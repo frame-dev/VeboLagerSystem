@@ -5,7 +5,7 @@ import javax.swing.*;
 public class MainGUI extends JFrame {
 
     public MainGUI() {
-        setTitle("Vebo Lagersystem");
+        setTitle("Lager übersicht");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
