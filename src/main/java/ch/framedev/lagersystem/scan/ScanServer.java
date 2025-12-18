@@ -115,10 +115,9 @@ public class ScanServer {
     }
 
     private static String buildFormPage(String decodedData) {
-        // Keep the scanned data as hidden field so the submit contains it
         String safeData = escHtml(decodedData);
 
-        return """
+        return String.format("""
         <!doctype html>
         <html lang="de">
         <head>
@@ -130,8 +129,7 @@ public class ScanServer {
             <h1>Bitte gebe die Menge an:</h1>
 
             <form method="get" action="/scan">
-                <input type="hidden" name="data" value=\"""" + safeData + """
-                ">
+                <input type="hidden" name="data" value="%s">
 
                 <label>
                     <input type="checkbox" name="ownUse">
@@ -145,14 +143,11 @@ public class ScanServer {
 
                 <button type="submit">Absenden</button>
             </form>
-
-            <hr>
-            <a href="/latest">Letzter Scan</a> |
-            <a href="/list">Alle Scans</a>
         </body>
         </html>
-        """;
+        """, safeData);
     }
+
 
     private static String buildSuccessPage() {
         return """
