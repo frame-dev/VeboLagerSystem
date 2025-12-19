@@ -71,7 +71,7 @@ public class QRCodeUtils {
         return data.split(";");
     }
 
-    public static List<Map<String, String>> getMapFromJsonQRCode() {
+    public static List<Map<String, String>> getListMapFromJsonQRCode() {
         Gson gson = new Gson();
         List<Map<String, String>> mapList = new ArrayList<>();
         try {
@@ -85,5 +85,12 @@ public class QRCodeUtils {
             throw new RuntimeException(e);
         }
         return mapList;
+    }
+
+    public static void clearStoredQRCodes() {
+        if (STORE.exists()) {
+            if(!STORE.delete())
+                System.err.println("Konnte gespeicherte QR-Codes nicht löschen: " + STORE.getAbsolutePath());
+        }
     }
 }

@@ -6,7 +6,6 @@ import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.utils.UserDataDir;
 
 import java.io.File;
-import java.util.Arrays;
 
 public class Main {
 
@@ -27,7 +26,7 @@ public class Main {
         Splashscreen splashscreen = new Splashscreen();
         splashscreen.showSplash(5000); // Zeige Splashscreen für 3 Sekunden
         System.out.println("Anwendungsdatenverzeichnis: " + getAppDataDir().getAbsolutePath());
-        System.out.println(QRCodeUtils.getMapFromJsonQRCode());
+        System.out.println(QRCodeUtils.getListMapFromJsonQRCode());
     }
 
     public static File getAppDataDir() {
