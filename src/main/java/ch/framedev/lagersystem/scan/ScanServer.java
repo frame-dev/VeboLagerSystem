@@ -57,17 +57,28 @@ public class ScanServer {
                 try {
                     quantity = Integer.parseInt(qtyRaw);
                     if (quantity < 1) quantity = 1;
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException ignored) {
+                }
 
                 // Checkbox: present only if checked
                 boolean ownUse = getQueryParam(query, "ownUse") != null;
+                // http://darryls-macbook-air.local:8080/scan?data=artikelNr%3A1244%3Bname%3ATestData%3Beinkaufspreis%3A12.5%3Bverkaufspreis%3A13.2%3Blieferant%3AZVG&ownUse=on&quantity=1&type=sell
+                String type = getQueryParam(query, "type");
+                boolean sellType = "sell".equalsIgnoreCase(type);
+                boolean buyType = "buy".equalsIgnoreCase(type);
 
                 JsonObject obj = new JsonObject();
                 obj.addProperty("ts", Instant.now().toString());
                 obj.addProperty("data", decodedData);
                 obj.addProperty("quantity", quantity);
                 obj.addProperty("ownUse", ownUse);
-
+                if (sellType) {
+                    obj.addProperty("type", "sell");
+                } else if (buyType) {
+                    obj.addProperty("type", "buy");
+                } else {
+                    obj.addProperty("type", "unknown");
+                }
                 appendToArrayFile(obj);
 
                 System.out.println("Received: " + decodedData + " qty=" + quantity + " ownUse=" + ownUse
@@ -119,54 +130,59 @@ public class ScanServer {
         String safeData = escHtml(decodedData);
 
         return String.format("""
-        <!doctype html>
-        <html lang="de">
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1">
-            <title>Scan</title>
-        </head>
-        <body>
-            <h1>Bitte gebe die Menge an:</h1>
-
-            <form method="get" action="/scan">
-                <input type="hidden" name="data" value="%s">
-
-                <label>
-                    <input type="checkbox" name="ownUse">
-                    Eigenbedarf
-                </label>
-
-                <br><br>
-
-                <label for="quantity">Menge:</label>
-                <input type="number" id="quantity" name="quantity" min="1" required>
-
-                <button type="submit">Absenden</button>
-            </form>
-        </body>
-        </html>
-        """, safeData);
+                <!doctype html>
+                <html lang="de">
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width,initial-scale=1">
+                    <title>Scan</title>
+                </head>
+                <body>
+                    <h1>Bitte gebe die Menge an:</h1>
+                
+                    <form method="get" action="/scan">
+                        <input type="hidden" name="data" value="%s">
+                
+                        <label>
+                            <input type="checkbox" name="ownUse">
+                            Eigenbedarf
+                        </label>
+                
+                        <br><br>
+                
+                        <label for="quantity">Menge:</label>
+                        <input type="number" id="quantity" name="quantity" min="1" required>
+                        <br><br>
+                        <label for="sell">Verkauf</label>
+                        <input type="radio" id="sell" name="type" value="sell" checked>
+                        <label for="buy">Einkauf</label>
+                        <input type="radio" id="buy" name="type" value="buy">
+                        <br><br>
+                        <button type="submit">Absenden</button>
+                    </form>
+                </body>
+                </html>
+                """, safeData);
     }
 
 
     private static String buildSuccessPage() {
         return """
-        <!doctype html>
-        <html lang="de">
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width,initial-scale=1">
-            <title>Scan abgeschlossen</title>
-        </head>
-        <body>
-            <h1>Gespeichert</h1>
-            <p>Der Scan wurde gespeichert.</p>
-            <a href="/latest">Letzter Scan</a> |
-            <a href="/list">Alle Scans</a>
-        </body>
-        </html>
-        """;
+                <!doctype html>
+                <html lang="de">
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width,initial-scale=1">
+                    <title>Scan abgeschlossen</title>
+                </head>
+                <body>
+                    <h1>Gespeichert</h1>
+                    <p>Der Scan wurde gespeichert.</p>
+                    <a href="/latest">Letzter Scan</a> |
+                    <a href="/list">Alle Scans</a>
+                </body>
+                </html>
+                """;
     }
 
 
@@ -201,8 +217,8 @@ public class ScanServer {
     // All Gson: read/write the JSON array file
     private static synchronized void appendToArrayFile(JsonObject element) throws IOException {
         File parent = ScanServer.STORE.getParentFile();
-        if (parent != null)
-            if(!parent.mkdirs())
+        if (parent != null && !parent.exists())
+            if (!parent.mkdirs())
                 System.err.println("Konnte Verzeichnis nicht erstellen: " + parent.getAbsolutePath());
 
         JsonArray arr = readArrayFile();
