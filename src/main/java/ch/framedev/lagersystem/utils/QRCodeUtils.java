@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("unused")
 public class QRCodeUtils {
 
     private static final File STORE = new File(Main.getAppDataDir(), "scans.json"); // eine Zeile = ein JSON
@@ -71,6 +72,7 @@ public class QRCodeUtils {
         return data.split(";");
     }
 
+    @SuppressWarnings("unchecked")
     public static List<Map<String, String>> getListMapFromJsonQRCode() {
         Gson gson = new Gson();
         List<Map<String, String>> mapList = new ArrayList<>();
