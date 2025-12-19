@@ -11,10 +11,11 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class QRCodeUtils {
 
-    private static final File STORE = new File(Main.getAppDataDir(), "scans.jsonl"); // eine Zeile = ein JSON
+    private static final File STORE = new File(Main.getAppDataDir(), "scans.json"); // eine Zeile = ein JSON
 
     public static List<String> getDataFromQRCode() {
         Gson gson = new Gson();
@@ -32,6 +33,21 @@ public class QRCodeUtils {
             throw new RuntimeException(e);
         }
         return dataList;
+    }
+
+    public static List<String> getQRCodes() {
+        Gson gson = new Gson();
+        List<String> qrCodeList = new ArrayList<>();
+        try {
+            JsonArray yamlData = gson.fromJson(new FileReader(STORE), JsonArray.class);
+            for (JsonElement e : yamlData) {
+                JsonObject obj = e.getAsJsonObject();
+                qrCodeList.add(gson.toJson(obj));
+            }
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+        return qrCodeList;
     }
 
     public static String getLatestQRCodeData() {
@@ -53,5 +69,21 @@ public class QRCodeUtils {
     public static String[] getPartsFromData(String data) {
         if (data == null) return new String[0];
         return data.split(";");
+    }
+
+    public static List<Map<String, String>> getMapFromJsonQRCode() {
+        Gson gson = new Gson();
+        List<Map<String, String>> mapList = new ArrayList<>();
+        try {
+            JsonArray yamlData = gson.fromJson(new FileReader(STORE), JsonArray.class);
+            for (JsonElement e : yamlData) {
+                JsonObject obj = e.getAsJsonObject();
+                Map<String, String> map = gson.fromJson(gson.toJson(obj), Map.class);
+                mapList.add(map);
+            }
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+        return mapList;
     }
 }
