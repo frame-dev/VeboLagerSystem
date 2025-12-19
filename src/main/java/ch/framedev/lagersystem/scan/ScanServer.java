@@ -16,10 +16,11 @@ import java.util.concurrent.Executors;
 
 public class ScanServer {
 
-    // Single JSON file containing an array: [ {ts,data}, ... ]
+    // Single JSON file containing an array: [ {ts,data,quantity,ownUse}, ... ]
     private static final File STORE = new File(Main.getAppDataDir(), "scans.json");
     private static final Gson gson = new GsonBuilder().disableHtmlEscaping().create();
 
+    @SuppressWarnings("HttpUrlsUsage")
     public static void main(String[] args) throws Exception {
         int port = 8080;
 
@@ -67,7 +68,7 @@ public class ScanServer {
                 obj.addProperty("quantity", quantity);
                 obj.addProperty("ownUse", ownUse);
 
-                appendToArrayFile(STORE, obj);
+                appendToArrayFile(obj);
 
                 System.out.println("Received: " + decodedData + " qty=" + quantity + " ownUse=" + ownUse
                         + " from " + NetUtils.getClientIp(exchange));
@@ -76,21 +77,21 @@ public class ScanServer {
                 respond(exchange, 200, buildSuccessPage(), "text/html; charset=utf-8");
 
             } catch (Exception e) {
-                e.printStackTrace();
+                System.err.println("Error handling /scan: " + e);
                 respond(exchange, 500, "Internal Server Error");
             }
         });
 
         server.createContext("/list", exchange -> {
-            JsonArray arr = readArrayFile(STORE);
+            JsonArray arr = readArrayFile();
             // pretty optional; remove setPrettyPrinting() if you prefer compact
             String body = gson.toJson(arr) + "\n";
             respond(exchange, 200, body, "application/json; charset=utf-8");
         });
 
         server.createContext("/latest", exchange -> {
-            JsonArray arr = readArrayFile(STORE);
-            if (arr.size() == 0) {
+            JsonArray arr = readArrayFile();
+            if (arr.isEmpty()) {
                 respond(exchange, 200, "{}\n", "application/json; charset=utf-8");
                 return;
             }
@@ -192,23 +193,23 @@ public class ScanServer {
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
         ex.getResponseHeaders().set("Content-Type", contentType);
         ex.sendResponseHeaders(code, bytes.length);
-        try (OutputStream os = ex.getResponseBody()) {
+        try (ex; OutputStream os = ex.getResponseBody()) {
             os.write(bytes);
-        } finally {
-            ex.close();
         }
     }
 
     // All Gson: read/write the JSON array file
-    private static synchronized void appendToArrayFile(File file, JsonObject element) throws IOException {
-        File parent = file.getParentFile();
-        if (parent != null) parent.mkdirs();
+    private static synchronized void appendToArrayFile(JsonObject element) throws IOException {
+        File parent = ScanServer.STORE.getParentFile();
+        if (parent != null)
+            if(!parent.mkdirs())
+                System.err.println("Konnte Verzeichnis nicht erstellen: " + parent.getAbsolutePath());
 
-        JsonArray arr = readArrayFile(file);
+        JsonArray arr = readArrayFile();
         arr.add(element);
 
         try (Writer w = Files.newBufferedWriter(
-                file.toPath(),
+                ScanServer.STORE.toPath(),
                 StandardCharsets.UTF_8,
                 StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING,
@@ -218,10 +219,10 @@ public class ScanServer {
         }
     }
 
-    private static JsonArray readArrayFile(File file) throws IOException {
-        if (!file.exists() || file.length() == 0) return new JsonArray();
+    private static JsonArray readArrayFile() throws IOException {
+        if (!ScanServer.STORE.exists() || ScanServer.STORE.length() == 0) return new JsonArray();
 
-        try (Reader r = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8)) {
+        try (Reader r = Files.newBufferedReader(ScanServer.STORE.toPath(), StandardCharsets.UTF_8)) {
             JsonElement el = JsonParser.parseReader(r);
             if (el == null || el.isJsonNull()) return new JsonArray();
             if (!el.isJsonArray()) return new JsonArray(); // or throw
