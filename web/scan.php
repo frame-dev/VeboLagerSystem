@@ -543,7 +543,7 @@ if (isset($_GET['quantity'])) {
             html5QrcodeScanner = new Html5QrcodeScanner(
                 "reader",
                 { 
-                    fps: 10,
+                    fps: 30,
                     qrbox: { width: 250, height: 250 },
                     aspectRatio: 1.0
                 },
@@ -588,7 +588,8 @@ if (isset($_GET['quantity'])) {
         }
 
         function onScanFailure(error) {
-            // Handle scan failure, usually not needed
+            // Handle scan failure, if needed
+            console.warn(`Code scan error = ${error}`);
         }
 
         // Auto-populate data field if coming from URL
@@ -601,7 +602,7 @@ if (isset($_GET['quantity'])) {
     </script>
 
     <div class="download-section">
-        <h1>Download scan.json</h1>
+        <h1>Download All Data as (scans.json)</h1>
         <a href="scans.json" download class="export-btn">📥 Download JSON</a>
     </div>
 </body>

@@ -554,7 +554,8 @@ foreach ($scans as $scan) {
             
             items.forEach(item => {
                 const timestamp = item.querySelector('.timestamp').textContent;
-                const data = item.querySelector('.detail-value').textContent;
+                const detailValue = item.querySelectorAll('.detail-value').textContent;
+                const data = detailValue.replace("CHF", "").trim();
                 const details = item.querySelectorAll('.detail-value');
                 const quantity = details[1].textContent;
                 const ownUse = details[2].textContent;
@@ -708,7 +709,7 @@ foreach ($scans as $scan) {
         <?php endif; ?>
         
         <div class="download-section">
-            <h1>Download scan.json</h1>
+            <h1>Download All Data as (scans.json)</h1>
             <a href="scans.json" download class="export-btn">📥 Download JSON</a>
         </div>
     </div>
