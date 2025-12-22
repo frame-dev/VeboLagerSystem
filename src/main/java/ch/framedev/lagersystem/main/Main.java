@@ -1,13 +1,15 @@
 package ch.framedev.lagersystem.main;
 
-import ch.framedev.lagersystem.guis.Splashscreen;
+import ch.framedev.lagersystem.guis.MainGUI;
+import ch.framedev.lagersystem.managers.DatabaseManager;
 import ch.framedev.lagersystem.scan.ScanServer;
-import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.utils.UserDataDir;
 
 import java.io.File;
 
 public class Main {
+
+    public static DatabaseManager databaseManager;
 
     public static void main(String[] args) throws Exception {
         System.out.println("Starte Vebo Lager System...");
@@ -23,10 +25,9 @@ public class Main {
             }
         }
 
-        Splashscreen splashscreen = new Splashscreen();
-        splashscreen.showSplash(5000); // Zeige Splashscreen für 3 Sekunden
-        System.out.println("Anwendungsdatenverzeichnis: " + getAppDataDir().getAbsolutePath());
-        System.out.println(QRCodeUtils.getListMapFromJsonQRCode());
+        databaseManager = new DatabaseManager(getAppDataDir().getAbsolutePath(), "vebo_lager_system.db");
+        MainGUI mainGUI = new MainGUI();
+        mainGUI.display();
     }
 
     public static File getAppDataDir() {
