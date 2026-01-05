@@ -1,6 +1,7 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 
 import javax.swing.*;
@@ -9,9 +10,13 @@ import javax.swing.text.NumberFormatter;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.NumberFormat;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+
+import static ch.framedev.lagersystem.main.Main.articleListGUI;
 
 public class ArticleGUI extends JFrame {
 
@@ -66,7 +71,7 @@ public class ArticleGUI extends JFrame {
                         (Double) row[6],
                         (String) row[7]
                 );
-                if(!articleManager.insertArticle(article)) {
+                if (!articleManager.insertArticle(article)) {
                     JOptionPane.showMessageDialog(this, "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.", "Fehler", JOptionPane.ERROR_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(this, "Artikel erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
@@ -99,7 +104,7 @@ public class ArticleGUI extends JFrame {
                         (Double) updatedRow[6],
                         (String) updatedRow[7]
                 );
-                if(articleManager.updateArticle(article)) {
+                if (articleManager.updateArticle(article)) {
                     JOptionPane.showMessageDialog(this, "Artikel erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Artikels.", "Fehler", JOptionPane.ERROR_MESSAGE);
@@ -228,17 +233,28 @@ public class ArticleGUI extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         int row = 0;
-        gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Artikelnummer:"), gbc);
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Artikelnummer:"), gbc);
         JTextField nummerField = new JTextField(existingData[0] == null ? "" : existingData[0].toString(), 20);
-        gbc.gridx = 1; panel.add(nummerField, gbc);
+        gbc.gridx = 1;
+        panel.add(nummerField, gbc);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Name:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Name:"), gbc);
         JTextField nameField = new JTextField(existingData[1] == null ? "" : existingData[1].toString(), 20);
-        gbc.gridx = 1; panel.add(nameField, gbc);
+        gbc.gridx = 1;
+        panel.add(nameField, gbc);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Details:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Details:"), gbc);
         JTextField detailsField = new JTextField(existingData[2] == null ? "" : existingData[2].toString(), 20);
-        gbc.gridx = 1; panel.add(detailsField, gbc);
+        gbc.gridx = 1;
+        panel.add(detailsField, gbc);
 
         // parse integer values robustly
         int existingLager = 0;
@@ -247,20 +263,30 @@ public class ArticleGUI extends JFrame {
             Object o = existingData[3];
             if (o instanceof Number) existingLager = ((Number) o).intValue();
             else existingLager = Integer.parseInt(o.toString());
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
         try {
             Object o = existingData[4];
             if (o instanceof Number) existingMindest = ((Number) o).intValue();
             else existingMindest = Integer.parseInt(o.toString());
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Lagerbestand:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Lagerbestand:"), gbc);
         JSpinner lagerSpinner = new JSpinner(new SpinnerNumberModel(existingLager, 0, Integer.MAX_VALUE, 1));
-        gbc.gridx = 1; panel.add(lagerSpinner, gbc);
+        gbc.gridx = 1;
+        panel.add(lagerSpinner, gbc);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Mindestbestand:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Mindestbestand:"), gbc);
         JSpinner mindestSpinner = new JSpinner(new SpinnerNumberModel(existingMindest, 0, Integer.MAX_VALUE, 1));
-        gbc.gridx = 1; panel.add(mindestSpinner, gbc);
+        gbc.gridx = 1;
+        panel.add(mindestSpinner, gbc);
 
         // price fields with formatter
         NumberFormat priceFormat = NumberFormat.getNumberInstance();
@@ -277,28 +303,42 @@ public class ArticleGUI extends JFrame {
             Object o = existingData[5];
             if (o instanceof Number) existingVerkauf = ((Number) o).doubleValue();
             else existingVerkauf = Double.parseDouble(o.toString());
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
         try {
             Object o = existingData[6];
             if (o instanceof Number) existingEinkauf = ((Number) o).doubleValue();
             else existingEinkauf = Double.parseDouble(o.toString());
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Verkaufspreis:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Verkaufspreis:"), gbc);
         JFormattedTextField verkaufField = new JFormattedTextField(priceFormatter);
         verkaufField.setColumns(10);
         verkaufField.setValue(existingVerkauf);
-        gbc.gridx = 1; panel.add(verkaufField, gbc);
+        gbc.gridx = 1;
+        panel.add(verkaufField, gbc);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Einkaufspreis:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Einkaufspreis:"), gbc);
         JFormattedTextField einkaufField = new JFormattedTextField(priceFormatter);
         einkaufField.setColumns(10);
         einkaufField.setValue(existingEinkauf);
-        gbc.gridx = 1; panel.add(einkaufField, gbc);
+        gbc.gridx = 1;
+        panel.add(einkaufField, gbc);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Lieferant:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Lieferant:"), gbc);
         JTextField lieferantField = new JTextField(existingData[7] == null ? "" : existingData[7].toString(), 20);
-        gbc.gridx = 1; panel.add(lieferantField, gbc);
+        gbc.gridx = 1;
+        panel.add(lieferantField, gbc);
 
         // buttons
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -307,7 +347,10 @@ public class ArticleGUI extends JFrame {
         buttons.add(cancelBtn);
         buttons.add(okBtn);
 
-        gbc.gridx = 0; gbc.gridy = ++row; gbc.gridwidth = 2; panel.add(buttons, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = ++row;
+        gbc.gridwidth = 2;
+        panel.add(buttons, gbc);
 
         dialog.getContentPane().add(panel);
         dialog.getRootPane().setDefaultButton(okBtn);
@@ -370,25 +413,44 @@ public class ArticleGUI extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         int row = 0;
-        gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Artikelnummer:"), gbc);
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Artikelnummer:"), gbc);
         JTextField nummerField = new JTextField(20);
-        gbc.gridx = 1; panel.add(nummerField, gbc);
+        gbc.gridx = 1;
+        panel.add(nummerField, gbc);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Name:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Name:"), gbc);
         JTextField nameField = new JTextField(20);
-        gbc.gridx = 1; panel.add(nameField, gbc);
+        gbc.gridx = 1;
+        panel.add(nameField, gbc);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Details:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Details:"), gbc);
         JTextField detailsField = new JTextField(20);
-        gbc.gridx = 1; panel.add(detailsField, gbc);
+        gbc.gridx = 1;
+        panel.add(detailsField, gbc);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Lagerbestand:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Lagerbestand:"), gbc);
         JSpinner lagerSpinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
-        gbc.gridx = 1; panel.add(lagerSpinner, gbc);
+        gbc.gridx = 1;
+        panel.add(lagerSpinner, gbc);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Mindestbestand:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Mindestbestand:"), gbc);
         JSpinner mindestSpinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
-        gbc.gridx = 1; panel.add(mindestSpinner, gbc);
+        gbc.gridx = 1;
+        panel.add(mindestSpinner, gbc);
 
         // price fields with formatter
         NumberFormat priceFormat = NumberFormat.getNumberInstance();
@@ -399,21 +461,33 @@ public class ArticleGUI extends JFrame {
         priceFormatter.setAllowsInvalid(false);
         priceFormatter.setMinimum(0.0);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Verkaufspreis:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Verkaufspreis:"), gbc);
         JFormattedTextField verkaufField = new JFormattedTextField(priceFormatter);
         verkaufField.setColumns(10);
         verkaufField.setValue(0.0);
-        gbc.gridx = 1; panel.add(verkaufField, gbc);
+        gbc.gridx = 1;
+        panel.add(verkaufField, gbc);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Einkaufspreis:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Einkaufspreis:"), gbc);
         JFormattedTextField einkaufField = new JFormattedTextField(priceFormatter);
         einkaufField.setColumns(10);
         einkaufField.setValue(0.0);
-        gbc.gridx = 1; panel.add(einkaufField, gbc);
+        gbc.gridx = 1;
+        panel.add(einkaufField, gbc);
 
-        row++; gbc.gridx = 0; gbc.gridy = row; panel.add(new JLabel("Lieferant:"), gbc);
+        row++;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        panel.add(new JLabel("Lieferant:"), gbc);
         JTextField lieferantField = new JTextField(20);
-        gbc.gridx = 1; panel.add(lieferantField, gbc);
+        gbc.gridx = 1;
+        panel.add(lieferantField, gbc);
 
         // buttons
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -422,7 +496,10 @@ public class ArticleGUI extends JFrame {
         buttons.add(cancelBtn);
         buttons.add(okBtn);
 
-        gbc.gridx = 0; gbc.gridy = ++row; gbc.gridwidth = 2; panel.add(buttons, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = ++row;
+        gbc.gridwidth = 2;
+        panel.add(buttons, gbc);
 
         dialog.getContentPane().add(panel);
         dialog.getRootPane().setDefaultButton(okBtn);
@@ -736,20 +813,20 @@ public class ArticleGUI extends JFrame {
     private void setupTableInteractions() {
         JPopupMenu popup = createTablePopup();
 
-        articleTable.addMouseListener(new java.awt.event.MouseAdapter() {
+        articleTable.addMouseListener(new MouseAdapter() {
             @Override
-            public void mousePressed(java.awt.event.MouseEvent e) {
+            public void mousePressed(MouseEvent e) {
                 maybeShowPopup(e);
             }
 
             @Override
-            public void mouseReleased(java.awt.event.MouseEvent e) {
+            public void mouseReleased(MouseEvent e) {
                 maybeShowPopup(e);
             }
 
             @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && SwingUtilities.isRightMouseButton(e)) {
                     int row = articleTable.rowAtPoint(e.getPoint());
                     if (row != -1) {
                         // Convert to model index in case sorting is active
@@ -764,10 +841,26 @@ public class ArticleGUI extends JFrame {
                             ));
                         }
                     }
+                } else if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                    int row = articleTable.rowAtPoint(e.getPoint());
+                    if (row != -1) {
+                        Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector().elementAt(articleTable.convertRowIndexToModel(row)).toArray();
+                        Article article = ArticleManager.getInstance().getArticleByNumber((String) existingData[0]);
+                        ArticleListGUI.addArticle(article, 0);
+                        if (articleListGUI == null)
+                            articleListGUI = new ArticleListGUI();
+                        if (!articleListGUI.isVisible()) {
+                            articleListGUI.display();
+                        } else {
+                            articleListGUI.toFront();
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(ArticleGUI.this, "Artikel konnte nicht gefunden werden.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    }
                 }
             }
 
-            private void maybeShowPopup(java.awt.event.MouseEvent e) {
+            private void maybeShowPopup(MouseEvent e) {
                 if (e.isPopupTrigger()) {
                     int row = articleTable.rowAtPoint(e.getPoint());
                     if (row != -1) {

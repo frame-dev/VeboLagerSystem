@@ -134,8 +134,8 @@ public class OrderManager {
             for (String articleEntry : articlesArray) {
                 String[] parts = articleEntry.split(":");
                 if (parts.length == 2) {
-                    String articleNumber = parts[0];
-                    int quantity = Integer.parseInt(parts[1]);
+                    String articleNumber = parts[0].trim();
+                    int quantity = Integer.parseInt(parts[1].trim());
                     orderedArticles.put(articleNumber, quantity);
                 }
             }

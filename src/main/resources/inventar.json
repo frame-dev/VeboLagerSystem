@@ -1,0 +1,1595 @@
+[
+  {
+    "number": "1101",
+    "name": "Brillenreinigungsflüssigkeit Suva/Haberkorn",
+    "details": "3 l",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 95.0,
+    "buyPrice": 86.36,
+    "vendorName": "SUVA"
+  },
+  {
+    "number": "1102",
+    "name": "Brillenreinigungstücher",
+    "details": "200 Blatt",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 8.6,
+    "buyPrice": 7.82,
+    "vendorName": "SUVA"
+  },
+  {
+    "number": "1103",
+    "name": "Brillenreinigungsboxe Komplet mit Spritzfl.",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 109.45,
+    "buyPrice": 99.5,
+    "vendorName": "SUVA"
+  },
+  {
+    "number": "1104",
+    "name": "Gehörschutzpfropfen",
+    "details": "200 Paar",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 58.0,
+    "buyPrice": 52.73,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1105.a",
+    "name": "Schutzbrille normal",
+    "details": "Stk.",
+    "stockQuantity": 28,
+    "minStockLevel": 0,
+    "sellPrice": 9.5,
+    "buyPrice": 8.64,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1105.b",
+    "name": "Schutzbrille über Brille (Bollè)",
+    "details": "Stk.",
+    "stockQuantity": 31,
+    "minStockLevel": 0,
+    "sellPrice": 12.1,
+    "buyPrice": 11.0,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1106",
+    "name": "Staubmaske",
+    "details": "Stk.",
+    "stockQuantity": 23,
+    "minStockLevel": 0,
+    "sellPrice": 2.4,
+    "buyPrice": 2.18,
+    "vendorName": "SUVA"
+  },
+  {
+    "number": "1107",
+    "name": "Augenschutz Station 2 Flaschen Komplett",
+    "details": "Stk.",
+    "stockQuantity": 4,
+    "minStockLevel": 0,
+    "sellPrice": 119.9,
+    "buyPrice": 109.0,
+    "vendorName": "SUVA"
+  },
+  {
+    "number": "1108",
+    "name": "Augenschutz 1 lt. Flasche  (Ersatz)",
+    "details": "1l Flasche",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 27.10,
+    "buyPrice": 24.64,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1109",
+    "name": "Atemschutzmaske mit (Filter 2 Stk.)",
+    "details": "Stk.",
+    "stockQuantity": 3,
+    "minStockLevel": 0,
+    "sellPrice": 45.5,
+    "buyPrice": 41.36,
+    "vendorName": "SUVA"
+  },
+  {
+    "number": "1110",
+    "name": "Löschdecken Modell",
+    "details": "Stk.",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 0.0,
+    "buyPrice": 0.0,
+    "vendorName": "SUVA"
+  },
+  {
+    "number": "1111",
+    "name": "Brillenreinigung Flasche Ersatz  0.5 l",
+    "details": "Stk.",
+    "stockQuantity": 23,
+    "minStockLevel": 0,
+    "sellPrice": 14.85,
+    "buyPrice": 13.5,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1112",
+    "name": "Brillenreinigung Flasche Deckel Ersatz",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 9.7,
+    "buyPrice": 8.82,
+    "vendorName": "SUVA"
+  },
+  {
+    "number": "1113",
+    "name": "Biella Nero S2 (nur Küche)",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 48.25,
+    "buyPrice": 43.86,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1114",
+    "name": "Venezia Nero (nur Küche)",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 45.8,
+    "buyPrice": 41.64,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1115",
+    "name": "Abeba 7031 schwarz / offen (nur Küche)",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 41.15,
+    "buyPrice": 37.41,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1116",
+    "name": "Hygienemaske Box à 50Stk. Bezug über S. Flück Zentrum Oensingen",
+    "details": "Box à 50 Stk.",
+    "stockQuantity": 1920,
+    "minStockLevel": 0,
+    "sellPrice": 0.0,
+    "buyPrice": 0.0,
+    "vendorName": "S. Flück Zentrum Oensingen"
+  },
+  {
+    "number": "1201",
+    "name": "Baumwollhandschuhe",
+    "details": "Gr.   7 Paar",
+    "stockQuantity": 190,
+    "minStockLevel": 0,
+    "sellPrice": 1.0,
+    "buyPrice": 0.91,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1202",
+    "name": "Baumwollhandschuhe",
+    "details": "Gr.   8 Paar",
+    "stockQuantity": 120,
+    "minStockLevel": 0,
+    "sellPrice": 1.0,
+    "buyPrice": 0.91,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1203",
+    "name": "Baumwollhandschuhe",
+    "details": "Gr.   9 Paar",
+    "stockQuantity": 103,
+    "minStockLevel": 0,
+    "sellPrice": 1.0,
+    "buyPrice": 0.91,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1204",
+    "name": "Baumwollhandschuhe",
+    "details": "Gr. 10 Paar",
+    "stockQuantity": 70,
+    "minStockLevel": 0,
+    "sellPrice": 1.0,
+    "buyPrice": 0.91,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1205",
+    "name": "Baumwollhandschuhe",
+    "details": "Gr. 11 Paar",
+    "stockQuantity": 32,
+    "minStockLevel": 0,
+    "sellPrice": 1.0,
+    "buyPrice": 0.91,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1206",
+    "name": "Baumwollhandschuhe",
+    "details": "Gr. 12 Paar",
+    "stockQuantity": 62,
+    "minStockLevel": 0,
+    "sellPrice": 1.0,
+    "buyPrice": 0.91,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1207",
+    "name": "Chloroplenlatex Säurefest",
+    "details": "10-10 ½ Paar",
+    "stockQuantity": 8,
+    "minStockLevel": 0,
+    "sellPrice": 8.1,
+    "buyPrice": 7.36,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1208",
+    "name": "Einweg-Latexhandschuhe S / M / L / XL",
+    "details": "100 Stk. Box",
+    "stockQuantity": 20,
+    "minStockLevel": 0,
+    "sellPrice": 5.3,
+    "buyPrice": 4.82,
+    "vendorName": "Null"
+  },
+  {
+    "number": "1209",
+    "name": "Handschuhe Latex Reinigung Blau",
+    "details": "Gr. 7 - 7 ½ Paar",
+    "stockQuantity": 81,
+    "minStockLevel": 0,
+    "sellPrice": 4.95,
+    "buyPrice": 4.5,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1210",
+    "name": "Handschuhe Latex Reinigung Blau",
+    "details": "Gr. 8 - 8 ½ Paar",
+    "stockQuantity": 69,
+    "minStockLevel": 0,
+    "sellPrice": 4.95,
+    "buyPrice": 4.5,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1211",
+    "name": "Handschuhe Latex Reinigung Blau",
+    "details": "Gr. 9 - 9 ½ Paar",
+    "stockQuantity": 52,
+    "minStockLevel": 0,
+    "sellPrice": 4.95,
+    "buyPrice": 4.5,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1212",
+    "name": "Handschuhe Latex Reinigung Blau",
+    "details": "Gr. 10 - 10 ½ Paar",
+    "stockQuantity": 6,
+    "minStockLevel": 0,
+    "sellPrice": 4.95,
+    "buyPrice": 4.5,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1213",
+    "name": "Nitril Handschuh Einweg Ungepudert Blau",
+    "details": "Gr. S / M / L / XL 100 Stk. Box",
+    "stockQuantity": 2246,
+    "minStockLevel": 0,
+    "sellPrice": 7.15,
+    "buyPrice": 6.5,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "1214",
+    "name": "Gartenhandschuhe    Gelb / Grün",
+    "details": "Gr. S / M / L / XL",
+    "stockQuantity": 41,
+    "minStockLevel": 0,
+    "sellPrice": 2.0,
+    "buyPrice": 1.82,
+    "vendorName": "Landi"
+  },
+  {
+    "number": "1215",
+    "name": "Lederhandschuhe",
+    "details": "Gr. 10 Paar",
+    "stockQuantity": 81,
+    "minStockLevel": 0,
+    "sellPrice": 5.4,
+    "buyPrice": 4.91,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1216",
+    "name": "Überziehschuhe Blau",
+    "details": "100 Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.95,
+    "buyPrice": 3.59,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "1217",
+    "name": "Handschuhe Latex (Dünne Gelb)",
+    "details": "Gr. 10 Paar",
+    "stockQuantity": 24,
+    "minStockLevel": 0,
+    "sellPrice": 1.25,
+    "buyPrice": 1.14,
+    "vendorName": "Null"
+  },
+  {
+    "number": "1301",
+    "name": "Handcrème: Anti Dry",
+    "details": "100 ml",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 8.0,
+    "buyPrice": 7.27,
+    "vendorName": "Merz"
+  },
+  {
+    "number": "3101",
+    "name": "110 lt.",
+    "details": "grau Rolle",
+    "stockQuantity": 32,
+    "minStockLevel": 0,
+    "sellPrice": 2.80,
+    "buyPrice": 2.55,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3102",
+    "name": "35 lt.",
+    "details": "transparent Rolle",
+    "stockQuantity": 16,
+    "minStockLevel": 0,
+    "sellPrice": 2.0,
+    "buyPrice": 1.82,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3103",
+    "name": "35 lt.",
+    "details": "grau Rolle",
+    "stockQuantity": 736,
+    "minStockLevel": 0,
+    "sellPrice": 1.6,
+    "buyPrice": 1.45,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3104",
+    "name": "55 lt.",
+    "details": "transparent stk.",
+    "stockQuantity": 4,
+    "minStockLevel": 0,
+    "sellPrice": 3.0,
+    "buyPrice": 2.73,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3105",
+    "name": "55 lt. Gitterkörbe Säcke",
+    "details": "Gitterkörbe Säcke 100 Stk.",
+    "stockQuantity": 200,
+    "minStockLevel": 0,
+    "sellPrice": 4.4,
+    "buyPrice": 4.0,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3106",
+    "name": "Treteimer WC",
+    "details": "3 - 5 lt. 1 Rolle",
+    "stockQuantity": 12,
+    "minStockLevel": 0,
+    "sellPrice": 1.2,
+    "buyPrice": 1.09,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3107",
+    "name": "Sammelsack Aludosen",
+    "details": "1 Rolle",
+    "stockQuantity": 47,
+    "minStockLevel": 0,
+    "sellPrice": 4.4,
+    "buyPrice": 4.0,
+    "vendorName": "Igora"
+  },
+  {
+    "number": "3201",
+    "name": "Abwaschbürste",
+    "details": "Stk.",
+    "stockQuantity": 14,
+    "minStockLevel": 0,
+    "sellPrice": 2.45,
+    "buyPrice": 2.23,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3202",
+    "name": "Hygiene - Schrubber 30cm Kunststoff",
+    "details": "Stk.",
+    "stockQuantity": 11,
+    "minStockLevel": 0,
+    "sellPrice": 14.3,
+    "buyPrice": 13.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3203",
+    "name": "Besen 40 cm Kokos",
+    "details": "Stk.",
+    "stockQuantity": 7,
+    "minStockLevel": 0,
+    "sellPrice": 13.2,
+    "buyPrice": 12.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3204",
+    "name": "Besen 50 cm Kokos",
+    "details": "Stk.",
+    "stockQuantity": 7,
+    "minStockLevel": 0,
+    "sellPrice": 18.7,
+    "buyPrice": 17.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3205",
+    "name": "Besen 60 cm Kokos",
+    "details": "Stk.",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 23.1,
+    "buyPrice": 21.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3206",
+    "name": "Besenstiel zu Besen 32 cm",
+    "details": "Stk.",
+    "stockQuantity": 9,
+    "minStockLevel": 0,
+    "sellPrice": 6.5,
+    "buyPrice": 5.91,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3207",
+    "name": "Besenstiel zu Besen 40 - 60 cm Angespitzt",
+    "details": "Stk.",
+    "stockQuantity": 14,
+    "minStockLevel": 0,
+    "sellPrice": 6.5,
+    "buyPrice": 5.91,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3208",
+    "name": "Fegbürste Ersatz",
+    "details": "Stk.",
+    "stockQuantity": 5,
+    "minStockLevel": 0,
+    "sellPrice": 10.35,
+    "buyPrice": 9.41,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3209",
+    "name": "Fegbürste Komplett",
+    "details": "Stk.",
+    "stockQuantity": 9,
+    "minStockLevel": 0,
+    "sellPrice": 17.15,
+    "buyPrice": 15.59,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3210",
+    "name": "Handwischer Kokos",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 4.6,
+    "buyPrice": 4.18,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3211",
+    "name": "Kehrichtschaufel Metall",
+    "details": "Stk.",
+    "stockQuantity": 2,
+    "minStockLevel": 0,
+    "sellPrice": 9.0,
+    "buyPrice": 8.18,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3212",
+    "name": "Heizkörperpinsel 25 mm",
+    "details": "Stk.",
+    "stockQuantity": 2,
+    "minStockLevel": 0,
+    "sellPrice": 3.25,
+    "buyPrice": 2.95,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3213",
+    "name": "Heizkörperpinsel 36 mm",
+    "details": "Stk.",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 4.35,
+    "buyPrice": 3.95,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3214",
+    "name": "Reisbesen / Industriebesen",
+    "details": "Stk.",
+    "stockQuantity": 4,
+    "minStockLevel": 0,
+    "sellPrice": 10.9,
+    "buyPrice": 9.91,
+    "vendorName": "Landi"
+  },
+  {
+    "number": "3215",
+    "name": "Hahnen Putzer",
+    "details": "Stk.",
+    "stockQuantity": 2,
+    "minStockLevel": 0,
+    "sellPrice": 3.65,
+    "buyPrice": 3.32,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3216",
+    "name": "Flaschen Putzer",
+    "details": "Stk.",
+    "stockQuantity": 9,
+    "minStockLevel": 0,
+    "sellPrice": 2.55,
+    "buyPrice": 2.32,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3217",
+    "name": "Hygienebesen 40 mit Stiel (Rot/Blau/Gelb)",
+    "details": "Stk.",
+    "stockQuantity": 14,
+    "minStockLevel": 0,
+    "sellPrice": 42.0,
+    "buyPrice": 38.18,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3218",
+    "name": "Hygiene Kehrgarnitur (Schüfeli & Bäseli)",
+    "details": "Stk. (Rot / Blau / Gelb)",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 6.0,
+    "buyPrice": 5.45,
+    "vendorName": "Steinfels"
+  },
+  {
+    "number": "3219",
+    "name": "Hygiene Besenstiel",
+    "details": "Stk.",
+    "stockQuantity": 4,
+    "minStockLevel": 0,
+    "sellPrice": 15.0,
+    "buyPrice": 13.64,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3220",
+    "name": "Besen Rosshaar 32cm",
+    "details": "Stk.",
+    "stockQuantity": 4,
+    "minStockLevel": 0,
+    "sellPrice": 16.5,
+    "buyPrice": 15.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3221",
+    "name": "Besen Rosshaar 50cm",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 43.9,
+    "buyPrice": 39.91,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3222",
+    "name": "Besen Rosshaar 60cm",
+    "details": "Stk.",
+    "stockQuantity": 8,
+    "minStockLevel": 0,
+    "sellPrice": 46.6,
+    "buyPrice": 42.36,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3223",
+    "name": "Besen Rosshaar 80 cm",
+    "details": "Stk.",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 47.8,
+    "buyPrice": 43.45,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3301",
+    "name": "Abwaschlappen Baumwolle solange Vorrat",
+    "details": "Stk.",
+    "stockQuantity": 35,
+    "minStockLevel": 0,
+    "sellPrice": 2.0,
+    "buyPrice": 1.82,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3302",
+    "name": "Kupferlappen 17x20cm",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 2.1,
+    "buyPrice": 1.91,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3303",
+    "name": "Putzlappen Hell / Bunt",
+    "details": "Sack à 10kg",
+    "stockQuantity": 32,
+    "minStockLevel": 0,
+    "sellPrice": 10.6,
+    "buyPrice": 9.64,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3304",
+    "name": "Putzschwamm hellbraun",
+    "details": "weisser Pad 10 Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 4.0,
+    "buyPrice": 3.64,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3305",
+    "name": "Putzschwamm Weiss",
+    "details": "grüner Pad 10 Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 4.0,
+    "buyPrice": 3.64,
+    "vendorName": "Thedra"
+  },
+  {
+    "number": "3306",
+    "name": "Putzschwamm Rot, Gelb, Blau, Grün",
+    "details": "weisser Pad 10 Stk.",
+    "stockQuantity": 491,
+    "minStockLevel": 0,
+    "sellPrice": 4.0,
+    "buyPrice": 3.64,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3307",
+    "name": "Bodenlappen Baumwolle",
+    "details": "Stk.",
+    "stockQuantity": 3,
+    "minStockLevel": 0,
+    "sellPrice": 3.65,
+    "buyPrice": 3.32,
+    "vendorName": "Promag"
+  },
+  {
+    "number": "3308",
+    "name": "Spiraltopfreiniger (Edelstahlwolle)",
+    "details": "1 Stk.",
+    "stockQuantity": 39,
+    "minStockLevel": 0,
+    "sellPrice": 0.85,
+    "buyPrice": 0.77,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3309",
+    "name": "Stahlwatte",
+    "details": "10 Stk.",
+    "stockQuantity": 6,
+    "minStockLevel": 0,
+    "sellPrice": 3.3,
+    "buyPrice": 3.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3310",
+    "name": "Vliesstücher assortiert (Abwaschlappen Mehrweg)",
+    "details": "40 Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 23.1,
+    "buyPrice": 21.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3311",
+    "name": "Mikrofaser Tücher Rot, Gelb, Blau, Grün",
+    "details": "Stk.",
+    "stockQuantity": 430,
+    "minStockLevel": 0,
+    "sellPrice": 1.7,
+    "buyPrice": 1.55,
+    "vendorName": "Atavis Graf"
+  },
+  {
+    "number": "3312",
+    "name": "Zauberschwamm (Radiergummi mit Wasser)",
+    "details": "Stk.",
+    "stockQuantity": 102,
+    "minStockLevel": 0,
+    "sellPrice": 1.4,
+    "buyPrice": 1.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3313",
+    "name": "Vlies Handschuhe (Hygiene Bad) ZVG",
+    "details": "100 Stk. Pack",
+    "stockQuantity": 3000,
+    "minStockLevel": 0,
+    "sellPrice": 6.0,
+    "buyPrice": 5.45,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3314",
+    "name": "Wiper Boul (Eimer / Reinigungstücher)",
+    "details": "1 Eimer",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 22.4,
+    "buyPrice": 20.36,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3401",
+    "name": "Dosierflasche Kompl. Leer unbeschriftet",
+    "details": "½ l transparent Stk.",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 3.4,
+    "buyPrice": 3.09,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3402",
+    "name": "Dosierflasche Kompl. Leer dl beschriftet",
+    "details": "½ l transparent Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.6,
+    "buyPrice": 3.27,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3403",
+    "name": "Entkalker Bathin / Karit Kompl.",
+    "details": "5dl Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 5.05,
+    "buyPrice": 4.59,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3404",
+    "name": "Sprühkopf zu Sprühflasche",
+    "details": "",
+    "stockQuantity": 24,
+    "minStockLevel": 0,
+    "sellPrice": 3.3,
+    "buyPrice": 3.0,
+    "vendorName": "Minatol/Steinfels"
+  },
+  {
+    "number": "3405",
+    "name": "Sprühflasche Walco 27  Kompl.",
+    "details": "Stk. mit Zerstäuber",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 5.05,
+    "buyPrice": 4.59,
+    "vendorName": "Walco"
+  },
+  {
+    "number": "3406",
+    "name": "Deckel Weiss zu 5 dl Flaschen",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 0.7,
+    "buyPrice": 0.64,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3407",
+    "name": "Maja San Org. Flasch mit Deckel",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.0,
+    "buyPrice": 2.73,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3408",
+    "name": "Deckel Rot zu 7 dl Flasche",
+    "details": "Stk.",
+    "stockQuantity": 57,
+    "minStockLevel": 0,
+    "sellPrice": 0.35,
+    "buyPrice": 0.32,
+    "vendorName": "Thedra/Atramex"
+  },
+  {
+    "number": "3409",
+    "name": "WC-Flasche/ Thedra Komplett",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 2.7,
+    "buyPrice": 2.45,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3410",
+    "name": "Sprühflasche mit Zerstäuber Promag",
+    "details": "1/2 l transparent ",
+    "stockQuantity": 14,
+    "minStockLevel": 0,
+    "sellPrice": 6.8,
+    "buyPrice": 6.18,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "3411",
+    "name": "Maya Uni Dosierflasche 5 dl Komplett",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.0,
+    "buyPrice": 2.73,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3412",
+    "name": "Clinex Superaktiv Reiniger 5dl Dosierflasche Komplett",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.5,
+    "buyPrice": 3.18,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3413",
+    "name": "Maya Forte Dosierflasche 5 dl komplett",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 4.7,
+    "buyPrice": 4.27,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3414",
+    "name": "Parkettpflegemittel Dosierflasche 7 dl Komplett",
+    "details": "Solange Vorrat",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 2.45,
+    "buyPrice": 2.23,
+    "vendorName": "Thedra"
+  },
+  {
+    "number": "3415",
+    "name": "Ergo 8 Dosierflasche 5 dl Komplett",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.85,
+    "buyPrice": 3.5,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "3416",
+    "name": "GR Radical Forte Dosierflasche 5 dl Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.5,
+    "buyPrice": 3.18,
+    "vendorName": "Thedra"
+  },
+  {
+    "number": "3417",
+    "name": "Sprühflasche Walco 36 Kompl.",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 5.05,
+    "buyPrice": 4.59,
+    "vendorName": "Walco"
+  },
+  {
+    "number": "3418",
+    "name": "Maya Brillant Glänzer Geschirrspüler 5 dl Dosierf. Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.5,
+    "buyPrice": 3.18,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3419",
+    "name": "Steinex Inox 5 dl Dosierf. Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.5,
+    "buyPrice": 3.18,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3420",
+    "name": "Klarin Plus Sprühflasche Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 8.7,
+    "buyPrice": 7.95,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3421",
+    "name": "Top Glass Forte Sprühflasche Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 8.7,
+    "buyPrice": 7.95,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3422",
+    "name": "Ergo 2,5 dl Dosierflasche Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.85,
+    "buyPrice": 3.5,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3424",
+    "name": "Orange Clean 7 dl Dosierflasche Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 2.55,
+    "buyPrice": 2.32,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3425",
+    "name": "Ergo 4 / 5 dl Dosierflasche Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.85,
+    "buyPrice": 3.5,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3426",
+    "name": "Ergo 6 / 5 dl Dosierflasche Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.85,
+    "buyPrice": 3.5,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "3427",
+    "name": "Steinet 840 Sprühflasche 5 dl Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 6.15,
+    "buyPrice": 5.59,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3428",
+    "name": "OFLOR Dosierflasche 5 dl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.0,
+    "buyPrice": 2.73,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3429",
+    "name": "Uni Top 5 dl Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.85,
+    "buyPrice": 3.5,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "3430",
+    "name": "Maya Vit Komplett",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 32.2,
+    "buyPrice": 29.27,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3431",
+    "name": "Maya Multi Komplett",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 4.7,
+    "buyPrice": 4.27,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3432",
+    "name": "Maya Multi Plus Komplett",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 4.7,
+    "buyPrice": 4.27,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3433",
+    "name": "Steinet 302 Fenster / Glasreiniger Kompl.",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 4.7,
+    "buyPrice": 4.27,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "3434",
+    "name": "Maya Entkalker Komplett",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 4.9,
+    "buyPrice": 4.45,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4101",
+    "name": "Aqualyt SR Glanzreiniger",
+    "details": "20 kg",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 131.15,
+    "buyPrice": 119.23,
+    "vendorName": "Gehrig"
+  },
+  {
+    "number": "4102",
+    "name": "Aqualyt Classic",
+    "details": "25 kg",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 133.0,
+    "buyPrice": 121.82,
+    "vendorName": "Gehrig"
+  },
+  {
+    "number": "4103",
+    "name": "Dish-Lav C Abwaschpulver",
+    "details": "10 kg",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 72.25,
+    "buyPrice": 66.14,
+    "vendorName": "Null"
+  },
+  {
+    "number": "4104",
+    "name": "Spühl Blitz Handspühlmittel",
+    "details": "1 lt.",
+    "stockQuantity": 3,
+    "minStockLevel": 0,
+    "sellPrice": 7.4,
+    "buyPrice": 6.77,
+    "vendorName": "W+R"
+  },
+  {
+    "number": "4105",
+    "name": "Aqualyt Jet",
+    "details": "25 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 138.6,
+    "buyPrice": 126.91,
+    "vendorName": "Null"
+  },
+  {
+    "number": "4106",
+    "name": "Dish-Lav TKS C Tauchreiniger",
+    "details": "15 kg",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 134.5,
+    "buyPrice": 123.18,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4107",
+    "name": "Wasserenthärter - Salz",
+    "details": "25 kg",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 13.75,
+    "buyPrice": 12.59,
+    "vendorName": "Null"
+  },
+  {
+    "number": "4108",
+    "name": "Clean Lav GSM-Tabs 5 in 1 in 1 für Geschirrspüler",
+    "details": "Packet 50 Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 14.5,
+    "buyPrice": 13.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "4109",
+    "name": "Aqualyt NS",
+    "details": "20 kg",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 118.0,
+    "buyPrice": 108.18,
+    "vendorName": "Gehrig"
+  },
+  {
+    "number": "4110",
+    "name": "Aqualyt ES",
+    "details": "1 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 28.0,
+    "buyPrice": 25.64,
+    "vendorName": "Gehrig"
+  },
+  {
+    "number": "4111",
+    "name": "Aqualyt TR",
+    "details": "6 kg",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 59.15,
+    "buyPrice": 54.14,
+    "vendorName": "Gehrig"
+  },
+  {
+    "number": "4112",
+    "name": "Maya Lav Basic Geschirrwaschmittel",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 81.0,
+    "buyPrice": 74.09,
+    "vendorName": "Null"
+  },
+  {
+    "name": "Placeholder"
+  },
+  {
+    "number": "5101",
+    "name": "Alufolie",
+    "details": "30cm x 20m Stk.",
+    "stockQuantity": 6,
+    "minStockLevel": 0,
+    "sellPrice": 3.9,
+    "buyPrice": 3.55,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "5102",
+    "name": "Alufolie: Gastronom",
+    "details": "45cm x 150m Stk.",
+    "stockQuantity": 4,
+    "minStockLevel": 0,
+    "sellPrice": 38.0,
+    "buyPrice": 34.55,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5103",
+    "name": "Backofenfolie",
+    "details": "Stk.",
+    "stockQuantity": 5,
+    "minStockLevel": 0,
+    "sellPrice": 1.85,
+    "buyPrice": 1.68,
+    "vendorName": "Migros"
+  },
+  {
+    "number": "5104",
+    "name": "Filtertüten: 1 x 10",
+    "details": "40 Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 6.1,
+    "buyPrice": 5.55,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5105",
+    "name": "Filtertüten: 1 x 4",
+    "details": "80 Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 2.45,
+    "buyPrice": 2.23,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5106",
+    "name": "Filtertüten: 1 x 6",
+    "details": "100 Stk. (40Stk. à 2.55Fr.)",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 7.05,
+    "buyPrice": 6.41,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5107",
+    "name": "Warnschild 'Achtung Rutschgefahr'",
+    "details": "Gelb Stk.",
+    "stockQuantity": 12,
+    "minStockLevel": 0,
+    "sellPrice": 20.5,
+    "buyPrice": 18.64,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "5108",
+    "name": "Filtertüten: Pa-Ho 220 (Oensingen)",
+    "details": "100 Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 49.5,
+    "buyPrice": 45.0,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5109",
+    "name": "Frischhaltefolie",
+    "details": "30cm x 30m Stk.  Kleine",
+    "stockQuantity": 7,
+    "minStockLevel": 0,
+    "sellPrice": 2.5,
+    "buyPrice": 2.27,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "5110",
+    "name": "Frischhaltefolie: Gastronom",
+    "details": "30cm x 300m",
+    "stockQuantity": 2,
+    "minStockLevel": 0,
+    "sellPrice": 19.8,
+    "buyPrice": 18.00,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "5111",
+    "name": "Kaffeebecher 2 dl Weiss",
+    "details": "3000 Stk. Karton",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 57.0,
+    "buyPrice": 51.82,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5112",
+    "name": "Frischhaltefolie",
+    "details": "30cm x 300m Stk.   Gross",
+    "stockQuantity": 2,
+    "minStockLevel": 0,
+    "sellPrice": 12.1,
+    "buyPrice": 11.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "5113",
+    "name": "Servietten Brunch",
+    "details": "1000 Stk. (Karton 6000Stk.)",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 19.35,
+    "buyPrice": 17.59,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5114.a",
+    "name": "Serviette",
+    "details": "1 Beutel  = (50 Serviette)",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 9.35,
+    "buyPrice": 8.5,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5114.b",
+    "name": "Serviette",
+    "details": "1 Karton = 16 Beutel",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 150.0,
+    "buyPrice": 136.36,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5115.a",
+    "name": "Tischläufer hellgrün 40cm x 24m",
+    "details": "1 Rolle =",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 11.6,
+    "buyPrice": 10.55,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5115.b",
+    "name": "Eniwa  Inn  Hellgrün",
+    "details": "1 Karton = 12 Rollen",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 139.2,
+    "buyPrice": 126.55,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5116",
+    "name": "Dampfabzug Fettfilter Dünn",
+    "details": "",
+    "stockQuantity": 5,
+    "minStockLevel": 0,
+    "sellPrice": 0.0,
+    "buyPrice": 0.0,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5117",
+    "name": "Dampfabzug Filter Matte",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 0.0,
+    "buyPrice": 0.0,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5118",
+    "name": "Servietten Farbig   ¼  gross  ",
+    "details": "Pack 50 Stk.",
+    "stockQuantity": 30,
+    "minStockLevel": 0,
+    "sellPrice": 1.45,
+    "buyPrice": 0.0,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5119.a",
+    "name": "Servietten Weiss      1/8      klein       (Gastro)",
+    "details": "Pack 250  Stk.  NEU",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 8.0,
+    "buyPrice": 0.0,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5119.b",
+    "name": "Servietten Weiss      1/8      klein       (Gastro)",
+    "details": " (1 Karton à 8 Pack)",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 48.0,
+    "buyPrice": 43.64,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5201",
+    "name": "Hygienebeutel         Papier",
+    "details": "100 Stk.",
+    "stockQuantity": 1000,
+    "minStockLevel": 0,
+    "sellPrice": 6.85,
+    "buyPrice": 6.23,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "5202",
+    "name": "Papierspender zu (Z Falztücher)",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 16.0,
+    "buyPrice": 14.55,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "5203",
+    "name": "Mini – Tork   (Pack 12 Stk.)",
+    "details": "Rolle",
+    "stockQuantity": 427,
+    "minStockLevel": 0,
+    "sellPrice": 1.75,
+    "buyPrice": 1.59,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "5204",
+    "name": "Papierhandtücher (Z Falztücher) Neu",
+    "details": "Karton",
+    "stockQuantity": 6,
+    "minStockLevel": 0,
+    "sellPrice": 31.9,
+    "buyPrice": 26.4,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "5205",
+    "name": "Raumspray Tabak Minatol",
+    "details": "0.5 l",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 10.15,
+    "buyPrice": 9.23,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "5206",
+    "name": "Staubsaugersack: 10 l (Kessel) Minatol",
+    "details": "Stk.",
+    "stockQuantity": 7,
+    "minStockLevel": 0,
+    "sellPrice": 3.0,
+    "buyPrice": 2.73,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "5207",
+    "name": "Staubsaugersack: (Rücken) Minatol",
+    "details": "Stk.",
+    "stockQuantity": 20,
+    "minStockLevel": 0,
+    "sellPrice": 3.4,
+    "buyPrice": 3.09,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "5208",
+    "name": "Staubsaugersäcke AERO 15 Taski",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.9,
+    "buyPrice": 3.55,
+    "vendorName": "Taski"
+  },
+  {
+    "number": "5209",
+    "name": "WC-Papier (8er Pack)",
+    "details": "1 Pack ist = 8stk.",
+    "stockQuantity": 4680,
+    "minStockLevel": 0,
+    "sellPrice": 3.60,
+    "buyPrice": 2.8,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "5210",
+    "name": "Hygienebeutel Hygolet Blau (Säckli 20 Stk)",
+    "details": "Karton Klein",
+    "stockQuantity": 8,
+    "minStockLevel": 0,
+    "sellPrice": 1.5,
+    "buyPrice": 1.36,
+    "vendorName": "Hygolet"
+  },
+  {
+    "number": "5211",
+    "name": "Hygienebeutel zu Hygabox (Graue Säckli)",
+    "details": "10 Stk. 1 Rolle",
+    "stockQuantity": 90,
+    "minStockLevel": 0,
+    "sellPrice": 11.55,
+    "buyPrice": 10.50,
+    "vendorName": "Widmer"
+  },
+  {
+    "number": "5212",
+    "name": "Rollenhalter Mini Tork",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 21.0,
+    "buyPrice": 19.09,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "5213",
+    "name": "Staubsaugersäcke zu WS 500 Minatol",
+    "details": "10 Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 36.20,
+    "buyPrice": 0.0,
+    "vendorName": "Minatol/Wetrok"
+  }
+]

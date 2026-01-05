@@ -31,6 +31,8 @@ public class MainGUI extends JFrame {
 
         JButton showAllOrdersButton = new JButton("Zeige alle Bestellungen an");
         showAllOrdersButton.addActionListener(e -> {
+            OrderGUI orderGUI = new OrderGUI();
+            orderGUI.setVisible(true);
         });
         content.add(showAllOrdersButton);
 

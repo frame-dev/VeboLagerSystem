@@ -1,5 +1,7 @@
 package ch.framedev.lagersystem.classes;
 
+import ch.framedev.lagersystem.managers.ArticleManager;
+
 import java.util.Map;
 
 public class Order {
@@ -77,5 +79,19 @@ public class Order {
 
     public void setSenderKontoNumber(String senderKontoNumber) {
         this.senderKontoNumber = senderKontoNumber;
+    }
+
+    public double getTotalOrderPrice() {
+        double totalPrice = 0.0;
+        ArticleManager articleManager = ArticleManager.getInstance();
+        for (Map.Entry<String, Integer> entry : orderedArticles.entrySet()) {
+            String articleNumber = entry.getKey();
+            int quantity = entry.getValue();
+            Article article = articleManager.getArticleByNumber(articleNumber);
+            if (article != null) {
+                totalPrice += article.getSellPrice() * quantity;
+            }
+        }
+        return totalPrice;
     }
 }
