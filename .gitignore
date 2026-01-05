@@ -40,3 +40,4 @@ build/
 .DS_Store
 scans.jsonl
 /target/
+/logs/application.log
