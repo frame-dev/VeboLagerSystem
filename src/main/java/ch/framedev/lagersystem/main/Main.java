@@ -7,9 +7,11 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.DatabaseManager;
 import ch.framedev.lagersystem.scan.ScanServer;
 import ch.framedev.lagersystem.utils.ImportUtils;
+import ch.framedev.lagersystem.utils.LogUtils;
 import ch.framedev.lagersystem.utils.UserDataDir;
 import ch.framedev.simplejavautils.Settings;
 
+import javax.swing.*;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +20,8 @@ public class Main {
 
     public static DatabaseManager databaseManager;
     public static ArticleListGUI articleListGUI;
+
+    public static LogUtils logUtils = new LogUtils();
 
     public static String userName = "Unbekannt";
 
@@ -34,6 +38,7 @@ public class Main {
         if (!getAppDataDir().exists()) {
             if (!getAppDataDir().mkdirs()) {
                 System.err.println("Konnte Anwendungsdatenverzeichnis nicht erstellen: " + getAppDataDir().getAbsolutePath());
+                logUtils.addLog("Konnte Anwendungsdatenverzeichnis nicht erstellen: " + getAppDataDir().getAbsolutePath());
             }
         }
 
@@ -58,10 +63,16 @@ public class Main {
             boolean inserted = ArticleManager.getInstance().insertArticle(article);
             if (inserted) {
                 System.out.println("Importierter Artikel: " + name + " (Artikelnummer: " + number + ")");
+                logUtils.addLog("Importierter Artikel: " + name + " (Artikelnummer: " + number + ")");
             } else {
                 System.out.println("Artikel bereits vorhanden, übersprungen: " + name + " (Artikelnummer: " + number + ")");
             }
         }
+        String input = JOptionPane.showInputDialog("Bitte geben Sie Ihren Benutzernamen ein:");
+        if (input != null && !input.trim().isEmpty()) {
+            userName = input.trim();
+        }
+        System.out.println("Benutzername gesetzt auf: " + userName);
         MainGUI mainGUI = new MainGUI();
         mainGUI.display();
     }
