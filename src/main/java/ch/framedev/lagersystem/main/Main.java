@@ -71,6 +71,9 @@ public class Main {
         String input = JOptionPane.showInputDialog("Bitte geben Sie Ihren Benutzernamen ein:");
         if (input != null && !input.trim().isEmpty()) {
             userName = input.trim();
+        } else {
+            JOptionPane.showMessageDialog(null, "Benutzername ungültig, Standardname 'Unbekannt' wird verwendet.", "Warnung", JOptionPane.WARNING_MESSAGE);
+            userName = "Unbekannt";
         }
         System.out.println("Benutzername gesetzt auf: " + userName);
         MainGUI mainGUI = new MainGUI();

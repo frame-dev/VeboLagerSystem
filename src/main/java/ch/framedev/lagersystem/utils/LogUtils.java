@@ -1,51 +1,61 @@
 package ch.framedev.lagersystem.utils;
 
 import ch.framedev.lagersystem.main.Main;
-import ch.framedev.simplejavautils.SimpleJavaUtils;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.List;
+import java.util.Date;
 
 public class LogUtils {
 
-    private List<String> logs;
+    private final Logger LOGGER = LogManager.getLogger(LogUtils.class);
     private final File LOG_FILE;
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
     public LogUtils() {
         this.LOG_FILE = new File(Main.getAppDataDir(), "vebo_lager_system.log");
-        if(!LOG_FILE.getParentFile().exists()) {
-            if(!LOG_FILE.getParentFile().mkdirs()) {
-                System.err.println("Konnte Log-Verzeichnis nicht erstellen: " + LOG_FILE.getParentFile().getAbsolutePath());
+        initializeLogFile();
+    }
+
+    private void initializeLogFile() {
+        // Ensure parent directory exists
+        File parentDir = LOG_FILE.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            if (!parentDir.mkdirs()) {
+                System.err.println("Konnte Log-Verzeichnis nicht erstellen: " + parentDir.getAbsolutePath());
+                return;
             }
-            if(!LOG_FILE.exists()) {
-                try {
-                    if(!LOG_FILE.createNewFile()) {
-                        System.err.println("Konnte Log-Datei nicht erstellen: " + LOG_FILE.getAbsolutePath());
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
+        }
+
+        // Ensure log file exists
+        if (!LOG_FILE.exists()) {
+            try {
+                if (!LOG_FILE.createNewFile()) {
+                    System.err.println("Konnte Log-Datei nicht erstellen: " + LOG_FILE.getAbsolutePath());
                 }
+            } catch (IOException e) {
+                LOGGER.log(Level.ERROR, "Fehler beim Erstellen der Log-Datei: {}", LOG_FILE.getAbsolutePath(), e);
             }
         }
     }
 
-    public void addLog(String logEntry) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-        logEntry = "[" + dateFormat.format(System.currentTimeMillis()) + "] " + logEntry;
-        logs.add(logEntry);
-        saveLogsToFile();
+    public synchronized void addLog(String logEntry) {
+        String timestampedEntry = "[" + dateFormat.format(new Date()) + "] " + logEntry;
+        writeLogToFile(timestampedEntry);
+        LOGGER.log(Level.INFO, logEntry);
     }
 
-    private void saveLogsToFile() {
-        try(FileWriter writer = new FileWriter(LOG_FILE, true)) {
-            for(String log : logs) {
-                writer.write(log + System.lineSeparator());
-            }
+    private void writeLogToFile(String logEntry) {
+        try (FileWriter writer = new FileWriter(LOG_FILE, true)) {
+            writer.write(logEntry + System.lineSeparator());
             writer.flush();
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (IOException e) {
+            LOGGER.log(Level.ERROR, "Fehler beim Schreiben der Log-Datei: {}", LOG_FILE.getAbsolutePath(), e);
         }
     }
 }
