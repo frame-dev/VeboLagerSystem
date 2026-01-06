@@ -11,20 +11,17 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 
 public class EditOrderGUI extends JFrame {
 
     private final Order order;
-    private JTextField orderIdField;
-    private JTextField receiverNameField;
-    private JTextField receiverKontoNumberField;
-    private JTextField orderDateField;
-    private JTextField senderNameField;
-    private JTextField senderKontoNumberField;
+    private final JTextField receiverNameField;
+    private final JTextField receiverKontoNumberField;
+    private final JTextField orderDateField;
+    private final JTextField senderNameField;
+    private final JTextField senderKontoNumberField;
 
-    private JTable articlesTable;
-    private DefaultTableModel tableModel;
+    private final DefaultTableModel tableModel;
 
     public EditOrderGUI(Order order) {
         this.order = order;
@@ -45,7 +42,7 @@ public class EditOrderGUI extends JFrame {
         mainPanel.add(new JLabel("Order ID:"), gbc);
         gbc.gridx = 1;
         gbc.weightx = 1.0;
-        orderIdField = new JTextField(order.getOrderId());
+        JTextField orderIdField = new JTextField(order.getOrderId());
         orderIdField.setEditable(false);
         mainPanel.add(orderIdField, gbc);
 
@@ -109,7 +106,7 @@ public class EditOrderGUI extends JFrame {
 
         String[] columnNames = {"Artikel", "Menge", "Preis"};
         tableModel = new DefaultTableModel(columnNames, 0);
-        articlesTable = new JTable(tableModel);
+        JTable articlesTable = new JTable(tableModel);
         JScrollPane scrollPane = new JScrollPane(articlesTable);
         scrollPane.setPreferredSize(new Dimension(700, 200));
         mainPanel.add(scrollPane, gbc);
@@ -162,10 +159,7 @@ public class EditOrderGUI extends JFrame {
         order.setSenderKontoNumber(senderKontoNumberField.getText());
 
         Map<String, Integer> tableData = getTableData();
-        Map<String, Integer> orderedArticles = new java.util.HashMap<>();
-        for (Map.Entry<String, Integer> entry : tableData.entrySet()) {
-            orderedArticles.put(entry.getKey(), (Integer) entry.getValue());
-        }
+        Map<String, Integer> orderedArticles = new java.util.HashMap<>(tableData);
         order.setOrderedArticles(orderedArticles);
 
         OrderManager orderManager = OrderManager.getInstance();
@@ -183,7 +177,7 @@ public class EditOrderGUI extends JFrame {
         Map<String, Integer> data = new java.util.HashMap<>();
         for (int i = 0; i < tableModel.getRowCount(); i++) {
             String articleName = (String) tableModel.getValueAt(i, 0);
-            int quantity = 0;
+            int quantity;
             try {
                 quantity = Integer.parseInt((String) tableModel.getValueAt(i, 1));
             } catch (NumberFormatException | ClassCastException e) {

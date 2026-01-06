@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@SuppressWarnings("unused")
 public class ArticleListGUI extends JFrame {
 
     private static Map<Article, Integer> articlesAndQuantity = new HashMap<>();
@@ -23,28 +24,21 @@ public class ArticleListGUI extends JFrame {
     private final JLabel countLabel;
 
     // Helper class to track article and quantity together
-    private static class ArticleDisplay {
-        final Article article;
-        final int quantity;
-
-        ArticleDisplay(Article article, int quantity) {
-            this.article = article;
-            this.quantity = quantity;
-        }
+        private record ArticleDisplay(Article article, int quantity) {
 
         @Override
-        public String toString() {
-            try {
-                return String.format("%s - %s (Stock: %d) | Qty: %d",
-                    article.getName(),
-                    article.getArticleNumber(),
-                    article.getStockQuantity(),
-                    quantity);
-            } catch (Exception ex) {
-                return article.toString() + " | Qty: " + quantity;
+            public String toString() {
+                try {
+                    return String.format("%s - %s (Stock: %d) | Qty: %d",
+                            article.getName(),
+                            article.getArticleNumber(),
+                            article.getStockQuantity(),
+                            quantity);
+                } catch (Exception ex) {
+                    return article.toString() + " | Qty: " + quantity;
+                }
             }
         }
-    }
 
     public ArticleListGUI() {
         setTitle("Artikel Liste");

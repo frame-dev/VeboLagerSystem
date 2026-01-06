@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("BooleanMethodIsAlwaysInverted")
 public class ClientManager {
 
     private static ClientManager instance;

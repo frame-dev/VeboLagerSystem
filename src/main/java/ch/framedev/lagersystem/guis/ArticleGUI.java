@@ -1,7 +1,6 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
-import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
 
@@ -21,6 +20,7 @@ import java.util.regex.PatternSyntaxException;
 
 import static ch.framedev.lagersystem.main.Main.articleListGUI;
 
+@SuppressWarnings("unused")
 public class ArticleGUI extends JFrame {
 
     private final JTable articleTable;
@@ -28,7 +28,7 @@ public class ArticleGUI extends JFrame {
     private final JScrollPane tableScrollPane;
     // base column widths (used as relative weights when resizing)
     private final int[] baseColumnWidths = new int[]{150, 260, 340, 110, 110, 150, 150, 200};
-    private JLabel countLabel;
+    private final JLabel countLabel;
 
     public ArticleGUI() {
         setTitle("Artikel Verwaltung");
@@ -181,8 +181,9 @@ public class ArticleGUI extends JFrame {
         // perform search using a RowFilter on columns 0 (Artikelnummer) and 1 (Name)
         Runnable doSearch = () -> {
             String text = searchField.getText().trim();
-            TableRowSorter<DefaultTableModel> sorter = null;
+            TableRowSorter<DefaultTableModel> sorter;
             if (articleTable.getRowSorter() instanceof TableRowSorter) {
+                //noinspection unchecked
                 sorter = (TableRowSorter<DefaultTableModel>) articleTable.getRowSorter();
             } else {
                 sorter = new TableRowSorter<>((DefaultTableModel) articleTable.getModel());
@@ -565,35 +566,7 @@ public class ArticleGUI extends JFrame {
 
     private void initializeTable() {
         // Provide a typed, non-editable table model so sorting & renderers behave correctly
-        DefaultTableModel model = new DefaultTableModel() {
-            @Override
-            public Class<?> getColumnClass(int columnIndex) {
-                switch (columnIndex) {
-                    case 3:
-                    case 4:
-                        return Integer.class;
-                    case 5:
-                    case 6:
-                        return Double.class;
-                    default:
-                        return String.class;
-                }
-            }
-
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; // non-editable table (editing done via dialogs)
-            }
-        };
-
-        model.addColumn("Artikelnummer");
-        model.addColumn("Name");
-        model.addColumn("Details");
-        model.addColumn("Lagerbestand");
-        model.addColumn("Mindestbestand");
-        model.addColumn("Verkaufspreis");
-        model.addColumn("Einkaufspreis");
-        model.addColumn("Lieferant");
+        DefaultTableModel model = getDefaultTableModel();
 
         articleTable.setModel(model);
 
@@ -666,6 +639,34 @@ public class ArticleGUI extends JFrame {
         header.setBackground(new Color(62, 84, 98));
         header.setForeground(Color.WHITE);
         header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
+    }
+
+    private static DefaultTableModel getDefaultTableModel() {
+        DefaultTableModel model = new DefaultTableModel() {
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                return switch (columnIndex) {
+                    case 3, 4 -> Integer.class;
+                    case 5, 6 -> Double.class;
+                    default -> String.class;
+                };
+            }
+
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // non-editable table (editing done via dialogs)
+            }
+        };
+
+        model.addColumn("Artikelnummer");
+        model.addColumn("Name");
+        model.addColumn("Details");
+        model.addColumn("Lagerbestand");
+        model.addColumn("Mindestbestand");
+        model.addColumn("Verkaufspreis");
+        model.addColumn("Einkaufspreis");
+        model.addColumn("Lieferant");
+        return model;
     }
 
     /**

@@ -5,6 +5,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -22,6 +24,8 @@ import java.util.Map;
 
 @SuppressWarnings("unused")
 public class QRCodeUtils {
+
+    private static final Logger logger = LogManager.getLogger(QRCodeUtils.class);
 
     @SuppressWarnings("unchecked")
     public static List<Map<String, Object>> retrieveQrCodeDataFromWebsite() {
@@ -52,11 +56,10 @@ public class QRCodeUtils {
                     }
                 }
             } else {
-                System.err.println("Failed to fetch QR code data from website. HTTP response code: " + responseCode);
+                logger.error("Failed to fetch QR code data. HTTP response code: {}", responseCode);
             }
         } catch (IOException e) {
-            System.err.println("Error fetching QR code data from website: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error while fetching QR code data from website", e);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         } finally {

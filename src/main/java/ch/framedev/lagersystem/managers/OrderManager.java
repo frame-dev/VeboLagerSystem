@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("UnusedReturnValue")
 public class OrderManager {
 
     private final Logger logger = LogManager.getLogger(OrderManager.class);

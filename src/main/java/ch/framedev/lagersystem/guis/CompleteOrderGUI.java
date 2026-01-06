@@ -191,6 +191,7 @@ public class CompleteOrderGUI extends JFrame {
         }
 
         // Final confirmation
+        //noinspection unused
         int res = JOptionPane.showConfirmDialog(this,
                 "Möchten Sie die Bestellung " + selected.getOrderId() + " abschließen?\n" +
                         "Der Lagerbestand wird entsprechend reduziert.",

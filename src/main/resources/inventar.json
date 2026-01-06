@@ -1120,26 +1120,6 @@
     "vendorName": "Mühlethaler"
   },
   {
-    "number": "4101",
-    "name": "Aqualyt SR Glanzreiniger",
-    "details": "20 kg",
-    "stockQuantity": 0,
-    "minStockLevel": 0,
-    "sellPrice": 131.15,
-    "buyPrice": 119.23,
-    "vendorName": "Gehrig"
-  },
-  {
-    "number": "4102",
-    "name": "Aqualyt Classic",
-    "details": "25 kg",
-    "stockQuantity": 0,
-    "minStockLevel": 0,
-    "sellPrice": 133.0,
-    "buyPrice": 121.82,
-    "vendorName": "Gehrig"
-  },
-  {
     "number": "4103",
     "name": "Dish-Lav C Abwaschpulver",
     "details": "10 kg",
@@ -1158,16 +1138,6 @@
     "sellPrice": 7.4,
     "buyPrice": 6.77,
     "vendorName": "W+R"
-  },
-  {
-    "number": "4105",
-    "name": "Aqualyt Jet",
-    "details": "25 lt.",
-    "stockQuantity": 0,
-    "minStockLevel": 0,
-    "sellPrice": 138.6,
-    "buyPrice": 126.91,
-    "vendorName": "Null"
   },
   {
     "number": "4106",
@@ -1198,36 +1168,6 @@
     "sellPrice": 14.5,
     "buyPrice": 13.27,
     "vendorName": "ZVG"
-  },
-  {
-    "number": "4109",
-    "name": "Aqualyt NS",
-    "details": "20 kg",
-    "stockQuantity": 0,
-    "minStockLevel": 0,
-    "sellPrice": 118.0,
-    "buyPrice": 108.18,
-    "vendorName": "Gehrig"
-  },
-  {
-    "number": "4110",
-    "name": "Aqualyt ES",
-    "details": "1 lt.",
-    "stockQuantity": 0,
-    "minStockLevel": 0,
-    "sellPrice": 28.0,
-    "buyPrice": 25.64,
-    "vendorName": "Gehrig"
-  },
-  {
-    "number": "4111",
-    "name": "Aqualyt TR",
-    "details": "6 kg",
-    "stockQuantity": 0,
-    "minStockLevel": 0,
-    "sellPrice": 59.15,
-    "buyPrice": 54.14,
-    "vendorName": "Gehrig"
   },
   {
     "number": "4112",

@@ -25,7 +25,7 @@ public class OrderGUI extends JFrame {
     private final JTable orderTable;
     private final JScrollPane tableScrollPane;
     private final int[] baseColumnWidths = new int[]{150, 180, 150, 150, 120, 120, 120};
-    private JLabel orderCountLabel;
+    private final JLabel orderCountLabel;
 
     public OrderGUI() {
         setTitle("Bestellungen Verwaltung");
@@ -471,6 +471,34 @@ public class OrderGUI extends JFrame {
                 .append("</tr>");
         }
 
+        JScrollPane scrollPane = getJScrollPane(order, articlesHtml, totalPrice);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        // Buttons
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        btnPanel.setBackground(Color.WHITE);
+
+        JButton exportBtn = createRoundedButton("PDF Exportieren");
+        exportBtn.addActionListener(ev -> {
+            // TODO: Add PDF export functionality
+            JOptionPane.showMessageDialog(detailsDialog,
+                "PDF Export für einzelne Bestellungen wird demnächst verfügbar sein.",
+                "Info",
+                JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        JButton closeBtn = createRoundedButton("Schließen");
+        closeBtn.addActionListener(ev -> detailsDialog.dispose());
+
+        btnPanel.add(exportBtn);
+        btnPanel.add(closeBtn);
+        panel.add(btnPanel, BorderLayout.SOUTH);
+
+        detailsDialog.add(panel);
+        detailsDialog.setVisible(true);
+    }
+
+    private static JScrollPane getJScrollPane(Order order, StringBuilder articlesHtml, double totalPrice) {
         String htmlContent = "<html><body style='font-family: Arial, sans-serif; padding: 10px;'>" +
             "<h2 style='color: #1e3a5f; margin-bottom: 20px;'>Bestelldetails</h2>" +
             "<table style='width: 100%; margin-bottom: 20px;'>" +
@@ -501,31 +529,7 @@ public class OrderGUI extends JFrame {
         JEditorPane editorPane = new JEditorPane("text/html", htmlContent);
         editorPane.setEditable(false);
         editorPane.setBackground(Color.WHITE);
-        JScrollPane scrollPane = new JScrollPane(editorPane);
-        panel.add(scrollPane, BorderLayout.CENTER);
-
-        // Buttons
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
-        btnPanel.setBackground(Color.WHITE);
-
-        JButton exportBtn = createRoundedButton("PDF Exportieren");
-        exportBtn.addActionListener(ev -> {
-            // TODO: Add PDF export functionality
-            JOptionPane.showMessageDialog(detailsDialog,
-                "PDF Export für einzelne Bestellungen wird demnächst verfügbar sein.",
-                "Info",
-                JOptionPane.INFORMATION_MESSAGE);
-        });
-
-        JButton closeBtn = createRoundedButton("Schließen");
-        closeBtn.addActionListener(ev -> detailsDialog.dispose());
-
-        btnPanel.add(exportBtn);
-        btnPanel.add(closeBtn);
-        panel.add(btnPanel, BorderLayout.SOUTH);
-
-        detailsDialog.add(panel);
-        detailsDialog.setVisible(true);
+        return new JScrollPane(editorPane);
     }
 
     // small rounded panel for card styling

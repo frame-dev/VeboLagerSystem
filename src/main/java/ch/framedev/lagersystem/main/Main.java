@@ -2,11 +2,9 @@ package ch.framedev.lagersystem.main;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.User;
-import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.guis.ArticleListGUI;
 import ch.framedev.lagersystem.guis.MainGUI;
 import ch.framedev.lagersystem.managers.*;
-import ch.framedev.lagersystem.scan.ScanServer;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;

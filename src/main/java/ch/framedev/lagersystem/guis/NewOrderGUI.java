@@ -356,16 +356,17 @@ public class NewOrderGUI extends JFrame {
         orderManager.insertOrder(order);
     }
 
+    @SuppressWarnings("deprecation")
     private void exportOrderToPDF(File file) throws IOException {
         try (PDDocument doc = new PDDocument()) {
             PDPage page = new PDPage();
             doc.addPage(page);
 
-            // Try to load a system TTF on macOS; fallback to bundled font or error message
+            // Load fonts
             PDFont regularFont = null;
             PDFont boldFont = null;
             File regularTtf = new File("/Library/Fonts/Arial.ttf");
-            File boldTtf = new File("/Library/Fonts/Arial Bold.ttf"); // common macOS paths
+            File boldTtf = new File("/Library/Fonts/Arial Bold.ttf");
 
             if (regularTtf.exists()) {
                 regularFont = PDType0Font.load(doc, regularTtf);
@@ -375,7 +376,6 @@ public class NewOrderGUI extends JFrame {
                     boldFont = regularFont;
                 }
             } else {
-                // As a fallback attempt to use built-in Type1 fonts via reflection (won't crash compile if missing)
                 try {
                     Class<?> c = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
                     Object helv = c.getField("HELVETICA").get(null);
@@ -384,7 +384,6 @@ public class NewOrderGUI extends JFrame {
                     if (helvBold instanceof PDFont) boldFont = (PDFont) helvBold;
                     if (regularFont != null && boldFont == null) boldFont = regularFont;
                 } catch (Exception ignored) {
-                    // no PDType1Font available or fields missing
                 }
             }
 
@@ -393,47 +392,215 @@ public class NewOrderGUI extends JFrame {
             }
 
             try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+                float pageWidth = page.getMediaBox().getWidth();
+                float margin = 50;
+                float yPosition = 750;
+
+                // === HEADER SECTION ===
+                // Company name / logo area (top right)
+                cs.setNonStrokingColor(30, 58, 95); // Dark blue
+                cs.addRect(margin, yPosition, pageWidth - 2 * margin, 60);
+                cs.fill();
+
                 cs.beginText();
-                cs.setFont(boldFont, 14);
-                cs.newLineAtOffset(50, 750);
-                cs.showText("Bestellung");
-                cs.newLineAtOffset(0, -20);
+                cs.setNonStrokingColor(255, 255, 255); // White
+                cs.setFont(boldFont, 24);
+                cs.newLineAtOffset(margin + 10, yPosition + 25);
+                cs.showText("VEBO BESTELLUNG");
+                cs.endText();
 
+                yPosition -= 80;
+
+                // Date and Order ID section
+                cs.beginText();
+                cs.setNonStrokingColor(0, 0, 0);
+                cs.setFont(boldFont, 11);
+                cs.newLineAtOffset(margin, yPosition);
+                cs.showText("Bestelldatum:");
+                cs.endText();
+
+                cs.beginText();
+                cs.setFont(regularFont, 11);
+                cs.newLineAtOffset(margin + 100, yPosition);
+                cs.showText(new SimpleDateFormat("dd.MM.yyyy").format(new Date()));
+                cs.endText();
+
+                yPosition -= 18;
+
+                cs.beginText();
+                cs.setFont(boldFont, 11);
+                cs.newLineAtOffset(margin, yPosition);
+                cs.showText("Bestell-ID:");
+                cs.endText();
+
+                cs.beginText();
+                cs.setFont(regularFont, 11);
+                cs.newLineAtOffset(margin + 100, yPosition);
+                cs.showText("ORD" + System.currentTimeMillis());
+                cs.endText();
+
+                yPosition -= 30;
+
+                // === SENDER / RECEIVER SECTION ===
+                // Draw background boxes
+                float boxHeight = 85;
+                cs.setNonStrokingColor(245, 247, 250); // Light gray
+                cs.addRect(margin, yPosition - boxHeight, (pageWidth - 2 * margin - 10) / 2, boxHeight);
+                cs.fill();
+
+                cs.setNonStrokingColor(245, 247, 250);
+                cs.addRect(margin + (pageWidth - 2 * margin) / 2 + 5, yPosition - boxHeight, (pageWidth - 2 * margin - 10) / 2, boxHeight);
+                cs.fill();
+
+                // Sender (left box)
+                cs.beginText();
+                cs.setNonStrokingColor(0, 0, 0);
+                cs.setFont(boldFont, 12);
+                cs.newLineAtOffset(margin + 10, yPosition - 15);
+                cs.showText("ABSENDER");
+                cs.endText();
+
+                cs.beginText();
                 cs.setFont(regularFont, 10);
-                cs.showText("Datum: " + new SimpleDateFormat("dd.MM.yyyy").format(new Date()));
-                cs.newLineAtOffset(0, -20);
-                cs.showText(String.format("Empfänger: %s", receiverNameCombobox.getSelectedItem() != null ? receiverNameCombobox.getSelectedItem().toString().trim() : ""));
-                cs.newLineAtOffset(0, -15);
-                cs.showText(String.format("Empf. Konto: %s", receiverKontoField.getText().trim()));
-                cs.newLineAtOffset(0, -20);
-                cs.showText(String.format("Absender: %s", senderNameField.getText().trim()));
-                cs.newLineAtOffset(0, -15);
-                cs.showText(String.format("Abs. Konto: %s", senderKontoField.getText().trim()));
-                cs.newLineAtOffset(0, -20);
-                cs.showText(String.format("Abteilung: %s", departmentList.getSelectedItem() != null ? departmentList.getSelectedItem().toString().trim() : ""));
-                cs.newLineAtOffset(0, -25);
-                cs.showText("------------------------------------------------------------");
-                cs.newLineAtOffset(0, -18);
-                cs.showText(String.format("%-30s | %6s | %10s | %10s", "Artikel", "Menge", "Preis", "Gesamt"));
-                cs.newLineAtOffset(0, -15);
-                cs.showText("------------------------------------------------------------");
+                cs.newLineAtOffset(margin + 10, yPosition - 32);
+                cs.showText(senderNameField.getText().trim());
+                cs.endText();
 
+                cs.beginText();
+                cs.setFont(regularFont, 9);
+                cs.newLineAtOffset(margin + 10, yPosition - 47);
+                cs.showText("Konto: " + senderKontoField.getText().trim());
+                cs.endText();
+
+                // Receiver (right box)
+                float rightBoxX = margin + (pageWidth - 2 * margin) / 2 + 15;
+                cs.beginText();
+                cs.setFont(boldFont, 12);
+                cs.newLineAtOffset(rightBoxX, yPosition - 15);
+                cs.showText("EMPFÄNGER");
+                cs.endText();
+
+                String receiver = receiverNameCombobox.getSelectedItem() != null ? receiverNameCombobox.getSelectedItem().toString().trim() : "";
+                cs.beginText();
+                cs.setFont(regularFont, 10);
+                cs.newLineAtOffset(rightBoxX, yPosition - 32);
+                cs.showText(receiver);
+                cs.endText();
+
+                cs.beginText();
+                cs.setFont(regularFont, 9);
+                cs.newLineAtOffset(rightBoxX, yPosition - 47);
+                cs.showText("Konto: " + receiverKontoField.getText().trim());
+                cs.endText();
+
+                String dept = departmentList.getSelectedItem() != null ? departmentList.getSelectedItem().toString().trim() : "";
+                cs.beginText();
+                cs.setFont(regularFont, 9);
+                cs.newLineAtOffset(rightBoxX, yPosition - 62);
+                cs.showText("Abteilung: " + dept);
+                cs.endText();
+
+                yPosition -= boxHeight + 30;
+
+                // === ARTICLES TABLE ===
+                // Table header
+                cs.setNonStrokingColor(62, 84, 98); // Dark blue-gray
+                cs.addRect(margin, yPosition - 20, pageWidth - 2 * margin, 20);
+                cs.fill();
+
+                cs.beginText();
+                cs.setNonStrokingColor(255, 255, 255);
+                cs.setFont(boldFont, 10);
+                cs.newLineAtOffset(margin + 5, yPosition - 14);
+                cs.showText("Artikel");
+                cs.newLineAtOffset(200, 0);
+                cs.showText("Menge");
+                cs.newLineAtOffset(60, 0);
+                cs.showText("Einzelpreis");
+                cs.newLineAtOffset(80, 0);
+                cs.showText("Gesamt");
+                cs.endText();
+
+                yPosition -= 25;
+
+                // Table rows
                 double total = 0.0;
+                boolean alternateRow = false;
                 for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
                     Article a = e.getKey();
                     int qty = e.getValue();
                     double unit = safePrice(a);
                     double line = unit * qty;
                     total += line;
-                    cs.newLineAtOffset(0, -15);
-                    String lineTxt = String.format("%-30s | %6d | %10.2f CHF | %10.2f CHF", a.getName() + "(" + a.getArticleNumber() + ")" + a.getDetails(), qty, unit, line);
-                    cs.showText(lineTxt);
+
+                    // Alternate row background
+                    if (alternateRow) {
+                        cs.setNonStrokingColor(250, 250, 250);
+                        cs.addRect(margin, yPosition - 15, pageWidth - 2 * margin, 18);
+                        cs.fill();
+                    }
+
+                    cs.beginText();
+                    cs.setNonStrokingColor(0, 0, 0);
+                    cs.setFont(regularFont, 9);
+                    cs.newLineAtOffset(margin + 5, yPosition - 10);
+                    // Truncate long article names
+                    String articleName = a.getName();
+                    if (articleName.length() > 35) {
+                        articleName = articleName.substring(0, 32) + "...";
+                    }
+                    cs.showText(articleName + " (" + a.getArticleNumber() + ")");
+                    cs.newLineAtOffset(200, 0);
+                    cs.showText(String.valueOf(qty));
+                    cs.newLineAtOffset(60, 0);
+                    cs.showText(String.format("%.2f CHF", unit));
+                    cs.newLineAtOffset(80, 0);
+                    cs.showText(String.format("%.2f CHF", line));
+                    cs.endText();
+
+                    yPosition -= 18;
+                    alternateRow = !alternateRow;
+
+                    // Check if we need a new page
+                    if (yPosition < 150) {
+                        PDPage newPage = new PDPage();
+                        doc.addPage(newPage);
+                        cs.close();
+                        // Continue on new page (simplified - in production you'd handle this better)
+                        break;
+                    }
                 }
 
-                cs.newLineAtOffset(0, -20);
-                cs.showText("------------------------------------------------------------");
-                cs.newLineAtOffset(0, -18);
-                cs.showText(String.format("Total: %.2f CHF", total));
+                // === TOTALS SECTION ===
+                yPosition -= 10;
+                cs.setNonStrokingColor(200, 200, 200);
+                cs.setLineWidth(1);
+                cs.moveTo(margin, yPosition);
+                cs.lineTo(pageWidth - margin, yPosition);
+                cs.stroke();
+
+                yPosition -= 25;
+
+                // Total box
+                cs.setNonStrokingColor(30, 58, 95);
+                cs.addRect(pageWidth - margin - 150, yPosition - 25, 150, 30);
+                cs.fill();
+
+                cs.beginText();
+                cs.setNonStrokingColor(255, 255, 255);
+                cs.setFont(boldFont, 12);
+                cs.newLineAtOffset(pageWidth - margin - 140, yPosition - 15);
+                cs.showText("TOTAL:");
+                cs.newLineAtOffset(50, 0);
+                cs.showText(String.format("%.2f CHF", total));
+                cs.endText();
+
+                // === FOOTER ===
+                cs.beginText();
+                cs.setNonStrokingColor(150, 150, 150);
+                cs.setFont(regularFont, 8);
+                cs.newLineAtOffset(margin, 30);
+                cs.showText("VEBO Lagersystem - Generiert am " + new SimpleDateFormat("dd.MM.yyyy HH:mm").format(new Date()));
                 cs.endText();
             }
 
@@ -452,16 +619,14 @@ public class NewOrderGUI extends JFrame {
     }
 
     private String getHelpText() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<html><h2>Hilfe - Neue Bestellung erstellen</h2>")
-                .append("<p>In diesem Fenster können Sie eine neue Bestellung zusammenstellen.</p>")
-                .append("<ul>")
-                .append("<li>Wählen Sie Artikel aus der Liste und fügen Sie Mengen hinzu.</li>")
-                .append("<li>Geben Sie Empfänger und Absender an.</li>")
-                .append("<li>Klicken Sie auf \"Bestellen\" um die Bestellung zu speichern.</li>")
-                .append("<li>Mit \"Export PDF\" erzeugen Sie ein PDF mit allen Daten.</li>")
-                .append("</ul>");
-        return sb.toString();
+        return "<html><h2>Hilfe - Neue Bestellung erstellen</h2>" +
+                "<p>In diesem Fenster können Sie eine neue Bestellung zusammenstellen.</p>" +
+                "<ul>" +
+                "<li>Wählen Sie Artikel aus der Liste und fügen Sie Mengen hinzu.</li>" +
+                "<li>Geben Sie Empfänger und Absender an.</li>" +
+                "<li>Klicken Sie auf \"Bestellen\" um die Bestellung zu speichern.</li>" +
+                "<li>Mit \"Export PDF\" erzeugen Sie ein PDF mit allen Daten.</li>" +
+                "</ul>";
     }
 
     private JButton createRoundedButton(String text) {

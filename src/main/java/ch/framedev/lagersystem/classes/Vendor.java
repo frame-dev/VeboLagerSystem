@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.classes;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class Vendor {
 
     private String name;

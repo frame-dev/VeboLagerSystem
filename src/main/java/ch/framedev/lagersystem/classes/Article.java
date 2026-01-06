@@ -1,5 +1,6 @@
 package ch.framedev.lagersystem.classes;
 
+@SuppressWarnings("unused")
 public class Article {
 
     private String articleNumber;

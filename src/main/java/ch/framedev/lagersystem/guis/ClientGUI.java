@@ -1,7 +1,6 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.managers.ClientManager;
-import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
 
 import javax.swing.*;

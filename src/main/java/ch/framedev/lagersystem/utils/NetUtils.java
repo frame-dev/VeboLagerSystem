@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.net.*;
 import java.util.Enumeration;
 
+@SuppressWarnings("unused")
 public final class NetUtils {
 
     private NetUtils() {
@@ -76,7 +77,7 @@ public final class NetUtils {
     public static String getPublicIp() {
         String service = "https://api.ipify.org";
         try {
-            HttpURLConnection conn = (HttpURLConnection) new URL(service).openConnection();
+            HttpURLConnection conn = (HttpURLConnection) new URI(service).toURL().openConnection();
             conn.setConnectTimeout(2000);
             conn.setReadTimeout(2000);
             conn.setRequestMethod("GET");

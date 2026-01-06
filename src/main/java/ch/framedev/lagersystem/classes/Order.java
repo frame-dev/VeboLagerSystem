@@ -4,6 +4,7 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 
 import java.util.Map;
 
+@SuppressWarnings("unused")
 public class Order {
 
     private String orderId;

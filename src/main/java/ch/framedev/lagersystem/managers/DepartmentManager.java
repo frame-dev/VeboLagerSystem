@@ -1,12 +1,17 @@
 package ch.framedev.lagersystem.managers;
 
 import ch.framedev.lagersystem.main.Main;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("unused")
 public class DepartmentManager {
+
+    private final Logger logger = LogManager.getLogger(DepartmentManager.class);
 
     private static DepartmentManager instance;
     private final DatabaseManager databaseManager;
@@ -76,7 +81,7 @@ public class DepartmentManager {
             }
             return null;
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error getting department", e);
             return null;
         }
     }
@@ -92,7 +97,7 @@ public class DepartmentManager {
                 ));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error while getting all departments", e);
         }
         return departments;
     }

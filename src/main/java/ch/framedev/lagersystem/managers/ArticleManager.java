@@ -10,6 +10,7 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class ArticleManager {
 
     private final Logger logger = LogManager.getLogger(ArticleManager.class);
@@ -61,7 +62,7 @@ public class ArticleManager {
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
         VendorManager vendorManager = VendorManager.getInstance();
         if (!vendorManager.existsVendor(article.getVendorName())) {
-            Vendor vendor = vendor = new Vendor(article.getVendorName(), "", "", "", "", new ArrayList<>());
+            Vendor vendor = new Vendor(article.getVendorName(), "", "", "", "", new ArrayList<>());
             vendor.getSuppliedArticles().add(article.getArticleNumber());
             vendorManager.insertVendor(vendor);
         } else {
@@ -84,7 +85,7 @@ public class ArticleManager {
                 "WHERE articleNumber = ?;";
         VendorManager vendorManager = VendorManager.getInstance();
         if (!vendorManager.existsVendor(article.getVendorName())) {
-            Vendor vendor = vendor = new Vendor(article.getVendorName(), "", "", "", "", new ArrayList<>());
+            Vendor vendor = new Vendor(article.getVendorName(), "", "", "", "", new ArrayList<>());
             vendor.getSuppliedArticles().add(article.getArticleNumber());
             vendorManager.insertVendor(vendor);
         } else {

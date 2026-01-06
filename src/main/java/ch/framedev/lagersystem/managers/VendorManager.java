@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("UnusedReturnValue")
 public class VendorManager {
 
     private final Logger logger = LogManager.getLogger(VendorManager.class);

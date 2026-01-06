@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 
+@SuppressWarnings({"UnusedReturnValue", "unused"})
 public class UserManager {
 
     private final Logger logger = LogManager.getLogger(UserManager.class);

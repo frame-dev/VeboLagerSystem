@@ -2,9 +2,10 @@ package ch.framedev.lagersystem.classes;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class User {
 
-    private String name;
+    private final String name;
     private List<String> orders;
 
     public User(String name, List<String> orders) {

@@ -1,8 +1,6 @@
 package ch.framedev.lagersystem.actions;
 
-import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.guis.CompleteOrderGUI;
-import ch.framedev.lagersystem.guis.EditOrderGUI;
 import ch.framedev.lagersystem.guis.NewOrderGUI;
 
 import java.awt.event.ActionEvent;
@@ -15,14 +13,6 @@ public class OrderActions {
         public void actionPerformed(ActionEvent e) {
             NewOrderGUI newOrderGUI = new NewOrderGUI();
             newOrderGUI.display();
-        }
-    }
-
-    public static class DeleteOrderAction implements ActionListener {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            // Logic to delete an order
-            System.out.println("Deleting an order...");
         }
     }
 

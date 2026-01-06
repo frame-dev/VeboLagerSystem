@@ -21,6 +21,7 @@ import java.util.WeakHashMap;
  * Note: executeQuery returns a ResultSet and keeps the creating Statement tracked.
  * Callers must call closeQuery(ResultSet) when finished to close both ResultSet and Statement.
  */
+@SuppressWarnings({"UnusedReturnValue", "unused"})
 public class DatabaseManager {
 
     private final Logger logger = LogManager.getLogger(DatabaseManager.class);
@@ -28,7 +29,6 @@ public class DatabaseManager {
     public static final String TABLE_ARTICLES = "articles";
     public static final String TABLE_VENDORS = "vendors";
     public static final String TABLE_ORDERS = "orders";
-    public static final String TABLE_USERS = "users";
 
     private final Connection connection;
 
@@ -148,11 +148,10 @@ public class DatabaseManager {
             }
 
             try {
-                int paramCount = pstmt.getParameterMetaData().getParameterCount();
-                if (values.length < paramCount) {
-                    throw new IllegalArgumentException("Not enough parameters: expected " + paramCount + " but got " + values.length);
+                int bindCount = pstmt.getParameterMetaData().getParameterCount();
+                if (values.length < bindCount) {
+                    throw new IllegalArgumentException("Not enough parameters: expected " + bindCount + " but got " + values.length);
                 }
-                int bindCount = Math.min(values.length, paramCount);
                 for (int i = 0; i < bindCount; i++) {
                     pstmt.setObject(i + 1, values[i]);
                 }
