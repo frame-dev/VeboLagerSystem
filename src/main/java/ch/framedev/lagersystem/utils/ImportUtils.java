@@ -24,6 +24,7 @@ public class ImportUtils {
     private static final Logger LOGGER = LogManager.getLogger(ImportUtils.class);
     private final File INVENTORY_FILE;
     private final File VENDOR_FILE;
+    private final File DEPARTMENT_FILE;
     private static volatile ImportUtils instance;
 
     private ImportUtils() {
@@ -44,6 +45,15 @@ public class ImportUtils {
         } else {
             LOGGER.info("Vendor file loaded: {}", VENDOR_FILE.getAbsolutePath());
         }
+
+        DEPARTMENT_FILE = new SimpleJavaUtils().getFromResourceFile("departments.json", Main.class);
+        if (DEPARTMENT_FILE == null) {
+            LOGGER.warn("Department file 'departments.json' not found in resources");
+        } else if (!DEPARTMENT_FILE.exists()) {
+            LOGGER.warn("Department file does not exist: {}", DEPARTMENT_FILE.getAbsolutePath());
+        } else {
+            LOGGER.info("Department file loaded: {}", DEPARTMENT_FILE.getAbsolutePath());
+        }
     }
 
     public static ImportUtils getInstance() {
@@ -55,6 +65,37 @@ public class ImportUtils {
             }
         }
         return instance;
+    }
+
+    public List<Map<String, Object>> loadDepartmentsList() {
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        if(DEPARTMENT_FILE == null || !DEPARTMENT_FILE.exists()) {
+            LOGGER.warn("Cannot load file 'departments.json' from resources.");
+            return list;
+        }
+
+        Gson gson = new Gson();
+        try (FileReader reader = new FileReader(DEPARTMENT_FILE)) {
+            JsonArray jsonArray = gson.fromJson(reader, JsonArray.class);
+            if (jsonArray == null) {
+                LOGGER.info("Loaded {} departments from file 'departments.json'.", 0);
+                return list;
+            }
+            for (JsonElement jsonElement : jsonArray) {
+                if (!jsonElement.isJsonObject()) {
+                    LOGGER.debug("Skipping non-object element in departments array");
+                    continue;
+                }
+                JsonObject jsonObject = jsonElement.getAsJsonObject();
+                Map<String, Object> itemData = parseJsonObject(gson, jsonObject);
+                list.add(itemData);
+            }
+            LOGGER.info("Loaded {} departments from file 'departments.json'.", list.size());
+        } catch (IOException e) {
+            LOGGER.error("Failed to load departments from file 'departments.json'", e);
+        }
+        return list;
     }
 
     public List<Map<String, Object>> loadVendorList() {
@@ -69,7 +110,7 @@ public class ImportUtils {
         try (FileReader reader = new FileReader(VENDOR_FILE)) {
             JsonArray jsonArray = gson.fromJson(reader, JsonArray.class);
             if(jsonArray == null) {
-                LOGGER.info("Loaded {} vendors from file 'vendor.json'.", jsonArray.size());
+                LOGGER.info("Loaded {} vendors from file 'vendor.json'.", 0);
                 return list;
             }
             for (JsonElement jsonElement : jsonArray) {

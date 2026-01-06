@@ -14,6 +14,7 @@ public class Order {
     private String senderName;
     private String senderKontoNumber;
     private String department;
+    private String status;
 
     public Order(String orderId, Map<String, Integer> orderedArticles, String receiverName,
                  String receiverKontoNumber, String orderDate, String senderName, String senderKontoNumber, String department) {
@@ -25,6 +26,19 @@ public class Order {
         this.senderName = senderName;
         this.senderKontoNumber = senderKontoNumber;
         this.department = department;
+        this.status = "Pending";
+    }
+
+    public Order(String orderId, Map<String, Integer> orderedArticles, String receiverName, String receiverKontoNumber, String orderDate, String senderName, String senderKontoNumber, String department, String status) {
+        this.orderId = orderId;
+        this.orderedArticles = orderedArticles;
+        this.receiverName = receiverName;
+        this.receiverKontoNumber = receiverKontoNumber;
+        this.orderDate = orderDate;
+        this.senderName = senderName;
+        this.senderKontoNumber = senderKontoNumber;
+        this.department = department;
+        this.status = status;
     }
 
     public String getOrderId() {
@@ -89,6 +103,14 @@ public class Order {
 
     public void setDepartment(String department) {
         this.department = department;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public double getTotalOrderPrice() {

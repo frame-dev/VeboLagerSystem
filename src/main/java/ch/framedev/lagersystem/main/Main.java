@@ -5,10 +5,7 @@ import ch.framedev.lagersystem.classes.User;
 import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.guis.ArticleListGUI;
 import ch.framedev.lagersystem.guis.MainGUI;
-import ch.framedev.lagersystem.managers.ArticleManager;
-import ch.framedev.lagersystem.managers.DatabaseManager;
-import ch.framedev.lagersystem.managers.UserManager;
-import ch.framedev.lagersystem.managers.VendorManager;
+import ch.framedev.lagersystem.managers.*;
 import ch.framedev.lagersystem.scan.ScanServer;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
@@ -96,6 +93,23 @@ public class Main {
                 logUtils.addLog("Importierter Lieferant: " + vendorName);
             }
         }
+
+        DepartmentManager departmentManager = DepartmentManager.getInstance();
+        List<Map<String,Object>> departmentData = ImportUtils.getInstance().loadDepartmentsList();
+        for(Map<String,Object> itemData : departmentData) {
+            String departmentName = (String) itemData.get("department");
+            String kontoNumber = (String) itemData.get("kontoNumber");
+            if(!departmentManager.existsDepartment(departmentName)) {
+                if(!departmentManager.insertDepartment(departmentName, kontoNumber)) {
+                    System.out.println("Fehler beim Einfügen der Abteilung: " + departmentName);
+                    logUtils.addLog("Fehler beim Einfügen der Abteilung: " + departmentName);
+                    continue;
+                }
+                System.out.println("Importierte Abteilung: " + departmentName);
+                logUtils.addLog("Importierte Abteilung: " + departmentName);
+            }
+        }
+
 
         User user = new User("marc", new ArrayList<>());
         UserManager userManager = UserManager.getInstance();

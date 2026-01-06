@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
+import ch.framedev.lagersystem.utils.QRCodeUtils;
 
 import javax.swing.*;
 import javax.swing.table.*;
@@ -13,6 +14,8 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.NumberFormat;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -25,6 +28,7 @@ public class ArticleGUI extends JFrame {
     private final JScrollPane tableScrollPane;
     // base column widths (used as relative weights when resizing)
     private final int[] baseColumnWidths = new int[]{150, 260, 340, 110, 110, 150, 150, 200};
+    private JLabel countLabel;
 
     public ArticleGUI() {
         setTitle("Artikel Verwaltung");
@@ -119,12 +123,14 @@ public class ArticleGUI extends JFrame {
 
         JButton retrieveQrCodeDataButton = createRoundedButton("QR-Code Daten abrufen");
         retrieveQrCodeDataButton.addActionListener(e -> {
-
+            List<Map<String, Object>> qrCodeData = QRCodeUtils.retrieveQrCodeDataFromWebsite();
+            JOptionPane.showMessageDialog(this, "Es wurden " + qrCodeData.size() + " QR-Code Datensätze abgerufen.", "QR-Code Daten", JOptionPane.INFORMATION_MESSAGE);
         });
 
         toolbarWrapper.add(addArticleButton);
         toolbarWrapper.add(editArticleButton);
         toolbarWrapper.add(deleteArticleButton);
+        toolbarWrapper.add(retrieveQrCodeDataButton);
 
         // top area: header + toolbar stacked
         JPanel topPanel = new JPanel(new BorderLayout());
@@ -205,7 +211,7 @@ public class ArticleGUI extends JFrame {
         // Enter key triggers search
         searchField.addActionListener(e -> doSearch.run());
 
-        JLabel countLabel = new JLabel("Anzahl Artikel: " + articleTable.getRowCount());
+        countLabel = new JLabel("Anzahl Artikel: " + articleTable.getRowCount());
         searchPanel.add(countLabel);
 
         searchPanel.add(searchLabel);
@@ -718,11 +724,13 @@ public class ArticleGUI extends JFrame {
     public void addArticleRow(Object[] rowData) {
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
         model.addRow(rowData);
+        updateCountLabel();
     }
 
     public void removeArticleRow(int rowIndex) {
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
         model.removeRow(rowIndex);
+        updateCountLabel();
     }
 
     public JTable getArticleTable() {
@@ -777,6 +785,13 @@ public class ArticleGUI extends JFrame {
                     a.getVendorName()
             });
         }
+        updateCountLabel();
+    }
+
+    private void updateCountLabel() {
+        if (countLabel != null) {
+            countLabel.setText("Anzahl Artikel: " + articleTable.getRowCount());
+        }
     }
 
     private void deleteSelectedArticle() {
@@ -790,14 +805,19 @@ public class ArticleGUI extends JFrame {
         if (confirm != JOptionPane.YES_OPTION) return;
 
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-        String artikelnummer = (String) model.getValueAt(selectedRow, 0);
+        int modelRow = articleTable.convertRowIndexToModel(selectedRow);
+        String artikelnummer = (String) model.getValueAt(modelRow, 0);
 
-        // Remove from table
-        model.removeRow(selectedRow);
-
-        // Remove from database
+        // Remove from database first
         ArticleManager articleManager = ArticleManager.getInstance();
-        articleManager.deleteArticleByNumber(artikelnummer);
+        if (articleManager.deleteArticleByNumber(artikelnummer)) {
+            // Only remove from table if DB deletion succeeded
+            model.removeRow(modelRow);
+            updateCountLabel();
+            JOptionPane.showMessageDialog(this, "Artikel erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Artikels aus der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     // Simple rounded panel implementation
@@ -838,36 +858,51 @@ public class ArticleGUI extends JFrame {
 
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2 && SwingUtilities.isRightMouseButton(e)) {
+                // Double left-click: Add to order list
+                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
                     int row = articleTable.rowAtPoint(e.getPoint());
-                    if (row != -1) {
-                        // Convert to model index in case sorting is active
-                        int modelRow = articleTable.convertRowIndexToModel(row);
-                        Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector().elementAt(modelRow).toArray();
-                        Object[] updated = showUpdateArticleDialog(existingData);
-                        if (updated != null) {
-                            DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-                            for (int i = 0; i < updated.length; i++) model.setValueAt(updated[i], modelRow, i);
-                            ArticleManager.getInstance().updateArticle(new Article(
-                                    (String) updated[0], (String) updated[1], (String) updated[2], (Integer) updated[3], (Integer) updated[4], (Double) updated[5], (Double) updated[6], (String) updated[7]
-                            ));
-                        }
+                    if (row == -1) return;
+
+                    int modelRow = articleTable.convertRowIndexToModel(row);
+                    Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector().elementAt(modelRow).toArray();
+                    String artikelNr = (String) existingData[0];
+
+                    Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
+                    if (article == null) {
+                        JOptionPane.showMessageDialog(ArticleGUI.this, "Artikel konnte nicht gefunden werden.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                        return;
                     }
-                } else if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
-                    int row = articleTable.rowAtPoint(e.getPoint());
-                    if (row != -1) {
-                        Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector().elementAt(articleTable.convertRowIndexToModel(row)).toArray();
-                        Article article = ArticleManager.getInstance().getArticleByNumber((String) existingData[0]);
-                        ArticleListGUI.addArticle(article, 0);
-                        if (articleListGUI == null)
+
+                    String input = JOptionPane.showInputDialog(ArticleGUI.this,
+                        "Geben Sie die Menge für \"" + article.getName() + "\" ein:",
+                        "Zur Bestellung hinzufügen",
+                        JOptionPane.PLAIN_MESSAGE);
+
+                    if (input == null) return; // User cancelled
+
+                    try {
+                        int quantity = Integer.parseInt(input.trim());
+                        if (quantity <= 0) {
+                            JOptionPane.showMessageDialog(ArticleGUI.this, "Menge muss größer als 0 sein.", "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+
+                        ArticleListGUI.addArticle(article, quantity);
+
+                        if (articleListGUI == null) {
                             articleListGUI = new ArticleListGUI();
+                        } else {
+                            articleListGUI.refreshArticleList();
+                        }
+
                         if (!articleListGUI.isVisible()) {
                             articleListGUI.display();
                         } else {
                             articleListGUI.toFront();
                         }
-                    } else {
-                        JOptionPane.showMessageDialog(ArticleGUI.this, "Artikel konnte nicht gefunden werden.", "Fehler", JOptionPane.ERROR_MESSAGE);
+
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(ArticleGUI.this, "Ungültige Menge: " + input, "Fehler", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             }

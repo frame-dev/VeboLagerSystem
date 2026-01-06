@@ -137,7 +137,7 @@ public class ClientGUI extends JFrame {
 
             int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Kunden wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
-                if (ClientManager.getInstance().deleteClient(name, konto)) {
+                if (ClientManager.getInstance().deleteClient(name)) {
                     clients.remove(modelRow);
                     ((DefaultTableModel) clientTable.getModel()).removeRow(modelRow);
                 } else {
@@ -256,7 +256,7 @@ public class ClientGUI extends JFrame {
             holder[0] = new Object[]{name, dept, konto};
             dialog.dispose();
             ClientManager clientManager = ClientManager.getInstance();
-            if(!clientManager.insertClient(name, konto, dept)) {
+            if(!clientManager.insertClient(name, dept)) {
                 JOptionPane.showMessageDialog(dialog, "Fehler beim Hinzufügen des Kunden zur Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE);
             }
         });
@@ -325,12 +325,12 @@ public class ClientGUI extends JFrame {
             holder[0] = new Object[]{name, dept, konto};
             dialog.dispose();
             ClientManager clientManager = ClientManager.getInstance();
-            if(!clientManager.existsClient(name, konto)) {
-                if(!clientManager.insertClient(name, konto, dept)) {
+            if(!clientManager.existsClient(name)) {
+                if(!clientManager.insertClient(name, dept)) {
                     JOptionPane.showMessageDialog(dialog, "Fehler beim Hinzufügen des Kunden zur Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE);
                 }
             } else {
-                if(!clientManager.updateClient(name, konto, dept)) {
+                if(!clientManager.updateClient(name, dept)) {
                     JOptionPane.showMessageDialog(dialog, "Fehler beim Aktualisieren des Kunden in der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE);
                 }
             }
@@ -380,7 +380,7 @@ public class ClientGUI extends JFrame {
 
             int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Kunden wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
-                if (ClientManager.getInstance().deleteClient(name, konto)) {
+                if (ClientManager.getInstance().deleteClient(name)) {
                     clients.remove(modelRow);
                     ((DefaultTableModel) clientTable.getModel()).removeRow(modelRow);
                 } else {

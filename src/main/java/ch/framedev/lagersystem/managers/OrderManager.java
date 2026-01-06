@@ -39,7 +39,8 @@ public class OrderManager {
                 "orderDate TEXT," +
                 "senderName TEXT," +
                 "senderKontoNumber TEXT," +
-                "department TEXT" +
+                "department TEXT," +
+                "status TEXT" +
                 ");";
         databaseManager.executeUpdate(sql);
     }
@@ -64,8 +65,8 @@ public class OrderManager {
         if (!articlesBuilder.isEmpty()) {
             articlesBuilder.setLength(articlesBuilder.length() - 1); // Remove trailing comma
         }
-        String sql = "INSERT INTO orders (orderId, orderedArticles, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber, department) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+        String sql = "INSERT INTO orders (orderId, orderedArticles, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber, department, status) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
         return databaseManager.executePreparedUpdate(sql, new Object[]{
                 order.getOrderId(),
                 articlesBuilder.toString(),
@@ -74,7 +75,8 @@ public class OrderManager {
                 order.getOrderDate(),
                 order.getSenderName(),
                 order.getSenderKontoNumber(),
-                order.getDepartment()
+                order.getDepartment(),
+                order.getStatus()
         });
     }
 
@@ -88,7 +90,7 @@ public class OrderManager {
         if (!articlesBuilder.isEmpty()) {
             articlesBuilder.setLength(articlesBuilder.length() - 1); // Remove trailing comma
         }
-        String sql = "UPDATE orders SET orderedArticles = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?" +
+        String sql = "UPDATE orders SET orderedArticles = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?, status = ?" +
                 "WHERE orderId = ?;";
         return databaseManager.executePreparedUpdate(sql, new Object[]{
                 articlesBuilder.toString(),
@@ -98,6 +100,7 @@ public class OrderManager {
                 order.getSenderName(),
                 order.getSenderKontoNumber(),
                 order.getDepartment(),
+                order.getStatus(),
                 order.getOrderId()
         });
     }
@@ -124,7 +127,8 @@ public class OrderManager {
                         resultSet.getString("orderDate"),
                         resultSet.getString("senderName"),
                         resultSet.getString("senderKontoNumber"),
-                        resultSet.getString("department")
+                        resultSet.getString("department"),
+                        resultSet.getString("status")
                 );
             }
         } catch (Exception e) {
@@ -164,7 +168,8 @@ public class OrderManager {
                         resultSet.getString("orderDate"),
                         resultSet.getString("senderName"),
                         resultSet.getString("senderKontoNumber"),
-                        resultSet.getString("department")
+                        resultSet.getString("department"),
+                        resultSet.getString("status")
                 ));
             }
             return orders;

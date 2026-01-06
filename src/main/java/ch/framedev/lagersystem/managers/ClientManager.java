@@ -20,8 +20,7 @@ public class ClientManager {
     private void createTable() {
         String sql = "CREATE TABLE IF NOT EXISTS clients (" +
                 "firstLastName TEXT," +
-                "kontoNumber TEXT," +
-                "department TEXT," +
+                "department TEXT" +
                 ");";
         databaseManager.executeUpdate(sql);
     }
@@ -33,14 +32,14 @@ public class ClientManager {
         return instance;
     }
 
-    public boolean insertClient(String firstLastName, String kontoNumber, String department) {
-        String sql = "INSERT INTO clients (firstLastName, kontoNumber, department) " +
-                "VALUES (?, ?, ?);";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName, kontoNumber, department});
+    public boolean insertClient(String firstLastName, String department) {
+        String sql = "INSERT INTO clients (firstLastName, department) " +
+                "VALUES (?, ?);";
+        return databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName, department});
     }
 
-    public boolean existsClient(String firstLastName, String kontoNumber) {
-        String sql = "SELECT * FROM clients WHERE firstLastName = '" + firstLastName + "' AND kontoNumber = '" + kontoNumber + "';";
+    public boolean existsClient(String firstLastName) {
+        String sql = "SELECT * FROM clients WHERE firstLastName = '" + firstLastName + "';";
         try (var resultSet = databaseManager.executeQuery(sql)) {
             return resultSet.next();
         } catch (Exception e) {
@@ -48,20 +47,20 @@ public class ClientManager {
         }
     }
 
-    public boolean updateClient(String firstLastName, String kontoNumber, String newDepartment) {
-        if (!existsClient(firstLastName, kontoNumber)) {
+    public boolean updateClient(String firstLastName, String newDepartment) {
+        if (!existsClient(firstLastName)) {
             return false;
         }
-        String sql = "UPDATE clients SET department = ? WHERE firstLastName = ? AND kontoNumber = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{newDepartment, firstLastName, kontoNumber});
+        String sql = "UPDATE clients SET department = ? WHERE firstLastName = ?;";
+        return databaseManager.executePreparedUpdate(sql, new Object[]{newDepartment, firstLastName});
     }
 
-    public boolean deleteClient(String firstLastName, String kontoNumber) {
-        if (!existsClient(firstLastName, kontoNumber)) {
+    public boolean deleteClient(String firstLastName) {
+        if (!existsClient(firstLastName)) {
             return false;
         }
-        String sql = "DELETE FROM clients WHERE firstLastName = ? AND kontoNumber = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName, kontoNumber});
+        String sql = "DELETE FROM clients WHERE firstLastName = ?;";
+        return databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName});
     }
 
     public List<Map<String, String>> getAllClients() {
@@ -71,7 +70,6 @@ public class ClientManager {
             while (resultSet.next()) {
                 Map<String, String> client = new HashMap<>();
                 client.put("firstLastName", resultSet.getString("firstLastName"));
-                client.put("kontoNumber", resultSet.getString("kontoNumber"));
                 client.put("department", resultSet.getString("department"));
                 clients.add(client);
             }

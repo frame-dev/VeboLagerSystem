@@ -3,6 +3,8 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.managers.ClientManager;
+import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -17,21 +19,20 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.List;
 
 public class NewOrderGUI extends JFrame {
 
-    private final JList<String> articleJList;
     private final DefaultTableModel orderTableModel;
     // track Article -> qty so prices are available
     private final Map<Article, Integer> orderArticles = new LinkedHashMap<>();
-    private final Map<String, Article> labelToArticle = new HashMap<>();
     private final JLabel totalPriceLabel;
-    private final JTextField receiverNameField;
+
+    private final JComboBox<String> receiverNameCombobox;
     private final JTextField receiverKontoField;
     private final JTextField senderNameField;
     private final JTextField senderKontoField;
-    private final JTextField departmentField;
+
+    private final JComboBox<String> departmentList;
 
     public NewOrderGUI() {
         setTitle("Neue Bestellung erstellen");
@@ -56,47 +57,9 @@ public class NewOrderGUI extends JFrame {
         // Main card
         RoundedPanel card = new RoundedPanel(Color.WHITE, 16);
         card.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        card.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.fill = GridBagConstraints.BOTH;
+        card.setLayout(new BorderLayout(8, 8));
 
-        // Left: article list
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.weightx = 0.45;
-        gbc.weighty = 1.0;
-        JPanel left = new JPanel(new BorderLayout(8, 8));
-        left.setOpaque(false);
-        JLabel listLabel = new JLabel("Verfügbare Artikel");
-        left.add(listLabel, BorderLayout.NORTH);
-
-        // get articles (if ArticleListGUI provides a map-of-Article->qty) or fallback
-        Map<Article, Integer> articles = Main.articleListGUI != null ? ArticleListGUI.getArticlesAndQuantity() : new HashMap<>();
-        DefaultListModel<String> lm = new DefaultListModel<>();
-        for (Article a : articles.keySet()) {
-            String label = a.getName() + " (Nr: " + a.getArticleNumber() + ") - " + a.getDetails();
-            lm.addElement(label);
-            labelToArticle.put(label, a);
-        }
-        articleJList = new JList<>(lm);
-        articleJList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        JScrollPane listScroll = new JScrollPane(articleJList);
-        left.add(listScroll, BorderLayout.CENTER);
-
-        JButton addToOrderBtn = createRoundedButton("Zu Bestellung hinzufügen");
-        addToOrderBtn.addActionListener(e -> addSelectedArticlesToOrder());
-        JPanel addBtnWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        addBtnWrap.setOpaque(false);
-        addBtnWrap.add(addToOrderBtn);
-        left.add(addBtnWrap, BorderLayout.SOUTH);
-
-        card.add(left, gbc);
-
-        // Right: order details
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.weightx = 0.55;
+        // Order details panel
         JPanel right = new JPanel(new GridBagLayout());
         right.setOpaque(false);
         GridBagConstraints r = new GridBagConstraints();
@@ -106,16 +69,46 @@ public class NewOrderGUI extends JFrame {
         r.gridy = 0;
         r.weightx = 1.0;
 
+        departmentList = new JComboBox<>();
+        fillDepartmentList();
+
+        receiverNameCombobox = new JComboBox<>();
+        fillReceiverNameCombobox();
+
         // Receiver / Sender form
-        receiverNameField = new JTextField();
         receiverKontoField = new JTextField();
         senderNameField = new JTextField();
         senderKontoField = new JTextField();
-        departmentField = new JTextField();
+        senderKontoField.setText("4250 - 431.689");
+
+        departmentList.addActionListener(event -> {
+            String selectedDept = (String) departmentList.getSelectedItem();
+            if (selectedDept != null && !selectedDept.trim().isEmpty()) {
+                DepartmentManager departmentManager = DepartmentManager.getInstance();
+                Map<String, Object> dept = departmentManager.getDepartment(selectedDept);
+                if (dept != null && dept.get("kontoNumber") != null) {
+                    receiverKontoField.setText(dept.get("kontoNumber").toString());
+                }
+            }
+        });
+        // Add key listener for when user types in the editable combobox
+        departmentList.getEditor().getEditorComponent().addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyReleased(java.awt.event.KeyEvent e) {
+                String typedDept = departmentList.getEditor().getItem().toString().trim();
+                if (!typedDept.isEmpty()) {
+                    DepartmentManager departmentManager = DepartmentManager.getInstance();
+                    Map<String, Object> dept = departmentManager.getDepartment(typedDept);
+                    if (dept != null && dept.get("kontoNumber") != null) {
+                        receiverKontoField.setText(dept.get("kontoNumber").toString());
+                    }
+                }
+            }
+        });
 
         right.add(new JLabel("Empfänger Name:"), r);
         r.gridy++;
-        right.add(receiverNameField, r);
+        right.add(receiverNameCombobox, r);
         r.gridy++;
         right.add(new JLabel("Empfänger Konto Nr.:"), r);
         r.gridy++;
@@ -131,7 +124,7 @@ public class NewOrderGUI extends JFrame {
         r.gridy++;
         right.add(new JLabel("Abteilung:"), r);
         r.gridy++;
-        right.add(departmentField, r);
+        right.add(departmentList, r);
 
         // Order table (show unit price and line total)
         r.gridy++;
@@ -154,6 +147,10 @@ public class NewOrderGUI extends JFrame {
         r.weighty = 0.0;
         JPanel rightBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         rightBottom.setOpaque(false);
+
+        JButton addArticlesBtn = createRoundedButton("Artikel hinzufügen");
+        addArticlesBtn.addActionListener(e -> addArticlesFromList());
+
         totalPriceLabel = new JLabel("Totalpreis: 0.00 CHF");
         JButton createOrderBtn = createRoundedButton("Bestellen");
         createOrderBtn.addActionListener(e -> onCreateOrder());
@@ -170,12 +167,13 @@ public class NewOrderGUI extends JFrame {
             }
         });
 
+        rightBottom.add(addArticlesBtn);
         rightBottom.add(totalPriceLabel);
         rightBottom.add(exportPdfBtn);
         rightBottom.add(createOrderBtn);
         right.add(rightBottom, r);
 
-        card.add(right, gbc);
+        card.add(right, BorderLayout.CENTER);
 
         // place card in center with padding background
         JPanel centerWrapper = new JPanel(new GridBagLayout());
@@ -192,6 +190,46 @@ public class NewOrderGUI extends JFrame {
         setLocationRelativeTo(null);
     }
 
+    private void fillReceiverNameCombobox() {
+        receiverNameCombobox.removeAllItems();
+        receiverNameCombobox.addItem(""); // Empty option
+
+        Set<String> clientNames = new LinkedHashSet<>();
+        ClientManager clientManager = ClientManager.getInstance();
+        for (var client : clientManager.getAllClients()) {
+            String name = client.get("firstLastName");
+            if (name != null && !name.trim().isEmpty()) {
+                clientNames.add(name.trim());
+            }
+        }
+
+        // Add sorted client names to combo box
+        clientNames.stream().sorted().forEach(receiverNameCombobox::addItem);
+
+        // Make it editable so users can enter custom names
+        receiverNameCombobox.setEditable(true);
+    }
+
+    private void fillDepartmentList() {
+        departmentList.removeAllItems();
+        departmentList.addItem(""); // Empty option
+
+        Set<String> departments = new LinkedHashSet<>();
+        DepartmentManager departmentManager = DepartmentManager.getInstance();
+        for (var department : departmentManager.getAllDepartments()) {
+            String dept = (String) department.get("department");
+            if (dept != null && !dept.trim().isEmpty()) {
+                departments.add(dept.trim());
+            }
+        }
+
+        // Add sorted departments to combo box
+        departments.stream().sorted().forEach(departmentList::addItem);
+
+        // Make it editable so users can enter custom departments
+        departmentList.setEditable(true);
+    }
+
     private File chooseSaveFile() {
         JFileChooser fc = new JFileChooser();
         fc.setSelectedFile(new File(System.getProperty("user.home"), "order_" + System.currentTimeMillis() + ".pdf"));
@@ -199,28 +237,37 @@ public class NewOrderGUI extends JFrame {
         return res == JFileChooser.APPROVE_OPTION ? fc.getSelectedFile() : null;
     }
 
-    private void addSelectedArticlesToOrder() {
-        List<String> selected = articleJList.getSelectedValuesList();
-        if (selected.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Bitte wählen Sie mindestens einen Artikel aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+    private void addArticlesFromList() {
+        // Get all articles from ArticleListGUI
+        Map<Article, Integer> articlesWithQty = ArticleListGUI.getArticlesAndQuantity();
+
+        if (articlesWithQty.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                "Keine Artikel in der Artikelliste. Bitte fügen Sie zuerst Artikel hinzu.",
+                "Keine Artikel",
+                JOptionPane.WARNING_MESSAGE);
             return;
         }
-        for (String label : selected) {
-            Article a = labelToArticle.get(label);
-            if (a == null) continue;
-            String qtyStr = JOptionPane.showInputDialog(this, "Menge für \"" + a.getName() + "\":", "1");
-            if (qtyStr == null) continue;
-            try {
-                int qty = Integer.parseInt(qtyStr.trim());
-                if (qty <= 0) continue;
-                orderArticles.merge(a, qty, Integer::sum);
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Ungültige Menge: " + qtyStr, "Fehler", JOptionPane.ERROR_MESSAGE);
+
+        // Add all articles to the order
+        for (Map.Entry<Article, Integer> entry : articlesWithQty.entrySet()) {
+            Article a = entry.getKey();
+            Integer qty = entry.getValue();
+
+            if (qty != null && qty > 0) {
+                orderArticles.put(a, qty);
             }
         }
+
         rebuildOrderTable();
         updateTotalPrice();
+
+        JOptionPane.showMessageDialog(this,
+            articlesWithQty.size() + " Artikel zur Bestellung hinzugefügt.",
+            "Erfolgreich",
+            JOptionPane.INFORMATION_MESSAGE);
     }
+
 
     private void rebuildOrderTable() {
         orderTableModel.setRowCount(0);
@@ -256,11 +303,11 @@ public class NewOrderGUI extends JFrame {
             JOptionPane.showMessageDialog(this, "Keine Artikel in der Bestellung.", "Fehler", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        String receiver = receiverNameField.getText().trim();
+        String receiver = receiverNameCombobox.getSelectedItem() != null ? receiverNameCombobox.getSelectedItem().toString().trim() : "";
         String rKonto = receiverKontoField.getText().trim();
         String sender = senderNameField.getText().trim();
         String sKonto = senderKontoField.getText().trim();
-        String department = departmentField.getText().trim();
+        String department = departmentList.getSelectedItem() != null ? departmentList.getSelectedItem().toString().trim() : "";
         if (receiver.isEmpty() || sender.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Empfänger und Absender Namen sind erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE);
             return;
@@ -355,7 +402,7 @@ public class NewOrderGUI extends JFrame {
                 cs.setFont(regularFont, 10);
                 cs.showText("Datum: " + new SimpleDateFormat("dd.MM.yyyy").format(new Date()));
                 cs.newLineAtOffset(0, -20);
-                cs.showText(String.format("Empfänger: %s", receiverNameField.getText().trim()));
+                cs.showText(String.format("Empfänger: %s", receiverNameCombobox.getSelectedItem() != null ? receiverNameCombobox.getSelectedItem().toString().trim() : ""));
                 cs.newLineAtOffset(0, -15);
                 cs.showText(String.format("Empf. Konto: %s", receiverKontoField.getText().trim()));
                 cs.newLineAtOffset(0, -20);
@@ -363,7 +410,7 @@ public class NewOrderGUI extends JFrame {
                 cs.newLineAtOffset(0, -15);
                 cs.showText(String.format("Abs. Konto: %s", senderKontoField.getText().trim()));
                 cs.newLineAtOffset(0, -20);
-                cs.showText(String.format("Abteilung: %s", departmentField.getText().trim()));
+                cs.showText(String.format("Abteilung: %s", departmentList.getSelectedItem() != null ? departmentList.getSelectedItem().toString().trim() : ""));
                 cs.newLineAtOffset(0, -25);
                 cs.showText("------------------------------------------------------------");
                 cs.newLineAtOffset(0, -18);

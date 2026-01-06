@@ -1,0 +1,150 @@
+[
+  {
+    "department": "Schreinerei",
+    "kontoNumber": "101.18"
+  },
+  {
+    "department": "Montage_Oensingen",
+    "kontoNumber": "101.21 und 37"
+  },
+  {
+    "department": "Packing",
+    "kontoNumber": "101.22"
+  },
+  {
+    "department": "Mechanik und Ausbildung BI",
+    "kontoNumber": "101.24"
+  },
+  {
+    "department": "Elektrotechnik",
+    "kontoNumber": "101.26"
+  },
+  {
+    "department": "Druck & Beschriftung",
+    "kontoNumber": "101.28"
+  },
+  {
+    "department": "Konfektion Oensingen",
+    "kontoNumber": "101.29"
+  },
+  {
+    "department": "Wäscherei",
+    "kontoNumber": "101.32"
+  },
+  {
+    "department": "Kartonage",
+    "kontoNumber": "101.86"
+  },
+  {
+    "department": "Logistik",
+    "kontoNumber": "101.602"
+  },
+  {
+    "department": "Mechanik Olten",
+    "kontoNumber": "103.24"
+  },
+  {
+    "department": "Baugruppenmontage Olten",
+    "kontoNumber": "103.25"
+  },
+  {
+    "department": "Personalrestaurant Olten",
+    "kontoNumber": "103.605"
+  },
+  {
+    "department": "Logistik Olten",
+    "kontoNumber": "103.607"
+  },
+  {
+    "department": "Gebäude_Haslistrasse_Olten",
+    "kontoNumber": "103.631"
+  },
+  {
+    "department": "Personalrestaurant Grenchen",
+    "kontoNumber": "105.603"
+  },
+  {
+    "department": "Wohnen Staadacker",
+    "kontoNumber": "325.44"
+  },
+  {
+    "department": "Nachtwache",
+    "kontoNumber": "325.46"
+  },
+  {
+    "department": "Süd1",
+    "kontoNumber": "325.46"
+  },
+  {
+    "department": "Süd2",
+    "kontoNumber": "325.46"
+  },
+  {
+    "department": "Süd3",
+    "kontoNumber": "325.46"
+  },
+  {
+    "department": "Süd4",
+    "kontoNumber": "325.46"
+  },
+  {
+    "department": "Süd5",
+    "kontoNumber": "325.46"
+  },
+  {
+    "department": "Wohnen Tagesstruktur Girardstrasse",
+    "kontoNumber": "325.56"
+  },
+  {
+    "department": "WH Matzendorf",
+    "kontoNumber": "325.65"
+  },
+  {
+    "department": "Wohnen Breitenbach",
+    "kontoNumber": "325.68"
+  },
+  {
+    "department": "Wohnen Hauptstrasse",
+    "kontoNumber": "325.69"
+  },
+  {
+    "department": "Tagesstätte Oensingen Zentrum",
+    "kontoNumber": "350.81"
+  },
+  {
+    "department": "Tagesstätte Solothurn",
+    "kontoNumber": "350.82"
+  },
+  {
+    "department": "HR & Kommunikation",
+    "kontoNumber": "430.602"
+  },
+  {
+    "department": "Infrastruktur BI",
+    "kontoNumber": "432.625"
+  },
+  {
+    "department": "Bäckerei BI",
+    "kontoNumber": "547"
+  },
+  {
+    "department": "Küche BI",
+    "kontoNumber": "575"
+  },
+  {
+    "department": "Küche Zentrum Oensingen",
+    "kontoNumber": "576"
+  },
+  {
+    "department": "Gastro Solothurn",
+    "kontoNumber": "596"
+  },
+  {
+    "department": "Cafeteria Wohnen Süd",
+    "kontoNumber": ""
+  },
+  {
+    "department": "SAHB",
+    "kontoNumber": ""
+  }
+]

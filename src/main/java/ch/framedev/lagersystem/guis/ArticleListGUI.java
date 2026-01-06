@@ -17,10 +17,34 @@ import java.util.stream.Collectors;
 public class ArticleListGUI extends JFrame {
 
     private static Map<Article, Integer> articlesAndQuantity = new HashMap<>();
-    private final DefaultListModel<String> listModel = new DefaultListModel<>();
-    private JList<String> articleJList;
+    private final DefaultListModel<ArticleDisplay> listModel = new DefaultListModel<>();
+    private JList<ArticleDisplay> articleJList;
     private final JTextField searchField;
     private final JLabel countLabel;
+
+    // Helper class to track article and quantity together
+    private static class ArticleDisplay {
+        final Article article;
+        final int quantity;
+
+        ArticleDisplay(Article article, int quantity) {
+            this.article = article;
+            this.quantity = quantity;
+        }
+
+        @Override
+        public String toString() {
+            try {
+                return String.format("%s - %s (Stock: %d) | Qty: %d",
+                    article.getName(),
+                    article.getArticleNumber(),
+                    article.getStockQuantity(),
+                    quantity);
+            } catch (Exception ex) {
+                return article.toString() + " | Qty: " + quantity;
+            }
+        }
+    }
 
     public ArticleListGUI() {
         setTitle("Artikel Liste");
@@ -76,9 +100,11 @@ public class ArticleListGUI extends JFrame {
 
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 6));
         btnPanel.setOpaque(false);
+        JButton editQtyBtn = new JButton("Edit Quantity");
         JButton removeBtn = new JButton("Remove Selected");
         JButton clearAllBtn = new JButton("Clear All");
         JButton closeBtn = new JButton("Close");
+        btnPanel.add(editQtyBtn);
         btnPanel.add(removeBtn);
         btnPanel.add(clearAllBtn);
         btnPanel.add(closeBtn);
@@ -108,25 +134,37 @@ public class ArticleListGUI extends JFrame {
             filterList();
         });
 
+        editQtyBtn.addActionListener(e -> {
+            int sel = articleJList.getSelectedIndex();
+            if (sel == -1) {
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            ArticleDisplay selected = listModel.getElementAt(sel);
+            String input = JOptionPane.showInputDialog(this,
+                "Neue Menge für \"" + selected.article.getName() + "\":",
+                selected.quantity);
+            if (input != null) {
+                try {
+                    int newQty = Integer.parseInt(input.trim());
+                    if (newQty <= 0) {
+                        JOptionPane.showMessageDialog(this, "Menge muss größer als 0 sein.", "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    articlesAndQuantity.put(selected.article, newQty);
+                    refreshArticleList();
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Ungültige Zahl: " + input, "Fehler", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
         removeBtn.addActionListener(e -> {
             int sel = articleJList.getSelectedIndex();
             if (sel == -1) return;
-            String value = listModel.getElementAt(sel);
-            String name = value.split("-")[0];
-            Article toRemove = articlesAndQuantity.keySet().stream()
-                    .filter(a -> {
-                        try {
-                            return a.getName().equals(name);
-                        } catch (Exception ex) {
-                            return a.toString().equals(name);
-                        }
-                    })
-                    .findFirst().orElse(null);
-            // remove matching first article by name
-            if (toRemove != null) {
-                articlesAndQuantity.remove(toRemove);
-                refreshArticleList();
-            }
+            ArticleDisplay selected = listModel.getElementAt(sel);
+            articlesAndQuantity.remove(selected.article);
+            refreshArticleList();
         });
 
         clearAllBtn.addActionListener(e -> {
@@ -144,8 +182,26 @@ public class ArticleListGUI extends JFrame {
                 if (e.getClickCount() == 2) {
                     int idx = articleJList.locationToIndex(e.getPoint());
                     if (idx != -1) {
-                        String value = listModel.getElementAt(idx);
-                        JOptionPane.showMessageDialog(ArticleListGUI.this, value, "Artikel", JOptionPane.INFORMATION_MESSAGE);
+                        ArticleDisplay ad = listModel.getElementAt(idx);
+                        String details = String.format(
+                            "<html><h3>%s</h3>" +
+                            "<b>Article Number:</b> %s<br/>" +
+                            "<b>Details:</b> %s<br/>" +
+                            "<b>Stock:</b> %d<br/>" +
+                            "<b>Min Stock:</b> %d<br/>" +
+                            "<b>Selected Qty:</b> %d<br/>" +
+                            "<b>Sell Price:</b> %.2f CHF<br/>" +
+                            "<b>Purchase Price:</b> %.2f CHF</html>",
+                            ad.article.getName(),
+                            ad.article.getArticleNumber(),
+                            ad.article.getDetails(),
+                            ad.article.getStockQuantity(),
+                            ad.article.getMinStockLevel(),
+                            ad.quantity,
+                            ad.article.getSellPrice(),
+                            ad.article.getPurchasePrice()
+                        );
+                        JOptionPane.showMessageDialog(ArticleListGUI.this, details, "Artikel Details", JOptionPane.INFORMATION_MESSAGE);
                     }
                 }
             }
@@ -164,13 +220,18 @@ public class ArticleListGUI extends JFrame {
 
     private void filterList() {
         String q = searchField.getText().trim().toLowerCase();
-        List<Article> filtered;
-        if (q.isEmpty()) filtered = articlesAndQuantity.keySet().stream().toList();
-        else filtered = articlesAndQuantity.keySet().stream()
-                .filter(a -> displayFor(a).toLowerCase().contains(q))
-                .collect(Collectors.toList());
+        List<Map.Entry<Article, Integer>> filtered;
+        if (q.isEmpty()) {
+            filtered = new ArrayList<>(articlesAndQuantity.entrySet());
+        } else {
+            filtered = articlesAndQuantity.entrySet().stream()
+                    .filter(entry -> displayFor(entry.getKey()).toLowerCase().contains(q))
+                    .collect(Collectors.toList());
+        }
         listModel.clear();
-        for (Article a : filtered) listModel.addElement(displayFor(a));
+        for (Map.Entry<Article, Integer> entry : filtered) {
+            listModel.addElement(new ArticleDisplay(entry.getKey(), entry.getValue()));
+        }
         countLabel.setText(listModel.getSize() + " item(s)");
     }
 
@@ -185,7 +246,9 @@ public class ArticleListGUI extends JFrame {
 
     public void refreshArticleList() {
         listModel.clear();
-        for (Article article : articlesAndQuantity.keySet()) listModel.addElement(displayFor(article));
+        for (Map.Entry<Article, Integer> entry : articlesAndQuantity.entrySet()) {
+            listModel.addElement(new ArticleDisplay(entry.getKey(), entry.getValue()));
+        }
         countLabel.setText(listModel.getSize() + " item(s)");
     }
 
