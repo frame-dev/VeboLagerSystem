@@ -28,6 +28,7 @@ public class DatabaseManager {
     public static final String TABLE_ARTICLES = "articles";
     public static final String TABLE_VENDORS = "vendors";
     public static final String TABLE_ORDERS = "orders";
+    public static final String TABLE_USERS = "users";
 
     private final Connection connection;
 

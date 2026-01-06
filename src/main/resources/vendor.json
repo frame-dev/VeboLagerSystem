@@ -1,0 +1,26 @@
+[
+  {
+    "name": "ZVG",
+    "contactPerson": "Patrik Rudin",
+    "details": "ZVG Zellstoff-Verarbeitung AG",
+    "address": "Fenchackerweg 2-4, CH-4704 Niederbipp",
+    "email": "p.rudin@zvg.ch",
+    "phoneNumber": "+41 79 466 76 60"
+  },
+  {
+    "name": "Landi",
+    "contactPerson": "",
+    "details":"LANDI BippGäuThal",
+    "address": "Aeussere Klus 39, 4702 Oensingen",
+    "email": "info@landibgt.ch",
+    "phoneNumber": "+41 58 434 25 30"
+  },
+  {
+    "name": "Thomi",
+    "contactPerson": "",
+    "details": "Thomi + Co AG/SA",
+    "address": "Rütschelenstrasse 1, 4932 Lotzwil",
+    "email": "info@thomi.com",
+    "phoneNumber": "062 919 83 83"
+  }
+]

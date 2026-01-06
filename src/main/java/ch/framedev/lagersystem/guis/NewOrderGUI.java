@@ -9,7 +9,6 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -32,6 +31,7 @@ public class NewOrderGUI extends JFrame {
     private final JTextField receiverKontoField;
     private final JTextField senderNameField;
     private final JTextField senderKontoField;
+    private final JTextField departmentField;
 
     public NewOrderGUI() {
         setTitle("Neue Bestellung erstellen");
@@ -111,6 +111,7 @@ public class NewOrderGUI extends JFrame {
         receiverKontoField = new JTextField();
         senderNameField = new JTextField();
         senderKontoField = new JTextField();
+        departmentField = new JTextField();
 
         right.add(new JLabel("Empfänger Name:"), r);
         r.gridy++;
@@ -127,6 +128,10 @@ public class NewOrderGUI extends JFrame {
         right.add(new JLabel("Absender Konto Nr.:"), r);
         r.gridy++;
         right.add(senderKontoField, r);
+        r.gridy++;
+        right.add(new JLabel("Abteilung:"), r);
+        r.gridy++;
+        right.add(departmentField, r);
 
         // Order table (show unit price and line total)
         r.gridy++;
@@ -255,6 +260,7 @@ public class NewOrderGUI extends JFrame {
         String rKonto = receiverKontoField.getText().trim();
         String sender = senderNameField.getText().trim();
         String sKonto = senderKontoField.getText().trim();
+        String department = departmentField.getText().trim();
         if (receiver.isEmpty() || sender.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Empfänger und Absender Namen sind erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE);
             return;
@@ -264,7 +270,7 @@ public class NewOrderGUI extends JFrame {
         for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
             payload.put(e.getKey().getArticleNumber(), e.getValue());
         }
-        createOrder(payload, receiver, rKonto, sender, sKonto);
+        createOrder(payload, receiver, rKonto, sender, sKonto, department);
         File file = chooseSaveFile();
         if (file != null) {
             try {
@@ -286,7 +292,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     public void createOrder(Map<String, Integer> orderArticles, String receiverName, String receiverKontoNumber,
-                            String senderName, String senderKontoNumber) {
+                            String senderName, String senderKontoNumber, String department) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
         String date = dateFormat.format(new Date());
         Order order = new Order(
@@ -296,7 +302,8 @@ public class NewOrderGUI extends JFrame {
                 receiverKontoNumber,
                 date,
                 senderName,
-                senderKontoNumber
+                senderKontoNumber,
+                department
         );
         OrderManager orderManager = OrderManager.getInstance();
         orderManager.insertOrder(order);
@@ -355,10 +362,12 @@ public class NewOrderGUI extends JFrame {
                 cs.showText(String.format("Absender: %s", senderNameField.getText().trim()));
                 cs.newLineAtOffset(0, -15);
                 cs.showText(String.format("Abs. Konto: %s", senderKontoField.getText().trim()));
+                cs.newLineAtOffset(0, -20);
+                cs.showText(String.format("Abteilung: %s", departmentField.getText().trim()));
                 cs.newLineAtOffset(0, -25);
                 cs.showText("------------------------------------------------------------");
                 cs.newLineAtOffset(0, -18);
-                cs.showText(String.format("%-30s %6s %10s %10s", "Artikel", "Menge", "Preis", "Gesamt"));
+                cs.showText(String.format("%-30s | %6s | %10s | %10s", "Artikel", "Menge", "Preis", "Gesamt"));
                 cs.newLineAtOffset(0, -15);
                 cs.showText("------------------------------------------------------------");
 
@@ -370,7 +379,7 @@ public class NewOrderGUI extends JFrame {
                     double line = unit * qty;
                     total += line;
                     cs.newLineAtOffset(0, -15);
-                    String lineTxt = String.format("%-30s %6d %10.2f CHF %10.2f CHF", a.getName() + "(" + a.getArticleNumber() + ")" + a.getDetails(), qty, unit, line);
+                    String lineTxt = String.format("%-30s | %6d | %10.2f CHF | %10.2f CHF", a.getName() + "(" + a.getArticleNumber() + ")" + a.getDetails(), qty, unit, line);
                     cs.showText(lineTxt);
                 }
 

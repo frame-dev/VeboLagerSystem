@@ -137,6 +137,29 @@ public class ArticleManager {
         }
     }
 
+    public Article getArticleByName(String name) {
+        String sql = "SELECT * FROM articles WHERE name = ?;";
+        try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{name})) {
+            if (resultSet.next()) {
+                return new Article(
+                        resultSet.getString("articleNumber"),
+                        resultSet.getString("name"),
+                        resultSet.getString("details"),
+                        resultSet.getInt("stockQuantity"),
+                        resultSet.getInt("minStockLevel"),
+                        resultSet.getDouble("sellPrice"),
+                        resultSet.getDouble("purchasePrice"),
+                        resultSet.getString("vendorName")
+                );
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            logger.error("Error while checking if vendor with name '{}'", name, e);
+            return null;
+        }
+    }
+
     public List<Article> getAllArticles() {
         String sql = "SELECT * FROM articles;";
         try (ResultSet resultSet = databaseManager.executeQuery(sql)) {

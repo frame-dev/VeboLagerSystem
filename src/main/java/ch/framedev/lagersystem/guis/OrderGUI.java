@@ -1,6 +1,7 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.actions.OrderActions;
+import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.managers.OrderManager;
 
@@ -15,6 +16,7 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
+import java.util.Vector;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -22,7 +24,7 @@ public class OrderGUI extends JFrame {
 
     private final JTable orderTable;
     private final JScrollPane tableScrollPane;
-    private final int[] baseColumnWidths = new int[]{150, 200, 180, 180, 150};
+    private final int[] baseColumnWidths = new int[]{150, 180, 150, 150, 120, 120};
 
     public OrderGUI() {
         setTitle("Bestellungen Verwaltung");
@@ -83,7 +85,7 @@ public class OrderGUI extends JFrame {
         // Bottom search bar
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         searchPanel.setBackground(new Color(245, 247, 250));
-        JLabel searchLabel = new JLabel("Suche (Bestell-ID oder Empfänger):");
+        JLabel searchLabel = new JLabel("Suche (Bestell-ID, Empfänger oder Abteilung):");
         JTextField searchField = new JTextField(28);
         JButton searchBtn = new JButton("Suchen");
         JButton clearBtn = new JButton("Leeren");
@@ -104,12 +106,16 @@ public class OrderGUI extends JFrame {
         newOrderButton.addActionListener(new OrderActions.CreateOrderAction());
 
         editOrderButton.addActionListener(e -> {
-            int sel = orderTable.getSelectedRow();
-            if (sel == -1) {
+            Vector<Object> rowData = getSelectedOrderData();
+            if (rowData == null) {
                 JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            JOptionPane.showMessageDialog(this, "Bestellung bearbeiten (noch nicht implementiert)", "Info", JOptionPane.INFORMATION_MESSAGE);
+            Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
+            if (order != null) {
+                EditOrderGUI editGui = new EditOrderGUI(order);
+                editGui.display();
+            }
         });
 
         deleteOrderButton.addActionListener(e -> {
@@ -143,9 +149,9 @@ public class OrderGUI extends JFrame {
             } else {
                 try {
                     String regex = "(?i)" + Pattern.quote(text);
-                    sorter.setRowFilter(RowFilter.regexFilter(regex, 0, 1));
+                    sorter.setRowFilter(RowFilter.regexFilter(regex, 0, 1, 3));
                 } catch (PatternSyntaxException ex) {
-                    sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(text), 0, 1));
+                    sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(text), 0, 1, 3));
                 }
             }
         };
@@ -178,11 +184,12 @@ public class OrderGUI extends JFrame {
         model.setRowCount(0);
         for (Order o : orders) {
             model.addRow(new Object[]{
-                o.getOrderId(),
-                o.getReceiverName(),
-                o.getSenderName(),
-                o.getOrderDate(),
-                o.getOrderedArticles().size() + " Artikel"
+                    o.getOrderId(),
+                    o.getReceiverName(),
+                    o.getSenderName(),
+                    o.getDepartment(),
+                    o.getOrderDate(),
+                    o.getOrderedArticles().size() + " Artikel"
             });
         }
     }
@@ -196,7 +203,18 @@ public class OrderGUI extends JFrame {
         popup.add(del);
         popup.add(complete);
 
-        edit.addActionListener(e -> JOptionPane.showMessageDialog(this, "Bearbeiten noch nicht implementiert"));
+        edit.addActionListener(e -> {
+            Vector<Object> rowData = getSelectedOrderData();
+            if (rowData == null) {
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
+            if (order != null) {
+                EditOrderGUI editGui = new EditOrderGUI(order);
+                editGui.display();
+            }
+        });
         del.addActionListener(e -> {
             int sel = orderTable.getSelectedRow();
             if (sel == -1) return;
@@ -217,7 +235,56 @@ public class OrderGUI extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
-                    JOptionPane.showMessageDialog(OrderGUI.this, "Doppelklick - Details anzeigen (noch nicht implementiert)");
+                    Vector<Object> rowData = getSelectedOrderData();
+                    if (rowData == null) {
+                        JOptionPane.showMessageDialog(OrderGUI.this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
+                    if (order != null) {
+                        JFrame detailsGUI = new JFrame("Details");
+                        JPanel panel = new JPanel(new BorderLayout(10, 10));
+                        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+                        JTextArea detailsArea = new JTextArea();
+                        detailsArea.setEditable(false);
+                        StringBuilder detailsText = new StringBuilder();
+                        detailsText.append("Bestell-ID: ").append(order.getOrderId()).append("\n");
+                        detailsText.append("Department: ").append(order.getDepartment()).append("\n");
+                        detailsText.append("Empfänger: ").append(order.getReceiverName()).append("\n");
+                        detailsText.append("Absender: ").append(order.getSenderName()).append("\n");
+                        detailsText.append("Datum: ").append(order.getOrderDate()).append("\n");
+                        List<Article> articles = OrderManager.getInstance().getOrderArticles(order);
+                        detailsText.append("Artikel:\n");
+                        for (Article a : articles) {
+                            int quantity = order.getOrderedArticles().getOrDefault(a.getArticleNumber(), 0);
+                            if (quantity == 0) {
+                                quantity = order.getOrderedArticles().get(a.getName());
+                            }
+                            detailsText.append(" - ").append(a.getArticleNumber()).append(": ").append(a.getName()).append(" :: Menge: ").append(quantity).append(" | Einzelpreis: ").append(a.getSellPrice()).append(" CHF").append(" || Preis: ")
+                                    .append(quantity * a.getSellPrice()).append(" CHF").append("\n");
+                        }
+                        detailsText.append("\nGesamtpreis: ");
+                        double totalPrice = 0.0;
+                        for (Article a : articles) {
+                            int quantity = order.getOrderedArticles().getOrDefault(a.getArticleNumber(), 0);
+                            if (quantity == 0) {
+                                quantity = order.getOrderedArticles().get(a.getName());
+                            }
+                            totalPrice += quantity * a.getSellPrice();
+                        }
+                        detailsText.append(totalPrice).append(" CHF\n");
+                        detailsArea.setText(detailsText.toString());
+                        panel.add(new JScrollPane(detailsArea), BorderLayout.CENTER);
+                        JButton closeBtn = new JButton("Schließen");
+                        closeBtn.addActionListener(ev -> detailsGUI.dispose());
+                        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+                        btnPanel.add(closeBtn);
+                        panel.add(btnPanel, BorderLayout.SOUTH);
+                        detailsGUI.add(panel);
+                        detailsGUI.setSize(400, 400);
+                        detailsGUI.setLocationRelativeTo(OrderGUI.this);
+                        detailsGUI.setVisible(true);
+                    }
                 }
             }
 
@@ -243,22 +310,41 @@ public class OrderGUI extends JFrame {
         });
     }
 
+    private Vector<Object> getSelectedOrderData() {
+        int sel = orderTable.getSelectedRow();
+        if (sel == -1) return null;
+        int modelRow = orderTable.convertRowIndexToModel(sel);
+        Vector<Object> rowData = new Vector<>();
+        for (int i = 0; i < orderTable.getColumnCount(); i++) {
+            rowData.add(orderTable.getModel().getValueAt(modelRow, i));
+        }
+        return rowData;
+    }
+
     private void initializeOrderTable() {
         DefaultTableModel model = new DefaultTableModel() {
             @Override
             public int getColumnCount() {
-                return 5;
+                return 6;
             }
 
             @Override
             public String getColumnName(int col) {
                 switch (col) {
-                    case 0: return "Bestell-ID";
-                    case 1: return "Empfänger";
-                    case 2: return "Absender";
-                    case 3: return "Datum";
-                    case 4: return "Artikel";
-                    default: return "";
+                    case 0:
+                        return "Bestell-ID";
+                    case 1:
+                        return "Empfänger";
+                    case 2:
+                        return "Absender";
+                    case 3:
+                        return "Abteilung";
+                    case 4:
+                        return "Datum";
+                    case 5:
+                        return "Artikel";
+                    default:
+                        return "";
                 }
             }
 

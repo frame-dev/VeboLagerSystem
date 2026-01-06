@@ -9,12 +9,63 @@ import com.google.gson.JsonObject;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 @SuppressWarnings("unused")
 public class QRCodeUtils {
+
+    @SuppressWarnings("unchecked")
+    public static List<Map<String, Object>> retrieveQrCodeDataFromWebsite() {
+        String urlString = "https://framedev.ch/vebo/scans.json";
+        Gson gson = new Gson();
+        List<Map<String, Object>> mapList = new ArrayList<>();
+
+        HttpURLConnection connection = null;
+        try {
+            URL url = new URI(urlString).toURL();
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(10000); // 10 seconds timeout
+            connection.setReadTimeout(10000);
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("User-Agent", "VeboLagerSystem/1.0");
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                try (InputStreamReader reader = new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8)) {
+                    JsonArray yamlData = gson.fromJson(reader, JsonArray.class);
+                    if (yamlData != null) {
+                        for (JsonElement e : yamlData) {
+                            JsonObject obj = e.getAsJsonObject();
+                            Map<String, Object> map = gson.fromJson(gson.toJson(obj), Map.class);
+                            mapList.add(map);
+                        }
+                    }
+                }
+            } else {
+                System.err.println("Failed to fetch QR code data from website. HTTP response code: " + responseCode);
+            }
+        } catch (IOException e) {
+            System.err.println("Error fetching QR code data from website: " + e.getMessage());
+            e.printStackTrace();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+        return mapList;
+    }
 
     private static final File STORE = new File(Main.getAppDataDir(), "scans.json"); // eine Zeile = ein JSON
 

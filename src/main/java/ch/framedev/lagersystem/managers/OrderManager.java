@@ -1,5 +1,6 @@
 package ch.framedev.lagersystem.managers;
 
+import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.main.Main;
 import org.apache.logging.log4j.LogManager;
@@ -8,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class OrderManager {
 
@@ -36,7 +38,8 @@ public class OrderManager {
                 "receiverKontoNumber TEXT," +
                 "orderDate TEXT," +
                 "senderName TEXT," +
-                "senderKontoNumber TEXT" +
+                "senderKontoNumber TEXT," +
+                "department TEXT" +
                 ");";
         databaseManager.executeUpdate(sql);
     }
@@ -57,12 +60,12 @@ public class OrderManager {
         }
         StringBuilder articlesBuilder = new StringBuilder();
         order.getOrderedArticles().forEach((articleNumber, quantity) ->
-            articlesBuilder.append(articleNumber).append(":").append(quantity).append(","));
+                articlesBuilder.append(articleNumber).append(":").append(quantity).append(","));
         if (!articlesBuilder.isEmpty()) {
             articlesBuilder.setLength(articlesBuilder.length() - 1); // Remove trailing comma
         }
-        String sql = "INSERT INTO orders (orderId, orderedArticles, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?);";
+        String sql = "INSERT INTO orders (orderId, orderedArticles, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber, department) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
         return databaseManager.executePreparedUpdate(sql, new Object[]{
                 order.getOrderId(),
                 articlesBuilder.toString(),
@@ -70,7 +73,8 @@ public class OrderManager {
                 order.getReceiverKontoNumber(),
                 order.getOrderDate(),
                 order.getSenderName(),
-                order.getSenderKontoNumber()
+                order.getSenderKontoNumber(),
+                order.getDepartment()
         });
     }
 
@@ -80,11 +84,11 @@ public class OrderManager {
         }
         StringBuilder articlesBuilder = new StringBuilder();
         order.getOrderedArticles().forEach((articleNumber, quantity) ->
-            articlesBuilder.append(articleNumber).append(":").append(quantity).append(","));
+                articlesBuilder.append(articleNumber).append(":").append(quantity).append(","));
         if (!articlesBuilder.isEmpty()) {
             articlesBuilder.setLength(articlesBuilder.length() - 1); // Remove trailing comma
         }
-        String sql = "UPDATE orders SET orderedArticles = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ? " +
+        String sql = "UPDATE orders SET orderedArticles = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?" +
                 "WHERE orderId = ?;";
         return databaseManager.executePreparedUpdate(sql, new Object[]{
                 articlesBuilder.toString(),
@@ -93,6 +97,7 @@ public class OrderManager {
                 order.getOrderDate(),
                 order.getSenderName(),
                 order.getSenderKontoNumber(),
+                order.getDepartment(),
                 order.getOrderId()
         });
     }
@@ -106,7 +111,7 @@ public class OrderManager {
     }
 
     public Order getOrder(String orderId) {
-        String sql = "SELECT * FROM orders WHERE orderId = '" + orderId + "';";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + " WHERE orderId = '" + orderId + "';";
         try (var resultSet = databaseManager.executeQuery(sql)) {
             if (resultSet.next()) {
                 String orderedArticlesStr = resultSet.getString("orderedArticles");
@@ -118,7 +123,8 @@ public class OrderManager {
                         resultSet.getString("receiverKontoNumber"),
                         resultSet.getString("orderDate"),
                         resultSet.getString("senderName"),
-                        resultSet.getString("senderKontoNumber")
+                        resultSet.getString("senderKontoNumber"),
+                        resultSet.getString("department")
                 );
             }
         } catch (Exception e) {
@@ -157,7 +163,8 @@ public class OrderManager {
                         resultSet.getString("receiverKontoNumber"),
                         resultSet.getString("orderDate"),
                         resultSet.getString("senderName"),
-                        resultSet.getString("senderKontoNumber")
+                        resultSet.getString("senderKontoNumber"),
+                        resultSet.getString("department")
                 ));
             }
             return orders;
@@ -165,5 +172,19 @@ public class OrderManager {
             logger.error("Error while checking if orders in Database", e);
             return new ArrayList<>();
         }
+    }
+
+    public List<Article> getOrderArticles(Order order) {
+        Map<String, Integer> orderedArticles = order.getOrderedArticles();
+        List<Article> articles = new ArrayList<>();
+        for(Map.Entry<String, Integer> entry : orderedArticles.entrySet()) {
+            Article article;
+            article = ArticleManager.getInstance().getArticleByName(entry.getKey());
+            if(article == null) {
+                article = ArticleManager.getInstance().getArticleByNumber(entry.getKey());
+            }
+            articles.add(article);
+        }
+        return articles;
     }
 }

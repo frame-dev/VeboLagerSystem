@@ -1,5 +1,6 @@
 package ch.framedev.lagersystem.utils;
 
+import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.simplejavautils.SimpleJavaUtils;
 import com.google.gson.Gson;
@@ -10,6 +11,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -21,6 +23,7 @@ public class ImportUtils {
 
     private static final Logger LOGGER = LogManager.getLogger(ImportUtils.class);
     private final File INVENTORY_FILE;
+    private final File VENDOR_FILE;
     private static volatile ImportUtils instance;
 
     private ImportUtils() {
@@ -31,6 +34,15 @@ public class ImportUtils {
             LOGGER.warn("Inventory file does not exist: {}", INVENTORY_FILE.getAbsolutePath());
         } else {
             LOGGER.info("Inventory file loaded: {}", INVENTORY_FILE.getAbsolutePath());
+        }
+
+        VENDOR_FILE = new SimpleJavaUtils().getFromResourceFile("vendor.json", Main.class);
+        if (VENDOR_FILE == null) {
+            LOGGER.warn("Vendor file 'vendor.json' not found in resources");
+        } else if (!VENDOR_FILE.exists()) {
+            LOGGER.warn("Vendor file does not exist: {}", VENDOR_FILE.getAbsolutePath());
+        } else {
+            LOGGER.info("Vendor file loaded: {}", VENDOR_FILE.getAbsolutePath());
         }
     }
 
@@ -43,6 +55,38 @@ public class ImportUtils {
             }
         }
         return instance;
+    }
+
+    public List<Map<String, Object>> loadVendorList() {
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        if(VENDOR_FILE == null || !VENDOR_FILE.exists()) {
+            LOGGER.warn("Cannot load Vendor list from file 'vendor.json'.");
+            return list;
+        }
+
+        Gson gson = new Gson();
+        try (FileReader reader = new FileReader(VENDOR_FILE)) {
+            JsonArray jsonArray = gson.fromJson(reader, JsonArray.class);
+            if(jsonArray == null) {
+                LOGGER.info("Loaded {} vendors from file 'vendor.json'.", jsonArray.size());
+                return list;
+            }
+            for (JsonElement jsonElement : jsonArray) {
+                if (!jsonElement.isJsonObject()) {
+                    LOGGER.debug("Skipping non-object element in vendor array");
+                    continue;
+                }
+                JsonObject jsonObject = jsonElement.getAsJsonObject();
+                Map<String, Object> itemData = parseJsonObject(gson, jsonObject);
+                list.add(itemData);
+            }
+
+            LOGGER.info("Loaded {} vendors from file 'vendor.json'.", list.size());
+        } catch (IOException e) {
+            LOGGER.error("Failed to load vendors from file 'vendor.json'", e);
+        }
+        return list;
     }
 
     public List<Map<String, Object>> loadInventoryFile() {

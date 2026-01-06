@@ -72,6 +72,32 @@ public class VendorManager {
                 String.join(",", vendor.getSuppliedArticles()), vendor.getName()});
     }
 
+    public boolean updateVendor(String vendorName, String[] columns, Object[] data) {
+        if(!existsVendor(vendorName)) {
+            return false;
+        }
+        if(data.length != columns.length) {
+            return false;
+        }
+
+        // Build dynamic UPDATE statement
+        StringBuilder sql = new StringBuilder("UPDATE vendors SET ");
+        for (int i = 0; i < columns.length; i++) {
+            sql.append(columns[i]).append(" = ?");
+            if (i < columns.length - 1) {
+                sql.append(", ");
+            }
+        }
+        sql.append(" WHERE name = ?;");
+
+        // Combine data array with vendorName for WHERE clause
+        Object[] params = new Object[data.length + 1];
+        System.arraycopy(data, 0, params, 0, data.length);
+        params[data.length] = vendorName;
+
+        return databaseManager.executePreparedUpdate(sql.toString(), params);
+    }
+
     public boolean deleteVendor(String name) {
         if (!existsVendor(name)) {
             return false;

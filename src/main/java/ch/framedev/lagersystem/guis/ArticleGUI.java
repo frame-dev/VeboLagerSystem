@@ -33,6 +33,8 @@ public class ArticleGUI extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
         // Initialize table early so toolbar actions can reference it
         articleTable = new JTable();
         initializeTable();
@@ -114,6 +116,11 @@ public class ArticleGUI extends JFrame {
 
         JButton deleteArticleButton = createRoundedButton("Artikel löschen");
         deleteArticleButton.addActionListener(e -> deleteSelectedArticle());
+
+        JButton retrieveQrCodeDataButton = createRoundedButton("QR-Code Daten abrufen");
+        retrieveQrCodeDataButton.addActionListener(e -> {
+
+        });
 
         toolbarWrapper.add(addArticleButton);
         toolbarWrapper.add(editArticleButton);
@@ -197,6 +204,9 @@ public class ArticleGUI extends JFrame {
 
         // Enter key triggers search
         searchField.addActionListener(e -> doSearch.run());
+
+        JLabel countLabel = new JLabel("Anzahl Artikel: " + articleTable.getRowCount());
+        searchPanel.add(countLabel);
 
         searchPanel.add(searchLabel);
         searchPanel.add(searchField);
@@ -595,6 +605,8 @@ public class ArticleGUI extends JFrame {
         articleTable.setShowVerticalLines(true);
         articleTable.setGridColor(new Color(226, 230, 233)); // soft light gray
         articleTable.setIntercellSpacing(new Dimension(1, 1));
+        articleTable.setFont(new Font("Arial", Font.PLAIN, 16));
+
 
         // Alternating row colors for readability (subtle)
         DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
@@ -647,7 +659,7 @@ public class ArticleGUI extends JFrame {
         JTableHeader header = articleTable.getTableHeader();
         header.setBackground(new Color(62, 84, 98));
         header.setForeground(Color.WHITE);
-        header.setFont(header.getFont().deriveFont(Font.BOLD));
+        header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
     }
 
     /**

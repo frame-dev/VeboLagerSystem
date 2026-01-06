@@ -36,6 +36,13 @@ public class MainGUI extends JFrame {
         });
         content.add(showAllOrdersButton);
 
+        JButton showClientsGUI = new JButton("Zeige alle Kunden an");
+        showClientsGUI.addActionListener(e -> {
+            ClientGUI clientGUI = new ClientGUI();
+            clientGUI.setVisible(true);
+        });
+        content.add(showClientsGUI);
+
         pack();
         setLocationRelativeTo(null);
     }
