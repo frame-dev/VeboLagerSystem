@@ -1,9 +1,10 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.managers.ClientManager;
+import ch.framedev.lagersystem.managers.ClientManager;
+import ch.framedev.lagersystem.managers.DepartmentManager;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableRowSorter;
@@ -12,9 +13,8 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -23,8 +23,10 @@ public class ClientGUI extends JFrame {
 
     private final JTable clientTable;
     private final JScrollPane tableScrollPane;
-    private final int[] baseColumnWidths = new int[]{200, 200, 200};
+    private final int[] baseColumnWidths = new int[]{300, 300};
     private final List<Client> clients = new ArrayList<>();
+
+    private JComboBox<String> departmentCombobox;
 
     public ClientGUI() {
         setTitle("Kunden Verwaltung");
@@ -115,8 +117,8 @@ public class ClientGUI extends JFrame {
                 return;
             }
             int modelRow = clientTable.convertRowIndexToModel(sel);
-            Object[] existing = new Object[3];
-            for (int i = 0; i < 3; i++) {
+            Object[] existing = new Object[2];
+            for (int i = 0; i < 2; i++) {
                 existing[i] = clientTable.getModel().getValueAt(modelRow, i);
             }
             Object[] updated = showUpdateClientDialog(existing);
@@ -133,8 +135,6 @@ public class ClientGUI extends JFrame {
             }
             int modelRow = clientTable.convertRowIndexToModel(sel);
             String name = (String) clientTable.getModel().getValueAt(modelRow, 0);
-            String konto = (String) clientTable.getModel().getValueAt(modelRow, 2);
-
             int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Kunden wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
                 if (ClientManager.getInstance().deleteClient(name)) {
@@ -196,10 +196,9 @@ public class ClientGUI extends JFrame {
         for (Map<String, String> dbClient : dbClients) {
             String name = dbClient.get("firstLastName");
             String dept = dbClient.get("department");
-            String konto = dbClient.get("kontoNumber");
 
-            clients.add(new Client(name, dept, konto));
-            model.addRow(new Object[]{name, dept, konto});
+            clients.add(new Client(name, dept));
+            model.addRow(new Object[]{name, dept});
         }
     }
 
@@ -224,16 +223,10 @@ public class ClientGUI extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = row;
         p.add(new JLabel("Abteilung:"), gbc);
-        JTextField deptField = new JTextField(20);
+        departmentCombobox = new JComboBox<>();
+        fillDepartmentList();
         gbc.gridx = 1;
-        p.add(deptField, gbc);
-        row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        p.add(new JLabel("Konto Nummer:"), gbc);
-        JTextField kontoField = new JTextField(20);
-        gbc.gridx = 1;
-        p.add(kontoField, gbc);
+        p.add(departmentCombobox, gbc);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton ok = new JButton("OK");
@@ -247,13 +240,16 @@ public class ClientGUI extends JFrame {
 
         ok.addActionListener(ae -> {
             String name = nameField.getText().trim();
-            String dept = deptField.getText().trim();
-            String konto = kontoField.getText().trim();
+            String selectedDept = (String) departmentCombobox.getSelectedItem();
+            if(selectedDept == null) {
+                selectedDept = "";
+            }
+            String dept = selectedDept.trim();
             if (name.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            holder[0] = new Object[]{name, dept, konto};
+            holder[0] = new Object[]{name, dept};
             dialog.dispose();
             ClientManager clientManager = ClientManager.getInstance();
             if(!clientManager.insertClient(name, dept)) {
@@ -289,20 +285,15 @@ public class ClientGUI extends JFrame {
         JTextField nameField = new JTextField(existing[0] == null ? "" : existing[0].toString(), 20);
         gbc.gridx = 1;
         p.add(nameField, gbc);
+
+        fillDepartmentList();
         row++;
         gbc.gridx = 0;
         gbc.gridy = row;
         p.add(new JLabel("Abteilung:"), gbc);
-        JTextField deptField = new JTextField(existing[1] == null ? "" : existing[1].toString(), 20);
+        departmentCombobox = new JComboBox<>();
         gbc.gridx = 1;
-        p.add(deptField, gbc);
-        row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        p.add(new JLabel("Konto Nummer:"), gbc);
-        JTextField kontoField = new JTextField(existing[2] == null ? "" : existing[2].toString(), 20);
-        gbc.gridx = 1;
-        p.add(kontoField, gbc);
+        p.add(departmentCombobox, gbc);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton ok = new JButton("OK");
@@ -316,13 +307,16 @@ public class ClientGUI extends JFrame {
 
         ok.addActionListener(ae -> {
             String name = nameField.getText().trim();
-            String dept = deptField.getText().trim();
-            String konto = kontoField.getText().trim();
+            String selectedDept = (String) departmentCombobox.getSelectedItem();
+            if(selectedDept == null) {
+                selectedDept = "";
+            }
+            String dept = selectedDept.trim();
             if (name.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            holder[0] = new Object[]{name, dept, konto};
+            holder[0] = new Object[]{name, dept};
             dialog.dispose();
             ClientManager clientManager = ClientManager.getInstance();
             if(!clientManager.existsClient(name)) {
@@ -347,9 +341,26 @@ public class ClientGUI extends JFrame {
         return holder[0];
     }
 
-    /**
-     * Setup table interactions: double-click to edit, right-click context menu for edit/delete
-     */
+    private void fillDepartmentList() {
+        departmentCombobox.removeAllItems();
+        departmentCombobox.addItem(""); // Empty option
+
+        Set<String> departments = new LinkedHashSet<>();
+        DepartmentManager departmentManager = DepartmentManager.getInstance();
+        for (var department : departmentManager.getAllDepartments()) {
+            String dept = (String) department.get("department");
+            if (dept != null && !dept.trim().isEmpty()) {
+                departments.add(dept.trim());
+            }
+        }
+
+        // Add sorted departments to combo box
+        departments.stream().sorted().forEach(departmentCombobox::addItem);
+
+        // Make it editable so users can enter custom departments
+        departmentCombobox.setEditable(true);
+    }
+
     private void setupTableInteractions() {
         JPopupMenu popup = new JPopupMenu();
         JMenuItem edit = new JMenuItem("Bearbeiten");
@@ -361,8 +372,8 @@ public class ClientGUI extends JFrame {
             int sel = clientTable.getSelectedRow();
             if (sel == -1) return;
             int modelRow = clientTable.convertRowIndexToModel(sel);
-            Object[] existing = new Object[3];
-            for (int i = 0; i < 3; i++) {
+            Object[] existing = new Object[2];
+            for (int i = 0; i < 2; i++) {
                 existing[i] = clientTable.getModel().getValueAt(modelRow, i);
             }
             Object[] updated = showUpdateClientDialog(existing);
@@ -376,7 +387,6 @@ public class ClientGUI extends JFrame {
             if (sel == -1) return;
             int modelRow = clientTable.convertRowIndexToModel(sel);
             String name = (String) clientTable.getModel().getValueAt(modelRow, 0);
-            String konto = (String) clientTable.getModel().getValueAt(modelRow, 2);
 
             int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Kunden wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
@@ -396,8 +406,8 @@ public class ClientGUI extends JFrame {
                     int row = clientTable.rowAtPoint(e.getPoint());
                     if (row == -1) return;
                     int modelRow = clientTable.convertRowIndexToModel(row);
-                    Object[] existing = new Object[3];
-                    for (int i = 0; i < 3; i++) {
+                    Object[] existing = new Object[2];
+                    for (int i = 0; i < 2; i++) {
                         existing[i] = clientTable.getModel().getValueAt(modelRow, i);
                     }
                     Object[] updated = showUpdateClientDialog(existing);
@@ -433,7 +443,7 @@ public class ClientGUI extends JFrame {
         DefaultTableModel model = new DefaultTableModel() {
             @Override
             public int getColumnCount() {
-                return 3;
+                return 2;
             }
 
             @Override
@@ -441,7 +451,6 @@ public class ClientGUI extends JFrame {
                 return switch (col) {
                     case 0 -> "Name";
                     case 1 -> "Abteilung";
-                    case 2 -> "Konto Nummer";
                     default -> "";
                 };
             }
@@ -467,10 +476,7 @@ public class ClientGUI extends JFrame {
         clientTable.setSelectionBackground(new Color(184, 207, 229));
         clientTable.setSelectionForeground(Color.BLACK);
 
-        DefaultTableCellRenderer center = new DefaultTableCellRenderer();
-        center.setHorizontalAlignment(SwingConstants.CENTER);
         TableColumnModel tcm = clientTable.getColumnModel();
-        if (tcm.getColumnCount() > 0) tcm.getColumn(2).setCellRenderer(center);
 
         for (int i = 0; i < baseColumnWidths.length && i < tcm.getColumnCount(); i++) {
             tcm.getColumn(i).setPreferredWidth(baseColumnWidths[i]);
@@ -531,12 +537,10 @@ public class ClientGUI extends JFrame {
     private static class Client {
         String name;
         String department;
-        String kontoNumber;
 
-        Client(String name, String department, String kontoNumber) {
+        Client(String name, String department) {
             this.name = name;
             this.department = department;
-            this.kontoNumber = kontoNumber;
         }
     }
 

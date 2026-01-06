@@ -82,4 +82,18 @@ public class UserManager {
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE username = ?;";
         return databaseManager.executePreparedUpdate(sql, new Object[]{username});
     }
+
+    public User getUserByName(String username) {
+        String sql = "SELECT * FROM " + TABLE_NAME + " WHERE username = '" + username + "';";
+        try (var resultSet = databaseManager.executeQuery(sql)) {
+            if (resultSet.next()) {
+                String ordersStr = resultSet.getString("orders");
+                List<String> orders = List.of(ordersStr.split(","));
+                return new User(username, orders);
+            }
+        } catch (Exception e) {
+            logger.error("Error while retrieving user with name '{}'", username, e);
+        }
+        return null;
+    }
 }

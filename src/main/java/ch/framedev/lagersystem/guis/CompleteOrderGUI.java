@@ -2,13 +2,16 @@ package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
+import ch.framedev.lagersystem.classes.User;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
+import ch.framedev.lagersystem.managers.UserManager;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class CompleteOrderGUI extends JFrame {
 
@@ -110,12 +113,12 @@ public class CompleteOrderGUI extends JFrame {
                 int articleCount = o.getOrderedArticles().size();
                 detailsLabel.setText(String.format(
                         "<html><div style='padding:5px;'>" +
-                        "<b>Bestell-ID:</b> %s<br/>" +
-                        "<b>Empfänger:</b> %s<br/>" +
-                        "<b>Abteilung:</b> %s<br/>" +
-                        "<b>Datum:</b> %s<br/>" +
-                        "<b>Artikel:</b> %d<br/>" +
-                        "</div></html>",
+                                "<b>Bestell-ID:</b> %s<br/>" +
+                                "<b>Empfänger:</b> %s<br/>" +
+                                "<b>Abteilung:</b> %s<br/>" +
+                                "<b>Datum:</b> %s<br/>" +
+                                "<b>Artikel:</b> %d<br/>" +
+                                "</div></html>",
                         o.getOrderId(), o.getReceiverName(), o.getDepartment(),
                         o.getOrderDate(), articleCount));
                 completeButton.setEnabled(true);
@@ -145,7 +148,7 @@ public class CompleteOrderGUI extends JFrame {
 
         List<Article> articles = selected.getOrderedArticles().keySet().stream()
                 .map(s -> ArticleManager.getInstance().getArticleByNumber(s))
-                .filter(a -> a != null)
+                .filter(Objects::nonNull)
                 .toList();
 
         for (Article article : articles) {
@@ -190,10 +193,15 @@ public class CompleteOrderGUI extends JFrame {
         // Final confirmation
         int res = JOptionPane.showConfirmDialog(this,
                 "Möchten Sie die Bestellung " + selected.getOrderId() + " abschließen?\n" +
-                "Der Lagerbestand wird entsprechend reduziert.",
+                        "Der Lagerbestand wird entsprechend reduziert.",
                 "Bestätigung",
                 JOptionPane.YES_NO_OPTION);
-
+        UserManager userManager = UserManager.getInstance();
+        User user = userManager.getUserByName(selected.getSenderName());
+        if (!user.getOrders().contains(selected.getOrderId()))
+            user.getOrders().add(selected.getOrderId());
+        userManager.updateUser(user);
+/*
         if (res == JOptionPane.YES_OPTION) {
             // Update stock quantities
             for (Article article : articles) {
@@ -224,7 +232,7 @@ public class CompleteOrderGUI extends JFrame {
             }
 
             refreshList();
-        }
+        }*/
     }
 
     public void display() {
