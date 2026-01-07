@@ -37,33 +37,57 @@ public class NewOrderGUI extends JFrame {
     public NewOrderGUI() {
         setTitle("Neue Bestellung erstellen");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(900, 560);
+        setSize(1100, 700);
         setLocationRelativeTo(null);
-        setLayout(new BorderLayout(8, 8));
+        setLayout(new BorderLayout(0, 0));
 
-        // Header
-        RoundedPanel header = new RoundedPanel(new Color(255, 255, 255), 18);
-        header.setPreferredSize(new Dimension(0, 72));
-        header.setLayout(new GridBagLayout());
-        JLabel title = new JLabel("Neue Bestellung");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
-        title.setForeground(new Color(30, 40, 50));
-        header.add(title);
+        // Header with gradient
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
         headerWrapper.setBackground(new Color(245, 247, 250));
+        GradientPanel header = new GradientPanel(
+            new Color(46, 134, 193),
+            new Color(52, 152, 219)
+        );
+        header.setPreferredSize(new Dimension(900, 80));
+        header.setLayout(new GridBagLayout());
+
+        JLabel iconLabel = new JLabel("📝");
+        iconLabel.setFont(iconLabel.getFont().deriveFont(Font.BOLD, 36f));
+        iconLabel.setForeground(new Color(255, 255, 255, 180));
+
+        JLabel title = new JLabel("  Neue Bestellung Erstellen");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
+        title.setForeground(Color.WHITE);
+
+        JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        headerContent.setOpaque(false);
+        headerContent.add(iconLabel);
+        headerContent.add(title);
+        header.add(headerContent);
+
         headerWrapper.add(header);
         add(headerWrapper, BorderLayout.NORTH);
 
-        // Main card
-        RoundedPanel card = new RoundedPanel(Color.WHITE, 16);
-        card.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        card.setLayout(new BorderLayout(8, 8));
+        // Main content with split pane
+        JPanel mainContent = new JPanel(new BorderLayout(15, 15));
+        mainContent.setBackground(new Color(245, 247, 250));
+        mainContent.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // Order details panel
-        JPanel right = new JPanel(new GridBagLayout());
-        right.setOpaque(false);
+        // Left panel - Form details
+        RoundedPanel leftCard = new RoundedPanel(Color.WHITE, 16);
+        leftCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        leftCard.setLayout(new BorderLayout(10, 10));
+
+        JLabel formTitle = new JLabel("📋 Bestellinformationen");
+        formTitle.setFont(formTitle.getFont().deriveFont(Font.BOLD, 17f));
+        formTitle.setForeground(new Color(31, 45, 61));
+        leftCard.add(formTitle, BorderLayout.NORTH);
+
+        // Form panel
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setOpaque(false);
         GridBagConstraints r = new GridBagConstraints();
-        r.insets = new Insets(6, 6, 6, 6);
+        r.insets = new Insets(8, 8, 8, 8);
         r.fill = GridBagConstraints.HORIZONTAL;
         r.gridx = 0;
         r.gridy = 0;
@@ -81,6 +105,11 @@ public class NewOrderGUI extends JFrame {
         senderKontoField = new JTextField();
         senderKontoField.setText("4250 - 431.689");
 
+        // Style text fields
+        styleTextField(receiverKontoField);
+        styleTextField(senderNameField);
+        styleTextField(senderKontoField);
+
         departmentList.addActionListener(event -> {
             String selectedDept = (String) departmentList.getSelectedItem();
             if (selectedDept != null && !selectedDept.trim().isEmpty()) {
@@ -91,6 +120,7 @@ public class NewOrderGUI extends JFrame {
                 }
             }
         });
+
         // Add key listener for when user types in the editable combobox
         departmentList.getEditor().getEditorComponent().addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
@@ -106,30 +136,32 @@ public class NewOrderGUI extends JFrame {
             }
         });
 
-        right.add(new JLabel("Empfänger Name:"), r);
-        r.gridy++;
-        right.add(receiverNameCombobox, r);
-        r.gridy++;
-        right.add(new JLabel("Empfänger Konto Nr.:"), r);
-        r.gridy++;
-        right.add(receiverKontoField, r);
-        r.gridy++;
-        right.add(new JLabel("Absender Name:"), r);
-        r.gridy++;
-        right.add(senderNameField, r);
-        r.gridy++;
-        right.add(new JLabel("Absender Konto Nr.:"), r);
-        r.gridy++;
-        right.add(senderKontoField, r);
-        r.gridy++;
-        right.add(new JLabel("Abteilung:"), r);
-        r.gridy++;
-        right.add(departmentList, r);
+        // Add form fields with styled labels
+        addStyledFormRow(formPanel, r, "👤 Empfänger Name:", receiverNameCombobox);
+        addStyledFormRow(formPanel, r, "💳 Empfänger Konto Nr.:", receiverKontoField);
+        addStyledFormRow(formPanel, r, "👤 Absender Name:", senderNameField);
+        addStyledFormRow(formPanel, r, "💳 Absender Konto Nr.:", senderKontoField);
+        addStyledFormRow(formPanel, r, "🏢 Abteilung:", departmentList);
+
+        JScrollPane formScroll = new JScrollPane(formPanel);
+        formScroll.setBorder(null);
+        formScroll.setOpaque(false);
+        formScroll.getViewport().setOpaque(false);
+        leftCard.add(formScroll, BorderLayout.CENTER);
+
+        // Right panel - Order items
+        RoundedPanel rightCard = new RoundedPanel(Color.WHITE, 16);
+        rightCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        rightCard.setLayout(new BorderLayout(10, 10));
+
+        JLabel tableTitle = new JLabel("🛒 Bestellte Artikel");
+        tableTitle.setFont(tableTitle.getFont().deriveFont(Font.BOLD, 17f));
+        tableTitle.setForeground(new Color(31, 45, 61));
+        rightCard.add(tableTitle, BorderLayout.NORTH);
+
+        rightCard.add(tableTitle, BorderLayout.NORTH);
 
         // Order table (show unit price and line total)
-        r.gridy++;
-        r.fill = GridBagConstraints.BOTH;
-        r.weighty = 0.5;
         orderTableModel = new DefaultTableModel(new String[]{"Artikel", "Menge", "Einzelpreis", "Gesamt"}, 0) {
             @Override
             public boolean isCellEditable(int row, int col) {
@@ -137,24 +169,41 @@ public class NewOrderGUI extends JFrame {
             }
         };
         JTable orderTable = new JTable(orderTableModel);
-        orderTable.setRowHeight(24);
+        orderTable.setRowHeight(28);
+        orderTable.setFont(orderTable.getFont().deriveFont(13f));
+        orderTable.setShowGrid(true);
+        orderTable.setGridColor(new Color(230, 236, 240));
+        orderTable.getTableHeader().setBackground(new Color(52, 152, 219));
+        orderTable.getTableHeader().setForeground(Color.WHITE);
+        orderTable.getTableHeader().setFont(orderTable.getTableHeader().getFont().deriveFont(Font.BOLD, 13f));
+        orderTable.setSelectionBackground(new Color(52, 152, 219, 30));
+
         JScrollPane orderScroll = new JScrollPane(orderTable);
-        right.add(orderScroll, r);
+        orderScroll.setBorder(BorderFactory.createLineBorder(new Color(220, 225, 230), 1));
+        rightCard.add(orderScroll, BorderLayout.CENTER);
 
-        // Bottom actions (create + total + pdf)
-        r.gridy++;
-        r.fill = GridBagConstraints.HORIZONTAL;
-        r.weighty = 0.0;
-        JPanel rightBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        rightBottom.setOpaque(false);
+        // Bottom panel with total and buttons
+        JPanel bottomPanel = new JPanel(new BorderLayout(10, 10));
+        bottomPanel.setOpaque(false);
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
-        JButton addArticlesBtn = createRoundedButton("Artikel hinzufügen");
+        // Total price with styled label
+        JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        totalPanel.setOpaque(false);
+        totalPriceLabel = new JLabel("Totalpreis: 0.00 CHF");
+        totalPriceLabel.setFont(totalPriceLabel.getFont().deriveFont(Font.BOLD, 16f));
+        totalPriceLabel.setForeground(new Color(46, 204, 113));
+        totalPanel.add(totalPriceLabel);
+        bottomPanel.add(totalPanel, BorderLayout.WEST);
+
+        // Action buttons
+        JPanel actionButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        actionButtons.setOpaque(false);
+
+        JButton addArticlesBtn = createStyledButton("📦 Artikel hinzufügen", new Color(52, 152, 219), Color.WHITE);
         addArticlesBtn.addActionListener(e -> addArticlesFromList());
 
-        totalPriceLabel = new JLabel("Totalpreis: 0.00 CHF");
-        JButton createOrderBtn = createRoundedButton("Bestellen");
-        createOrderBtn.addActionListener(e -> onCreateOrder());
-        JButton exportPdfBtn = createRoundedButton("Export PDF");
+        JButton exportPdfBtn = createStyledButton("📄 Export PDF", new Color(241, 196, 15), Color.WHITE);
         exportPdfBtn.addActionListener(e -> {
             File file = chooseSaveFile();
             if (file != null) {
@@ -167,27 +216,54 @@ public class NewOrderGUI extends JFrame {
             }
         });
 
-        rightBottom.add(addArticlesBtn);
-        rightBottom.add(totalPriceLabel);
-        rightBottom.add(exportPdfBtn);
-        rightBottom.add(createOrderBtn);
-        right.add(rightBottom, r);
+        JButton createOrderBtn = createStyledButton("✓ Bestellen", new Color(46, 204, 113), Color.WHITE);
+        createOrderBtn.addActionListener(e -> onCreateOrder());
 
-        card.add(right, BorderLayout.CENTER);
+        actionButtons.add(addArticlesBtn);
+        actionButtons.add(exportPdfBtn);
+        actionButtons.add(createOrderBtn);
+        bottomPanel.add(actionButtons, BorderLayout.EAST);
 
-        // place card in center with padding background
-        JPanel centerWrapper = new JPanel(new GridBagLayout());
-        centerWrapper.setBackground(new Color(245, 247, 250));
-        centerWrapper.add(card);
-        add(centerWrapper, BorderLayout.CENTER);
+        rightCard.add(bottomPanel, BorderLayout.SOUTH);
+
+        // Add cards to split pane
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftCard, rightCard);
+        splitPane.setDividerLocation(450);
+        splitPane.setDividerSize(4);
+        splitPane.setBorder(null);
+        splitPane.setOpaque(false);
+
+        mainContent.add(splitPane, BorderLayout.CENTER);
+        add(mainContent, BorderLayout.CENTER);
 
         // Menu
         setJMenuBar(createJMenu());
 
         // finalize
-        pack();
-        setMinimumSize(new Dimension(760, 420));
+        setMinimumSize(new Dimension(900, 600));
         setLocationRelativeTo(null);
+    }
+
+    private void styleTextField(JTextField field) {
+        field.setFont(field.getFont().deriveFont(13f));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(206, 212, 218), 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+    }
+
+    private void addStyledFormRow(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field) {
+        JLabel label = new JLabel(labelText);
+        label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
+        label.setForeground(new Color(52, 73, 94));
+        panel.add(label, gbc);
+
+        gbc.gridy++;
+        gbc.insets = new Insets(2, 8, 12, 8);
+        panel.add(field, gbc);
+
+        gbc.gridy++;
+        gbc.insets = new Insets(8, 8, 8, 8);
     }
 
     private void fillReceiverNameCombobox() {
@@ -629,20 +705,55 @@ public class NewOrderGUI extends JFrame {
                 "</ul>";
     }
 
-    private JButton createRoundedButton(String text) {
+    private JButton createStyledButton(String text, Color bgColor, Color fgColor) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
         button.setBorderPainted(false);
         button.setContentAreaFilled(false);
         button.setOpaque(true);
-        button.setBackground(new Color(237, 242, 247));
-        button.setForeground(new Color(20, 30, 40));
-        button.setFont(button.getFont().deriveFont(Font.BOLD));
+        button.setBackground(bgColor);
+        button.setForeground(fgColor);
+        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 210, 220), 1),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)
+                BorderFactory.createLineBorder(bgColor.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 18, 10, 18)
         ));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Hover effect
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(bgColor.brighter());
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(bgColor);
+            }
+        });
+
         return button;
+    }
+
+    // Gradient panel for header
+    private static class GradientPanel extends JPanel {
+        private final Color color1;
+        private final Color color2;
+
+        GradientPanel(Color color1, Color color2) {
+            this.color1 = color1;
+            this.color2 = color2;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            GradientPaint gp = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
+            g2.setPaint(gp);
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+            g2.dispose();
+            super.paintComponent(g);
+        }
     }
 
     // small rounded panel for card/header styling

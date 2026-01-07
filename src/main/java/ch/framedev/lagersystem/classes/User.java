@@ -1,5 +1,6 @@
 package ch.framedev.lagersystem.classes;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @SuppressWarnings("unused")
@@ -18,6 +19,7 @@ public class User {
     }
 
     public List<String> getOrders() {
+        if(orders == null) return new ArrayList<>();
         return orders;
     }
 

@@ -9,9 +9,14 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Modern edit order GUI with improved visual design and user experience.
+ * Features: Split panel layout, gradient header, styled components, and article caching.
+ */
 public class EditOrderGUI extends JFrame {
 
     private final Order order;
@@ -20,181 +25,399 @@ public class EditOrderGUI extends JFrame {
     private final JTextField orderDateField;
     private final JTextField senderNameField;
     private final JTextField senderKontoNumberField;
+    private final JTextField departmentField;
 
     private final DefaultTableModel tableModel;
+    private final Map<String, Article> articleCache = new HashMap<>();
 
     public EditOrderGUI(Order order) {
         this.order = order;
-        setTitle("Edit Order");
-        setSize(800, 600);
+        setTitle("Bestellung Bearbeiten");
+        setSize(1000, 700);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
+        setLayout(new BorderLayout(0, 0));
 
-        JPanel mainPanel = new JPanel(new GridBagLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        setLayout(new BorderLayout(0, 0));
+
+        // Gradient header with icon
+        JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        headerWrapper.setBackground(new Color(245, 247, 250));
+        GradientPanel header = new GradientPanel(
+            new Color(142, 68, 173),
+            new Color(155, 89, 182)
+        );
+        header.setPreferredSize(new Dimension(850, 80));
+        header.setLayout(new GridBagLayout());
+
+        JLabel iconLabel = new JLabel("✏️");
+        iconLabel.setFont(iconLabel.getFont().deriveFont(Font.BOLD, 36f));
+        iconLabel.setForeground(new Color(255, 255, 255, 180));
+
+        JLabel title = new JLabel("  Bestellung Bearbeiten");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
+        title.setForeground(Color.WHITE);
+
+        JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        headerContent.setOpaque(false);
+        headerContent.add(iconLabel);
+        headerContent.add(title);
+        header.add(headerContent);
+
+        headerWrapper.add(header);
+        add(headerWrapper, BorderLayout.NORTH);
+
+        // Main content area
+        JPanel mainContent = new JPanel(new BorderLayout(15, 15));
+        mainContent.setBackground(new Color(245, 247, 250));
+        mainContent.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        // Left panel - Order details form
+        RoundedPanel leftCard = new RoundedPanel(Color.WHITE, 16);
+        leftCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        leftCard.setLayout(new BorderLayout(10, 10));
+
+        JLabel formTitle = new JLabel("📋 Bestelldetails");
+        formTitle.setFont(formTitle.getFont().deriveFont(Font.BOLD, 17f));
+        formTitle.setForeground(new Color(31, 45, 61));
+        leftCard.add(formTitle, BorderLayout.NORTH);
+
+        // Form panel with GridBagLayout
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setOpaque(false);
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.insets = new Insets(8, 8, 8, 8);
         gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        // Order ID
         gbc.gridx = 0;
         gbc.gridy = 0;
-        mainPanel.add(new JLabel("Order ID:"), gbc);
-        gbc.gridx = 1;
         gbc.weightx = 1.0;
+
+        // Initialize fields
         JTextField orderIdField = new JTextField(order.getOrderId());
         orderIdField.setEditable(false);
-        mainPanel.add(orderIdField, gbc);
+        orderIdField.setBackground(new Color(240, 240, 240));
+        styleTextField(orderIdField);
 
-        // Receiver Name
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.weightx = 0;
-        mainPanel.add(new JLabel("Empfänger Name:"), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
         receiverNameField = new JTextField(order.getReceiverName());
-        mainPanel.add(receiverNameField, gbc);
+        styleTextField(receiverNameField);
 
-        // Receiver Konto Number
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.weightx = 0;
-        mainPanel.add(new JLabel("Empfänger Konto Nummer:"), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
         receiverKontoNumberField = new JTextField(order.getReceiverKontoNumber());
-        mainPanel.add(receiverKontoNumberField, gbc);
+        styleTextField(receiverKontoNumberField);
 
-        // Order Date
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        gbc.weightx = 0;
-        mainPanel.add(new JLabel("Bestelldatum:"), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
         orderDateField = new JTextField(order.getOrderDate());
-        mainPanel.add(orderDateField, gbc);
+        styleTextField(orderDateField);
 
-        // Sender Name
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        gbc.weightx = 0;
-        mainPanel.add(new JLabel("Absender Name:"), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
         senderNameField = new JTextField(order.getSenderName());
-        mainPanel.add(senderNameField, gbc);
+        styleTextField(senderNameField);
 
-        // Sender Konto Number
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.weightx = 0;
-        mainPanel.add(new JLabel("Absender Konto Nummer:"), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1.0;
         senderKontoNumberField = new JTextField(order.getSenderKontoNumber());
-        mainPanel.add(senderKontoNumberField, gbc);
+        styleTextField(senderKontoNumberField);
 
-        // Articles Table
-        gbc.gridx = 0;
-        gbc.gridy = 6;
-        gbc.gridwidth = 2;
-        gbc.weightx = 1.0;
-        gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.BOTH;
+        departmentField = new JTextField(order.getDepartment() != null ? order.getDepartment() : "");
+        styleTextField(departmentField);
 
-        String[] columnNames = {"Artikel", "Menge", "Preis"};
-        tableModel = new DefaultTableModel(columnNames, 0);
+        // Add form rows
+        addStyledFormRow(formPanel, gbc, "🆔 Bestell-ID:", orderIdField);
+        addStyledFormRow(formPanel, gbc, "👤 Empfänger Name:", receiverNameField);
+        addStyledFormRow(formPanel, gbc, "💳 Empfänger Konto:", receiverKontoNumberField);
+        addStyledFormRow(formPanel, gbc, "📅 Bestelldatum:", orderDateField);
+        addStyledFormRow(formPanel, gbc, "👤 Absender Name:", senderNameField);
+        addStyledFormRow(formPanel, gbc, "💳 Absender Konto:", senderKontoNumberField);
+        addStyledFormRow(formPanel, gbc, "🏢 Abteilung:", departmentField);
+
+        JScrollPane formScroll = new JScrollPane(formPanel);
+        formScroll.setBorder(null);
+        formScroll.setOpaque(false);
+        formScroll.getViewport().setOpaque(false);
+        leftCard.add(formScroll, BorderLayout.CENTER);
+
+        leftCard.add(formScroll, BorderLayout.CENTER);
+
+        // Right panel - Articles table
+        RoundedPanel rightCard = new RoundedPanel(Color.WHITE, 16);
+        rightCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        rightCard.setLayout(new BorderLayout(10, 10));
+
+        JLabel tableTitle = new JLabel("📦 Bestellte Artikel");
+        tableTitle.setFont(tableTitle.getFont().deriveFont(Font.BOLD, 17f));
+        tableTitle.setForeground(new Color(31, 45, 61));
+        rightCard.add(tableTitle, BorderLayout.NORTH);
+
+        // Articles Table with modern styling
+        String[] columnNames = {"Artikel", "Menge", "Einzelpreis"};
+        tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 1; // Only quantity is editable
+            }
+        };
         JTable articlesTable = new JTable(tableModel);
+        articlesTable.setRowHeight(28);
+        articlesTable.setFont(articlesTable.getFont().deriveFont(13f));
+        articlesTable.setShowGrid(true);
+        articlesTable.setGridColor(new Color(230, 236, 240));
+        articlesTable.getTableHeader().setBackground(new Color(155, 89, 182));
+        articlesTable.getTableHeader().setForeground(Color.WHITE);
+        articlesTable.getTableHeader().setFont(articlesTable.getTableHeader().getFont().deriveFont(Font.BOLD, 13f));
+        articlesTable.setSelectionBackground(new Color(155, 89, 182, 30));
+
         JScrollPane scrollPane = new JScrollPane(articlesTable);
-        scrollPane.setPreferredSize(new Dimension(700, 200));
-        mainPanel.add(scrollPane, gbc);
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(220, 225, 230), 1));
+        rightCard.add(scrollPane, BorderLayout.CENTER);
 
-        // Buttons
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton saveButton = new JButton("Speichern");
-        JButton cancelButton = new JButton("Abbrechen");
+        // Bottom action panel
+        JPanel actionPanel = new JPanel(new BorderLayout(10, 10));
+        actionPanel.setOpaque(false);
+        actionPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
-        saveButton.addActionListener(e -> saveChanges());
+        // Info label on left
+        JLabel infoLabel = new JLabel("💡 Tipp: Doppelklick zum Bearbeiten der Menge");
+        infoLabel.setFont(infoLabel.getFont().deriveFont(Font.ITALIC, 11f));
+        infoLabel.setForeground(new Color(108, 117, 125));
+        actionPanel.add(infoLabel, BorderLayout.WEST);
+
+        // Action buttons on right
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton cancelButton = createStyledButton("✕ Abbrechen", new Color(220, 53, 69), Color.WHITE);
         cancelButton.addActionListener(e -> dispose());
 
-        buttonPanel.add(saveButton);
+        JButton saveButton = createStyledButton("💾 Speichern", new Color(40, 167, 69), Color.WHITE);
+        saveButton.addActionListener(e -> saveChanges());
+
         buttonPanel.add(cancelButton);
+        buttonPanel.add(saveButton);
+        actionPanel.add(buttonPanel, BorderLayout.EAST);
 
-        gbc.gridx = 0;
-        gbc.gridy = 7;
-        gbc.gridwidth = 2;
-        gbc.weighty = 0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.EAST;
-        mainPanel.add(buttonPanel, gbc);
+        rightCard.add(actionPanel, BorderLayout.SOUTH);
 
-        add(mainPanel);
+        // Add panels to split pane
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftCard, rightCard);
+        splitPane.setDividerLocation(400);
+        splitPane.setDividerSize(4);
+        splitPane.setBorder(null);
+        splitPane.setOpaque(false);
 
+        mainContent.add(splitPane, BorderLayout.CENTER);
+        add(mainContent, BorderLayout.CENTER);
+
+        // Load articles
         loadArticles();
     }
 
+    private void styleTextField(JTextField field) {
+        field.setFont(field.getFont().deriveFont(13f));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(206, 212, 218), 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+    }
+
+    private void addStyledFormRow(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field) {
+        JLabel label = new JLabel(labelText);
+        label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
+        label.setForeground(new Color(52, 73, 94));
+        panel.add(label, gbc);
+
+        gbc.gridy++;
+        gbc.insets = new Insets(2, 8, 12, 8);
+        panel.add(field, gbc);
+
+        gbc.gridy++;
+        gbc.insets = new Insets(8, 8, 8, 8);
+    }
+
     private void loadArticles() {
-        // Load articles from order into table
-        // This depends on your Order class structure
-        // Example implementation:
+        // Load articles from order into table with caching for performance
         Map<String, Integer> orderedArticles = order.getOrderedArticles();
         List<Article> articles = new ArrayList<>();
+
+        // Use cache to avoid repeated database queries
         for(Map.Entry<String, Integer> entry : orderedArticles.entrySet()) {
-            articles.add(ArticleManager.getInstance().getArticleByNumber(entry.getKey()));
+            String articleNumber = entry.getKey();
+            Article article;
+
+            // Check cache first
+            if (articleCache.containsKey(articleNumber)) {
+                article = articleCache.get(articleNumber);
+            } else {
+                article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+                if (article != null) {
+                    articleCache.put(articleNumber, article);
+                }
+            }
+
+            if (article != null) {
+                articles.add(article);
+            }
         }
+
+        // Populate table
         for (Article article : articles) {
             int quantity = orderedArticles.get(article.getArticleNumber());
-            Object[] rowData = {article.getName(), quantity, article.getSellPrice()};
+            Object[] rowData = {
+                article.getName() + " (" + article.getArticleNumber() + ")",
+                quantity,
+                String.format("%.2f CHF", article.getSellPrice())
+            };
             tableModel.addRow(rowData);
         }
     }
 
     private void saveChanges() {
-        order.setReceiverName(receiverNameField.getText());
-        order.setReceiverKontoNumber(receiverKontoNumberField.getText());
-        order.setOrderDate(orderDateField.getText());
-        order.setSenderName(senderNameField.getText());
-        order.setSenderKontoNumber(senderKontoNumberField.getText());
+        // Update order with form values
+        order.setReceiverName(receiverNameField.getText().trim());
+        order.setReceiverKontoNumber(receiverKontoNumberField.getText().trim());
+        order.setOrderDate(orderDateField.getText().trim());
+        order.setSenderName(senderNameField.getText().trim());
+        order.setSenderKontoNumber(senderKontoNumberField.getText().trim());
+        order.setDepartment(departmentField.getText().trim());
 
+        // Get updated quantities from table
         Map<String, Integer> tableData = getTableData();
-        Map<String, Integer> orderedArticles = new java.util.HashMap<>(tableData);
-        order.setOrderedArticles(orderedArticles);
+        order.setOrderedArticles(new HashMap<>(tableData));
 
+        // Save to database
         OrderManager orderManager = OrderManager.getInstance();
         boolean success = orderManager.updateOrder(order);
+
         if (!success) {
-            JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren der Bestellung!", "Fehler", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                "<html><b>Fehler beim Aktualisieren!</b><br/>Die Bestellung konnte nicht gespeichert werden.</html>",
+                "Fehler",
+                JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        JOptionPane.showMessageDialog(this, "Bestellung erfolgreich aktualisiert!");
+        JOptionPane.showMessageDialog(this,
+            "<html><b>✓ Erfolgreich gespeichert!</b><br/>Die Bestellung wurde aktualisiert.</html>",
+            "Erfolg",
+            JOptionPane.INFORMATION_MESSAGE);
         dispose();
     }
 
     public Map<String, Integer> getTableData() {
-        Map<String, Integer> data = new java.util.HashMap<>();
+        Map<String, Integer> data = new HashMap<>();
+
         for (int i = 0; i < tableModel.getRowCount(); i++) {
-            String articleName = (String) tableModel.getValueAt(i, 0);
+            String articleNameWithNumber = (String) tableModel.getValueAt(i, 0);
+
+            // Extract article number from "Name (Number)" format
+            String articleNumber = null;
+            int openParen = articleNameWithNumber.lastIndexOf('(');
+            int closeParen = articleNameWithNumber.lastIndexOf(')');
+            if (openParen != -1 && closeParen != -1 && closeParen > openParen) {
+                articleNumber = articleNameWithNumber.substring(openParen + 1, closeParen).trim();
+            }
+
+            // Get quantity from table
             int quantity;
             try {
-                quantity = Integer.parseInt((String) tableModel.getValueAt(i, 1));
+                Object qtyObj = tableModel.getValueAt(i, 1);
+                if (qtyObj instanceof Integer) {
+                    quantity = (Integer) qtyObj;
+                } else {
+                    quantity = Integer.parseInt(qtyObj.toString());
+                }
             } catch (NumberFormatException | ClassCastException e) {
-                quantity = (int) tableModel.getValueAt(i, 1);
+                System.err.println("Invalid quantity at row " + i + ": " + tableModel.getValueAt(i, 1));
+                continue; // Skip this row
             }
-            // Integer quantity = Integer.parseInt((String) tableModel.getValueAt(i, 1));
 
-            // Get article number from article name
-            Article article = ArticleManager.getInstance().getArticleByName(articleName);
-            if (article != null) {
-                data.put(article.getArticleNumber(), quantity);
+            // Use article number if extracted, otherwise try to find by name
+            if (articleNumber != null && !articleNumber.isEmpty()) {
+                data.put(articleNumber, quantity);
+            } else {
+                // Fallback: extract just the name part and look it up
+                String articleName = articleNameWithNumber;
+                if (openParen != -1) {
+                    articleName = articleNameWithNumber.substring(0, openParen).trim();
+                }
+                Article article = ArticleManager.getInstance().getArticleByName(articleName);
+                if (article != null) {
+                    data.put(article.getArticleNumber(), quantity);
+                }
             }
         }
+
         return data;
     }
 
     public void display() {
         SwingUtilities.invokeLater(() -> setVisible(true));
+    }
+
+    private JButton createStyledButton(String text, Color bgColor, Color fgColor) {
+        JButton button = new JButton(text);
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setOpaque(true);
+        button.setBackground(bgColor);
+        button.setForeground(fgColor);
+        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(bgColor.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 18, 10, 18)
+        ));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Hover effect
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(bgColor.brighter());
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(bgColor);
+            }
+        });
+
+        return button;
+    }
+
+    // Gradient panel for header
+    private static class GradientPanel extends JPanel {
+        private final Color color1;
+        private final Color color2;
+
+        GradientPanel(Color color1, Color color2) {
+            this.color1 = color1;
+            this.color2 = color2;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            GradientPaint gp = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
+            g2.setPaint(gp);
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+            g2.dispose();
+            super.paintComponent(g);
+        }
+    }
+
+    // Rounded panel for card styling
+    private static class RoundedPanel extends JPanel {
+        private final Color bg;
+        private final int radius;
+
+        RoundedPanel(Color bg, int radius) {
+            this.bg = bg;
+            this.radius = radius;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(bg);
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
+            g2.dispose();
+            super.paintComponent(g);
+        }
     }
 }

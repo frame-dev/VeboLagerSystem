@@ -20,6 +20,7 @@ import java.util.WeakHashMap;
  * <p>
  * Note: executeQuery returns a ResultSet and keeps the creating Statement tracked.
  * Callers must call closeQuery(ResultSet) when finished to close both ResultSet and Statement.
+ * TODO: Performance optimizations if needed.
  */
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 public class DatabaseManager {

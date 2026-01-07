@@ -8,6 +8,7 @@ import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.UserManager;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,85 +16,147 @@ import java.util.Objects;
 
 public class CompleteOrderGUI extends JFrame {
 
-    private JList<String> ordersList;
-    private DefaultListModel<String> listModel;
+    private JList<OrderListItem> ordersList;
+    private DefaultListModel<OrderListItem> listModel;
     private List<Order> currentOrders;
-    private final JLabel detailsLabel;
+    private final JPanel detailsPanel;
     private final JButton completeButton;
     private final JButton refreshButton;
     private final JButton closeButton;
     private final JLabel orderCountLabel;
+    private final JLabel statusIconLabel;
 
     public CompleteOrderGUI() {
         setTitle("Bestellung Abschließen");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(750, 550);
+        setSize(850, 650);
         setLocationRelativeTo(null);
-        setLayout(new BorderLayout(8, 8));
+        setLayout(new BorderLayout(0, 0));
 
-        // Header
+        // Header with gradient
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
         headerWrapper.setBackground(new Color(245, 247, 250));
-        RoundedPanel headerPanel = new RoundedPanel(new Color(255, 255, 255), 20);
-        headerPanel.setPreferredSize(new Dimension(600, 64));
-        JLabel title = new JLabel("Bestellung Abschließen");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 22f));
-        title.setForeground(new Color(31, 45, 61));
-        headerPanel.add(title);
+        GradientPanel headerPanel = new GradientPanel(
+            new Color(30, 58, 95),
+            new Color(52, 84, 122)
+        );
+        headerPanel.setPreferredSize(new Dimension(720, 80));
+        headerPanel.setLayout(new GridBagLayout());
+
+        JLabel iconLabel = new JLabel("✓");
+        iconLabel.setFont(iconLabel.getFont().deriveFont(Font.BOLD, 32f));
+        iconLabel.setForeground(new Color(255, 255, 255, 180));
+
+        JLabel title = new JLabel("  Bestellung Abschließen");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
+        title.setForeground(Color.WHITE);
+
+        JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        headerContent.setOpaque(false);
+        headerContent.add(iconLabel);
+        headerContent.add(title);
+        headerPanel.add(headerContent);
+
         headerWrapper.add(headerPanel);
         add(headerWrapper, BorderLayout.NORTH);
 
-        // Main card
-        RoundedPanel card = new RoundedPanel(Color.WHITE, 18);
-        card.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        card.setLayout(new BorderLayout(8, 8));
+        // Main split panel
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        splitPane.setDividerLocation(400);
+        splitPane.setDividerSize(4);
+        splitPane.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        splitPane.setBackground(new Color(245, 247, 250));
 
-        // Initialize detailsLabel early
-        detailsLabel = new JLabel("<html><div style='text-align:center; padding:10px;'>" +
-                "Wähle eine Bestellung aus, um Details zu sehen.</div></html>", SwingConstants.CENTER);
-        detailsLabel.setFont(detailsLabel.getFont().deriveFont(14f));
-        detailsLabel.setForeground(new Color(80, 90, 100));
+        // Left panel - Orders list with search
+        JPanel leftPanel = new JPanel(new BorderLayout(8, 8));
+        leftPanel.setOpaque(false);
 
+        RoundedPanel leftCard = new RoundedPanel(Color.WHITE, 16);
+        leftCard.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        leftCard.setLayout(new BorderLayout(8, 8));
+
+        JLabel listTitle = new JLabel("📋 Offene Bestellungen");
+        listTitle.setFont(listTitle.getFont().deriveFont(Font.BOLD, 16f));
+        listTitle.setForeground(new Color(31, 45, 61));
+        leftCard.add(listTitle, BorderLayout.NORTH);
+
+        // Initialize orderCountLabel early
         orderCountLabel = new JLabel("Anzahl Bestellungen: 0");
+        orderCountLabel.setFont(orderCountLabel.getFont().deriveFont(Font.PLAIN, 12f));
+        orderCountLabel.setForeground(new Color(100, 110, 120));
+        leftCard.add(orderCountLabel, BorderLayout.SOUTH);
 
-        // Initialize orders list
-        initializeOrdersList();
-        JScrollPane scrollPane = new JScrollPane(ordersList);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(220, 225, 230)));
-        card.add(scrollPane, BorderLayout.CENTER);
+        leftPanel.add(leftCard, BorderLayout.CENTER);
+        splitPane.setLeftComponent(leftPanel);
 
-        // Details panel
-        JPanel detailsPanel = new JPanel(new BorderLayout(8, 8));
+        // Right panel - Details (MUST be created before initializeOrdersList)
+        JPanel rightPanel = new JPanel(new BorderLayout(8, 8));
+        rightPanel.setOpaque(false);
+
+        RoundedPanel rightCard = new RoundedPanel(Color.WHITE, 16);
+        rightCard.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        rightCard.setLayout(new BorderLayout(10, 10));
+
+        JLabel detailsTitle = new JLabel("📄 Bestelldetails");
+        detailsTitle.setFont(detailsTitle.getFont().deriveFont(Font.BOLD, 16f));
+        detailsTitle.setForeground(new Color(31, 45, 61));
+        rightCard.add(detailsTitle, BorderLayout.NORTH);
+
+        // Details panel with better styling (initialize EARLY)
+        detailsPanel = new JPanel();
+        detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
         detailsPanel.setOpaque(false);
         detailsPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 225, 230)),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+            BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+            BorderFactory.createEmptyBorder(15, 15, 15, 15)
         ));
-        detailsPanel.add(detailsLabel, BorderLayout.CENTER);
-        card.add(detailsPanel, BorderLayout.SOUTH);
 
-        // Place card in center
-        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        statusIconLabel = new JLabel("ℹ️", SwingConstants.CENTER);
+        statusIconLabel.setFont(statusIconLabel.getFont().deriveFont(48f));
+
+        JLabel placeholderText = new JLabel("<html><div style='text-align:center; color:#6c757d;'>" +
+            "Wählen Sie eine Bestellung aus<br/>um Details anzuzeigen</div></html>", SwingConstants.CENTER);
+        placeholderText.setFont(placeholderText.getFont().deriveFont(14f));
+
+        detailsPanel.add(Box.createVerticalGlue());
+        detailsPanel.add(statusIconLabel);
+        detailsPanel.add(Box.createVerticalStrut(10));
+        detailsPanel.add(placeholderText);
+        detailsPanel.add(Box.createVerticalGlue());
+
+        JScrollPane detailsScroll = new JScrollPane(detailsPanel);
+        detailsScroll.setBorder(null);
+        detailsScroll.setBackground(Color.WHITE);
+        rightCard.add(detailsScroll, BorderLayout.CENTER);
+
+        rightPanel.add(rightCard, BorderLayout.CENTER);
+        splitPane.setRightComponent(rightPanel);
+
+        // NOW initialize orders list after detailsPanel is ready
+        initializeOrdersList();
+        JScrollPane scrollPane = new JScrollPane(ordersList);
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(220, 225, 230), 1));
+        scrollPane.setBackground(Color.WHITE);
+        leftCard.add(scrollPane, BorderLayout.CENTER);
+
+        // Wrapper for split pane
+        JPanel centerWrapper = new JPanel(new BorderLayout());
         centerWrapper.setBackground(new Color(245, 247, 250));
-        centerWrapper.add(card);
+        centerWrapper.add(splitPane, BorderLayout.CENTER);
         add(centerWrapper, BorderLayout.CENTER);
 
-        // Bottom panel with count and buttons
-        JPanel bottomPanel = new JPanel(new BorderLayout(10, 10));
+        // Bottom panel with styled buttons
+        JPanel bottomPanel = new JPanel(new BorderLayout(15, 10));
         bottomPanel.setBackground(new Color(245, 247, 250));
-        bottomPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(5, 20, 15, 20));
 
-        orderCountLabel.setFont(orderCountLabel.getFont().deriveFont(Font.BOLD));
-        orderCountLabel.setForeground(new Color(31, 45, 61));
-        bottomPanel.add(orderCountLabel, BorderLayout.WEST);
-
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
         buttons.setOpaque(false);
 
-        completeButton = createRoundedButton("Bestellung abschließen");
+        refreshButton = createStyledButton("🔄 Aktualisieren", new Color(108, 117, 125), Color.WHITE);
+        completeButton = createStyledButton("✓ Abschließen", new Color(40, 167, 69), Color.WHITE);
         completeButton.setEnabled(false);
-        refreshButton = createRoundedButton("Aktualisieren");
-        closeButton = createRoundedButton("Schließen");
+        closeButton = createStyledButton("✕ Schließen", new Color(220, 53, 69), Color.WHITE);
 
         buttons.add(refreshButton);
         buttons.add(completeButton);
@@ -110,28 +173,122 @@ public class CompleteOrderGUI extends JFrame {
             int idx = ordersList.getSelectedIndex();
             if (idx >= 0 && currentOrders != null && idx < currentOrders.size()) {
                 Order o = currentOrders.get(idx);
-                int articleCount = o.getOrderedArticles().size();
-                detailsLabel.setText(String.format(
-                        "<html><div style='padding:5px;'>" +
-                                "<b>Bestell-ID:</b> %s<br/>" +
-                                "<b>Empfänger:</b> %s<br/>" +
-                                "<b>Abteilung:</b> %s<br/>" +
-                                "<b>Datum:</b> %s<br/>" +
-                                "<b>Artikel:</b> %d<br/>" +
-                                "</div></html>",
-                        o.getOrderId(), o.getReceiverName(), o.getDepartment(),
-                        o.getOrderDate(), articleCount));
+                showOrderDetails(o);
                 completeButton.setEnabled(true);
             } else {
-                detailsLabel.setText("<html><div style='text-align:center; padding:10px;'>" +
-                        "Wähle eine Bestellung aus, um Details zu sehen.</div></html>");
+                showPlaceholder();
                 completeButton.setEnabled(false);
             }
         });
 
         completeButton.addActionListener(e -> completeSelectedOrder());
-        refreshButton.addActionListener(e -> refreshList());
+        refreshButton.addActionListener(e -> {
+            refreshList();
+            JOptionPane.showMessageDialog(this, "Liste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE);
+        });
         closeButton.addActionListener(e -> dispose());
+    }
+
+    private void showPlaceholder() {
+        detailsPanel.removeAll();
+        detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
+
+        statusIconLabel.setText("ℹ️");
+        statusIconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JLabel placeholderText = new JLabel("<html><div style='text-align:center; color:#6c757d;'>" +
+            "Wählen Sie eine Bestellung aus<br/>um Details anzuzeigen</div></html>");
+        placeholderText.setFont(placeholderText.getFont().deriveFont(14f));
+        placeholderText.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        detailsPanel.add(Box.createVerticalGlue());
+        detailsPanel.add(statusIconLabel);
+        detailsPanel.add(Box.createVerticalStrut(10));
+        detailsPanel.add(placeholderText);
+        detailsPanel.add(Box.createVerticalGlue());
+
+        detailsPanel.revalidate();
+        detailsPanel.repaint();
+    }
+
+    private void showOrderDetails(Order order) {
+        detailsPanel.removeAll();
+        detailsPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
+
+        // Order info fields
+        addDetailRow(detailsPanel, gbc, "Bestell-ID:", order.getOrderId(), new Color(52, 152, 219));
+        addDetailRow(detailsPanel, gbc, "Empfänger:", order.getReceiverName(), new Color(46, 204, 113));
+        addDetailRow(detailsPanel, gbc, "Abteilung:", order.getDepartment(), new Color(155, 89, 182));
+        addDetailRow(detailsPanel, gbc, "Datum:", order.getOrderDate(), new Color(241, 196, 15));
+
+        // Article count with icon
+        int articleCount = order.getOrderedArticles().size();
+        addDetailRow(detailsPanel, gbc, "Artikel:", articleCount + " Position(en)", new Color(230, 126, 34));
+
+        // Separator
+        gbc.gridy++;
+        JSeparator sep = new JSeparator();
+        sep.setForeground(new Color(220, 225, 230));
+        detailsPanel.add(sep, gbc);
+
+        // Article details
+        gbc.gridy++;
+        JLabel articlesTitle = new JLabel("📦 Bestellte Artikel:");
+        articlesTitle.setFont(articlesTitle.getFont().deriveFont(Font.BOLD, 14f));
+        articlesTitle.setForeground(new Color(52, 73, 94));
+        detailsPanel.add(articlesTitle, gbc);
+
+        List<Article> articles = order.getOrderedArticles().keySet().stream()
+                .map(s -> ArticleManager.getInstance().getArticleByNumber(s))
+                .filter(Objects::nonNull)
+                .toList();
+
+        for (Article article : articles) {
+            gbc.gridy++;
+            int qty = order.getOrderedArticles().get(article.getArticleNumber());
+            String articleInfo = String.format("  • %s (%s) - Menge: %d",
+                article.getName(), article.getArticleNumber(), qty);
+            JLabel articleLabel = new JLabel(articleInfo);
+            articleLabel.setFont(articleLabel.getFont().deriveFont(12f));
+            articleLabel.setForeground(new Color(73, 80, 87));
+            detailsPanel.add(articleLabel, gbc);
+        }
+
+        // Add glue to push content to top
+        gbc.gridy++;
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        detailsPanel.add(Box.createVerticalGlue(), gbc);
+
+        detailsPanel.revalidate();
+        detailsPanel.repaint();
+    }
+
+    private void addDetailRow(JPanel panel, GridBagConstraints gbc, String label, String value, Color accentColor) {
+        JPanel rowPanel = new JPanel(new BorderLayout(10, 0));
+        rowPanel.setOpaque(false);
+        rowPanel.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
+
+        JLabel labelComp = new JLabel(label);
+        labelComp.setFont(labelComp.getFont().deriveFont(Font.BOLD, 13f));
+        labelComp.setForeground(new Color(52, 73, 94));
+
+        JLabel valueComp = new JLabel(value);
+        valueComp.setFont(valueComp.getFont().deriveFont(Font.PLAIN, 13f));
+        valueComp.setForeground(accentColor);
+
+        rowPanel.add(labelComp, BorderLayout.WEST);
+        rowPanel.add(valueComp, BorderLayout.CENTER);
+
+        panel.add(rowPanel, gbc);
+        gbc.gridy++;
     }
 
     private void completeSelectedOrder() {
@@ -198,10 +355,18 @@ public class CompleteOrderGUI extends JFrame {
                 "Bestätigung",
                 JOptionPane.YES_NO_OPTION);
         UserManager userManager = UserManager.getInstance();
-        User user = userManager.getUserByName(selected.getSenderName());
+        User user = userManager.getUserByName(selected.getSenderName().toLowerCase());
         if (!user.getOrders().contains(selected.getOrderId()))
             user.getOrders().add(selected.getOrderId());
         userManager.updateUser(user);
+
+        selected.setStatus("Abgeschlossen");
+        boolean updated = OrderManager.getInstance().updateOrder(selected);
+        if (updated)
+            JOptionPane.showMessageDialog(null, "Die Bestellung wurde erfolgreich abgeschlossen.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+        else
+            JOptionPane.showMessageDialog(null, "Fehler beim Abschließen der Bestellung.", "Fehler", JOptionPane.ERROR_MESSAGE);
+        refreshList();
 /*
         if (res == JOptionPane.YES_OPTION) {
             // Update stock quantities
@@ -244,8 +409,12 @@ public class CompleteOrderGUI extends JFrame {
         listModel = new DefaultListModel<>();
         ordersList = new JList<>(listModel);
         ordersList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        ordersList.setFont(ordersList.getFont().deriveFont(14f));
+        ordersList.setFont(ordersList.getFont().deriveFont(13f));
         ordersList.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        ordersList.setFixedCellHeight(60);
+        ordersList.setCellRenderer(new OrderListCellRenderer());
+        ordersList.setSelectionBackground(new Color(52, 152, 219, 30));
+        ordersList.setSelectionForeground(Color.BLACK);
         refreshList();
     }
 
@@ -262,13 +431,10 @@ public class CompleteOrderGUI extends JFrame {
         }
         if (currentOrders != null) {
             for (Order order : currentOrders) {
-                listModel.addElement(order.getOrderId() + " - " + order.getReceiverName() + " (" + order.getDepartment() + ")");
+                listModel.addElement(new OrderListItem(order));
             }
         }
-        if (detailsLabel != null) {
-            detailsLabel.setText("<html><div style='text-align:center; padding:10px;'>" +
-                    "Wähle eine Bestellung aus, um Details zu sehen.</div></html>");
-        }
+        showPlaceholder();
         if (completeButton != null) {
             completeButton.setEnabled(false);
         }
@@ -280,21 +446,143 @@ public class CompleteOrderGUI extends JFrame {
         orderCountLabel.setText("Anzahl Bestellungen: " + count);
     }
 
-    private JButton createRoundedButton(String text) {
+    private JButton createStyledButton(String text, Color bgColor, Color fgColor) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
         button.setBorderPainted(false);
         button.setContentAreaFilled(false);
         button.setOpaque(true);
-        button.setBackground(new Color(237, 242, 247));
-        button.setForeground(new Color(20, 30, 40));
-        button.setFont(button.getFont().deriveFont(Font.BOLD));
+        button.setBackground(bgColor);
+        button.setForeground(fgColor);
+        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 210, 220), 1),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)
+                BorderFactory.createLineBorder(bgColor.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Hover effect
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(bgColor.brighter());
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(bgColor);
+            }
+        });
+
         return button;
+    }
+
+    // Order list item wrapper class
+    private static class OrderListItem {
+        final Order order;
+
+        OrderListItem(Order order) {
+            this.order = order;
+        }
+
+        @Override
+        public String toString() {
+            return order.getOrderId() + " - " + order.getReceiverName();
+        }
+    }
+
+    // Custom cell renderer for prettier list items
+    private static class OrderListCellRenderer extends JPanel implements ListCellRenderer<OrderListItem> {
+        private final JLabel idLabel;
+        private final JLabel nameLabel;
+        private final JLabel deptLabel;
+        private final JLabel dateLabel;
+        private final Border padding;
+
+        OrderListCellRenderer() {
+            setLayout(new BorderLayout(10, 5));
+            padding = BorderFactory.createEmptyBorder(8, 12, 8, 12);
+
+            idLabel = new JLabel();
+            idLabel.setFont(idLabel.getFont().deriveFont(Font.BOLD, 13f));
+            idLabel.setForeground(new Color(52, 152, 219));
+
+            JPanel infoPanel = new JPanel(new GridLayout(2, 1, 0, 2));
+            infoPanel.setOpaque(false);
+
+            nameLabel = new JLabel();
+            nameLabel.setFont(nameLabel.getFont().deriveFont(Font.PLAIN, 12f));
+            nameLabel.setForeground(new Color(52, 73, 94));
+
+            JPanel bottomRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+            bottomRow.setOpaque(false);
+
+            deptLabel = new JLabel();
+            deptLabel.setFont(deptLabel.getFont().deriveFont(Font.PLAIN, 11f));
+            deptLabel.setForeground(new Color(108, 117, 125));
+
+            dateLabel = new JLabel();
+            dateLabel.setFont(dateLabel.getFont().deriveFont(Font.PLAIN, 11f));
+            dateLabel.setForeground(new Color(108, 117, 125));
+
+            bottomRow.add(deptLabel);
+            bottomRow.add(new JLabel("|"));
+            bottomRow.add(dateLabel);
+
+            infoPanel.add(nameLabel);
+            infoPanel.add(bottomRow);
+
+            add(idLabel, BorderLayout.NORTH);
+            add(infoPanel, BorderLayout.CENTER);
+        }
+
+        @Override
+        public Component getListCellRendererComponent(JList<? extends OrderListItem> list,
+                OrderListItem value, int index, boolean isSelected, boolean cellHasFocus) {
+
+            Order order = value.order;
+            idLabel.setText("📋 " + order.getOrderId());
+            nameLabel.setText("Empfänger: " + order.getReceiverName());
+            deptLabel.setText("🏢 " + order.getDepartment());
+            dateLabel.setText("📅 " + order.getOrderDate());
+
+            setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(240, 240, 240)),
+                padding
+            ));
+
+            if (isSelected) {
+                setBackground(new Color(52, 152, 219, 30));
+                setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 3, 1, 0, new Color(52, 152, 219)),
+                    padding
+                ));
+            } else {
+                setBackground(Color.WHITE);
+            }
+
+            return this;
+        }
+    }
+
+    // Gradient panel for header
+    private static class GradientPanel extends JPanel {
+        private final Color color1;
+        private final Color color2;
+
+        GradientPanel(Color color1, Color color2) {
+            this.color1 = color1;
+            this.color2 = color2;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            GradientPaint gp = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
+            g2.setPaint(gp);
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
+            g2.dispose();
+            super.paintComponent(g);
+        }
     }
 
     // Rounded panel for card styling

@@ -109,7 +109,7 @@ public class Main {
         }
 
 
-        User user = new User("marc", new ArrayList<>());
+        User user = new User("marc".toLowerCase(), new ArrayList<>());
         UserManager userManager = UserManager.getInstance();
         if(!userManager.existsUser(user.getName()))
             userManager.insertUser(user);

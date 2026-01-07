@@ -5,6 +5,7 @@ import ch.framedev.lagersystem.main.Main;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @SuppressWarnings({"UnusedReturnValue", "unused"})
@@ -89,7 +90,7 @@ public class UserManager {
         try (var resultSet = databaseManager.executeQuery(sql)) {
             if (resultSet.next()) {
                 String ordersStr = resultSet.getString("orders");
-                List<String> orders = List.of(ordersStr.split(","));
+                List<String> orders = new ArrayList<>(List.of(ordersStr.split(",")));
                 return new User(username, orders);
             }
         } catch (Exception e) {

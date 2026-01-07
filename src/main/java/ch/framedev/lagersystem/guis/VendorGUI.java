@@ -13,6 +13,9 @@ import java.awt.event.*;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+/**
+ * TODO: Cache vendor list and refresh only on changes
+ */
 public class VendorGUI extends JFrame {
 
     private final JTable vendorTable;
@@ -44,9 +47,11 @@ public class VendorGUI extends JFrame {
         JButton addVendorButton = createRoundedButton("Lieferant hinzufügen");
         JButton editVendorButton = createRoundedButton("Lieferant bearbeiten");
         JButton deleteVendorButton = createRoundedButton("Lieferant löschen");
+        JButton refreshButton = createRoundedButton("🔄 Aktualisieren");
         toolbar.add(addVendorButton);
         toolbar.add(editVendorButton);
         toolbar.add(deleteVendorButton);
+        toolbar.add(refreshButton);
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBackground(new Color(245, 247, 250));
         topPanel.add(toolbar, BorderLayout.SOUTH);
@@ -100,7 +105,8 @@ public class VendorGUI extends JFrame {
                 Vendor v = new Vendor((String) row[0], (String) row[1], (String) row[2], (String) row[3], (String) row[4]);
                 v.setSuppliedArticles(java.util.Arrays.asList(((String) row[5]).split("\\s*,\\s*")));
                 if (VendorManager.getInstance().insertVendor(v)) {
-                    ((DefaultTableModel) vendorTable.getModel()).addRow(row);
+                    loadVendors(); // Refresh table
+                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(this, "Fehler: Lieferant bereits vorhanden oder Insert fehlgeschlagen", "Fehler", JOptionPane.ERROR_MESSAGE);
                 }
@@ -117,11 +123,14 @@ public class VendorGUI extends JFrame {
             Object[] existing = ((DefaultTableModel) vendorTable.getModel()).getDataVector().elementAt(modelRow).toArray();
             Object[] updated = showUpdateVendorDialog(existing);
             if (updated != null) {
-                DefaultTableModel model = (DefaultTableModel) vendorTable.getModel();
-                for (int i = 0; i < updated.length; i++) model.setValueAt(updated[i], modelRow, i);
                 Vendor v = new Vendor((String) updated[0], (String) updated[1], (String) updated[2], (String) updated[3], (String) updated[4]);
                 v.setSuppliedArticles(java.util.Arrays.asList(((String) updated[5]).split("\\s*,\\s*")));
-                VendorManager.getInstance().updateVendor(v);
+                if (VendorManager.getInstance().updateVendor(v)) {
+                    loadVendors(); // Refresh table
+                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Lieferanten.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 
@@ -136,11 +145,17 @@ public class VendorGUI extends JFrame {
             int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Lieferanten wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
                 if (VendorManager.getInstance().deleteVendor(name)) {
-                    ((DefaultTableModel) vendorTable.getModel()).removeRow(modelRow);
+                    loadVendors(); // Refresh table
+                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE);
                 }
             }
+        });
+
+        refreshButton.addActionListener(e -> {
+            loadVendors();
+            JOptionPane.showMessageDialog(this, "Lieferantenliste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE);
         });
 
         // search logic using TableRowSorter on columns 0 (ID) and 1 (Name)

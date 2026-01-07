@@ -52,9 +52,11 @@ public class ClientGUI extends JFrame {
         JButton addClientButton = createRoundedButton("Kunde hinzufügen");
         JButton editClientButton = createRoundedButton("Kunde bearbeiten");
         JButton deleteClientButton = createRoundedButton("Kunde löschen");
+        JButton refreshButton = createRoundedButton("🔄 Aktualisieren");
         toolbar.add(addClientButton);
         toolbar.add(editClientButton);
         toolbar.add(deleteClientButton);
+        toolbar.add(refreshButton);
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBackground(new Color(245, 247, 250));
         topPanel.add(toolbar, BorderLayout.SOUTH);
@@ -137,12 +139,17 @@ public class ClientGUI extends JFrame {
             int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Kunden wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
                 if (ClientManager.getInstance().deleteClient(name)) {
-                    clients.remove(modelRow);
-                    ((DefaultTableModel) clientTable.getModel()).removeRow(modelRow);
+                    loadClients(); // Refresh table
+                    JOptionPane.showMessageDialog(this, "Kunde erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Kunden aus der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE);
                 }
             }
+        });
+
+        refreshButton.addActionListener(e -> {
+            loadClients();
+            JOptionPane.showMessageDialog(this, "Kundenliste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE);
         });
 
         // search logic using TableRowSorter

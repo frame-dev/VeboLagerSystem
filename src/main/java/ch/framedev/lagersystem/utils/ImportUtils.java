@@ -17,6 +17,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * TODO: Performance optimizations if needed for large files.
+ */
 public class ImportUtils {
 
     private static final Logger LOGGER = LogManager.getLogger(ImportUtils.class);

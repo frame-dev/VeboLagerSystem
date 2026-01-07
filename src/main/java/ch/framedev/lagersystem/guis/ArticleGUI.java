@@ -20,6 +20,9 @@ import java.util.regex.PatternSyntaxException;
 
 import static ch.framedev.lagersystem.main.Main.articleListGUI;
 
+/**
+ * TODO: Cache the article list in memory to avoid reloading from DB on every change
+ */
 @SuppressWarnings("unused")
 public class ArticleGUI extends JFrame {
 
@@ -79,7 +82,9 @@ public class ArticleGUI extends JFrame {
                 );
                 if (!articleManager.insertArticle(article)) {
                     JOptionPane.showMessageDialog(this, "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    loadArticles(); // Refresh to remove the local addition
                 } else {
+                    loadArticles(); // Refresh to ensure data consistency
                     JOptionPane.showMessageDialog(this, "Artikel erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                 }
             }
@@ -111,6 +116,7 @@ public class ArticleGUI extends JFrame {
                         (String) updatedRow[7]
                 );
                 if (articleManager.updateArticle(article)) {
+                    loadArticles(); // Refresh the table
                     JOptionPane.showMessageDialog(this, "Artikel erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Artikels.", "Fehler", JOptionPane.ERROR_MESSAGE);
@@ -121,6 +127,12 @@ public class ArticleGUI extends JFrame {
         JButton deleteArticleButton = createRoundedButton("Artikel löschen");
         deleteArticleButton.addActionListener(e -> deleteSelectedArticle());
 
+        JButton refreshButton = createRoundedButton("🔄 Aktualisieren");
+        refreshButton.addActionListener(e -> {
+            loadArticles();
+            JOptionPane.showMessageDialog(this, "Artikelliste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE);
+        });
+
         JButton retrieveQrCodeDataButton = createRoundedButton("QR-Code Daten abrufen");
         retrieveQrCodeDataButton.addActionListener(e -> {
             List<Map<String, Object>> qrCodeData = QRCodeUtils.retrieveQrCodeDataFromWebsite();
@@ -130,6 +142,7 @@ public class ArticleGUI extends JFrame {
         toolbarWrapper.add(addArticleButton);
         toolbarWrapper.add(editArticleButton);
         toolbarWrapper.add(deleteArticleButton);
+        toolbarWrapper.add(refreshButton);
         toolbarWrapper.add(retrieveQrCodeDataButton);
 
         // top area: header + toolbar stacked
