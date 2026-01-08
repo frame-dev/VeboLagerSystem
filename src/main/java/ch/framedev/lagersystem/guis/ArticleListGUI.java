@@ -41,7 +41,7 @@ public class ArticleListGUI extends JFrame {
         }
 
     public ArticleListGUI() {
-        setTitle("Artikel Liste");
+        setTitle("📋 Artikel Liste");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(420, 600);
         setLocationRelativeTo(null);

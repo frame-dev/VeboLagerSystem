@@ -9,6 +9,7 @@ import java.awt.*;
 public class MainGUI extends JFrame {
 
     private final JTabbedPane tabbedPane;
+    public static ArticleGUI articleGUI;
 
     public MainGUI() {
         setTitle("VEBO Lagersystem");
@@ -138,7 +139,7 @@ public class MainGUI extends JFrame {
 
         JPanel contentPanel = switch (tabIndex) {
             case 0 -> {
-                ArticleGUI articleGUI = new ArticleGUI();
+                articleGUI = new ArticleGUI();
                 yield (JPanel) articleGUI.getContentPane();
             }
             case 1 -> {

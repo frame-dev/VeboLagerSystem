@@ -188,7 +188,7 @@ public class ClientGUI extends JFrame {
         tableScrollPane.getViewport().addComponentListener(resizeListener);
         SwingUtilities.invokeLater(this::adjustColumnWidths);
 
-        setVisible(true);
+        // setVisible(true);
     }
 
     private void loadClients() {
@@ -292,7 +292,6 @@ public class ClientGUI extends JFrame {
         gbc.gridx = 1;
         p.add(nameField, gbc);
 
-        fillDepartmentList();
         row++;
         gbc.gridx = 0;
         gbc.gridy = row;
@@ -300,6 +299,7 @@ public class ClientGUI extends JFrame {
         departmentCombobox = new JComboBox<>();
         gbc.gridx = 1;
         p.add(departmentCombobox, gbc);
+        fillDepartmentList();
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton ok = new JButton("OK");

@@ -1528,5 +1528,565 @@
     "sellPrice": 36.20,
     "buyPrice": 0.0,
     "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "5214",
+    "name": "Lav Power Kleiderwaschmittel",
+    "details": "20kg Sackeinzel kg verkauf",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 151.25,
+    "buyPrice": 137.50,
+    "vendorName": "W+R"
+  },
+  {
+    "number": "5215",
+    "name": "Melt Ablaufreiniger 750ml",
+    "details": "Fl. nur mit Instruktion verkaufen",
+    "stockQuantity": 10,
+    "minStockLevel": 0,
+    "sellPrice": 29.0,
+    "buyPrice": 26.36,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5216",
+    "name": "Papierrollen Gross (WH/ Intr. Küche)",
+    "details": "Stk.",
+    "stockQuantity": 53,
+    "minStockLevel": 0,
+    "sellPrice": 4.95,
+    "buyPrice": 4.5,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "5217",
+    "name": "Rollenhalter Gross   (WH/ Intr. Küche)",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 70.0,
+    "buyPrice": 63.64,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "5218",
+    "name": "Clax Taps (Kleiderwaschmittel)",
+    "details": "Karton à 48 Stk",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 25.0,
+    "buyPrice": 22.73,
+    "vendorName": "Diversey"
+  },
+  {
+    "number": "5219",
+    "name": "Staubsaugersäcke zu WS 500 Minatol",
+    "details": "10 Stk.",
+    "stockQuantity": 22,
+    "minStockLevel": 0,
+    "sellPrice": 36.2,
+    "buyPrice": 32.91,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "5220",
+    "name": "Haushaltpapierrollen",
+    "details": "1 Pack à 4 Rollen",
+    "stockQuantity": 52,
+    "minStockLevel": 0,
+    "sellPrice": 6.35,
+    "buyPrice": 5.77,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5221",
+    "name": "Staubsaugersäcke S6",
+    "details": "10 Stk.",
+    "stockQuantity": 80,
+    "minStockLevel": 0,
+    "sellPrice": 24.20,
+    "buyPrice": 22.0,
+    "vendorName": "Thedra"
+  },
+  {
+    "number": "5222",
+    "name": "Vliesbeutel zu SL 11",
+    "details": "1 Stk.",
+    "stockQuantity": 50,
+    "minStockLevel": 0,
+    "sellPrice": 3.9,
+    "buyPrice": 3.55,
+    "vendorName": "Thedra"
+  },
+  {
+    "number": "5223",
+    "name": "Staubsaugersäcke T1 Rückenstaub. Thedra",
+    "details": "10 Stk.",
+    "stockQuantity": 10,
+    "minStockLevel": 0,
+    "sellPrice": 28.6,
+    "buyPrice": 26.0,
+    "vendorName": "Thedra"
+  },
+  {
+    "number": "5224",
+    "name": "Hygienebeutel  Hygolet ( Blaue Rollen)",
+    "details": "Karton à 5 Rollen",
+    "stockQuantity": 75,
+    "minStockLevel": 0,
+    "sellPrice": 13.0,
+    "buyPrice": 11.82,
+    "vendorName": "Hygolet"
+  },
+  {
+    "number": "5225",
+    "name": "Flächendesinfektion BC – Sept",
+    "details": "Kanne 5 l",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 36.0,
+    "buyPrice": 32.73,
+    "vendorName": "Null"
+  },
+  {
+    "number": "5226",
+    "name": "Multitex Wiper Rolle DR Weiss",
+    "details": "1 Rolle",
+    "stockQuantity": 3,
+    "minStockLevel": 0,
+    "sellPrice": 8.5,
+    "buyPrice": 7.73,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "5227",
+    "name": "Eimer zu Flächendesinfektion",
+    "details": "1 Eimer",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 4.4,
+    "buyPrice": 4.0,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "5228",
+    "name": "Vlies Hauben 52cm Durchmesser",
+    "details": "1 Beutel",
+    "stockQuantity": 28,
+    "minStockLevel": 0,
+    "sellPrice": 3.35,
+    "buyPrice": 3.05,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "5229",
+    "name": "Fettfilter für Dampfabzug Elektrolux",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 81.4,
+    "buyPrice": 74.0,
+    "vendorName": "Elektrolux"
+  },
+  {
+    "number": "5301",
+    "name": "Doppelklebeband ohne Leimrückstände",
+    "details": "50mm / 25m Rolle",
+    "stockQuantity": 22,
+    "minStockLevel": 0,
+    "sellPrice": 46.45,
+    "buyPrice": 42.23,
+    "vendorName": "Döbeli"
+  },
+  {
+    "number": "5302",
+    "name": "Doppelklebeband normal (Neu)",
+    "details": "50mm / 25m Rolle",
+    "stockQuantity": 17,
+    "minStockLevel": 0,
+    "sellPrice": 23.5,
+    "buyPrice": 21.36,
+    "vendorName": "Döbeli"
+  },
+  {
+    "number": "5303",
+    "name": "Malerklebeband",
+    "details": "19mm / 50m",
+    "stockQuantity": 111,
+    "minStockLevel": 0,
+    "sellPrice": 1.6,
+    "buyPrice": 1.45,
+    "vendorName": "Döbeli"
+  },
+  {
+    "number": "5304",
+    "name": "Klebeband: Papier (Schachtel)",
+    "details": "5 mm / 50m Rolle ",
+    "stockQuantity": 39,
+    "minStockLevel": 0,
+    "sellPrice": 5.95,
+    "buyPrice": 5.41,
+    "vendorName": "Döbeli"
+  },
+  {
+    "number": "5305",
+    "name": "Handroller Klebeband - 50mm",
+    "details": "Stk.",
+    "stockQuantity": 10,
+    "minStockLevel": 0,
+    "sellPrice": 38.9,
+    "buyPrice": 35.36,
+    "vendorName": "Döbeli"
+  },
+  {
+    "number": "5306",
+    "name": "Klebeband: PVC braun",
+    "details": "50mm / 66m Rolle",
+    "stockQuantity": 56,
+    "minStockLevel": 0,
+    "sellPrice": 2.4,
+    "buyPrice": 2.18,
+    "vendorName": "Döbeli"
+  },
+  {
+    "number": "5307",
+    "name": "Klebeband: PVC transparent",
+    "details": "19mm / 66m Rolle",
+    "stockQuantity": 189,
+    "minStockLevel": 0,
+    "sellPrice": 1.65,
+    "buyPrice": 1.5,
+    "vendorName": "Döbeli"
+  },
+  {
+    "number": "5308",
+    "name": "Klebeband: PVC transparent",
+    "details": "50mm / 66m Rolle",
+    "stockQuantity": 7,
+    "minStockLevel": 0,
+    "sellPrice": 2.45,
+    "buyPrice": 2.23,
+    "vendorName": "Döbeli"
+  },
+  {
+    "number": "5309",
+    "name": "Packschnur   (300)",
+    "details": "2.2 kg, dünn",
+    "stockQuantity": 2,
+    "minStockLevel": 0,
+    "sellPrice": 29.65,
+    "buyPrice": 26.91,
+    "vendorName": "Berger Seilerei"
+  },
+  {
+    "number": "5310",
+    "name": "Packschnur   (500)",
+    "details": "500g, dünn",
+    "stockQuantity": 2,
+    "minStockLevel": 0,
+    "sellPrice": 7.4,
+    "buyPrice": 6.73,
+    "vendorName": "Berger Seilerei"
+  },
+  {
+    "number": "5311",
+    "name": "Packpapier RN Natronkraft (Spedition)",
+    "details": "Rolle 63 kg",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 237.6,
+    "buyPrice": 216.0,
+    "vendorName": "Alestra altbüro"
+  },
+  {
+    "number": "5312",
+    "name": "Wellkarton (Qual. Schrenz) neu Preis 2011",
+    "details": "100cm x 75 m",
+    "stockQuantity": 2,
+    "minStockLevel": 0,
+    "sellPrice": 132.6,
+    "buyPrice": 120.55,
+    "vendorName": "SCA"
+  },
+  {
+    "number": "5313",
+    "name": "Malerklebeband",
+    "details": "50mm / 50m",
+    "stockQuantity": 10,
+    "minStockLevel": 0,
+    "sellPrice": 3.95,
+    "buyPrice": 3.59,
+    "vendorName": "Döbeli"
+  },
+  {
+    "number": "6101",
+    "name": "Dosierspender Kunststoff (Weiss / Klar) 0.5l",
+    "details": "Stk.",
+    "stockQuantity": 7,
+    "minStockLevel": 0,
+    "sellPrice": 28.6,
+    "buyPrice": 26.0,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "6102",
+    "name": "Gitterkorb für Abfall",
+    "details": "Stk.",
+    "stockQuantity": 2,
+    "minStockLevel": 0,
+    "sellPrice": 47.3,
+    "buyPrice": 43.0,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "6103",
+    "name": "WC-Bürsten Weiss „Profi“",
+    "details": "Stk.",
+    "stockQuantity": 10,
+    "minStockLevel": 0,
+    "sellPrice": 5.3,
+    "buyPrice": 4.82,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "6104",
+    "name": "Dosierspender Chromstahl 1lt. (Seife/ Desin.)",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 135.0,
+    "buyPrice": 122.73,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "6105",
+    "name": "Pad Braun 4320mm",
+    "details": "1 Stk.",
+    "stockQuantity": 2,
+    "minStockLevel": 0,
+    "sellPrice": 18.7,
+    "buyPrice": 17.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "6106",
+    "name": "Pad Blau 4320mm",
+    "details": "1 Stk.",
+    "stockQuantity": 6,
+    "minStockLevel": 0,
+    "sellPrice": 18.7,
+    "buyPrice": 17.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "6107",
+    "name": "Pad Rot 4320mm",
+    "details": "1 Stk.",
+    "stockQuantity": 6,
+    "minStockLevel": 0,
+    "sellPrice": 18.7,
+    "buyPrice": 17.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "6108",
+    "name": "Pad Weiss 4320mm",
+    "details": "1 Stk.",
+    "stockQuantity": 4,
+    "minStockLevel": 0,
+    "sellPrice": 18.7,
+    "buyPrice": 17.0,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "6109",
+    "name": "Pad Schwarz 4320mm",
+    "details": "1 Stk.",
+    "stockQuantity": 110,
+    "minStockLevel": 0,
+    "sellPrice": 18.7,
+    "buyPrice": 17.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "6110",
+    "name": "Pad Rechteckig 25x12 cm Weiss",
+    "details": "Pack à 5 Stk. Karton 12.60/Einzel 14.-",
+    "stockQuantity": 59,
+    "minStockLevel": 0,
+    "sellPrice": 14.0,
+    "buyPrice": 12.73,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "6111",
+    "name": "Pad Rechteckig 25x12 cm Blau / Grün",
+    "details": "Pack à 5 Stk.",
+    "stockQuantity": 5,
+    "minStockLevel": 0,
+    "sellPrice": 27.8,
+    "buyPrice": 25.27,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "6112",
+    "name": "Pad Rechteckig 25x12 cm Braun",
+    "details": "Pack à 5 Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 31.2,
+    "buyPrice": 28.36,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "6115",
+    "name": "Schleifnetz für Einscheibenmaschine",
+    "details": "Körnung 100",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 11.0,
+    "buyPrice": 10.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "6116",
+    "name": "Feuchtwischtücher Weiss (Masslituch) (ZVG)",
+    "details": "1 Rolle.",
+    "stockQuantity": 20,
+    "minStockLevel": 0,
+    "sellPrice": 14.1,
+    "buyPrice": 12.82,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "6118",
+    "name": "Gabelmopp",
+    "details": "Stk.",
+    "stockQuantity": 5,
+    "minStockLevel": 0,
+    "sellPrice": 21.5,
+    "buyPrice": 19.55,
+    "vendorName": "Weita"
+  },
+  {
+    "number": "6119",
+    "name": "Duftperle Staubsauger",
+    "details": "Stk.",
+    "stockQuantity": 14,
+    "minStockLevel": 0,
+    "sellPrice": 15.4,
+    "buyPrice": 14.0,
+    "vendorName": "Thedra"
+  },
+  {
+    "number": "6120",
+    "name": "Handpad Grün 16x22cm",
+    "details": "Stk.",
+    "stockQuantity": 150,
+    "minStockLevel": 0,
+    "sellPrice": 1.5,
+    "buyPrice": 1.36,
+    "vendorName": "Steinfels"
+  },
+  {
+    "number": "6121",
+    "name": "Eimer 6 lt. Rot/Blau/Gelb/Grün (Reinigungswagen)",
+    "details": "Stk.",
+    "stockQuantity": 5,
+    "minStockLevel": 0,
+    "sellPrice": 11.0,
+    "buyPrice": 10.0,
+    "vendorName": "Null"
+  },
+  {
+    "number": "6122",
+    "name": "Alustiel 140cm",
+    "details": "Stk.",
+    "stockQuantity": 6,
+    "minStockLevel": 0,
+    "sellPrice": 19.85,
+    "buyPrice": 18.05,
+    "vendorName": "Null"
+  },
+  {
+    "number": "6123",
+    "name": "Industriereiniger Dose (Lemonenbasis) Leimresten entferner",
+    "details": "Dose",
+    "stockQuantity": 10,
+    "minStockLevel": 0,
+    "sellPrice": 28.85,
+    "buyPrice": 26.23,
+    "vendorName": "3M Promag/Thedra"
+  },
+  {
+    "number": "6124",
+    "name": "Hahnenschlauch Einfüllschlauch",
+    "details": "Stk.",
+    "stockQuantity": 2,
+    "minStockLevel": 0,
+    "sellPrice": 35.0,
+    "buyPrice": 31.82,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "6125",
+    "name": "Wasserschieber 62cm Kompl.",
+    "details": "Stk.",
+    "stockQuantity": 11,
+    "minStockLevel": 0,
+    "sellPrice": 59.65,
+    "buyPrice": 54.23,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "6126",
+    "name": "Überzug zu Einwaschgerät 35cm",
+    "details": "Stk.",
+    "stockQuantity": 5,
+    "minStockLevel": 0,
+    "sellPrice": 14.5,
+    "buyPrice": 13.18,
+    "vendorName": "Promag"
+  },
+  {
+    "number": "6129",
+    "name": "Klapphalter",
+    "details": "Stk.",
+    "stockQuantity": 6,
+    "minStockLevel": 0,
+    "sellPrice": 82.0,
+    "buyPrice": 74.55,
+    "vendorName": "Null"
+  },
+  {
+    "number": "6130",
+    "name": "Laschen Mopp 45cm",
+    "details": "Stk.",
+    "stockQuantity": 74,
+    "minStockLevel": 0,
+    "sellPrice": 30.0,
+    "buyPrice": 27.27,
+    "vendorName": "Promag"
+  },
+  {
+    "number": "6131",
+    "name": "Plastik Box Weiss, ALU Entsorgung",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 7.7,
+    "buyPrice": 7.0,
+    "vendorName": "Null"
+  },
+  {
+    "number": "6132",
+    "name": "Plastik Box, Pet Entsorgung",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 39.1,
+    "buyPrice": 35.55,
+    "vendorName": "Igora"
   }
 ]

@@ -108,6 +108,22 @@ public class Main {
             }
         }
 
+        ClientManager clientManager = ClientManager.getInstance();
+        List<Map<String,Object>> clientData = ImportUtils.getInstance().loadClientsList();
+        for(Map<String,Object> itemData : clientData) {
+            String firstLastName = (String) itemData.get("firstLastName");
+            String department = (String) itemData.get("department");
+            if(!clientManager.existsClient(firstLastName)) {
+                if(!clientManager.insertClient(firstLastName, department)) {
+                    System.out.println("Fehler beim Einfügen des Kunden: " + firstLastName);
+                    logUtils.addLog("Fehler beim Einfügen des Kunden: " + firstLastName);
+                    continue;
+                }
+                System.out.println("Importierter Kunde: " + firstLastName);
+                logUtils.addLog("Importierter Kunde: " + firstLastName);
+            }
+        }
+
 
         User user = new User("marc".toLowerCase(), new ArrayList<>());
         UserManager userManager = UserManager.getInstance();

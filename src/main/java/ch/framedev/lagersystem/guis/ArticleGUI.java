@@ -1,8 +1,12 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.classes.Warning;
 import ch.framedev.lagersystem.managers.ArticleManager;
+import ch.framedev.lagersystem.managers.WarningManager;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import javax.swing.*;
 import javax.swing.table.*;
@@ -12,16 +16,21 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import static ch.framedev.lagersystem.main.Main.articleListGUI;
 
 /**
- * TODO: Cache the article list in memory to avoid reloading from DB on every change
+ * ArticleGUI with category support for better organization.
+ * Categories are loaded from categories.json and mapped to articles based on article number ranges.
  */
 @SuppressWarnings("unused")
 public class ArticleGUI extends JFrame {
@@ -29,9 +38,26 @@ public class ArticleGUI extends JFrame {
     private final JTable articleTable;
     // scroll pane reference so we can read viewport width on resize
     private final JScrollPane tableScrollPane;
-    // base column widths (used as relative weights when resizing)
-    private final int[] baseColumnWidths = new int[]{150, 260, 340, 110, 110, 150, 150, 200};
+    // base column widths - added category column between Name and Details
+    private final int[] baseColumnWidths = new int[]{150, 200, 150, 290, 110, 110, 150, 150, 200};
     private final JLabel countLabel;
+
+    // Category management
+    private JComboBox<String> categoryFilter;
+    private Map<String, CategoryRange> categories; // category name -> range
+
+    // Inner class to hold category range data
+    private static class CategoryRange {
+        String category;
+        int rangeStart;
+        int rangeEnd;
+
+        CategoryRange(String category, int start, int end) {
+            this.category = category;
+            this.rangeStart = start;
+            this.rangeEnd = end;
+        }
+    }
 
     public ArticleGUI() {
         setTitle("Artikel Verwaltung");
@@ -41,6 +67,9 @@ public class ArticleGUI extends JFrame {
         setLayout(new BorderLayout());
 
         setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // Load categories from JSON
+        loadCategories();
 
         // Initialize table early so toolbar actions can reference it
         articleTable = new JTable();
@@ -61,8 +90,24 @@ public class ArticleGUI extends JFrame {
         headerWrapper.add(headerPanel);
 
         // Toolbar with rounded buttons centered
-        JPanel toolbarWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 18));
+        JPanel toolbarWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 18));
         toolbarWrapper.setBackground(new Color(236, 239, 241));
+
+        // Category filter
+        JPanel categoryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        categoryPanel.setOpaque(false);
+        JLabel categoryLabel = new JLabel("📁 Kategorie:");
+        categoryLabel.setFont(categoryLabel.getFont().deriveFont(Font.BOLD));
+        categoryFilter = new JComboBox<>();
+        categoryFilter.addItem("Alle Kategorien");
+        if (categories != null) {
+            categories.keySet().stream().sorted().forEach(categoryFilter::addItem);
+        }
+        categoryFilter.setPreferredSize(new Dimension(200, 35));
+        categoryFilter.addActionListener(e -> filterByCategory());
+        categoryPanel.add(categoryLabel);
+        categoryPanel.add(categoryFilter);
+        toolbarWrapper.add(categoryPanel);
 
         JButton addArticleButton = createRoundedButton("Artikel hinzufügen");
         addArticleButton.addActionListener(e -> {
@@ -82,9 +127,7 @@ public class ArticleGUI extends JFrame {
                 );
                 if (!articleManager.insertArticle(article)) {
                     JOptionPane.showMessageDialog(this, "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.", "Fehler", JOptionPane.ERROR_MESSAGE);
-                    loadArticles(); // Refresh to remove the local addition
                 } else {
-                    loadArticles(); // Refresh to ensure data consistency
                     JOptionPane.showMessageDialog(this, "Artikel erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                 }
             }
@@ -116,7 +159,6 @@ public class ArticleGUI extends JFrame {
                         (String) updatedRow[7]
                 );
                 if (articleManager.updateArticle(article)) {
-                    loadArticles(); // Refresh the table
                     JOptionPane.showMessageDialog(this, "Artikel erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Artikels.", "Fehler", JOptionPane.ERROR_MESSAGE);
@@ -127,12 +169,6 @@ public class ArticleGUI extends JFrame {
         JButton deleteArticleButton = createRoundedButton("Artikel löschen");
         deleteArticleButton.addActionListener(e -> deleteSelectedArticle());
 
-        JButton refreshButton = createRoundedButton("🔄 Aktualisieren");
-        refreshButton.addActionListener(e -> {
-            loadArticles();
-            JOptionPane.showMessageDialog(this, "Artikelliste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE);
-        });
-
         JButton retrieveQrCodeDataButton = createRoundedButton("QR-Code Daten abrufen");
         retrieveQrCodeDataButton.addActionListener(e -> {
             List<Map<String, Object>> qrCodeData = QRCodeUtils.retrieveQrCodeDataFromWebsite();
@@ -142,7 +178,6 @@ public class ArticleGUI extends JFrame {
         toolbarWrapper.add(addArticleButton);
         toolbarWrapper.add(editArticleButton);
         toolbarWrapper.add(deleteArticleButton);
-        toolbarWrapper.add(refreshButton);
         toolbarWrapper.add(retrieveQrCodeDataButton);
 
         // top area: header + toolbar stacked
@@ -232,6 +267,24 @@ public class ArticleGUI extends JFrame {
         searchPanel.add(searchField);
         searchPanel.add(searchBtn);
         searchPanel.add(clearBtn);
+
+        // Add warnings button to bottom panel
+        JButton showWarningsBottomBtn = new JButton("⚠️ Warnungen");
+        showWarningsBottomBtn.setFocusPainted(false);
+        showWarningsBottomBtn.setBorderPainted(false);
+        showWarningsBottomBtn.setContentAreaFilled(false);
+        showWarningsBottomBtn.setOpaque(true);
+        showWarningsBottomBtn.setBackground(new Color(241, 196, 15));
+        showWarningsBottomBtn.setForeground(Color.WHITE);
+        showWarningsBottomBtn.setFont(showWarningsBottomBtn.getFont().deriveFont(Font.BOLD, 13f));
+        showWarningsBottomBtn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(243, 156, 18), 2),
+                BorderFactory.createEmptyBorder(8, 16, 8, 16)
+        ));
+        showWarningsBottomBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        showWarningsBottomBtn.addActionListener(e -> showAllWarnings());
+        searchPanel.add(showWarningsBottomBtn);
+
         add(searchPanel, BorderLayout.SOUTH);
 
         // Auto-resize columns when the window or viewport changes size
@@ -251,74 +304,141 @@ public class ArticleGUI extends JFrame {
     }
 
     private Object[] showUpdateArticleDialog(Object[] existingData) {
-        // For simplicity, reuse the add article dialog and pre-fill fields
         final Object[][] resultHolder = new Object[1][];
 
         JDialog dialog = new JDialog(this, "Artikel Bearbeiten", true);
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        dialog.setUndecorated(true);
+
+        // Main container with background
+        JPanel mainContainer = new JPanel(new BorderLayout());
+        mainContainer.setBackground(new Color(245, 247, 250));
+        mainContainer.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Header panel
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(62, 84, 98));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        JLabel titleLabel = new JLabel("✏️ Artikel Bearbeiten");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 20f));
+        titleLabel.setForeground(Color.WHITE);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+
+        // Close button
+        JButton closeBtn = new JButton("✕");
+        closeBtn.setForeground(Color.WHITE);
+        closeBtn.setBackground(new Color(62, 84, 98));
+        closeBtn.setBorderPainted(false);
+        closeBtn.setFocusPainted(false);
+        closeBtn.setFont(closeBtn.getFont().deriveFont(20f));
+        closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        closeBtn.addActionListener(e -> {
+            resultHolder[0] = null;
+            dialog.dispose();
+        });
+        headerPanel.add(closeBtn, BorderLayout.EAST);
+        mainContainer.add(headerPanel, BorderLayout.NORTH);
+
+        // Content card
+        RoundedPanel contentCard = new RoundedPanel(Color.WHITE, 12);
+        contentCard.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+        contentCard.setLayout(new GridBagLayout());
+
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.insets = new Insets(8, 8, 8, 8);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+
+        // Helper method for creating styled labels
+        java.util.function.Function<String, JLabel> createLabel = text -> {
+            JLabel label = new JLabel(text);
+            label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
+            label.setForeground(new Color(52, 73, 94));
+            return label;
+        };
+
+        // Helper method for styling text fields
+        java.util.function.Consumer<JTextField> styleTextField = field -> {
+            field.setFont(field.getFont().deriveFont(14f));
+            field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+            ));
+        };
 
         int row = 0;
-        gbc.gridx = 0;
+
+        // Artikelnummer
+        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1;
+        contentCard.add(createLabel.apply("Artikelnummer *"), gbc);
+        row++;
         gbc.gridy = row;
-        panel.add(new JLabel("Artikelnummer:"), gbc);
-        JTextField nummerField = new JTextField(existingData[0] == null ? "" : existingData[0].toString(), 20);
-        gbc.gridx = 1;
-        panel.add(nummerField, gbc);
+        JTextField nummerField = new JTextField(existingData[0] == null ? "" : existingData[0].toString(), 25);
+        styleTextField.accept(nummerField);
+        contentCard.add(nummerField, gbc);
 
         row++;
-        gbc.gridx = 0;
+        // Name
         gbc.gridy = row;
-        panel.add(new JLabel("Name:"), gbc);
-        JTextField nameField = new JTextField(existingData[1] == null ? "" : existingData[1].toString(), 20);
-        gbc.gridx = 1;
-        panel.add(nameField, gbc);
+        contentCard.add(createLabel.apply("Name *"), gbc);
+        row++;
+        gbc.gridy = row;
+        JTextField nameField = new JTextField(existingData[1] == null ? "" : existingData[1].toString(), 25);
+        styleTextField.accept(nameField);
+        contentCard.add(nameField, gbc);
 
         row++;
-        gbc.gridx = 0;
+        // Details
         gbc.gridy = row;
-        panel.add(new JLabel("Details:"), gbc);
-        JTextField detailsField = new JTextField(existingData[2] == null ? "" : existingData[2].toString(), 20);
-        gbc.gridx = 1;
-        panel.add(detailsField, gbc);
+        contentCard.add(createLabel.apply("Details"), gbc);
+        row++;
+        gbc.gridy = row;
+        JTextField detailsField = new JTextField(existingData[3] == null ? "" : existingData[3].toString(), 25);
+        styleTextField.accept(detailsField);
+        contentCard.add(detailsField, gbc);
 
-        // parse integer values robustly
+        // Parse integer values robustly (note: indices shifted because of category column)
         int existingLager = 0;
         int existingMindest = 0;
         try {
-            Object o = existingData[3];
+            Object o = existingData[4];
             if (o instanceof Number) existingLager = ((Number) o).intValue();
             else existingLager = Integer.parseInt(o.toString());
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { }
         try {
-            Object o = existingData[4];
+            Object o = existingData[5];
             if (o instanceof Number) existingMindest = ((Number) o).intValue();
             else existingMindest = Integer.parseInt(o.toString());
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { }
 
         row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        panel.add(new JLabel("Lagerbestand:"), gbc);
+        // Two columns for stock fields
+        JPanel stockPanel = new JPanel(new GridLayout(1, 2, 16, 0));
+        stockPanel.setOpaque(false);
+
+        JPanel lagerPanel = new JPanel(new BorderLayout(0, 4));
+        lagerPanel.setOpaque(false);
+        lagerPanel.add(createLabel.apply("Lagerbestand"), BorderLayout.NORTH);
         JSpinner lagerSpinner = new JSpinner(new SpinnerNumberModel(existingLager, 0, Integer.MAX_VALUE, 1));
-        gbc.gridx = 1;
-        panel.add(lagerSpinner, gbc);
+        lagerSpinner.setFont(lagerSpinner.getFont().deriveFont(14f));
+        ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setColumns(8);
+        lagerPanel.add(lagerSpinner, BorderLayout.CENTER);
 
-        row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        panel.add(new JLabel("Mindestbestand:"), gbc);
+        JPanel mindestPanel = new JPanel(new BorderLayout(0, 4));
+        mindestPanel.setOpaque(false);
+        mindestPanel.add(createLabel.apply("Mindestbestand"), BorderLayout.NORTH);
         JSpinner mindestSpinner = new JSpinner(new SpinnerNumberModel(existingMindest, 0, Integer.MAX_VALUE, 1));
-        gbc.gridx = 1;
-        panel.add(mindestSpinner, gbc);
+        mindestSpinner.setFont(mindestSpinner.getFont().deriveFont(14f));
+        ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setColumns(8);
+        mindestPanel.add(mindestSpinner, BorderLayout.CENTER);
 
-        // price fields with formatter
+        stockPanel.add(lagerPanel);
+        stockPanel.add(mindestPanel);
+
+        gbc.gridy = row;
+        contentCard.add(stockPanel, gbc);
+
+        // Price fields with formatter
         NumberFormat priceFormat = NumberFormat.getNumberInstance();
         priceFormat.setMinimumFractionDigits(2);
         priceFormat.setMaximumFractionDigits(2);
@@ -330,66 +450,98 @@ public class ArticleGUI extends JFrame {
         double existingVerkauf = 0.0;
         double existingEinkauf = 0.0;
         try {
-            Object o = existingData[5];
+            Object o = existingData[6];
             if (o instanceof Number) existingVerkauf = ((Number) o).doubleValue();
             else existingVerkauf = Double.parseDouble(o.toString());
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { }
         try {
-            Object o = existingData[6];
+            Object o = existingData[7];
             if (o instanceof Number) existingEinkauf = ((Number) o).doubleValue();
             else existingEinkauf = Double.parseDouble(o.toString());
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) { }
 
         row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        panel.add(new JLabel("Verkaufspreis:"), gbc);
+        // Two columns for price fields
+        JPanel pricePanel = new JPanel(new GridLayout(1, 2, 16, 0));
+        pricePanel.setOpaque(false);
+
+        JPanel verkaufPanel = new JPanel(new BorderLayout(0, 4));
+        verkaufPanel.setOpaque(false);
+        verkaufPanel.add(createLabel.apply("Verkaufspreis (CHF)"), BorderLayout.NORTH);
         JFormattedTextField verkaufField = new JFormattedTextField(priceFormatter);
         verkaufField.setColumns(10);
         verkaufField.setValue(existingVerkauf);
-        gbc.gridx = 1;
-        panel.add(verkaufField, gbc);
+        verkaufField.setFont(verkaufField.getFont().deriveFont(14f));
+        verkaufField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        verkaufPanel.add(verkaufField, BorderLayout.CENTER);
 
-        row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        panel.add(new JLabel("Einkaufspreis:"), gbc);
+        JPanel einkaufPanel = new JPanel(new BorderLayout(0, 4));
+        einkaufPanel.setOpaque(false);
+        einkaufPanel.add(createLabel.apply("Einkaufspreis (CHF)"), BorderLayout.NORTH);
         JFormattedTextField einkaufField = new JFormattedTextField(priceFormatter);
         einkaufField.setColumns(10);
         einkaufField.setValue(existingEinkauf);
-        gbc.gridx = 1;
-        panel.add(einkaufField, gbc);
+        einkaufField.setFont(einkaufField.getFont().deriveFont(14f));
+        einkaufField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        einkaufPanel.add(einkaufField, BorderLayout.CENTER);
+
+        pricePanel.add(verkaufPanel);
+        pricePanel.add(einkaufPanel);
+
+        gbc.gridy = row;
+        contentCard.add(pricePanel, gbc);
 
         row++;
-        gbc.gridx = 0;
+        // Lieferant
         gbc.gridy = row;
-        panel.add(new JLabel("Lieferant:"), gbc);
-        JTextField lieferantField = new JTextField(existingData[7] == null ? "" : existingData[7].toString(), 20);
-        gbc.gridx = 1;
-        panel.add(lieferantField, gbc);
+        contentCard.add(createLabel.apply("Lieferant"), gbc);
+        row++;
+        gbc.gridy = row;
+        JTextField lieferantField = new JTextField(existingData[8] == null ? "" : existingData[8].toString(), 25);
+        styleTextField.accept(lieferantField);
+        contentCard.add(lieferantField, gbc);
 
-        // buttons
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton okBtn = new JButton("OK");
+        mainContainer.add(contentCard, BorderLayout.CENTER);
+
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
+        buttonPanel.setBackground(new Color(245, 247, 250));
+
         JButton cancelBtn = new JButton("Abbrechen");
-        buttons.add(cancelBtn);
-        buttons.add(okBtn);
+        cancelBtn.setFont(cancelBtn.getFont().deriveFont(Font.BOLD, 13f));
+        cancelBtn.setForeground(new Color(52, 73, 94));
+        cancelBtn.setBackground(new Color(236, 240, 241));
+        cancelBtn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        cancelBtn.setFocusPainted(false);
+        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        gbc.gridx = 0;
-        gbc.gridy = ++row;
-        gbc.gridwidth = 2;
-        panel.add(buttons, gbc);
+        JButton okBtn = new JButton("💾 Speichern");
+        okBtn.setFont(okBtn.getFont().deriveFont(Font.BOLD, 13f));
+        okBtn.setForeground(Color.BLACK);
+        okBtn.setBackground(new Color(46, 204, 113));
+        okBtn.setBorder(BorderFactory.createEmptyBorder(10, 24, 10, 24));
+        okBtn.setFocusPainted(false);
+        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        dialog.getContentPane().add(panel);
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(okBtn);
+        mainContainer.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.getContentPane().add(mainContainer);
         dialog.getRootPane().setDefaultButton(okBtn);
 
-        // actions
+        // Actions
         cancelBtn.addActionListener(ae -> {
             resultHolder[0] = null;
             dialog.dispose();
         });
+
         okBtn.addActionListener(ae -> {
             String nummer = nummerField.getText().trim();
             String name = nameField.getText().trim();
@@ -397,7 +549,10 @@ public class ArticleGUI extends JFrame {
             String lieferant = lieferantField.getText().trim();
 
             if (nummer.isEmpty() || name.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Artikelnummer und Name sind Pflichtfelder.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(dialog,
+                    "Artikelnummer und Name sind Pflichtfelder.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -411,15 +566,19 @@ public class ArticleGUI extends JFrame {
                 verkaufspreis = ((Number) verkaufField.getValue()).doubleValue();
                 einkaufspreis = ((Number) einkaufField.getValue()).doubleValue();
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, "Bitte gültige Preise eingeben.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(dialog,
+                    "Bitte gültige Preise eingeben.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            resultHolder[0] = new Object[]{nummer, name, details, lagerbestand, mindestbestand, verkaufspreis, einkaufspreis, lieferant};
+            resultHolder[0] = new Object[]{nummer, name, details, lagerbestand, mindestbestand,
+                verkaufspreis, einkaufspreis, lieferant};
             dialog.dispose();
         });
 
-        // show dialog centered
+        // Show dialog
         dialog.pack();
         dialog.setLocationRelativeTo(this);
         SwingUtilities.invokeLater(nummerField::requestFocusInWindow);
@@ -435,54 +594,124 @@ public class ArticleGUI extends JFrame {
         final Object[][] resultHolder = new Object[1][];
 
         JDialog dialog = new JDialog(this, "Neuen Artikel hinzufügen", true);
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        dialog.setUndecorated(true);
+
+        // Main container with background
+        JPanel mainContainer = new JPanel(new BorderLayout());
+        mainContainer.setBackground(new Color(245, 247, 250));
+        mainContainer.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Header panel
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(62, 84, 98));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
+        JLabel titleLabel = new JLabel("➕ Neuen Artikel hinzufügen");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 20f));
+        titleLabel.setForeground(Color.WHITE);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+
+        // Close button
+        JButton closeBtn = new JButton("✕");
+        closeBtn.setForeground(Color.WHITE);
+        closeBtn.setBackground(new Color(62, 84, 98));
+        closeBtn.setBorderPainted(false);
+        closeBtn.setFocusPainted(false);
+        closeBtn.setFont(closeBtn.getFont().deriveFont(20f));
+        closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        closeBtn.addActionListener(e -> {
+            resultHolder[0] = null;
+            dialog.dispose();
+        });
+        headerPanel.add(closeBtn, BorderLayout.EAST);
+        mainContainer.add(headerPanel, BorderLayout.NORTH);
+
+        // Content card
+        RoundedPanel contentCard = new RoundedPanel(Color.WHITE, 12);
+        contentCard.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+        contentCard.setLayout(new GridBagLayout());
+
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.insets = new Insets(8, 8, 8, 8);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+
+        // Helper method for creating styled labels
+        java.util.function.Function<String, JLabel> createLabel = text -> {
+            JLabel label = new JLabel(text);
+            label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
+            label.setForeground(new Color(52, 73, 94));
+            return label;
+        };
+
+        // Helper method for styling text fields
+        java.util.function.Consumer<JTextField> styleTextField = field -> {
+            field.setFont(field.getFont().deriveFont(14f));
+            field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+            ));
+        };
 
         int row = 0;
-        gbc.gridx = 0;
+
+        // Artikelnummer
+        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1;
+        contentCard.add(createLabel.apply("Artikelnummer *"), gbc);
+        row++;
         gbc.gridy = row;
-        panel.add(new JLabel("Artikelnummer:"), gbc);
-        JTextField nummerField = new JTextField(20);
-        gbc.gridx = 1;
-        panel.add(nummerField, gbc);
+        JTextField nummerField = new JTextField(25);
+        styleTextField.accept(nummerField);
+        contentCard.add(nummerField, gbc);
 
         row++;
-        gbc.gridx = 0;
+        // Name
         gbc.gridy = row;
-        panel.add(new JLabel("Name:"), gbc);
-        JTextField nameField = new JTextField(20);
-        gbc.gridx = 1;
-        panel.add(nameField, gbc);
+        contentCard.add(createLabel.apply("Name *"), gbc);
+        row++;
+        gbc.gridy = row;
+        JTextField nameField = new JTextField(25);
+        styleTextField.accept(nameField);
+        contentCard.add(nameField, gbc);
 
         row++;
-        gbc.gridx = 0;
+        // Details
         gbc.gridy = row;
-        panel.add(new JLabel("Details:"), gbc);
-        JTextField detailsField = new JTextField(20);
-        gbc.gridx = 1;
-        panel.add(detailsField, gbc);
+        contentCard.add(createLabel.apply("Details"), gbc);
+        row++;
+        gbc.gridy = row;
+        JTextField detailsField = new JTextField(25);
+        styleTextField.accept(detailsField);
+        contentCard.add(detailsField, gbc);
 
         row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        panel.add(new JLabel("Lagerbestand:"), gbc);
+        // Two columns for stock fields
+        JPanel stockPanel = new JPanel(new GridLayout(1, 2, 16, 0));
+        stockPanel.setOpaque(false);
+
+        JPanel lagerPanel = new JPanel(new BorderLayout(0, 4));
+        lagerPanel.setOpaque(false);
+        lagerPanel.add(createLabel.apply("Lagerbestand"), BorderLayout.NORTH);
         JSpinner lagerSpinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
-        gbc.gridx = 1;
-        panel.add(lagerSpinner, gbc);
+        lagerSpinner.setFont(lagerSpinner.getFont().deriveFont(14f));
+        ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setColumns(8);
+        lagerPanel.add(lagerSpinner, BorderLayout.CENTER);
 
-        row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        panel.add(new JLabel("Mindestbestand:"), gbc);
+        JPanel mindestPanel = new JPanel(new BorderLayout(0, 4));
+        mindestPanel.setOpaque(false);
+        mindestPanel.add(createLabel.apply("Mindestbestand"), BorderLayout.NORTH);
         JSpinner mindestSpinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
-        gbc.gridx = 1;
-        panel.add(mindestSpinner, gbc);
+        mindestSpinner.setFont(mindestSpinner.getFont().deriveFont(14f));
+        ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setColumns(8);
+        mindestPanel.add(mindestSpinner, BorderLayout.CENTER);
 
-        // price fields with formatter
+        stockPanel.add(lagerPanel);
+        stockPanel.add(mindestPanel);
+
+        gbc.gridy = row;
+        contentCard.add(stockPanel, gbc);
+
+        // Price fields with formatter
         NumberFormat priceFormat = NumberFormat.getNumberInstance();
         priceFormat.setMinimumFractionDigits(2);
         priceFormat.setMaximumFractionDigits(2);
@@ -492,53 +721,87 @@ public class ArticleGUI extends JFrame {
         priceFormatter.setMinimum(0.0);
 
         row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        panel.add(new JLabel("Verkaufspreis:"), gbc);
+        // Two columns for price fields
+        JPanel pricePanel = new JPanel(new GridLayout(1, 2, 16, 0));
+        pricePanel.setOpaque(false);
+
+        JPanel verkaufPanel = new JPanel(new BorderLayout(0, 4));
+        verkaufPanel.setOpaque(false);
+        verkaufPanel.add(createLabel.apply("Verkaufspreis (CHF)"), BorderLayout.NORTH);
         JFormattedTextField verkaufField = new JFormattedTextField(priceFormatter);
         verkaufField.setColumns(10);
         verkaufField.setValue(0.0);
-        gbc.gridx = 1;
-        panel.add(verkaufField, gbc);
+        verkaufField.setFont(verkaufField.getFont().deriveFont(14f));
+        verkaufField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        verkaufPanel.add(verkaufField, BorderLayout.CENTER);
 
-        row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        panel.add(new JLabel("Einkaufspreis:"), gbc);
+        JPanel einkaufPanel = new JPanel(new BorderLayout(0, 4));
+        einkaufPanel.setOpaque(false);
+        einkaufPanel.add(createLabel.apply("Einkaufspreis (CHF)"), BorderLayout.NORTH);
         JFormattedTextField einkaufField = new JFormattedTextField(priceFormatter);
         einkaufField.setColumns(10);
         einkaufField.setValue(0.0);
-        gbc.gridx = 1;
-        panel.add(einkaufField, gbc);
+        einkaufField.setFont(einkaufField.getFont().deriveFont(14f));
+        einkaufField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        einkaufPanel.add(einkaufField, BorderLayout.CENTER);
+
+        pricePanel.add(verkaufPanel);
+        pricePanel.add(einkaufPanel);
+
+        gbc.gridy = row;
+        contentCard.add(pricePanel, gbc);
 
         row++;
-        gbc.gridx = 0;
+        // Lieferant
         gbc.gridy = row;
-        panel.add(new JLabel("Lieferant:"), gbc);
-        JTextField lieferantField = new JTextField(20);
-        gbc.gridx = 1;
-        panel.add(lieferantField, gbc);
+        contentCard.add(createLabel.apply("Lieferant"), gbc);
+        row++;
+        gbc.gridy = row;
+        JTextField lieferantField = new JTextField(25);
+        styleTextField.accept(lieferantField);
+        contentCard.add(lieferantField, gbc);
 
-        // buttons
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton okBtn = new JButton("OK");
+        mainContainer.add(contentCard, BorderLayout.CENTER);
+
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
+        buttonPanel.setBackground(new Color(245, 247, 250));
+
         JButton cancelBtn = new JButton("Abbrechen");
-        buttons.add(cancelBtn);
-        buttons.add(okBtn);
+        cancelBtn.setFont(cancelBtn.getFont().deriveFont(Font.BOLD, 13f));
+        cancelBtn.setForeground(new Color(52, 73, 94));
+        cancelBtn.setBackground(new Color(236, 240, 241));
+        cancelBtn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        cancelBtn.setFocusPainted(false);
+        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        gbc.gridx = 0;
-        gbc.gridy = ++row;
-        gbc.gridwidth = 2;
-        panel.add(buttons, gbc);
+        JButton okBtn = new JButton("➕ Hinzufügen");
+        okBtn.setFont(okBtn.getFont().deriveFont(Font.BOLD, 13f));
+        okBtn.setForeground(Color.BLACK);
+        okBtn.setBackground(new Color(52, 152, 219));
+        okBtn.setBorder(BorderFactory.createEmptyBorder(10, 24, 10, 24));
+        okBtn.setFocusPainted(false);
+        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        dialog.getContentPane().add(panel);
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(okBtn);
+        mainContainer.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.getContentPane().add(mainContainer);
         dialog.getRootPane().setDefaultButton(okBtn);
 
-        // actions
+        // Actions
         cancelBtn.addActionListener(ae -> {
             resultHolder[0] = null;
             dialog.dispose();
         });
+
         okBtn.addActionListener(ae -> {
             String nummer = nummerField.getText().trim();
             String name = nameField.getText().trim();
@@ -546,7 +809,10 @@ public class ArticleGUI extends JFrame {
             String lieferant = lieferantField.getText().trim();
 
             if (nummer.isEmpty() || name.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Artikelnummer und Name sind Pflichtfelder.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(dialog,
+                    "Artikelnummer und Name sind Pflichtfelder.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -560,15 +826,19 @@ public class ArticleGUI extends JFrame {
                 verkaufspreis = ((Number) verkaufField.getValue()).doubleValue();
                 einkaufspreis = ((Number) einkaufField.getValue()).doubleValue();
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog, "Bitte gültige Preise eingeben.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(dialog,
+                    "Bitte gültige Preise eingeben.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            resultHolder[0] = new Object[]{nummer, name, details, lagerbestand, mindestbestand, verkaufspreis, einkaufspreis, lieferant};
+            resultHolder[0] = new Object[]{nummer, name, details, lagerbestand, mindestbestand,
+                verkaufspreis, einkaufspreis, lieferant};
             dialog.dispose();
         });
 
-        // show dialog centered
+        // Show dialog
         dialog.pack();
         dialog.setLocationRelativeTo(this);
         SwingUtilities.invokeLater(nummerField::requestFocusInWindow);
@@ -640,18 +910,21 @@ public class ArticleGUI extends JFrame {
         // Apply renderers where appropriate (column indices stable)
         // Artikelnummer centered
         tcm.getColumn(0).setCellRenderer(centerRenderer);
-        // Integer columns right aligned
-        tcm.getColumn(3).setCellRenderer(rightRenderer);
+        // Category centered
+        tcm.getColumn(2).setCellRenderer(centerRenderer);
+        // Integer columns right aligned (shifted by 1 due to category column)
         tcm.getColumn(4).setCellRenderer(rightRenderer);
-        // Currency columns use currency renderer
-        tcm.getColumn(5).setCellRenderer(currencyRenderer);
+        tcm.getColumn(5).setCellRenderer(rightRenderer);
+        // Currency columns use currency renderer (shifted by 1)
         tcm.getColumn(6).setCellRenderer(currencyRenderer);
+        tcm.getColumn(7).setCellRenderer(currencyRenderer);
 
         // Header styling
         JTableHeader header = articleTable.getTableHeader();
         header.setBackground(new Color(62, 84, 98));
         header.setForeground(Color.WHITE);
         header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
+        sendTestWarning();
     }
 
     private static DefaultTableModel getDefaultTableModel() {
@@ -659,8 +932,8 @@ public class ArticleGUI extends JFrame {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 return switch (columnIndex) {
-                    case 3, 4 -> Integer.class;
-                    case 5, 6 -> Double.class;
+                    case 4, 5 -> Integer.class;  // Lagerbestand, Mindestbestand (shifted by 1)
+                    case 6, 7 -> Double.class;   // Verkaufspreis, Einkaufspreis (shifted by 1)
                     default -> String.class;
                 };
             }
@@ -673,6 +946,7 @@ public class ArticleGUI extends JFrame {
 
         model.addColumn("Artikelnummer");
         model.addColumn("Name");
+        model.addColumn("Kategorie");  // New category column
         model.addColumn("Details");
         model.addColumn("Lagerbestand");
         model.addColumn("Mindestbestand");
@@ -737,7 +1011,13 @@ public class ArticleGUI extends JFrame {
 
     public void addArticleRow(Object[] rowData) {
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-        model.addRow(rowData);
+        // Insert category after name (index 2)
+        Object[] rowWithCategory = new Object[9];
+        rowWithCategory[0] = rowData[0]; // Article number
+        rowWithCategory[1] = rowData[1]; // Name
+        rowWithCategory[2] = getCategoryForArticle((String) rowData[0]); // Category
+        System.arraycopy(rowData, 2, rowWithCategory, 3, rowData.length - 2);
+        model.addRow(rowWithCategory);
         updateCountLabel();
     }
 
@@ -760,6 +1040,11 @@ public class ArticleGUI extends JFrame {
             ArticleGUI gui = new ArticleGUI();
             gui.display();
         });
+    }
+
+    private void sendTestWarning() {
+        Warning warning = new Warning("Test warning", "Der Lagerbestand für Artikel A123 ist niedrig.", Warning.WarningType.LOW_STOCK, new SimpleDateFormat("yyyy.MM.dd HH:mm:ss").format(new Date()), false, false);
+        displayWarning(warning);
     }
 
     private JButton createRoundedButton(String text) {
@@ -788,9 +1073,11 @@ public class ArticleGUI extends JFrame {
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
         model.setRowCount(0);
         for (Article a : articles) {
+            String category = getCategoryForArticle(a.getArticleNumber());
             model.addRow(new Object[]{
                     a.getArticleNumber(),
                     a.getName(),
+                    category,  // Category column
                     a.getDetails(),
                     a.getStockQuantity(),
                     a.getMinStockLevel(),
@@ -832,6 +1119,176 @@ public class ArticleGUI extends JFrame {
         } else {
             JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Artikels aus der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    /**
+     * Displays a warning in a modern, styled dialog
+     * @param warning The warning object to display
+     */
+    public void displayWarning(Warning warning) {
+        SwingUtilities.invokeLater(() -> {
+            // Create custom dialog
+            JDialog dialog = new JDialog(this, "Warnung", true);
+            dialog.setUndecorated(true);
+            dialog.setLayout(new BorderLayout());
+
+            // Main panel with rounded corners
+            RoundedPanel mainPanel = new RoundedPanel(new Color(245, 247, 250), 20);
+            mainPanel.setLayout(new BorderLayout(0, 0));
+            mainPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 225, 230), 2),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+            ));
+
+            // Determine colors based on warning type
+            Color headerColor;
+            Color accentColor;
+            String icon;
+            switch (warning.getType()) {
+                case LOW_STOCK:
+                    headerColor = new Color(241, 196, 15); // Orange/Yellow
+                    accentColor = new Color(243, 156, 18);
+                    icon = "⚠️";
+                    break;
+                case ORDER_NEEDED:
+                    headerColor = new Color(231, 76, 60); // Red
+                    accentColor = new Color(192, 57, 43);
+                    icon = "🔴";
+                    break;
+                default:
+                    headerColor = new Color(52, 152, 219); // Blue
+                    accentColor = new Color(41, 128, 185);
+                    icon = "ℹ️";
+                    break;
+            }
+
+            // Header with warning type
+            JPanel header = new JPanel(new BorderLayout());
+            header.setBackground(headerColor);
+            header.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
+
+            JLabel typeLabel = new JLabel(icon + "  " + warning.getType().getDisplayName());
+            typeLabel.setFont(typeLabel.getFont().deriveFont(Font.BOLD, 18f));
+            typeLabel.setForeground(Color.WHITE);
+            header.add(typeLabel, BorderLayout.WEST);
+
+            // Close button
+            JButton closeBtn = new JButton("✕");
+            closeBtn.setFont(closeBtn.getFont().deriveFont(Font.BOLD, 16f));
+            closeBtn.setForeground(Color.WHITE);
+            closeBtn.setBackground(headerColor);
+            closeBtn.setBorderPainted(false);
+            closeBtn.setContentAreaFilled(false);
+            closeBtn.setFocusPainted(false);
+            closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            closeBtn.addActionListener(e -> dialog.dispose());
+            header.add(closeBtn, BorderLayout.EAST);
+
+            mainPanel.add(header, BorderLayout.NORTH);
+
+            // Content panel
+            JPanel content = new JPanel(new GridBagLayout());
+            content.setBackground(Color.WHITE);
+            content.setBorder(BorderFactory.createEmptyBorder(24, 20, 20, 20));
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            gbc.weightx = 1.0;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.insets = new Insets(0, 0, 12, 0);
+
+            // Title
+            JLabel titleLabel = new JLabel("<html><b>" + warning.getTitle() + "</b></html>");
+            titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 16f));
+            titleLabel.setForeground(new Color(44, 62, 80));
+            content.add(titleLabel, gbc);
+
+            // Message
+            gbc.gridy++;
+            gbc.insets = new Insets(0, 0, 16, 0);
+            JTextArea messageArea = new JTextArea(warning.getMessage());
+            messageArea.setWrapStyleWord(true);
+            messageArea.setLineWrap(true);
+            messageArea.setEditable(false);
+            messageArea.setFont(messageArea.getFont().deriveFont(14f));
+            messageArea.setForeground(new Color(52, 73, 94));
+            messageArea.setBackground(Color.WHITE);
+            messageArea.setBorder(null);
+            messageArea.setRows(4);
+            messageArea.setColumns(35);
+            content.add(messageArea, gbc);
+
+            // Date
+            gbc.gridy++;
+            gbc.insets = new Insets(0, 0, 20, 0);
+            JLabel dateLabel = new JLabel("📅 Datum: " + warning.getDate());
+            dateLabel.setFont(dateLabel.getFont().deriveFont(12f));
+            dateLabel.setForeground(new Color(127, 140, 141));
+            content.add(dateLabel, gbc);
+
+            // Status indicator
+            gbc.gridy++;
+            gbc.insets = new Insets(0, 0, 24, 0);
+            JLabel statusLabel = new JLabel(warning.isResolved() ? "✅ Gelöst" : "❌ Ungelöst");
+            statusLabel.setFont(statusLabel.getFont().deriveFont(Font.BOLD, 12f));
+            statusLabel.setForeground(warning.isResolved() ? new Color(39, 174, 96) : new Color(231, 76, 60));
+            content.add(statusLabel, gbc);
+
+            // Button panel
+            gbc.gridy++;
+            gbc.insets = new Insets(0, 0, 0, 0);
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+            buttonPanel.setOpaque(false);
+
+            if (!warning.isResolved()) {
+                JButton resolveBtn = new JButton("✓ Als gelöst markieren");
+                styleButton(resolveBtn, new Color(39, 174, 96), Color.WHITE);
+                resolveBtn.addActionListener(e -> {
+                    warning.setResolved(true);
+                    JOptionPane.showMessageDialog(dialog,
+                        "Die Warnung wurde als gelöst markiert.",
+                        "Erfolg",
+                        JOptionPane.INFORMATION_MESSAGE);
+                    dialog.dispose();
+                });
+                buttonPanel.add(resolveBtn);
+            }
+
+            JButton okBtn = new JButton("Schließen");
+            styleButton(okBtn, accentColor, Color.WHITE);
+            okBtn.addActionListener(e -> dialog.dispose());
+            buttonPanel.add(okBtn);
+
+            content.add(buttonPanel, gbc);
+
+            mainPanel.add(content, BorderLayout.CENTER);
+
+            dialog.add(mainPanel);
+            dialog.pack();
+            dialog.setLocationRelativeTo(this);
+
+            // Mark as displayed
+            warning.setDisplayed(true);
+
+            dialog.setVisible(true);
+        });
+    }
+
+    /**
+     * Helper method to style buttons consistently
+     */
+    private void styleButton(JButton button, Color bgColor, Color fgColor) {
+        button.setBackground(bgColor);
+        button.setForeground(fgColor);
+        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setOpaque(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(bgColor.darker(), 1),
+            BorderFactory.createEmptyBorder(8, 16, 8, 16)
+        ));
     }
 
     // Simple rounded panel implementation
@@ -958,5 +1415,334 @@ public class ArticleGUI extends JFrame {
         popup.add(editItem);
         popup.add(deleteItem);
         return popup;
+    }
+
+    /**
+     * Display all warnings from WarningManager in a modern dialog
+     */
+    private void showAllWarnings() {
+        WarningManager warningManager = WarningManager.getInstance();
+        List<Warning> warnings = warningManager.getAllWarnings();
+
+        // Create modern dialog
+        JDialog dialog = new JDialog(this, "Alle Warnungen", true);
+        dialog.setSize(900, 600);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout(10, 10));
+
+        // Header panel
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(245, 247, 250));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+
+        JLabel titleLabel = new JLabel("⚠️ Warnungen Übersicht");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 22f));
+        titleLabel.setForeground(new Color(31, 45, 61));
+
+        JLabel countLabel = new JLabel(warnings.size() + " Warnung(en)");
+        countLabel.setFont(countLabel.getFont().deriveFont(14f));
+        countLabel.setForeground(new Color(100, 110, 120));
+
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+        headerPanel.add(countLabel, BorderLayout.EAST);
+
+        dialog.add(headerPanel, BorderLayout.NORTH);
+
+        // Main content with table
+        if (warnings.isEmpty()) {
+            JPanel emptyPanel = new JPanel(new GridBagLayout());
+            emptyPanel.setBackground(Color.WHITE);
+            JLabel emptyLabel = new JLabel("✓ Keine Warnungen vorhanden");
+            emptyLabel.setFont(emptyLabel.getFont().deriveFont(16f));
+            emptyLabel.setForeground(new Color(100, 180, 100));
+            emptyPanel.add(emptyLabel);
+            dialog.add(emptyPanel, BorderLayout.CENTER);
+        } else {
+            // Create table model
+            String[] columnNames = {"Status", "Typ", "Titel", "Nachricht", "Datum"};
+            DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
+            };
+
+            // Populate table
+            for (Warning warning : warnings) {
+                String status = warning.isResolved() ? "✓ Gelöst" : "⚠ Offen";
+                String type = switch (warning.getType()) {
+                    case LOW_STOCK -> "Niedriger Bestand";
+                    case ORDER_NEEDED -> "Bestellung nötig";
+                    default -> "Sonstiges";
+                };
+
+                tableModel.addRow(new Object[]{
+                    status,
+                    type,
+                    warning.getTitle(),
+                    warning.getMessage(),
+                    warning.getDate()
+                });
+            }
+
+            JTable warningsTable = new JTable(tableModel);
+            warningsTable.setRowHeight(32);
+            warningsTable.setFont(warningsTable.getFont().deriveFont(14f));
+            warningsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+            warningsTable.setShowGrid(true);
+            warningsTable.setGridColor(new Color(226, 230, 233));
+            warningsTable.setIntercellSpacing(new Dimension(1, 1));
+
+            // Custom renderer for status column
+            warningsTable.getColumnModel().getColumn(0).setCellRenderer(new DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value,
+                        boolean isSelected, boolean hasFocus, int row, int column) {
+                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                    if (!isSelected) {
+                        if (value.toString().contains("Gelöst")) {
+                            setForeground(new Color(40, 150, 40));
+                        } else {
+                            setForeground(new Color(200, 100, 0));
+                        }
+                    }
+                    setHorizontalAlignment(SwingConstants.CENTER);
+                    return c;
+                }
+            });
+
+            // Column widths
+            warningsTable.getColumnModel().getColumn(0).setPreferredWidth(100);
+            warningsTable.getColumnModel().getColumn(1).setPreferredWidth(150);
+            warningsTable.getColumnModel().getColumn(2).setPreferredWidth(200);
+            warningsTable.getColumnModel().getColumn(3).setPreferredWidth(300);
+            warningsTable.getColumnModel().getColumn(4).setPreferredWidth(120);
+
+            // Header styling
+            JTableHeader header = warningsTable.getTableHeader();
+            header.setBackground(new Color(62, 84, 98));
+            header.setForeground(Color.WHITE);
+            header.setFont(header.getFont().deriveFont(Font.BOLD, 14f));
+
+            JScrollPane scrollPane = new JScrollPane(warningsTable);
+            scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+
+            JPanel tablePanel = new JPanel(new BorderLayout());
+            tablePanel.setBackground(new Color(245, 247, 250));
+            tablePanel.add(scrollPane, BorderLayout.CENTER);
+
+            dialog.add(tablePanel, BorderLayout.CENTER);
+
+            // Action panel at bottom
+            JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
+            actionPanel.setBackground(new Color(245, 247, 250));
+            actionPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
+
+            JButton viewDetailsBtn = new JButton("Details anzeigen");
+            styleButton(viewDetailsBtn, new Color(65, 105, 225), Color.WHITE);
+            viewDetailsBtn.addActionListener(e -> {
+                int selectedRow = warningsTable.getSelectedRow();
+                if (selectedRow == -1) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "Bitte wählen Sie eine Warnung aus.",
+                        "Keine Auswahl",
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                Warning selectedWarning = warnings.get(selectedRow);
+                displayWarning(selectedWarning);
+            });
+
+            JButton resolveBtn = new JButton("Als gelöst markieren");
+            styleButton(resolveBtn, new Color(40, 180, 99), Color.WHITE);
+            resolveBtn.addActionListener(e -> {
+                int selectedRow = warningsTable.getSelectedRow();
+                if (selectedRow == -1) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "Bitte wählen Sie eine Warnung aus.",
+                        "Keine Auswahl",
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                Warning selectedWarning = warnings.get(selectedRow);
+                if (selectedWarning.isResolved()) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "Diese Warnung wurde bereits gelöst.",
+                        "Bereits gelöst",
+                        JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+                if (warningManager.resolveWarning(selectedWarning.getTitle())) {
+                    tableModel.setValueAt("✓ Gelöst", selectedRow, 0);
+                    JOptionPane.showMessageDialog(dialog,
+                        "Warnung wurde als gelöst markiert.",
+                        "Erfolg",
+                        JOptionPane.INFORMATION_MESSAGE);
+                }
+            });
+
+            JButton deleteBtn = new JButton("Löschen");
+            styleButton(deleteBtn, new Color(231, 76, 60), Color.WHITE);
+            deleteBtn.addActionListener(e -> {
+                int selectedRow = warningsTable.getSelectedRow();
+                if (selectedRow == -1) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "Bitte wählen Sie eine Warnung aus.",
+                        "Keine Auswahl",
+                        JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                int confirm = JOptionPane.showConfirmDialog(dialog,
+                    "Möchten Sie diese Warnung wirklich löschen?",
+                    "Löschen bestätigen",
+                    JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    Warning selectedWarning = warnings.get(selectedRow);
+                    if (warningManager.deleteWarning(selectedWarning.getTitle())) {
+                        tableModel.removeRow(selectedRow);
+                        warnings.remove(selectedRow);
+                        countLabel.setText(warnings.size() + " Warnung(en)");
+                        JOptionPane.showMessageDialog(dialog,
+                            "Warnung wurde gelöscht.",
+                            "Erfolg",
+                            JOptionPane.INFORMATION_MESSAGE);
+                    }
+                }
+            });
+
+            JButton refreshBtn = new JButton("🔄 Aktualisieren");
+            styleButton(refreshBtn, new Color(237, 242, 247), new Color(20, 30, 40));
+            refreshBtn.addActionListener(e -> {
+                dialog.dispose();
+                showAllWarnings();
+            });
+
+            JButton closeBtn = new JButton("Schließen");
+            styleButton(closeBtn, new Color(149, 165, 166), Color.WHITE);
+            closeBtn.addActionListener(e -> dialog.dispose());
+
+            actionPanel.add(viewDetailsBtn);
+            actionPanel.add(resolveBtn);
+            actionPanel.add(deleteBtn);
+            actionPanel.add(refreshBtn);
+            actionPanel.add(closeBtn);
+
+            dialog.add(actionPanel, BorderLayout.SOUTH);
+        }
+
+        // If no warnings, just show close button
+        if (warnings.isEmpty()) {
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+            buttonPanel.setBackground(new Color(245, 247, 250));
+            JButton closeBtn = new JButton("Schließen");
+            styleButton(closeBtn, new Color(149, 165, 166), Color.WHITE);
+            closeBtn.addActionListener(e -> dialog.dispose());
+            buttonPanel.add(closeBtn);
+            dialog.add(buttonPanel, BorderLayout.SOUTH);
+        }
+
+        dialog.setVisible(true);
+    }
+
+
+    /**
+     * Load categories from categories.json resource file
+     */
+    private void loadCategories() {
+        categories = new HashMap<>();
+        try {
+            InputStream is = getClass().getResourceAsStream("/categories.json");
+            if (is == null) {
+                System.err.println("categories.json not found in resources");
+                return;
+            }
+
+            Gson gson = new Gson();
+            java.lang.reflect.Type listType = new TypeToken<List<Map<String, String>>>(){}.getType();
+            List<Map<String, String>> categoryList = gson.fromJson(
+                new InputStreamReader(is, StandardCharsets.UTF_8),
+                listType
+            );
+
+            for (Map<String, String> cat : categoryList) {
+                String categoryName = cat.get("category");
+                String fromTo = cat.get("fromTo");
+
+                if (categoryName != null && fromTo != null) {
+                    // Parse range like "1101 - 1116" or "1301"
+                    String[] parts = fromTo.split("-");
+                    int start, end;
+
+                    if (parts.length == 2) {
+                        start = Integer.parseInt(parts[0].trim());
+                        end = Integer.parseInt(parts[1].trim());
+                    } else {
+                        start = end = Integer.parseInt(parts[0].trim());
+                    }
+
+                    categories.put(categoryName, new CategoryRange(categoryName, start, end));
+                }
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error loading categories: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Get category for an article based on its article number
+     */
+    private String getCategoryForArticle(String articleNumber) {
+        if (categories == null || articleNumber == null) {
+            return "Unbekannt";
+        }
+
+        try {
+            // Extract numeric part from article number (e.g., "1101" from "1101-ABC")
+            String numericPart = articleNumber.replaceAll("[^0-9]", "");
+            if (numericPart.isEmpty()) {
+                return "Unbekannt";
+            }
+
+            int articleNum = Integer.parseInt(numericPart);
+
+            // Find matching category range
+            for (CategoryRange range : categories.values()) {
+                if (articleNum >= range.rangeStart && articleNum <= range.rangeEnd) {
+                    return range.category;
+                }
+            }
+        } catch (NumberFormatException e) {
+            // Article number doesn't contain valid number
+        }
+
+        return "Unbekannt";
+    }
+
+    /**
+     * Filter table by selected category
+     */
+    private void filterByCategory() {
+        String selectedCategory = (String) categoryFilter.getSelectedItem();
+
+        if (selectedCategory == null || selectedCategory.equals("Alle Kategorien")) {
+            // Show all articles
+            if (articleTable.getRowSorter() instanceof TableRowSorter) {
+                ((TableRowSorter<?>) articleTable.getRowSorter()).setRowFilter(null);
+            }
+        } else {
+            // Filter by category (column index 2)
+            if (articleTable.getRowSorter() instanceof TableRowSorter) {
+                @SuppressWarnings("unchecked")
+                TableRowSorter<DefaultTableModel> sorter = (TableRowSorter<DefaultTableModel>) articleTable.getRowSorter();
+                sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(selectedCategory), 2));
+            } else {
+                TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) articleTable.getModel());
+                articleTable.setRowSorter(sorter);
+                sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(selectedCategory), 2));
+            }
+        }
+        updateCountLabel();
     }
 }

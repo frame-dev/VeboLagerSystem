@@ -26,6 +26,7 @@ public class ImportUtils {
     private final File INVENTORY_FILE;
     private final File VENDOR_FILE;
     private final File DEPARTMENT_FILE;
+    private final File CLIENTS_FILE;
     private static volatile ImportUtils instance;
 
     private ImportUtils() {
@@ -55,8 +56,21 @@ public class ImportUtils {
         } else {
             LOGGER.info("Department file loaded: {}", DEPARTMENT_FILE.getAbsolutePath());
         }
+
+        CLIENTS_FILE = new SimpleJavaUtils().getFromResourceFile("clients.json", Main.class);
+        if(CLIENTS_FILE == null) {
+            LOGGER.warn("Clients file 'clients.json' not found in resources");
+        } else if (!CLIENTS_FILE.exists()) {
+            LOGGER.warn("Clients file does not exist: {}", CLIENTS_FILE.getAbsolutePath());
+        } else {
+            LOGGER.info("Clients file loaded: {}", CLIENTS_FILE.getAbsolutePath());
+        }
     }
 
+    /**
+     * Create a instance of this class if not already created and return it.
+     * @return Instance of ImportUtils
+     */
     public static ImportUtils getInstance() {
         if (instance == null) {
             synchronized (ImportUtils.class) {
@@ -66,6 +80,37 @@ public class ImportUtils {
             }
         }
         return instance;
+    }
+
+    public List<Map<String, Object>> loadClientsList() {
+        List<Map<String, Object>> clients = new ArrayList<>();
+
+        if(CLIENTS_FILE == null || !CLIENTS_FILE.exists()) {
+            LOGGER.warn("Cannot load file 'clients.json' from resources.");
+            return clients;
+        }
+
+        Gson gson = new Gson();
+        try (FileReader reader = new FileReader(CLIENTS_FILE)) {
+            JsonArray jsonArray = gson.fromJson(reader, JsonArray.class);
+            if (jsonArray == null) {
+                LOGGER.info("Loaded {} clients from file 'clients.json'.", 0);
+                return clients;
+            }
+            for (JsonElement jsonElement : jsonArray) {
+                if (!jsonElement.isJsonObject()) {
+                    LOGGER.debug("Skipping non-object element in clients array");
+                    continue;
+                }
+                JsonObject jsonObject = jsonElement.getAsJsonObject();
+                Map<String, Object> itemData = parseJsonObject(gson, jsonObject);
+                clients.add(itemData);
+            }
+            LOGGER.info("Loaded {} clients from file 'clients.json'.", clients.size());
+        } catch (IOException e) {
+            LOGGER.error("Failed to load clients from file 'clients.json'", e);
+        }
+        return clients;
     }
 
     public List<Map<String, Object>> loadDepartmentsList() {
