@@ -45,7 +45,7 @@ public class Main {
             }
         }
 
-
+        // Initialize Database Manager with database file in App Data Directory
         databaseManager = new DatabaseManager(getAppDataDir().getAbsolutePath(), "vebo_lager_system.db");
 
         // This runs the first setup of the Program
@@ -74,6 +74,7 @@ public class Main {
 
         VendorManager vendorManager = VendorManager.getInstance();
         List<Map<String, Object>> vendorData = ImportUtils.getInstance().loadVendorList();
+        System.out.println("Importiere " + vendorData.size() + " Lieferanten aus der Lieferanten Datei...");
         for (Map<String, Object> itemData : vendorData) {
             String vendorName = (String) itemData.get("name");
             String contactPerson = (String) itemData.get("contactPerson");
@@ -94,6 +95,7 @@ public class Main {
 
         DepartmentManager departmentManager = DepartmentManager.getInstance();
         List<Map<String,Object>> departmentData = ImportUtils.getInstance().loadDepartmentsList();
+        System.out.println("Importiere " + departmentData.size() + " Abteilungen aus der Abteilungs Datei...");
         for(Map<String,Object> itemData : departmentData) {
             String departmentName = (String) itemData.get("department");
             String kontoNumber = (String) itemData.get("kontoNumber");
@@ -110,6 +112,7 @@ public class Main {
 
         ClientManager clientManager = ClientManager.getInstance();
         List<Map<String,Object>> clientData = ImportUtils.getInstance().loadClientsList();
+        System.out.println("Importiere " + clientData.size() + " Kunden aus der Kunden Datei...");
         for(Map<String,Object> itemData : clientData) {
             String firstLastName = (String) itemData.get("firstLastName");
             String department = (String) itemData.get("department");

@@ -17,6 +17,7 @@ public class MainGUI extends JFrame {
         setSize(1200, 800);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         // Background color
         JPanel mainPanel = new JPanel(new BorderLayout());

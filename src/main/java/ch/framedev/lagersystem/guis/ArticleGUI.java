@@ -20,6 +20,7 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
+import java.util.Timer;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -63,8 +64,6 @@ public class ArticleGUI extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
-
         // Load categories from JSON
         loadCategories();
 
@@ -79,6 +78,7 @@ public class ArticleGUI extends JFrame {
         RoundedPanel headerPanel = new RoundedPanel(new Color(255, 255, 255), 20);
         headerPanel.setLayout(new GridBagLayout());
         headerPanel.setPreferredSize(new Dimension(760, 64));
+
         JLabel title = new JLabel("Artikel Verwaltung");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
         // dark but soft title color
@@ -106,6 +106,7 @@ public class ArticleGUI extends JFrame {
         categoryPanel.add(categoryFilter);
         toolbarWrapper.add(categoryPanel);
 
+        // Add Article button
         JButton addArticleButton = createRoundedButton("Artikel hinzufügen");
         addArticleButton.addActionListener(e -> {
             Object[] row = showAddArticleDialog();
@@ -130,6 +131,7 @@ public class ArticleGUI extends JFrame {
             }
         });
 
+        // Edit Article button
         JButton editArticleButton = createRoundedButton("Artikel bearbeiten");
         editArticleButton.addActionListener(e -> {
             int selectedRow = articleTable.getSelectedRow();
@@ -163,9 +165,11 @@ public class ArticleGUI extends JFrame {
             }
         });
 
+        // Delete Article button
         JButton deleteArticleButton = createRoundedButton("Artikel löschen");
         deleteArticleButton.addActionListener(e -> deleteSelectedArticle());
 
+        // Retrieve QR-Code Data button
         JButton retrieveQrCodeDataButton = createRoundedButton("QR-Code Daten abrufen");
         retrieveQrCodeDataButton.addActionListener(e -> {
             List<Map<String, Object>> qrCodeData = QRCodeUtils.retrieveQrCodeDataFromWebsite();
@@ -280,6 +284,17 @@ public class ArticleGUI extends JFrame {
         ));
         showWarningsBottomBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         showWarningsBottomBtn.addActionListener(e -> showAllWarnings());
+        showWarningsBottomBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                showWarningsBottomBtn.setBackground(new Color(243, 156, 18));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                showWarningsBottomBtn.setBackground(new Color(241, 196, 15));
+            }
+        });
         searchPanel.add(showWarningsBottomBtn);
 
         add(searchPanel, BorderLayout.SOUTH);
@@ -966,6 +981,7 @@ public class ArticleGUI extends JFrame {
         // Provide a typed, non-editable table model so sorting & renderers behave correctly
         DefaultTableModel model = getDefaultTableModel();
 
+        // Set model
         articleTable.setModel(model);
 
         // Visual tweaks
@@ -1039,7 +1055,13 @@ public class ArticleGUI extends JFrame {
         header.setBackground(new Color(62, 84, 98));
         header.setForeground(Color.WHITE);
         header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
-        sendTestWarning();
+
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                sendTestWarning();
+            }
+        }, 500); // slight delay to ensure test warning shows after GUI is visible
     }
 
     private static DefaultTableModel getDefaultTableModel() {
@@ -1165,19 +1187,30 @@ public class ArticleGUI extends JFrame {
     private JButton createRoundedButton(String text) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
         button.setOpaque(true);
         // softer button background and darker text for contrast
         button.setBackground(new Color(237, 242, 247));
-        button.setForeground(new Color(20, 30, 40));
+        button.setForeground(new Color(0, 0, 0));
         button.setFont(button.getFont().deriveFont(Font.BOLD));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(200, 210, 220), 2),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setPreferredSize(new Dimension(180, 40));
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(new Color(205, 205, 207));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(new Color(237, 242, 247));
+            }
+        });
+        // button.setPreferredSize(new Dimension(180, 40));
         return button;
     }
 
@@ -1385,6 +1418,7 @@ public class ArticleGUI extends JFrame {
             // Mark as displayed
             warning.setDisplayed(true);
 
+            dialog.requestFocus();
             dialog.setVisible(true);
         });
     }
