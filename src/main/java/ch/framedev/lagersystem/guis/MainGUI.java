@@ -137,27 +137,28 @@ public class MainGUI extends JFrame {
     private void loadTabContent(int tabIndex, JPanel wrapper) {
         wrapper.removeAll(); // Clear any existing content
 
-        JPanel contentPanel = switch (tabIndex) {
+        JFrame frame = switch (tabIndex) {
             case 0 -> {
                 articleGUI = new ArticleGUI();
-                yield (JPanel) articleGUI.getContentPane();
+                yield articleGUI;
             }
-            case 1 -> {
-                VendorGUI vendorGUI = new VendorGUI();
-                yield (JPanel) vendorGUI.getContentPane();
-            }
-            case 2 -> {
-                OrderGUI orderGUI = new OrderGUI();
-                yield (JPanel) orderGUI.getContentPane();
-            }
-            case 3 -> {
-                ClientGUI clientGUI = new ClientGUI();
-                yield (JPanel) clientGUI.getContentPane();
-            }
+            case 1 -> new VendorGUI();
+            case 2 -> new OrderGUI();
+            case 3 -> new ClientGUI();
             default -> null;
         };
 
-        if (contentPanel != null) {
+        if (frame != null) {
+            // Prevent the frame from being visible as a separate window
+            frame.setVisible(false);
+
+            // Extract the content panel
+            JPanel contentPanel = (JPanel) frame.getContentPane();
+
+            // Dispose the frame to release resources (but keep the content)
+            frame.dispose();
+
+            // Add the content to our wrapper
             wrapper.add(contentPanel, BorderLayout.CENTER);
             wrapper.revalidate();
             wrapper.repaint();

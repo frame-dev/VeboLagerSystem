@@ -43,7 +43,7 @@ public class ArticleGUI extends JFrame {
     private final JLabel countLabel;
 
     // Category management
-    private JComboBox<String> categoryFilter;
+    private final JComboBox<String> categoryFilter;
     private Map<String, CategoryRange> categories; // category name -> range
 
     // Inner class to hold category range data
