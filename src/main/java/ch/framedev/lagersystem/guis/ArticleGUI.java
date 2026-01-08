@@ -12,10 +12,7 @@ import javax.swing.*;
 import javax.swing.table.*;
 import javax.swing.text.NumberFormatter;
 import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -309,28 +306,44 @@ public class ArticleGUI extends JFrame {
         JDialog dialog = new JDialog(this, "Artikel Bearbeiten", true);
         dialog.setUndecorated(true);
 
-        // Main container with background
+        // Main container with shadow effect
         JPanel mainContainer = new JPanel(new BorderLayout());
         mainContainer.setBackground(new Color(245, 247, 250));
-        mainContainer.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        mainContainer.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(180, 190, 200), 2),
+            BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ));
 
-        // Header panel
+        // Header panel with gradient-like effect
         JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(new Color(62, 84, 98));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
-        JLabel titleLabel = new JLabel("✏️ Artikel Bearbeiten");
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 20f));
+        headerPanel.setBackground(new Color(41, 128, 185)); // Brighter blue
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+
+        JLabel titleLabel = new JLabel("✏️  Artikel Bearbeiten");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
         titleLabel.setForeground(Color.WHITE);
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
-        // Close button
+        // Styled close button
         JButton closeBtn = new JButton("✕");
         closeBtn.setForeground(Color.WHITE);
-        closeBtn.setBackground(new Color(62, 84, 98));
+        closeBtn.setBackground(new Color(41, 128, 185));
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
-        closeBtn.setFont(closeBtn.getFont().deriveFont(20f));
+        closeBtn.setContentAreaFilled(false);
+        closeBtn.setFont(new Font("Arial", Font.BOLD, 24));
         closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        closeBtn.setPreferredSize(new Dimension(40, 40));
+        closeBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                closeBtn.setForeground(new Color(231, 76, 60));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                closeBtn.setForeground(Color.WHITE);
+            }
+        });
         closeBtn.addActionListener(e -> {
             resultHolder[0] = null;
             dialog.dispose();
@@ -338,66 +351,91 @@ public class ArticleGUI extends JFrame {
         headerPanel.add(closeBtn, BorderLayout.EAST);
         mainContainer.add(headerPanel, BorderLayout.NORTH);
 
-        // Content card
-        RoundedPanel contentCard = new RoundedPanel(Color.WHITE, 12);
-        contentCard.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+        // Scrollable content card
+        RoundedPanel contentCard = new RoundedPanel(Color.WHITE, 0);
+        contentCard.setBorder(BorderFactory.createEmptyBorder(32, 40, 32, 40));
         contentCard.setLayout(new GridBagLayout());
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.insets = new Insets(6, 6, 6, 6);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
 
-        // Helper method for creating styled labels
+        // Helper method for creating styled labels with icons
         java.util.function.Function<String, JLabel> createLabel = text -> {
             JLabel label = new JLabel(text);
-            label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
-            label.setForeground(new Color(52, 73, 94));
+            label.setFont(new Font("Arial", Font.BOLD, 13));
+            label.setForeground(new Color(44, 62, 80));
             return label;
         };
 
-        // Helper method for styling text fields
+        // Helper method for styling text fields with hover effect
         java.util.function.Consumer<JTextField> styleTextField = field -> {
-            field.setFont(field.getFont().deriveFont(14f));
+            field.setFont(new Font("Arial", Font.PLAIN, 14));
             field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
             ));
+            field.setBackground(new Color(250, 251, 252));
+            field.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(52, 152, 219), 2, true),
+                        BorderFactory.createEmptyBorder(9, 11, 9, 11)
+                    ));
+                }
+                @Override
+                public void focusLost(FocusEvent e) {
+                    field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                        BorderFactory.createEmptyBorder(10, 12, 10, 12)
+                    ));
+                }
+            });
         };
 
         int row = 0;
 
-        // Artikelnummer
+        // Artikelnummer with icon
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1;
-        contentCard.add(createLabel.apply("Artikelnummer *"), gbc);
+        JLabel nummerLabel = createLabel.apply("🔢  Artikelnummer *");
+        contentCard.add(nummerLabel, gbc);
         row++;
         gbc.gridy = row;
-        JTextField nummerField = new JTextField(existingData[0] == null ? "" : existingData[0].toString(), 25);
+        gbc.insets = new Insets(2, 6, 16, 6);
+        JTextField nummerField = new JTextField(existingData[0] == null ? "" : existingData[0].toString(), 30);
         styleTextField.accept(nummerField);
         contentCard.add(nummerField, gbc);
 
         row++;
-        // Name
+        gbc.insets = new Insets(6, 6, 6, 6);
+        // Name with icon
         gbc.gridy = row;
-        contentCard.add(createLabel.apply("Name *"), gbc);
+        JLabel nameLabel = createLabel.apply("📝  Name *");
+        contentCard.add(nameLabel, gbc);
         row++;
         gbc.gridy = row;
-        JTextField nameField = new JTextField(existingData[1] == null ? "" : existingData[1].toString(), 25);
+        gbc.insets = new Insets(2, 6, 16, 6);
+        JTextField nameField = new JTextField(existingData[1] == null ? "" : existingData[1].toString(), 30);
         styleTextField.accept(nameField);
         contentCard.add(nameField, gbc);
 
         row++;
-        // Details
+        gbc.insets = new Insets(6, 6, 6, 6);
+        // Details with icon
         gbc.gridy = row;
-        contentCard.add(createLabel.apply("Details"), gbc);
+        JLabel detailsLabel = createLabel.apply("📋  Details");
+        contentCard.add(detailsLabel, gbc);
         row++;
         gbc.gridy = row;
-        JTextField detailsField = new JTextField(existingData[3] == null ? "" : existingData[3].toString(), 25);
+        gbc.insets = new Insets(2, 6, 16, 6);
+        JTextField detailsField = new JTextField(existingData[3] == null ? "" : existingData[3].toString(), 30);
         styleTextField.accept(detailsField);
         contentCard.add(detailsField, gbc);
 
-        // Parse integer values robustly (note: indices shifted because of category column)
+        // Parse integer values robustly
         int existingLager = 0;
         int existingMindest = 0;
         try {
@@ -412,30 +450,55 @@ public class ArticleGUI extends JFrame {
         } catch (Exception ignored) { }
 
         row++;
-        // Two columns for stock fields
-        JPanel stockPanel = new JPanel(new GridLayout(1, 2, 16, 0));
+        gbc.insets = new Insets(12, 6, 6, 6);
+        // Stock fields with improved layout
+        gbc.gridy = row;
+        JLabel stockSectionLabel = createLabel.apply("📦  Lagerbestand");
+        stockSectionLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        contentCard.add(stockSectionLabel, gbc);
+
+        row++;
+        gbc.gridy = row;
+        gbc.insets = new Insets(8, 6, 16, 6);
+        JPanel stockPanel = new JPanel(new GridLayout(1, 2, 20, 0));
         stockPanel.setOpaque(false);
 
-        JPanel lagerPanel = new JPanel(new BorderLayout(0, 4));
+        JPanel lagerPanel = new JPanel(new BorderLayout(0, 6));
         lagerPanel.setOpaque(false);
-        lagerPanel.add(createLabel.apply("Lagerbestand"), BorderLayout.NORTH);
+        JLabel lagerLabel = new JLabel("Aktuell");
+        lagerLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        lagerLabel.setForeground(new Color(127, 140, 141));
+        lagerPanel.add(lagerLabel, BorderLayout.NORTH);
         JSpinner lagerSpinner = new JSpinner(new SpinnerNumberModel(existingLager, 0, Integer.MAX_VALUE, 1));
-        lagerSpinner.setFont(lagerSpinner.getFont().deriveFont(14f));
-        ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setColumns(8);
+        lagerSpinner.setFont(new Font("Arial", Font.PLAIN, 14));
+        ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setColumns(10);
+        ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setBorder(
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+            )
+        );
         lagerPanel.add(lagerSpinner, BorderLayout.CENTER);
 
-        JPanel mindestPanel = new JPanel(new BorderLayout(0, 4));
+        JPanel mindestPanel = new JPanel(new BorderLayout(0, 6));
         mindestPanel.setOpaque(false);
-        mindestPanel.add(createLabel.apply("Mindestbestand"), BorderLayout.NORTH);
+        JLabel mindestLabel = new JLabel("Mindestbestand");
+        mindestLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        mindestLabel.setForeground(new Color(127, 140, 141));
+        mindestPanel.add(mindestLabel, BorderLayout.NORTH);
         JSpinner mindestSpinner = new JSpinner(new SpinnerNumberModel(existingMindest, 0, Integer.MAX_VALUE, 1));
-        mindestSpinner.setFont(mindestSpinner.getFont().deriveFont(14f));
-        ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setColumns(8);
+        mindestSpinner.setFont(new Font("Arial", Font.PLAIN, 14));
+        ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setColumns(10);
+        ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setBorder(
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+            )
+        );
         mindestPanel.add(mindestSpinner, BorderLayout.CENTER);
 
         stockPanel.add(lagerPanel);
         stockPanel.add(mindestPanel);
-
-        gbc.gridy = row;
         contentCard.add(stockPanel, gbc);
 
         // Price fields with formatter
@@ -461,73 +524,125 @@ public class ArticleGUI extends JFrame {
         } catch (Exception ignored) { }
 
         row++;
-        // Two columns for price fields
-        JPanel pricePanel = new JPanel(new GridLayout(1, 2, 16, 0));
+        gbc.insets = new Insets(12, 6, 6, 6);
+        // Price section
+        gbc.gridy = row;
+        JLabel priceSectionLabel = createLabel.apply("💰  Preise");
+        priceSectionLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        contentCard.add(priceSectionLabel, gbc);
+
+        row++;
+        gbc.gridy = row;
+        gbc.insets = new Insets(8, 6, 16, 6);
+        JPanel pricePanel = new JPanel(new GridLayout(1, 2, 20, 0));
         pricePanel.setOpaque(false);
 
-        JPanel verkaufPanel = new JPanel(new BorderLayout(0, 4));
+        JPanel verkaufPanel = new JPanel(new BorderLayout(0, 6));
         verkaufPanel.setOpaque(false);
-        verkaufPanel.add(createLabel.apply("Verkaufspreis (CHF)"), BorderLayout.NORTH);
+        JLabel verkaufLabel = new JLabel("Verkaufspreis (CHF)");
+        verkaufLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        verkaufLabel.setForeground(new Color(127, 140, 141));
+        verkaufPanel.add(verkaufLabel, BorderLayout.NORTH);
         JFormattedTextField verkaufField = new JFormattedTextField(priceFormatter);
-        verkaufField.setColumns(10);
+        verkaufField.setColumns(12);
         verkaufField.setValue(existingVerkauf);
-        verkaufField.setFont(verkaufField.getFont().deriveFont(14f));
+        verkaufField.setFont(new Font("Arial", Font.PLAIN, 14));
         verkaufField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+            BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+            BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
+        verkaufField.setBackground(new Color(250, 251, 252));
         verkaufPanel.add(verkaufField, BorderLayout.CENTER);
 
-        JPanel einkaufPanel = new JPanel(new BorderLayout(0, 4));
+        JPanel einkaufPanel = new JPanel(new BorderLayout(0, 6));
         einkaufPanel.setOpaque(false);
-        einkaufPanel.add(createLabel.apply("Einkaufspreis (CHF)"), BorderLayout.NORTH);
+        JLabel einkaufLabel = new JLabel("Einkaufspreis (CHF)");
+        einkaufLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        einkaufLabel.setForeground(new Color(127, 140, 141));
+        einkaufPanel.add(einkaufLabel, BorderLayout.NORTH);
         JFormattedTextField einkaufField = new JFormattedTextField(priceFormatter);
-        einkaufField.setColumns(10);
+        einkaufField.setColumns(12);
         einkaufField.setValue(existingEinkauf);
-        einkaufField.setFont(einkaufField.getFont().deriveFont(14f));
+        einkaufField.setFont(new Font("Arial", Font.PLAIN, 14));
         einkaufField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+            BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+            BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
+        einkaufField.setBackground(new Color(250, 251, 252));
         einkaufPanel.add(einkaufField, BorderLayout.CENTER);
 
         pricePanel.add(verkaufPanel);
         pricePanel.add(einkaufPanel);
-
-        gbc.gridy = row;
         contentCard.add(pricePanel, gbc);
 
         row++;
-        // Lieferant
+        gbc.insets = new Insets(6, 6, 6, 6);
+        // Lieferant with icon
         gbc.gridy = row;
-        contentCard.add(createLabel.apply("Lieferant"), gbc);
+        JLabel lieferantLabel = createLabel.apply("🚚  Lieferant");
+        contentCard.add(lieferantLabel, gbc);
         row++;
         gbc.gridy = row;
-        JTextField lieferantField = new JTextField(existingData[8] == null ? "" : existingData[8].toString(), 25);
+        gbc.insets = new Insets(2, 6, 6, 6);
+        JTextField lieferantField = new JTextField(existingData[8] == null ? "" : existingData[8].toString(), 30);
         styleTextField.accept(lieferantField);
         contentCard.add(lieferantField, gbc);
 
-        mainContainer.add(contentCard, BorderLayout.CENTER);
+        // Wrap content in scroll pane
+        JScrollPane scrollPane = new JScrollPane(contentCard);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        mainContainer.add(scrollPane, BorderLayout.CENTER);
 
-        // Button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
-        buttonPanel.setBackground(new Color(245, 247, 250));
+        // Button panel with improved styling
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 16));
+        buttonPanel.setBackground(new Color(250, 251, 252));
+        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 225, 230)));
 
-        JButton cancelBtn = new JButton("Abbrechen");
-        cancelBtn.setFont(cancelBtn.getFont().deriveFont(Font.BOLD, 13f));
+        JButton cancelBtn = new JButton("✕  Abbrechen");
+        cancelBtn.setFont(new Font("Arial", Font.BOLD, 13));
         cancelBtn.setForeground(new Color(52, 73, 94));
         cancelBtn.setBackground(new Color(236, 240, 241));
-        cancelBtn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        cancelBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+            BorderFactory.createEmptyBorder(10, 20, 10, 20)
+        ));
         cancelBtn.setFocusPainted(false);
         cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        cancelBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                cancelBtn.setBackground(new Color(220, 225, 230));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                cancelBtn.setBackground(new Color(236, 240, 241));
+            }
+        });
 
-        JButton okBtn = new JButton("💾 Speichern");
-        okBtn.setFont(okBtn.getFont().deriveFont(Font.BOLD, 13f));
+        JButton okBtn = new JButton("✓  Speichern");
+        okBtn.setFont(new Font("Arial", Font.BOLD, 13));
         okBtn.setForeground(Color.BLACK);
         okBtn.setBackground(new Color(46, 204, 113));
-        okBtn.setBorder(BorderFactory.createEmptyBorder(10, 24, 10, 24));
+        okBtn.setOpaque(false);
+        okBtn.setContentAreaFilled(true);
+        okBtn.setBorderPainted(false);
+        okBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(39, 174, 96), 1),
+            BorderFactory.createEmptyBorder(10, 27, 10, 27)
+        ));
         okBtn.setFocusPainted(false);
         okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        okBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                okBtn.setBackground(new Color(39, 174, 96));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                okBtn.setBackground(new Color(46, 204, 113));
+            }
+        });
 
         buttonPanel.add(cancelBtn);
         buttonPanel.add(okBtn);
@@ -579,7 +694,7 @@ public class ArticleGUI extends JFrame {
         });
 
         // Show dialog
-        dialog.pack();
+        dialog.setSize(700, 750);
         dialog.setLocationRelativeTo(this);
         SwingUtilities.invokeLater(nummerField::requestFocusInWindow);
         dialog.setVisible(true);
@@ -1686,7 +1801,7 @@ public class ArticleGUI extends JFrame {
 
         } catch (Exception e) {
             System.err.println("Error loading categories: " + e.getMessage());
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Fehler beim Laden der Kategorien: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
         }
     }
 
