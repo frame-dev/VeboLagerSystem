@@ -2,6 +2,7 @@ package ch.framedev.lagersystem.managers;
 
 import ch.framedev.lagersystem.main.Main;
 
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,6 +63,18 @@ public class ClientManager {
         }
         String sql = "DELETE FROM clients WHERE firstLastName = ?;";
         return databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName});
+    }
+
+    public String getDepartmentByName(String firstLastName) {
+        String sql = "SELECT department FROM clients WHERE firstLastName = ?;";
+        try(ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{firstLastName})) {
+            if(resultSet.next()) {
+                return resultSet.getString("department");
+            }
+        } catch (Exception e) {
+            // Handle exception if needed
+        }
+        return null;
     }
 
     public List<Map<String, String>> getAllClients() {

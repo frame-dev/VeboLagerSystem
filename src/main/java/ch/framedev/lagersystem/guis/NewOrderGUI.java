@@ -45,8 +45,8 @@ public class NewOrderGUI extends JFrame {
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
         headerWrapper.setBackground(new Color(245, 247, 250));
         GradientPanel header = new GradientPanel(
-            new Color(46, 134, 193),
-            new Color(52, 152, 219)
+                new Color(46, 134, 193),
+                new Color(52, 152, 219)
         );
         header.setPreferredSize(new Dimension(900, 80));
         header.setLayout(new GridBagLayout());
@@ -98,6 +98,17 @@ public class NewOrderGUI extends JFrame {
 
         receiverNameCombobox = new JComboBox<>();
         fillReceiverNameCombobox();
+        receiverNameCombobox.addActionListener(listener -> {
+            String selected = (String) receiverNameCombobox.getSelectedItem();
+            if (selected == null) {
+                JOptionPane.showMessageDialog(NewOrderGUI.this, "Kein Empfänger Name gefunden");
+            }
+
+            String department = ClientManager.getInstance().getDepartmentByName(selected);
+            if (department != null) {
+                departmentList.setSelectedItem(department);
+            }
+        });
 
         // Receiver / Sender form
         receiverKontoField = new JTextField();
@@ -200,10 +211,10 @@ public class NewOrderGUI extends JFrame {
         JPanel actionButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionButtons.setOpaque(false);
 
-        JButton addArticlesBtn = createStyledButton("📦 Artikel hinzufügen", new Color(52, 152, 219), Color.WHITE);
+        JButton addArticlesBtn = createStyledButton("📦 Artikel hinzufügen", new Color(52, 152, 219));
         addArticlesBtn.addActionListener(e -> addArticlesFromList());
 
-        JButton exportPdfBtn = createStyledButton("📄 Export PDF", new Color(241, 196, 15), Color.WHITE);
+        JButton exportPdfBtn = createStyledButton("📄 Export PDF", new Color(241, 196, 15));
         exportPdfBtn.addActionListener(e -> {
             File file = chooseSaveFile();
             if (file != null) {
@@ -216,7 +227,7 @@ public class NewOrderGUI extends JFrame {
             }
         });
 
-        JButton createOrderBtn = createStyledButton("✓ Bestellen", new Color(46, 204, 113), Color.WHITE);
+        JButton createOrderBtn = createStyledButton("✓ Bestellen", new Color(46, 204, 113));
         createOrderBtn.addActionListener(e -> onCreateOrder());
 
         actionButtons.add(addArticlesBtn);
@@ -247,8 +258,8 @@ public class NewOrderGUI extends JFrame {
     private void styleTextField(JTextField field) {
         field.setFont(field.getFont().deriveFont(13f));
         field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(206, 212, 218), 1),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+                BorderFactory.createLineBorder(new Color(206, 212, 218), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
     }
 
@@ -319,9 +330,9 @@ public class NewOrderGUI extends JFrame {
 
         if (articlesWithQty.isEmpty()) {
             JOptionPane.showMessageDialog(this,
-                "Keine Artikel in der Artikelliste. Bitte fügen Sie zuerst Artikel hinzu.",
-                "Keine Artikel",
-                JOptionPane.WARNING_MESSAGE);
+                    "Keine Artikel in der Artikelliste. Bitte fügen Sie zuerst Artikel hinzu.",
+                    "Keine Artikel",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -339,9 +350,9 @@ public class NewOrderGUI extends JFrame {
         updateTotalPrice();
 
         JOptionPane.showMessageDialog(this,
-            articlesWithQty.size() + " Artikel zur Bestellung hinzugefügt.",
-            "Erfolgreich",
-            JOptionPane.INFORMATION_MESSAGE);
+                articlesWithQty.size() + " Artikel zur Bestellung hinzugefügt.",
+                "Erfolgreich",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
 
@@ -705,14 +716,14 @@ public class NewOrderGUI extends JFrame {
                 "</ul>";
     }
 
-    private JButton createStyledButton(String text, Color bgColor, Color fgColor) {
+    private JButton createStyledButton(String text, Color bgColor) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
         button.setBorderPainted(false);
         button.setContentAreaFilled(false);
         button.setOpaque(true);
         button.setBackground(bgColor);
-        button.setForeground(fgColor);
+        button.setForeground(Color.WHITE);
         button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(bgColor.darker(), 1),
@@ -725,6 +736,7 @@ public class NewOrderGUI extends JFrame {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 button.setBackground(bgColor.brighter());
             }
+
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 button.setBackground(bgColor);
             }
