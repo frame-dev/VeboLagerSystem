@@ -602,7 +602,7 @@ public class ArticleGUI extends JFrame {
         JButton cancelBtn = new JButton("✕  Abbrechen");
         cancelBtn.setFont(new Font("Arial", Font.BOLD, 13));
         cancelBtn.setForeground(new Color(52, 73, 94));
-        cancelBtn.setBackground(new Color(236, 240, 241));
+        cancelBtn.setBackground(new Color(255, 57, 57));
         cancelBtn.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
             BorderFactory.createEmptyBorder(10, 20, 10, 20)
@@ -624,9 +624,9 @@ public class ArticleGUI extends JFrame {
         okBtn.setFont(new Font("Arial", Font.BOLD, 13));
         okBtn.setForeground(Color.BLACK);
         okBtn.setBackground(new Color(46, 204, 113));
-        okBtn.setOpaque(false);
+        okBtn.setOpaque(true);
         okBtn.setContentAreaFilled(true);
-        okBtn.setBorderPainted(false);
+        okBtn.setBorderPainted(true);
         okBtn.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(39, 174, 96), 1),
             BorderFactory.createEmptyBorder(10, 27, 10, 27)
