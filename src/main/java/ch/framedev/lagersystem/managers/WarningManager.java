@@ -54,8 +54,8 @@ public class WarningManager {
      * @return true if insertion was successful, false otherwise
      */
     public boolean insertWarning(Warning warning) {
-        String sql = "INSERT INTO warnings (title, message, type, date, isResolved) " +
-                "VALUES (?, ?, ?, ?, ?);";
+        String sql = "INSERT INTO warnings (title, message, type, date, isResolved, isDisplayed) " +
+                "VALUES (?, ?, ?, ?, ?, ?);";
         return databaseManager.executePreparedUpdate(sql, new Object[]{
                 warning.getTitle(),
                 warning.getMessage(),
@@ -90,6 +90,25 @@ public class WarningManager {
     public boolean resolveWarning(String title) {
         String sql = "UPDATE warnings SET isResolved = 'true' WHERE title = ?;";
         return databaseManager.executePreparedUpdate(sql, new Object[]{title});
+    }
+
+    /**
+     * Update a warning in the database
+     *
+     * @param warning Warning object to update
+     * @return true if update was successful, false otherwise
+     */
+    public boolean updateWarning(Warning warning) {
+        String sql = "UPDATE warnings SET message = ?, type = ?, date = ?, isResolved = ?, isDisplayed = ? " +
+                "WHERE title = ?;";
+        return databaseManager.executePreparedUpdate(sql, new Object[]{
+                warning.getMessage(),
+                warning.getType().name(),
+                warning.getDate(),
+                warning.isResolved() ? "true" : "false",
+                warning.isDisplayed() ? "true" : "false",
+                warning.getTitle()
+        });
     }
 
     public boolean deleteWarning(String title) {
@@ -143,14 +162,9 @@ public class WarningManager {
                 ));
             }
         } catch (Exception e) {
-            return warnings;
+            System.err.println("[WarningManager] Fehler beim Laden aller Warnungen: " + e.getMessage());
+            e.printStackTrace();
         }
         return warnings;
     }
-
-    /**
-     * Warnungen
-     * - Zu wenig Lagerbestand
-     * - Muss bestellt werden
-     */
 }

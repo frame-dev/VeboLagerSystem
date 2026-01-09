@@ -52,11 +52,44 @@ public class MainGUI extends JFrame {
 
         headerPanel.add(headerTextPanel, BorderLayout.WEST);
 
+        // Right panel with settings button and date
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+        rightPanel.setOpaque(false);
+
+        // Settings button
+        JButton settingsButton = new JButton("⚙️ Einstellungen");
+        settingsButton.setFont(new Font("Arial", Font.BOLD, 12));
+        settingsButton.setForeground(Color.WHITE);
+        settingsButton.setBackground(new Color(41, 128, 185));
+        settingsButton.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(52, 152, 219), 1),
+            BorderFactory.createEmptyBorder(8, 16, 8, 16)
+        ));
+        settingsButton.setFocusPainted(false);
+        settingsButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        settingsButton.addActionListener(e -> {
+            SettingsGUI settingsGUI = new SettingsGUI();
+            settingsGUI.display();
+        });
+        settingsButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                settingsButton.setBackground(new Color(52, 152, 219));
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                settingsButton.setBackground(new Color(41, 128, 185));
+            }
+        });
+
         // Add date/time label on the right
         JLabel dateLabel = new JLabel("07. Januar 2026");
         dateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         dateLabel.setForeground(new Color(180, 200, 220));
-        headerPanel.add(dateLabel, BorderLayout.EAST);
+
+        rightPanel.add(settingsButton);
+        rightPanel.add(dateLabel);
+        headerPanel.add(rightPanel, BorderLayout.EAST);
 
         mainPanel.add(headerPanel, BorderLayout.NORTH);
 

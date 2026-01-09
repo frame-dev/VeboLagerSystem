@@ -38,5 +38,17 @@
   {
     "firstLastName": "Studer Klara",
     "department": "Packing"
+  },
+  {
+    "firstLastName": "Susanne Bader",
+    "department": "Wäscherei"
+  },
+  {
+    "firstLastName": "Cyril Huber",
+    "department": "Süd2"
+  },
+  {
+    "firstLastName": "Erich Burri",
+    "department": "Süd4"
   }
 ]

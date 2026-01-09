@@ -24,7 +24,8 @@ if (isset($_GET['quantity'])) {
         'data' => $data,
         'quantity' => $quantity,
         'type' => $type,
-        'ownUse' => $ownUse
+        'ownUse' => $ownUse,
+        'id' => strval(uniqid())
     ];
     
     // Read existing data from JSON file

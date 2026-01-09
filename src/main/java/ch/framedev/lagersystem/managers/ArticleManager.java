@@ -340,4 +340,27 @@ public class ArticleManager {
         }
     }
 
+    public boolean removeFromStock(String articleNumber, int quantity) {
+        Article article = getArticleByNumber(articleNumber);
+        if(article == null) {
+            return false;
+        }
+        int newQuantity = article.getStockQuantity() - quantity;
+        if(newQuantity < 0) {
+            newQuantity = 0;
+        }
+        article.setStockQuantity(newQuantity);
+        return updateArticle(article);
+    }
+
+    public boolean addToStock(String articleNumber, int quantity) {
+        Article article = getArticleByNumber(articleNumber);
+        if(article == null) {
+            return false;
+        }
+        int newQuantity = article.getStockQuantity() + quantity;
+        article.setStockQuantity(newQuantity);
+        return updateArticle(article);
+    }
+
 }

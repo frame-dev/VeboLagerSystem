@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -258,5 +259,61 @@ public class ImportUtils {
             }
         }
         return value.getAsString(); // fallback
+    }
+
+    public static void addToList(String itemName) {
+        File file = new File(Main.getAppDataDir(), "imported_items.txt");
+        try(FileWriter writer = new FileWriter(file, true)) {
+            writer.write(itemName + System.lineSeparator());
+        } catch (IOException e) {
+            LOGGER.error("Failed to write item to imported_items.txt", e);
+        }
+    }
+
+    public static List<String> getImportedItems() {
+        List<String> importedItems = new ArrayList<>();
+        File file = new File(Main.getAppDataDir(), "imported_items.txt");
+        if(!file.exists()) {
+            return importedItems;
+        }
+        try {
+            importedItems = java.nio.file.Files.readAllLines(file.toPath());
+        } catch (IOException e) {
+            LOGGER.error("Failed to read imported items from imported_items.txt", e);
+        }
+        return importedItems;
+    }
+
+    public static void addQrCodeImport(String qrId) {
+        File file = new File(Main.getAppDataDir(), "imported_qrcodes.txt");
+        try(FileWriter writer = new FileWriter(file, true)) {
+            writer.write(qrId + System.lineSeparator());
+            writer.flush();
+        } catch (IOException e) {
+            LOGGER.error("Failed to write QR code ID to imported_qrcodes.txt", e);
+        }
+    }
+
+    public static List<String> getImportedQrCodes() {
+        List<String> importedQrCodes = new ArrayList<>();
+        File file = new File(Main.getAppDataDir(), "imported_qrcodes.txt");
+        if(!file.exists()) {
+            return importedQrCodes;
+        }
+        try {
+            importedQrCodes = java.nio.file.Files.readAllLines(file.toPath());
+        } catch (IOException e) {
+            LOGGER.error("Failed to read imported QR codes from imported_qrcodes.txt", e);
+        }
+        return importedQrCodes;
+    }
+
+    public static void addToOwnUseList(String data) {
+        File file = new File(Main.getAppDataDir(), "own_use_list.txt");
+        try(FileWriter writer = new FileWriter(file, true)) {
+            writer.write(data + System.lineSeparator());
+        } catch (IOException e) {
+            LOGGER.error("Failed to write data to own_use_list.txt", e);
+        }
     }
 }

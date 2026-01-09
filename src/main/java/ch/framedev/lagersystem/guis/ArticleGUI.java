@@ -4,15 +4,24 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Warning;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.WarningManager;
+import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
 import javax.swing.*;
 import javax.swing.table.*;
 import javax.swing.text.NumberFormatter;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -29,6 +38,7 @@ import static ch.framedev.lagersystem.main.Main.articleListGUI;
 /**
  * ArticleGUI with category support for better organization.
  * Categories are loaded from categories.json and mapped to articles based on article number ranges.
+ * TODO: Performance Upgrade
  */
 @SuppressWarnings("unused")
 public class ArticleGUI extends JFrame {
@@ -111,7 +121,6 @@ public class ArticleGUI extends JFrame {
         addArticleButton.addActionListener(e -> {
             Object[] row = showAddArticleDialog();
             if (row != null) {
-                addArticleRow(row);
                 ArticleManager articleManager = ArticleManager.getInstance();
                 Article article = new Article(
                         (String) row[0],
@@ -126,6 +135,7 @@ public class ArticleGUI extends JFrame {
                 if (!articleManager.insertArticle(article)) {
                     JOptionPane.showMessageDialog(this, "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.", "Fehler", JOptionPane.ERROR_MESSAGE);
                 } else {
+                    loadArticles(); // Reload articles from database to ensure consistency
                     JOptionPane.showMessageDialog(this, "Artikel erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                 }
             }
@@ -139,25 +149,40 @@ public class ArticleGUI extends JFrame {
                 JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector().elementAt(selectedRow).toArray();
+            int modelRow = articleTable.convertRowIndexToModel(selectedRow);
+            Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector().elementAt(modelRow).toArray();
             Object[] updatedRow = showUpdateArticleDialog(existingData);
             if (updatedRow != null) {
+                // updatedRow has 8 elements: [artikelNr, name, details, lager, mindest, verkauf, einkauf, lieferant]
+                // Table has 9 columns: [artikelNr, name, CATEGORY, details, lager, mindest, verkauf, einkauf, lieferant]
                 DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-                for (int i = 0; i < updatedRow.length; i++) {
-                    model.setValueAt(updatedRow[i], selectedRow, i);
-                }
+
+                // Update table with category
+                model.setValueAt(updatedRow[0], modelRow, 0); // Artikelnummer
+                model.setValueAt(updatedRow[1], modelRow, 1); // Name
+                String category = getCategoryForArticle((String) updatedRow[0]);
+                model.setValueAt(category, modelRow, 2); // Category (recalculated)
+                model.setValueAt(updatedRow[2], modelRow, 3); // Details
+                model.setValueAt(updatedRow[3], modelRow, 4); // Lagerbestand
+                model.setValueAt(updatedRow[4], modelRow, 5); // Mindestbestand
+                model.setValueAt(updatedRow[5], modelRow, 6); // Verkaufspreis
+                model.setValueAt(updatedRow[6], modelRow, 7); // Einkaufspreis
+                model.setValueAt(updatedRow[7], modelRow, 8); // Lieferant
+
+                // Create Article object (without category)
                 ArticleManager articleManager = ArticleManager.getInstance();
                 Article article = new Article(
-                        (String) updatedRow[0],
-                        (String) updatedRow[1],
-                        (String) updatedRow[2],
-                        (Integer) updatedRow[3],
-                        (Integer) updatedRow[4],
-                        (Double) updatedRow[5],
-                        (Double) updatedRow[6],
-                        (String) updatedRow[7]
+                        (String) updatedRow[0],  // artikelNr
+                        (String) updatedRow[1],  // name
+                        (String) updatedRow[2],  // details
+                        (Integer) updatedRow[3], // lagerbestand
+                        (Integer) updatedRow[4], // mindestbestand
+                        (Double) updatedRow[5],  // verkaufspreis
+                        (Double) updatedRow[6],  // einkaufspreis
+                        (String) updatedRow[7]   // lieferant
                 );
                 if (articleManager.updateArticle(article)) {
+                    loadArticles(); // Refresh to ensure consistency
                     JOptionPane.showMessageDialog(this, "Artikel erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Artikels.", "Fehler", JOptionPane.ERROR_MESSAGE);
@@ -171,10 +196,7 @@ public class ArticleGUI extends JFrame {
 
         // Retrieve QR-Code Data button
         JButton retrieveQrCodeDataButton = createRoundedButton("QR-Code Daten abrufen");
-        retrieveQrCodeDataButton.addActionListener(e -> {
-            List<Map<String, Object>> qrCodeData = QRCodeUtils.retrieveQrCodeDataFromWebsite();
-            JOptionPane.showMessageDialog(this, "Es wurden " + qrCodeData.size() + " QR-Code Datensätze abgerufen.", "QR-Code Daten", JOptionPane.INFORMATION_MESSAGE);
-        });
+        retrieveQrCodeDataButton.addActionListener(e -> showQRCodeDataDialog());
 
         toolbarWrapper.add(addArticleButton);
         toolbarWrapper.add(editArticleButton);
@@ -261,6 +283,10 @@ public class ArticleGUI extends JFrame {
         // Enter key triggers search
         searchField.addActionListener(e -> doSearch.run());
 
+        JButton exportTableAsPdfBtn = createRoundedButton("Tabelle als PDF exportieren");
+        exportTableAsPdfBtn.addActionListener(e -> exportTableAsPDF());
+        searchPanel.add(exportTableAsPdfBtn);
+
         countLabel = new JLabel("Anzahl Artikel: " + articleTable.getRowCount());
         searchPanel.add(countLabel);
 
@@ -315,6 +341,17 @@ public class ArticleGUI extends JFrame {
         SwingUtilities.invokeLater(this::adjustColumnWidths);
     }
 
+    private String prettyPrintQRData(String jsonData) {
+        Gson gson = new Gson();
+        Map<String, Object> dataMap = gson.fromJson(jsonData, new TypeToken<Map<String, Object>>() {
+        }.getType());
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, Object> entry : dataMap.entrySet()) {
+            sb.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+        }
+        return sb.toString();
+    }
+
     private Object[] showUpdateArticleDialog(Object[] existingData) {
         final Object[][] resultHolder = new Object[1][];
 
@@ -325,8 +362,8 @@ public class ArticleGUI extends JFrame {
         JPanel mainContainer = new JPanel(new BorderLayout());
         mainContainer.setBackground(new Color(245, 247, 250));
         mainContainer.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(180, 190, 200), 2),
-            BorderFactory.createEmptyBorder(0, 0, 0, 0)
+                BorderFactory.createLineBorder(new Color(180, 190, 200), 2),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)
         ));
 
         // Header panel with gradient-like effect
@@ -354,6 +391,7 @@ public class ArticleGUI extends JFrame {
             public void mouseEntered(MouseEvent e) {
                 closeBtn.setForeground(new Color(231, 76, 60));
             }
+
             @Override
             public void mouseExited(MouseEvent e) {
                 closeBtn.setForeground(Color.WHITE);
@@ -389,23 +427,24 @@ public class ArticleGUI extends JFrame {
         java.util.function.Consumer<JTextField> styleTextField = field -> {
             field.setFont(new Font("Arial", Font.PLAIN, 14));
             field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+                    BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                    BorderFactory.createEmptyBorder(10, 12, 10, 12)
             ));
             field.setBackground(new Color(250, 251, 252));
             field.addFocusListener(new FocusAdapter() {
                 @Override
                 public void focusGained(FocusEvent e) {
                     field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(52, 152, 219), 2, true),
-                        BorderFactory.createEmptyBorder(9, 11, 9, 11)
+                            BorderFactory.createLineBorder(new Color(52, 152, 219), 2, true),
+                            BorderFactory.createEmptyBorder(9, 11, 9, 11)
                     ));
                 }
+
                 @Override
                 public void focusLost(FocusEvent e) {
                     field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
-                        BorderFactory.createEmptyBorder(10, 12, 10, 12)
+                            BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                            BorderFactory.createEmptyBorder(10, 12, 10, 12)
                     ));
                 }
             });
@@ -414,7 +453,9 @@ public class ArticleGUI extends JFrame {
         int row = 0;
 
         // Artikelnummer with icon
-        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 1;
         JLabel nummerLabel = createLabel.apply("🔢  Artikelnummer *");
         contentCard.add(nummerLabel, gbc);
         row++;
@@ -450,19 +491,22 @@ public class ArticleGUI extends JFrame {
         styleTextField.accept(detailsField);
         contentCard.add(detailsField, gbc);
 
-        // Parse integer values robustly
+        // Parse integer values robustly (account for category at index 2)
+        // existingData structure: [0:artikelNr, 1:name, 2:category, 3:details, 4:lager, 5:mindest, 6:verkauf, 7:einkauf, 8:lieferant]
         int existingLager = 0;
         int existingMindest = 0;
         try {
-            Object o = existingData[4];
+            Object o = existingData[4]; // Lagerbestand at index 4
             if (o instanceof Number) existingLager = ((Number) o).intValue();
             else existingLager = Integer.parseInt(o.toString());
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
         try {
-            Object o = existingData[5];
+            Object o = existingData[5]; // Mindestbestand at index 5
             if (o instanceof Number) existingMindest = ((Number) o).intValue();
             else existingMindest = Integer.parseInt(o.toString());
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
 
         row++;
         gbc.insets = new Insets(12, 6, 6, 6);
@@ -488,10 +532,10 @@ public class ArticleGUI extends JFrame {
         lagerSpinner.setFont(new Font("Arial", Font.PLAIN, 14));
         ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setColumns(10);
         ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setBorder(
-            BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-            )
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                        BorderFactory.createEmptyBorder(8, 10, 8, 10)
+                )
         );
         lagerPanel.add(lagerSpinner, BorderLayout.CENTER);
 
@@ -505,10 +549,10 @@ public class ArticleGUI extends JFrame {
         mindestSpinner.setFont(new Font("Arial", Font.PLAIN, 14));
         ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setColumns(10);
         ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setBorder(
-            BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-            )
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                        BorderFactory.createEmptyBorder(8, 10, 8, 10)
+                )
         );
         mindestPanel.add(mindestSpinner, BorderLayout.CENTER);
 
@@ -528,15 +572,17 @@ public class ArticleGUI extends JFrame {
         double existingVerkauf = 0.0;
         double existingEinkauf = 0.0;
         try {
-            Object o = existingData[6];
+            Object o = existingData[6]; // Verkaufspreis at index 6
             if (o instanceof Number) existingVerkauf = ((Number) o).doubleValue();
             else existingVerkauf = Double.parseDouble(o.toString());
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
         try {
-            Object o = existingData[7];
+            Object o = existingData[7]; // Einkaufspreis at index 7
             if (o instanceof Number) existingEinkauf = ((Number) o).doubleValue();
             else existingEinkauf = Double.parseDouble(o.toString());
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
 
         row++;
         gbc.insets = new Insets(12, 6, 6, 6);
@@ -563,8 +609,8 @@ public class ArticleGUI extends JFrame {
         verkaufField.setValue(existingVerkauf);
         verkaufField.setFont(new Font("Arial", Font.PLAIN, 14));
         verkaufField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
-            BorderFactory.createEmptyBorder(10, 12, 10, 12)
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
         verkaufField.setBackground(new Color(250, 251, 252));
         verkaufPanel.add(verkaufField, BorderLayout.CENTER);
@@ -580,8 +626,8 @@ public class ArticleGUI extends JFrame {
         einkaufField.setValue(existingEinkauf);
         einkaufField.setFont(new Font("Arial", Font.PLAIN, 14));
         einkaufField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
-            BorderFactory.createEmptyBorder(10, 12, 10, 12)
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
         einkaufField.setBackground(new Color(250, 251, 252));
         einkaufPanel.add(einkaufField, BorderLayout.CENTER);
@@ -619,8 +665,8 @@ public class ArticleGUI extends JFrame {
         cancelBtn.setForeground(new Color(52, 73, 94));
         cancelBtn.setBackground(new Color(255, 57, 57));
         cancelBtn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
-            BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         cancelBtn.setFocusPainted(false);
         cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -629,6 +675,7 @@ public class ArticleGUI extends JFrame {
             public void mouseEntered(MouseEvent e) {
                 cancelBtn.setBackground(new Color(220, 225, 230));
             }
+
             @Override
             public void mouseExited(MouseEvent e) {
                 cancelBtn.setBackground(new Color(236, 240, 241));
@@ -643,8 +690,8 @@ public class ArticleGUI extends JFrame {
         okBtn.setContentAreaFilled(true);
         okBtn.setBorderPainted(true);
         okBtn.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(39, 174, 96), 1),
-            BorderFactory.createEmptyBorder(10, 27, 10, 27)
+                BorderFactory.createLineBorder(new Color(39, 174, 96), 1),
+                BorderFactory.createEmptyBorder(10, 27, 10, 27)
         ));
         okBtn.setFocusPainted(false);
         okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -653,6 +700,7 @@ public class ArticleGUI extends JFrame {
             public void mouseEntered(MouseEvent e) {
                 okBtn.setBackground(new Color(39, 174, 96));
             }
+
             @Override
             public void mouseExited(MouseEvent e) {
                 okBtn.setBackground(new Color(46, 204, 113));
@@ -680,9 +728,9 @@ public class ArticleGUI extends JFrame {
 
             if (nummer.isEmpty() || name.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog,
-                    "Artikelnummer und Name sind Pflichtfelder.",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
+                        "Artikelnummer und Name sind Pflichtfelder.",
+                        "Fehler",
+                        JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -697,14 +745,14 @@ public class ArticleGUI extends JFrame {
                 einkaufspreis = ((Number) einkaufField.getValue()).doubleValue();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog,
-                    "Bitte gültige Preise eingeben.",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
+                        "Bitte gültige Preise eingeben.",
+                        "Fehler",
+                        JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             resultHolder[0] = new Object[]{nummer, name, details, lagerbestand, mindestbestand,
-                verkaufspreis, einkaufspreis, lieferant};
+                    verkaufspreis, einkaufspreis, lieferant};
             dialog.dispose();
         });
 
@@ -778,15 +826,17 @@ public class ArticleGUI extends JFrame {
         java.util.function.Consumer<JTextField> styleTextField = field -> {
             field.setFont(field.getFont().deriveFont(14f));
             field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+                    BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+                    BorderFactory.createEmptyBorder(8, 10, 8, 10)
             ));
         };
 
         int row = 0;
 
         // Artikelnummer
-        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1;
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 1;
         contentCard.add(createLabel.apply("Artikelnummer *"), gbc);
         row++;
         gbc.gridy = row;
@@ -863,8 +913,8 @@ public class ArticleGUI extends JFrame {
         verkaufField.setValue(0.0);
         verkaufField.setFont(verkaufField.getFont().deriveFont(14f));
         verkaufField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
         verkaufPanel.add(verkaufField, BorderLayout.CENTER);
 
@@ -876,8 +926,8 @@ public class ArticleGUI extends JFrame {
         einkaufField.setValue(0.0);
         einkaufField.setFont(einkaufField.getFont().deriveFont(14f));
         einkaufField.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
         einkaufPanel.add(einkaufField, BorderLayout.CENTER);
 
@@ -940,9 +990,9 @@ public class ArticleGUI extends JFrame {
 
             if (nummer.isEmpty() || name.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog,
-                    "Artikelnummer und Name sind Pflichtfelder.",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
+                        "Artikelnummer und Name sind Pflichtfelder.",
+                        "Fehler",
+                        JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -957,14 +1007,14 @@ public class ArticleGUI extends JFrame {
                 einkaufspreis = ((Number) einkaufField.getValue()).doubleValue();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog,
-                    "Bitte gültige Preise eingeben.",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
+                        "Bitte gültige Preise eingeben.",
+                        "Fehler",
+                        JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             resultHolder[0] = new Object[]{nummer, name, details, lagerbestand, mindestbestand,
-                verkaufspreis, einkaufspreis, lieferant};
+                    verkaufspreis, einkaufspreis, lieferant};
             dialog.dispose();
         });
 
@@ -1062,6 +1112,271 @@ public class ArticleGUI extends JFrame {
                 sendTestWarning();
             }
         }, 500); // slight delay to ensure test warning shows after GUI is visible
+    }
+
+    /**
+     * Export the article table as a PDF with all data on a single page.
+     * Uses landscape A3 format for maximum space and dynamically scales content to fit.
+     */
+    private void exportTableAsPDF() {
+        // File chooser for save location
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("PDF Speichern");
+        fileChooser.setSelectedFile(new File("Artikel_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
+
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File fileToSave = fileChooser.getSelectedFile();
+        if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
+            fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
+        }
+
+        JTable table = articleTable;
+        try (PDDocument doc = new PDDocument()) {
+            // Load fonts
+            PDFont boldFont;
+            PDFont regularFont;
+            File arialBold = new File("/Library/Fonts/Arial Bold.ttf");
+            File arial = new File("/Library/Fonts/Arial.ttf");
+
+            if (arialBold.exists() && arial.exists()) {
+                boldFont = PDType0Font.load(doc, arialBold);
+                regularFont = PDType0Font.load(doc, arial);
+            } else {
+                // Fallback to Type1 fonts
+                try {
+                    Class<?> c = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
+                    Object helvBold = c.getField("HELVETICA_BOLD").get(null);
+                    Object helv = c.getField("HELVETICA").get(null);
+                    boldFont = (PDFont) helvBold;
+                    regularFont = (PDFont) helv;
+                } catch (Exception e) {
+                    throw new IOException("Keine verwendbaren Schriftarten gefunden");
+                }
+            }
+
+            // Page setup - Use A4 landscape for all columns to fit
+            PDRectangle pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()); // Landscape
+            float margin = 30;
+            float pageWidth = pageSize.getWidth();
+            float pageHeight = pageSize.getHeight();
+            float tableWidth = pageWidth - 2 * margin;
+
+            // Table configuration
+            int numCols = table.getColumnCount();
+            int numRows = table.getRowCount();
+            float rowHeight = 16f;
+            float headerHeight = 20f;
+            float fontSize = 7f;
+            float headerFontSize = 8f;
+            float cellPadding = 3f;
+
+            // Calculate column widths proportionally
+            float[] columnWidths = new float[numCols];
+            float totalWidth = 0;
+            for (int i = 0; i < numCols; i++) {
+                columnWidths[i] = i < baseColumnWidths.length ? baseColumnWidths[i] : 100;
+                totalWidth += columnWidths[i];
+            }
+            for (int i = 0; i < numCols; i++) {
+                columnWidths[i] = (columnWidths[i] / totalWidth) * tableWidth;
+            }
+
+            // Create first page
+            PDPage page = new PDPage(pageSize);
+            doc.addPage(page);
+            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
+
+            float yPosition = pageHeight - margin;
+            int currentPage = 1;
+            boolean alternate = false;
+
+            // Helper method to draw header
+            java.util.function.BiConsumer<PDPageContentStream, Float> drawHeader = (cs, yPos) -> {
+                try {
+                    // Document header
+                    cs.setNonStrokingColor(30f / 255f, 58f / 255f, 95f / 255f);
+                    cs.addRect(margin, yPos - 45, tableWidth, 45);
+                    cs.fill();
+
+                    cs.beginText();
+                    cs.setNonStrokingColor(1f, 1f, 1f);
+                    cs.setFont(boldFont, 16);
+                    cs.newLineAtOffset(margin + 10, yPos - 28);
+                    cs.showText("VEBO Lagersystem - Artikelliste");
+                    cs.endText();
+
+                    cs.beginText();
+                    cs.setFont(regularFont, 8);
+                    cs.newLineAtOffset(pageWidth - margin - 120, yPos - 28);
+                    cs.showText("Export: " + new SimpleDateFormat("dd.MM.yyyy HH:mm").format(new Date()));
+                    cs.endText();
+
+                    // Table header
+                    float tableHeaderY = yPos - 55;
+                    cs.setNonStrokingColor(62f / 255f, 84f / 255f, 98f / 255f);
+                    cs.addRect(margin, tableHeaderY - headerHeight, tableWidth, headerHeight);
+                    cs.fill();
+
+                    cs.beginText();
+                    cs.setNonStrokingColor(1f, 1f, 1f);
+                    cs.setFont(boldFont, headerFontSize);
+
+                    float xPos = margin;
+                    for (int col = 0; col < numCols; col++) {
+                        String header = table.getColumnName(col);
+                        // Truncate header if too long
+                        float textWidth = boldFont.getStringWidth(header) / 1000f * headerFontSize;
+                        if (textWidth > columnWidths[col] - 2 * cellPadding) {
+                            while (textWidth > columnWidths[col] - 2 * cellPadding && header.length() > 2) {
+                                header = header.substring(0, header.length() - 1);
+                                textWidth = boldFont.getStringWidth(header + "..") / 1000f * headerFontSize;
+                            }
+                            header = header + "..";
+                        }
+
+                        cs.newLineAtOffset(xPos + cellPadding, tableHeaderY - headerHeight + cellPadding + 3);
+                        cs.showText(header);
+                        cs.newLineAtOffset(-(xPos + cellPadding), -(tableHeaderY - headerHeight + cellPadding + 3));
+                        xPos += columnWidths[col];
+                    }
+                    cs.endText();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            };
+
+            // Helper method to draw footer
+            java.util.function.BiConsumer<PDPageContentStream, Integer> drawFooter = (cs, pageNum) -> {
+                try {
+                    cs.beginText();
+                    cs.setNonStrokingColor(0.4f, 0.4f, 0.4f);
+                    cs.setFont(regularFont, 7);
+                    cs.newLineAtOffset(margin, 15);
+                    cs.showText("VEBO Lagersystem © 2026 | " + numRows + " Artikel");
+                    cs.endText();
+
+                    cs.beginText();
+                    cs.newLineAtOffset(pageWidth - margin - 50, 15);
+                    cs.showText("Seite " + pageNum);
+                    cs.endText();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            };
+
+            // Draw header on first page
+            drawHeader.accept(contentStream, yPosition);
+            yPosition -= (55 + headerHeight + 5);
+
+            // Draw rows
+            for (int row = 0; row < numRows; row++) {
+                // Check if we need a new page
+                if (yPosition - rowHeight < margin + 30) {
+                    // Draw footer on current page
+                    drawFooter.accept(contentStream, currentPage);
+                    contentStream.close();
+
+                    // Create new page
+                    currentPage++;
+                    page = new PDPage(pageSize);
+                    doc.addPage(page);
+                    contentStream = new PDPageContentStream(doc, page);
+                    yPosition = pageHeight - margin;
+
+                    // Draw header on new page
+                    drawHeader.accept(contentStream, yPosition);
+                    yPosition -= (55 + headerHeight + 5);
+                }
+
+                // Alternate row background
+                if (alternate) {
+                    contentStream.setNonStrokingColor(247f / 255f, 250f / 255f, 253f / 255f);
+                    contentStream.addRect(margin, yPosition - rowHeight, tableWidth, rowHeight);
+                    contentStream.fill();
+                }
+
+                // Draw horizontal line
+                contentStream.setStrokingColor(220f / 255f, 225f / 255f, 230f / 255f);
+                contentStream.setLineWidth(0.3f);
+                contentStream.moveTo(margin, yPosition);
+                contentStream.lineTo(margin + tableWidth, yPosition);
+                contentStream.stroke();
+
+                // Draw cell text
+                contentStream.beginText();
+                contentStream.setNonStrokingColor(0f, 0f, 0f);
+                contentStream.setFont(regularFont, fontSize);
+
+                float xPos = margin;
+                for (int col = 0; col < numCols; col++) {
+                    Object value = table.getValueAt(row, col);
+                    String text = "";
+
+                    if (value != null) {
+                        // Format numbers
+                        if (value instanceof Double) {
+                            text = String.format("%.2f", (Double) value);
+                        } else if (value instanceof Integer) {
+                            text = String.format("%d", (Integer) value);
+                        } else {
+                            text = value.toString();
+                        }
+                    }
+
+                    // Truncate if too long
+                    float textWidth = regularFont.getStringWidth(text) / 1000f * fontSize;
+                    if (textWidth > columnWidths[col] - 2 * cellPadding) {
+                        while (textWidth > columnWidths[col] - 2 * cellPadding && text.length() > 2) {
+                            text = text.substring(0, text.length() - 1);
+                            textWidth = regularFont.getStringWidth(text + "..") / 1000f * fontSize;
+                        }
+                        text = text + "..";
+                    }
+
+                    contentStream.newLineAtOffset(xPos + cellPadding, yPosition - rowHeight + cellPadding + 2);
+                    contentStream.showText(text);
+                    contentStream.newLineAtOffset(-(xPos + cellPadding), -(yPosition - rowHeight + cellPadding + 2));
+                    xPos += columnWidths[col];
+                }
+                contentStream.endText();
+
+                yPosition -= rowHeight;
+                alternate = !alternate;
+            }
+
+            // Draw bottom border
+            contentStream.setStrokingColor(220f / 255f, 225f / 255f, 230f / 255f);
+            contentStream.setLineWidth(0.5f);
+            contentStream.moveTo(margin, yPosition);
+            contentStream.lineTo(margin + tableWidth, yPosition);
+            contentStream.stroke();
+
+            // Draw footer on last page
+            drawFooter.accept(contentStream, currentPage);
+
+            contentStream.close();
+            doc.save(fileToSave);
+
+            JOptionPane.showMessageDialog(this,
+                    "✅ PDF erfolgreich exportiert!\n\n" +
+                            "Datei: " + fileToSave.getName() + "\n" +
+                            "Pfad: " + fileToSave.getParent() + "\n" +
+                            "Artikel: " + numRows + "\n" +
+                            "Seiten: " + currentPage,
+                    "Export erfolgreich",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "❌ Fehler beim PDF-Export:\n\n" + ex.getMessage() +
+                            "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private static DefaultTableModel getDefaultTableModel() {
@@ -1271,6 +1586,7 @@ public class ArticleGUI extends JFrame {
 
     /**
      * Displays a warning in a modern, styled dialog
+     *
      * @param warning The warning object to display
      */
     public void displayWarning(Warning warning) {
@@ -1278,14 +1594,16 @@ public class ArticleGUI extends JFrame {
             // Create custom dialog
             JDialog dialog = new JDialog(this, "Warnung", true);
             dialog.setUndecorated(true);
+            dialog.requestFocus();
+            dialog.setAutoRequestFocus(true);
             dialog.setLayout(new BorderLayout());
 
             // Main panel with rounded corners
             RoundedPanel mainPanel = new RoundedPanel(new Color(245, 247, 250), 20);
             mainPanel.setLayout(new BorderLayout(0, 0));
             mainPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 225, 230), 2),
-                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+                    BorderFactory.createLineBorder(new Color(220, 225, 230), 2),
+                    BorderFactory.createEmptyBorder(0, 0, 0, 0)
             ));
 
             // Determine colors based on warning type
@@ -1393,10 +1711,12 @@ public class ArticleGUI extends JFrame {
                 styleButton(resolveBtn, new Color(39, 174, 96), Color.WHITE);
                 resolveBtn.addActionListener(e -> {
                     warning.setResolved(true);
+                    warning.setDisplayed(true);
+                    WarningManager.getInstance().resolveWarning(warning.getTitle());
                     JOptionPane.showMessageDialog(dialog,
-                        "Die Warnung wurde als gelöst markiert.",
-                        "Erfolg",
-                        JOptionPane.INFORMATION_MESSAGE);
+                            "Die Warnung wurde als gelöst markiert.",
+                            "Erfolg",
+                            JOptionPane.INFORMATION_MESSAGE);
                     dialog.dispose();
                 });
                 buttonPanel.add(resolveBtn);
@@ -1435,8 +1755,8 @@ public class ArticleGUI extends JFrame {
         button.setOpaque(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(bgColor.darker(), 1),
-            BorderFactory.createEmptyBorder(8, 16, 8, 16)
+                BorderFactory.createLineBorder(bgColor.darker(), 1),
+                BorderFactory.createEmptyBorder(8, 16, 8, 16)
         ));
     }
 
@@ -1494,9 +1814,9 @@ public class ArticleGUI extends JFrame {
                     }
 
                     String input = JOptionPane.showInputDialog(ArticleGUI.this,
-                        "Geben Sie die Menge für \"" + article.getName() + "\" ein:",
-                        "Zur Bestellung hinzufügen",
-                        JOptionPane.PLAIN_MESSAGE);
+                            "Geben Sie die Menge für \"" + article.getName() + "\" ein:",
+                            "Zur Bestellung hinzufügen",
+                            JOptionPane.PLAIN_MESSAGE);
 
                     if (input == null) return; // User cancelled
 
@@ -1626,11 +1946,11 @@ public class ArticleGUI extends JFrame {
                 };
 
                 tableModel.addRow(new Object[]{
-                    status,
-                    type,
-                    warning.getTitle(),
-                    warning.getMessage(),
-                    warning.getDate()
+                        status,
+                        type,
+                        warning.getTitle(),
+                        warning.getMessage(),
+                        warning.getDate()
                 });
             }
 
@@ -1646,7 +1966,7 @@ public class ArticleGUI extends JFrame {
             warningsTable.getColumnModel().getColumn(0).setCellRenderer(new DefaultTableCellRenderer() {
                 @Override
                 public Component getTableCellRendererComponent(JTable table, Object value,
-                        boolean isSelected, boolean hasFocus, int row, int column) {
+                                                               boolean isSelected, boolean hasFocus, int row, int column) {
                     Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                     if (!isSelected) {
                         if (value.toString().contains("Gelöst")) {
@@ -1693,9 +2013,9 @@ public class ArticleGUI extends JFrame {
                 int selectedRow = warningsTable.getSelectedRow();
                 if (selectedRow == -1) {
                     JOptionPane.showMessageDialog(dialog,
-                        "Bitte wählen Sie eine Warnung aus.",
-                        "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE);
+                            "Bitte wählen Sie eine Warnung aus.",
+                            "Keine Auswahl",
+                            JOptionPane.WARNING_MESSAGE);
                     return;
                 }
                 Warning selectedWarning = warnings.get(selectedRow);
@@ -1708,25 +2028,25 @@ public class ArticleGUI extends JFrame {
                 int selectedRow = warningsTable.getSelectedRow();
                 if (selectedRow == -1) {
                     JOptionPane.showMessageDialog(dialog,
-                        "Bitte wählen Sie eine Warnung aus.",
-                        "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE);
+                            "Bitte wählen Sie eine Warnung aus.",
+                            "Keine Auswahl",
+                            JOptionPane.WARNING_MESSAGE);
                     return;
                 }
                 Warning selectedWarning = warnings.get(selectedRow);
                 if (selectedWarning.isResolved()) {
                     JOptionPane.showMessageDialog(dialog,
-                        "Diese Warnung wurde bereits gelöst.",
-                        "Bereits gelöst",
-                        JOptionPane.INFORMATION_MESSAGE);
+                            "Diese Warnung wurde bereits gelöst.",
+                            "Bereits gelöst",
+                            JOptionPane.INFORMATION_MESSAGE);
                     return;
                 }
                 if (warningManager.resolveWarning(selectedWarning.getTitle())) {
                     tableModel.setValueAt("✓ Gelöst", selectedRow, 0);
                     JOptionPane.showMessageDialog(dialog,
-                        "Warnung wurde als gelöst markiert.",
-                        "Erfolg",
-                        JOptionPane.INFORMATION_MESSAGE);
+                            "Warnung wurde als gelöst markiert.",
+                            "Erfolg",
+                            JOptionPane.INFORMATION_MESSAGE);
                 }
             });
 
@@ -1736,15 +2056,15 @@ public class ArticleGUI extends JFrame {
                 int selectedRow = warningsTable.getSelectedRow();
                 if (selectedRow == -1) {
                     JOptionPane.showMessageDialog(dialog,
-                        "Bitte wählen Sie eine Warnung aus.",
-                        "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE);
+                            "Bitte wählen Sie eine Warnung aus.",
+                            "Keine Auswahl",
+                            JOptionPane.WARNING_MESSAGE);
                     return;
                 }
                 int confirm = JOptionPane.showConfirmDialog(dialog,
-                    "Möchten Sie diese Warnung wirklich löschen?",
-                    "Löschen bestätigen",
-                    JOptionPane.YES_NO_OPTION);
+                        "Möchten Sie diese Warnung wirklich löschen?",
+                        "Löschen bestätigen",
+                        JOptionPane.YES_NO_OPTION);
                 if (confirm == JOptionPane.YES_OPTION) {
                     Warning selectedWarning = warnings.get(selectedRow);
                     if (warningManager.deleteWarning(selectedWarning.getTitle())) {
@@ -1752,9 +2072,9 @@ public class ArticleGUI extends JFrame {
                         warnings.remove(selectedRow);
                         countLabel.setText(warnings.size() + " Warnung(en)");
                         JOptionPane.showMessageDialog(dialog,
-                            "Warnung wurde gelöscht.",
-                            "Erfolg",
-                            JOptionPane.INFORMATION_MESSAGE);
+                                "Warnung wurde gelöscht.",
+                                "Erfolg",
+                                JOptionPane.INFORMATION_MESSAGE);
                     }
                 }
             });
@@ -1807,10 +2127,11 @@ public class ArticleGUI extends JFrame {
             }
 
             Gson gson = new Gson();
-            java.lang.reflect.Type listType = new TypeToken<List<Map<String, String>>>(){}.getType();
+            java.lang.reflect.Type listType = new TypeToken<List<Map<String, String>>>() {
+            }.getType();
             List<Map<String, String>> categoryList = gson.fromJson(
-                new InputStreamReader(is, StandardCharsets.UTF_8),
-                listType
+                    new InputStreamReader(is, StandardCharsets.UTF_8),
+                    listType
             );
 
             for (Map<String, String> cat : categoryList) {
@@ -1893,5 +2214,642 @@ public class ArticleGUI extends JFrame {
             }
         }
         updateCountLabel();
+    }
+
+    /**
+     * Display QR-Code data in a modern, optimized dialog with import functionality
+     * Features:
+     * - Async data loading with progress feedback
+     * - Multiple import modes (single, multiple, all)
+     * - Eigenverbrauch (own use) support
+     * - Order list integration
+     * - Visual status indicators
+     */
+    private void showQRCodeDataDialog() {
+        // Create modern dialog with improved styling
+        JDialog dialog = new JDialog(this, "QR-Code Daten vom Server", true);
+        dialog.setSize(1150, 750);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout(0, 0));
+        dialog.setMinimumSize(new Dimension(900, 600));
+
+        // Header panel with gradient-like appearance
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(30, 58, 95));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 30, 24, 30));
+
+        JPanel headerLeft = new JPanel();
+        headerLeft.setLayout(new BoxLayout(headerLeft, BoxLayout.Y_AXIS));
+        headerLeft.setOpaque(false);
+
+        JLabel titleLabel = new JLabel("📱 QR-Code Daten von Server");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 22f));
+        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel subtitleLabel = new JLabel("Gescannte Artikel vom mobilen Scanner importieren");
+        subtitleLabel.setFont(subtitleLabel.getFont().deriveFont(Font.PLAIN, 13f));
+        subtitleLabel.setForeground(new Color(200, 220, 240));
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        headerLeft.add(titleLabel);
+        headerLeft.add(Box.createVerticalStrut(5));
+        headerLeft.add(subtitleLabel);
+
+        headerPanel.add(headerLeft, BorderLayout.WEST);
+
+        dialog.add(headerPanel, BorderLayout.NORTH);
+
+        // Main content area with improved styling
+        JPanel mainPanel = new JPanel(new BorderLayout(0, 12));
+        mainPanel.setBackground(new Color(248, 249, 250));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Info panel with better visual feedback
+        RoundedPanel infoPanel = new RoundedPanel(new Color(240, 248, 255), 8);
+        infoPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 181, 246), 2),
+                BorderFactory.createEmptyBorder(12, 18, 12, 18)
+        ));
+        infoPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 5));
+
+        JLabel infoIcon = new JLabel("ℹ️");
+        infoIcon.setFont(infoIcon.getFont().deriveFont(18f));
+
+        JLabel infoLabel = new JLabel("Lädt QR-Code Scan-Daten vom Server. Bitte warten...");
+        infoLabel.setFont(infoLabel.getFont().deriveFont(Font.BOLD, 13f));
+        infoLabel.setForeground(new Color(52, 73, 94));
+
+        infoPanel.add(infoIcon);
+        infoPanel.add(infoLabel);
+        mainPanel.add(infoPanel, BorderLayout.NORTH);
+
+        // Table for displaying QR data with enhanced styling
+        String[] columnNames = {"🕐 Timestamp", "📦 Artikel", "📊 Menge", "🏷️ Typ", "👤 Eigenverbrauch", "🆔 ID"};
+        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        JTable qrTable = new JTable(tableModel);
+        qrTable.setRowHeight(32);
+        qrTable.setFont(qrTable.getFont().deriveFont(13f));
+        qrTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        qrTable.setShowGrid(true);
+        qrTable.setGridColor(new Color(230, 235, 240));
+        qrTable.setIntercellSpacing(new Dimension(1, 1));
+        qrTable.setSelectionBackground(new Color(100, 181, 246));
+        qrTable.setSelectionForeground(Color.WHITE);
+
+        // Alternating row colors
+        qrTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 249, 250));
+                    setForeground(new Color(52, 73, 94));
+                }
+                setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+                return c;
+            }
+        });
+
+        // Column widths
+        qrTable.getColumnModel().getColumn(0).setPreferredWidth(170);
+        qrTable.getColumnModel().getColumn(1).setPreferredWidth(280);
+        qrTable.getColumnModel().getColumn(2).setPreferredWidth(90);
+        qrTable.getColumnModel().getColumn(3).setPreferredWidth(110);
+        qrTable.getColumnModel().getColumn(4).setPreferredWidth(140);
+        qrTable.getColumnModel().getColumn(5).setPreferredWidth(220);
+
+        // Header styling
+        JTableHeader header = qrTable.getTableHeader();
+        header.setBackground(new Color(30, 58, 95));
+        header.setForeground(Color.WHITE);
+        header.setFont(header.getFont().deriveFont(Font.BOLD, 13f));
+        header.setPreferredSize(new Dimension(header.getWidth(), 40));
+
+        JScrollPane scrollPane = new JScrollPane(qrTable);
+        scrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ));
+        scrollPane.getViewport().setBackground(Color.WHITE);
+
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+
+        dialog.add(mainPanel, BorderLayout.CENTER);
+
+        // Bottom action panel with improved layout
+        JPanel actionPanel = new JPanel(new BorderLayout(10, 0));
+        actionPanel.setBackground(Color.WHITE);
+        actionPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 225, 230)),
+                BorderFactory.createEmptyBorder(15, 20, 15, 20)
+        ));
+
+        // Status area with icon
+        JPanel statusArea = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        statusArea.setOpaque(false);
+
+        JLabel statusIcon = new JLabel("●");
+        statusIcon.setFont(statusIcon.getFont().deriveFont(16f));
+        statusIcon.setForeground(new Color(100, 200, 100));
+
+        JLabel statusLabel = new JLabel("Bereit zum Importieren");
+        statusLabel.setFont(statusLabel.getFont().deriveFont(Font.BOLD, 13f));
+        statusLabel.setForeground(new Color(70, 80, 90));
+
+        statusArea.add(statusIcon);
+        statusArea.add(statusLabel);
+        actionPanel.add(statusArea, BorderLayout.WEST);
+
+        // Button panel with better spacing
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        buttonPanel.setOpaque(false);
+
+        JButton refreshBtn = new JButton("🔄 Aktualisieren");
+        styleButton(refreshBtn, new Color(52, 152, 219), Color.WHITE);
+
+        JButton importBtn = new JButton("📥 Ausgewählte einlagern");
+        styleButton(importBtn, new Color(46, 204, 113), Color.WHITE);
+        importBtn.setEnabled(false);
+
+        JButton importAllBtn = new JButton("📥 Alle einlagern");
+        styleButton(importAllBtn, new Color(241, 196, 15), new Color(50, 50, 50));
+
+        JButton addToArticleListBtn = new JButton("➕ Zur Bestellliste");
+        styleButton(addToArticleListBtn, new Color(155, 89, 182), Color.WHITE);
+        addToArticleListBtn.addActionListener(e -> {
+            int[] selectedRows = qrTable.getSelectedRows();
+            if (selectedRows.length == 0) {
+                JOptionPane.showMessageDialog(dialog,
+                        "Bitte wählen Sie mindestens einen Datensatz aus.",
+                        "Keine Auswahl",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            int added = 0;
+            for (int row : selectedRows) {
+                String data = (String) tableModel.getValueAt(row, 1);
+                String artikelNr = QRCodeUtils.getPartsFromData(data)[0];
+                artikelNr = artikelNr.replace("artikelNr:", "");
+                int menge = Integer.parseInt(tableModel.getValueAt(row, 2).toString());
+
+                Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
+                if (article != null) {
+                    ArticleListGUI.addArticle(article, menge);
+                    added++;
+                }
+            }
+
+            if (added > 0) {
+                if (articleListGUI == null) {
+                    articleListGUI = new ArticleListGUI();
+                    articleListGUI.setVisible(true);
+                    articleListGUI.requestFocus();
+                } else {
+                    articleListGUI.refreshArticleList();
+                    articleListGUI.toFront();
+                }
+
+                statusLabel.setText(added + " Artikel zur Bestellliste hinzugefügt");
+                statusIcon.setForeground(new Color(46, 204, 113));
+            }
+        });
+
+        JButton removeFromInventoryBtn = new JButton("🗑️ Aus Inventar");
+        styleButton(removeFromInventoryBtn, new Color(251, 163, 153), Color.WHITE);
+        removeFromInventoryBtn.setEnabled(false);
+        removeFromInventoryBtn.addActionListener(e -> {
+            int selectedRow = qrTable.getSelectedRow();
+            if (selectedRow == -1) return;
+
+            String data = (String) tableModel.getValueAt(selectedRow, 1);
+            String artikelNr = QRCodeUtils.getPartsFromData(data)[0];
+            artikelNr = artikelNr.replace("artikelNr:", "");
+            int menge = Integer.parseInt(tableModel.getValueAt(selectedRow, 2).toString());
+            Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
+
+            if (article != null) {
+                int confirm = JOptionPane.showConfirmDialog(dialog,
+                        String.format("<html><b>%d Stück</b> von <b>\"%s\"</b><br/>aus dem Inventar entfernen?</html>",
+                                menge, article.getName()),
+                        "Entfernen bestätigen",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.QUESTION_MESSAGE);
+
+                if (confirm == JOptionPane.YES_OPTION) {
+                    ArticleManager.getInstance().removeFromStock(artikelNr, menge);
+                    String id = tableModel.getValueAt(selectedRow, 5).toString();
+                    if (!ImportUtils.getImportedQrCodes().contains(id)) {
+                        ImportUtils.addQrCodeImport(id);
+                    }
+
+                    statusLabel.setText(menge + " Stück von \"" + article.getName() + "\" entfernt");
+                    statusIcon.setForeground(new Color(231, 76, 60));
+
+                    ImportUtils.addToOwnUseList(data);
+                }
+            }
+        });
+
+        JButton closeBtn = new JButton("Schließen");
+        styleButton(closeBtn, new Color(149, 165, 166), Color.WHITE);
+        closeBtn.setBackground(Color.RED);
+        closeBtn.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(refreshBtn);
+        buttonPanel.add(importBtn);
+        buttonPanel.add(importAllBtn);
+        buttonPanel.add(addToArticleListBtn);
+        buttonPanel.add(removeFromInventoryBtn);
+        buttonPanel.add(closeBtn);
+
+        actionPanel.add(buttonPanel, BorderLayout.EAST);
+        dialog.add(actionPanel, BorderLayout.SOUTH);
+
+        // Load data in background with improved feedback
+        SwingWorker<List<Map<String, Object>>, Void> worker = new SwingWorker<>() {
+            @Override
+            protected List<Map<String, Object>> doInBackground() {
+                return QRCodeUtils.retrieveQrCodeDataFromWebsite();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    List<Map<String, Object>> qrCodeDataList = get();
+
+                    if (qrCodeDataList == null || qrCodeDataList.isEmpty()) {
+                        infoIcon.setText("⚠️");
+                        infoLabel.setText("Keine QR-Code Daten vom Server erhalten");
+                        infoPanel.setBackground(new Color(255, 245, 230));
+                        infoPanel.setBorder(BorderFactory.createCompoundBorder(
+                                BorderFactory.createLineBorder(new Color(255, 193, 7), 2),
+                                BorderFactory.createEmptyBorder(12, 18, 12, 18)
+                        ));
+                        statusLabel.setText("Keine Daten verfügbar");
+                        statusIcon.setForeground(new Color(255, 193, 7));
+                        return;
+                    }
+
+                    // Populate table
+                    for (Map<String, Object> dataMap : qrCodeDataList) {
+                        Object[] rowData = new Object[6];
+                        rowData[0] = dataMap.getOrDefault("timestamp", "N/A");
+                        rowData[1] = dataMap.getOrDefault("data", "N/A");
+                        rowData[2] = dataMap.getOrDefault("quantity", "N/A");
+                        rowData[3] = dataMap.getOrDefault("type", "N/A");
+                        rowData[4] = dataMap.getOrDefault("ownUse", "N/A");
+                        rowData[5] = dataMap.getOrDefault("id", "N/A");
+                        tableModel.addRow(rowData);
+                    }
+
+                    infoIcon.setText("✅");
+                    infoLabel.setText(qrCodeDataList.size() + " QR-Code Datensätze erfolgreich geladen");
+                    infoPanel.setBackground(new Color(230, 255, 240));
+                    infoPanel.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(new Color(46, 204, 113), 2),
+                            BorderFactory.createEmptyBorder(12, 18, 12, 18)
+                    ));
+                    statusLabel.setText(qrCodeDataList.size() + " Datensätze bereit");
+                    statusIcon.setForeground(new Color(46, 204, 113));
+                    importAllBtn.setEnabled(true);
+
+                } catch (Exception e) {
+                    infoIcon.setText("❌");
+                    infoLabel.setText("Fehler beim Laden: " + e.getMessage());
+                    infoPanel.setBackground(new Color(255, 235, 238));
+                    infoPanel.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(new Color(231, 76, 60), 2),
+                            BorderFactory.createEmptyBorder(12, 18, 12, 18)
+                    ));
+                    statusLabel.setText("Fehler beim Laden");
+                    statusIcon.setForeground(new Color(231, 76, 60));
+                }
+            }
+        };
+
+        // Enable/disable buttons based on selection with improved logic
+        qrTable.getSelectionModel().addListSelectionListener(e -> {
+            if (e.getValueIsAdjusting()) return;
+
+            int selectedCount = qrTable.getSelectedRowCount();
+            boolean hasSelection = selectedCount > 0;
+            boolean ownUse = false;
+            boolean hasSellType = false;
+            boolean hasBuyType = false;
+
+            // Check types for all selected rows
+            if (selectedCount == 1) {
+                int selectedRow = qrTable.getSelectedRow();
+                String ownUseValue = qrTable.getValueAt(selectedRow, 4).toString();
+                ownUse = ownUseValue.equalsIgnoreCase("Ja") || ownUseValue.equalsIgnoreCase("true");
+                String type = qrTable.getValueAt(selectedRow, 3).toString();
+                hasSellType = type.equalsIgnoreCase("sell");
+                hasBuyType = type.equalsIgnoreCase("buy");
+            } else if (selectedCount > 1) {
+                // Check if all selected rows are same type
+                int[] selectedRows = qrTable.getSelectedRows();
+                boolean allSell = true;
+                boolean allBuy = true;
+                for (int row : selectedRows) {
+                    String type = qrTable.getValueAt(row, 3).toString();
+                    if (!type.equalsIgnoreCase("sell")) allSell = false;
+                    if (!type.equalsIgnoreCase("buy")) allBuy = false;
+                }
+                hasSellType = allSell;
+                hasBuyType = allBuy;
+            }
+
+            if (selectedCount == 1 && ownUse) {
+                // Eigenverbrauch mode (only for single selection)
+                removeFromInventoryBtn.setEnabled(true);
+                importBtn.setEnabled(false);
+                importAllBtn.setEnabled(false);
+                addToArticleListBtn.setVisible(false);
+                statusLabel.setText("1 Eigenverbrauch-Datensatz ausgewählt");
+            } else if (hasSelection && hasBuyType) {
+                // Normal import mode (can be multiple)
+                importBtn.setEnabled(true);
+                removeFromInventoryBtn.setEnabled(false);
+                importAllBtn.setEnabled(true);
+                addToArticleListBtn.setVisible(false);
+                statusLabel.setText(selectedCount + " Einlagern-Datensatz" + (selectedCount > 1 ? "e" : "") + " ausgewählt");
+            } else if (hasSelection && hasSellType) {
+                // Sell mode (can be multiple)
+                removeFromInventoryBtn.setEnabled(false);
+                addToArticleListBtn.setVisible(true);
+                importBtn.setEnabled(false);
+                importAllBtn.setEnabled(false);
+                statusLabel.setText(selectedCount + " Verkauf-Datensatz" + (selectedCount > 1 ? "e" : "") + " ausgewählt");
+            } else {
+                // No selection or mixed types
+                importBtn.setEnabled(false);
+                removeFromInventoryBtn.setEnabled(false);
+                importAllBtn.setEnabled(tableModel.getRowCount() > 0);
+                addToArticleListBtn.setVisible(true);
+                statusLabel.setText(hasSelection ? "Gemischte Auswahl" : "Bereit zum Importieren");
+            }
+        });
+
+        // Action listeners with improved feedback
+        refreshBtn.addActionListener(e -> {
+            tableModel.setRowCount(0);
+            infoIcon.setText("ℹ️");
+            infoLabel.setText("Lädt QR-Code Scan-Daten vom Server. Bitte warten...");
+            infoPanel.setBackground(new Color(240, 248, 255));
+            infoPanel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(100, 181, 246), 2),
+                    BorderFactory.createEmptyBorder(12, 18, 12, 18)
+            ));
+            statusLabel.setText("Aktualisiere Daten...");
+            statusIcon.setForeground(new Color(100, 181, 246));
+            importBtn.setEnabled(false);
+            importAllBtn.setEnabled(false);
+            removeFromInventoryBtn.setEnabled(false);
+
+            // Create new worker for refresh
+            SwingWorker<List<Map<String, Object>>, Void> refreshWorker = new SwingWorker<>() {
+                @Override
+                protected List<Map<String, Object>> doInBackground() {
+                    return QRCodeUtils.retrieveQrCodeDataFromWebsite();
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        List<Map<String, Object>> qrCodeDataList = get();
+                        if (qrCodeDataList != null && !qrCodeDataList.isEmpty()) {
+                            for (Map<String, Object> dataMap : qrCodeDataList) {
+                                Object[] rowData = new Object[6];
+                                rowData[0] = dataMap.getOrDefault("timestamp", "N/A");
+                                rowData[1] = dataMap.getOrDefault("data", "N/A");
+                                rowData[2] = dataMap.getOrDefault("quantity", "N/A");
+                                rowData[3] = dataMap.getOrDefault("type", "N/A");
+                                rowData[4] = dataMap.getOrDefault("ownUse", "N/A");
+                                rowData[5] = dataMap.getOrDefault("id", "N/A");
+                                tableModel.addRow(rowData);
+                            }
+                            infoIcon.setText("✅");
+                            infoLabel.setText(qrCodeDataList.size() + " QR-Code Datensätze aktualisiert");
+                            infoPanel.setBackground(new Color(230, 255, 240));
+                            infoPanel.setBorder(BorderFactory.createCompoundBorder(
+                                    BorderFactory.createLineBorder(new Color(46, 204, 113), 2),
+                                    BorderFactory.createEmptyBorder(12, 18, 12, 18)
+                            ));
+                            statusLabel.setText(qrCodeDataList.size() + " Datensätze bereit");
+                            statusIcon.setForeground(new Color(46, 204, 113));
+                            importAllBtn.setEnabled(true);
+                        }
+                    } catch (Exception ex) {
+                        infoIcon.setText("❌");
+                        infoLabel.setText("Fehler beim Aktualisieren: " + ex.getMessage());
+                        infoPanel.setBackground(new Color(255, 235, 238));
+                        statusIcon.setForeground(new Color(231, 76, 60));
+                    }
+                }
+            };
+            refreshWorker.execute();
+        });
+
+        importBtn.addActionListener(e -> {
+            int[] selectedRows = qrTable.getSelectedRows();
+            if (selectedRows.length == 0) return;
+
+            int confirm = JOptionPane.showConfirmDialog(dialog,
+                    String.format("<html><b>%d Datensätze</b> importieren?<br/><small>Artikel werden ins Lager eingebucht.</small></html>",
+                            selectedRows.length),
+                    "Import bestätigen",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE);
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                int imported = 0;
+                int errors = 0;
+                ArticleManager articleManager = ArticleManager.getInstance();
+
+                for (int row : selectedRows) {
+                    try {
+                        String id = (String) tableModel.getValueAt(row, 5);
+                        String data = (String) tableModel.getValueAt(row, 1);
+                        int quantity = Integer.parseInt(tableModel.getValueAt(row, 2).toString());
+
+                        String[] parts = QRCodeUtils.getPartsFromData(data);
+                        String artikelNr = parts[0].replace("artikelNr:", "");
+                        Article article = articleManager.getArticleByNumber(artikelNr);
+
+                        if (article != null && !ImportUtils.getImportedQrCodes().contains(id)) {
+                            if (articleManager.addToStock(artikelNr, quantity)) {
+                                ImportUtils.addQrCodeImport(id);
+                                imported++;
+                            } else {
+                                errors++;
+                            }
+                        } else if(article == null) {
+                            Article newArticle = retrieveParts(parts);
+                            if (articleManager.insertArticle(newArticle)) {
+                                if (articleManager.addToStock(artikelNr, quantity)) {
+                                    ImportUtils.addQrCodeImport(id);
+                                    imported++;
+                                } else {
+                                    errors++;
+                                }
+                            } else {
+                                errors++;
+                            }
+                        } else {
+                            // Already imported - skip
+                            errors++;
+                        }
+                    } catch (Exception ex) {
+                        errors++;
+                    }
+                }
+
+                String message = String.format("<html><b>Import abgeschlossen</b><br/><br/>" +
+                                "✅ Erfolgreich: %d<br/>" +
+                                (errors > 0 ? "❌ Fehler: %d<br/>" : ""),
+                        imported, errors);
+
+                JOptionPane.showMessageDialog(dialog,
+                        message,
+                        "Import Ergebnis",
+                        errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+
+                statusLabel.setText(imported + " Datensätze importiert" + (errors > 0 ? " (" + errors + " Fehler)" : ""));
+                statusIcon.setForeground(errors > 0 ? new Color(255, 193, 7) : new Color(46, 204, 113));
+            }
+        });
+
+        importAllBtn.addActionListener(e -> {
+            int rowCount = tableModel.getRowCount();
+            if (rowCount == 0) return;
+
+            int confirm = JOptionPane.showConfirmDialog(dialog,
+                    String.format("<html><b>Alle %d Datensätze</b> importieren?<br/><small>Dies kann einige Sekunden dauern.</small></html>",
+                            rowCount),
+                    "Import bestätigen",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE);
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                statusLabel.setText("Importiere " + rowCount + " Datensätze...");
+                statusIcon.setForeground(new Color(100, 181, 246));
+                importAllBtn.setEnabled(false);
+                importBtn.setEnabled(false);
+                refreshBtn.setEnabled(false);
+
+                SwingWorker<Void, Integer> importWorker = new SwingWorker<>() {
+                    int imported = 0;
+                    int errors = 0;
+                    int skipped = 0;
+
+                    @Override
+                    protected Void doInBackground() {
+                        ArticleManager articleManager = ArticleManager.getInstance();
+
+                        for (int i = 0; i < rowCount; i++) {
+                            try {
+                                String data = (String) tableModel.getValueAt(i, 1);
+                                int quantity = Integer.parseInt(tableModel.getValueAt(i, 2).toString());
+                                String id = (String) tableModel.getValueAt(i, 5);
+
+                                if (ImportUtils.getImportedQrCodes().contains(id)) {
+                                    skipped++;
+                                    continue;
+                                }
+
+                                String[] parts = QRCodeUtils.getPartsFromData(data);
+                                String artikelNr = parts[0].replace("artikelNr:", "");
+                                Article article = articleManager.getArticleByNumber(artikelNr);
+
+                                if (article != null) {
+                                    if (articleManager.addToStock(artikelNr, quantity)) {
+                                        ImportUtils.addQrCodeImport(id);
+                                        imported++;
+                                        publish(imported);
+                                    } else {
+                                        errors++;
+                                    }
+                                } else {
+                                    Article newArticle = retrieveParts(parts);
+                                    if (articleManager.insertArticle(newArticle)) {
+                                        if (articleManager.addToStock(artikelNr, quantity)) {
+                                            ImportUtils.addQrCodeImport(id);
+                                            imported++;
+                                        } else {
+                                            errors++;
+                                        }
+                                    } else {
+                                        errors++;
+                                    }
+                                }
+                            } catch (Exception ex) {
+                                errors++;
+                            }
+                        }
+                        return null;
+                    }
+
+                    @Override
+                    protected void process(List<Integer> chunks) {
+                        if (!chunks.isEmpty()) {
+                            int latest = chunks.getLast();
+                            statusLabel.setText("Importiert: " + latest + " / " + rowCount);
+                        }
+                    }
+
+                    @Override
+                    protected void done() {
+                        String message = String.format(
+                                "<html><b>Import abgeschlossen</b><br/><br/>" +
+                                        "✅ Erfolgreich: %d<br/>" +
+                                        (skipped > 0 ? "⏭️ Übersprungen: %d (bereits importiert)<br/>" : "") +
+                                        (errors > 0 ? "❌ Fehler: %d<br/>" : ""),
+                                imported, skipped, errors);
+
+                        JOptionPane.showMessageDialog(dialog,
+                                message,
+                                "Import Ergebnis",
+                                errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+
+                        statusLabel.setText(String.format("%d importiert%s",
+                                imported,
+                                (errors > 0 ? " (" + errors + " Fehler)" : "")));
+                        statusIcon.setForeground(errors > 0 ? new Color(255, 193, 7) : new Color(46, 204, 113));
+
+                        importAllBtn.setEnabled(true);
+                        refreshBtn.setEnabled(true);
+                    }
+                };
+
+                importWorker.execute();
+            }
+        });
+
+        closeBtn.addActionListener(e -> dialog.dispose());
+
+        // Start loading data
+        worker.execute();
+
+        dialog.setVisible(true);
+    }
+
+    private static Article retrieveParts(String[] parts) {
+        String artikelNr = parts[0].replace("artikelNr:", "");
+        String name = parts[1].replace("name:", "");
+        String details = parts[2].replace("details:", "");
+        String sellPrice = parts[3].replace("sellPrice:", "");
+        String buyPrice = parts[4].replace("buyPrice:", "");
+        String vendor = parts[5].replace("vendor:", "");
+        return new Article(artikelNr, name, details, 0, 0,
+                Double.parseDouble(buyPrice), Double.parseDouble(sellPrice), vendor);
     }
 }
