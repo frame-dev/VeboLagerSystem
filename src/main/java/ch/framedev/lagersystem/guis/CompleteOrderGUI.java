@@ -355,7 +355,8 @@ public class CompleteOrderGUI extends JFrame {
                 "Bestätigung",
                 JOptionPane.YES_NO_OPTION);
         UserManager userManager = UserManager.getInstance();
-        User user = userManager.getUserByName(selected.getSenderName().toLowerCase());
+        User user = userManager.getUserByName(selected.getSenderName().toLowerCase())
+                == null ? createUser(selected.getSenderName()) : userManager.getUserByName(selected.getSenderName().toLowerCase());
         if (!user.getOrders().contains(selected.getOrderId()))
             user.getOrders().add(selected.getOrderId());
         userManager.updateUser(user);
@@ -367,42 +368,220 @@ public class CompleteOrderGUI extends JFrame {
         else
             JOptionPane.showMessageDialog(null, "Fehler beim Abschließen der Bestellung.", "Fehler", JOptionPane.ERROR_MESSAGE);
         refreshList();
-/*
+
         if (res == JOptionPane.YES_OPTION) {
-            // Update stock quantities
+            ArticleManager articleManager = ArticleManager.getInstance();
+
+            // Validate stock levels first - check if ALL articles have enough stock
+            List<String> insufficientStockErrors = new ArrayList<>();
             for (Article article : articles) {
                 int qty = selected.getOrderedArticles().get(article.getArticleNumber());
-                article.setStockQuantity(article.getStockQuantity() - qty);
-                ArticleManager.getInstance().updateArticle(article);
+                int currentStock = article.getStockQuantity();
+
+                if (currentStock < qty) {
+                    insufficientStockErrors.add(String.format(
+                        "• %s (%s): Benötigt=%d, Verfügbar=%d (Fehlt: %d)",
+                        article.getName(),
+                        article.getArticleNumber(),
+                        qty,
+                        currentStock,
+                        qty - currentStock
+                    ));
+                }
+            }
+
+            // If ANY article has insufficient stock, offer to complete partially or abort
+            if (!insufficientStockErrors.isEmpty()) {
+                StringBuilder errorMsg = new StringBuilder("<html><b>WARNUNG: Nicht genügend Lagerbestand!</b><br/><br/>");
+                errorMsg.append("Folgende Artikel haben nicht ausreichend Lagerbestand:<br/><br/>");
+                insufficientStockErrors.forEach(err -> errorMsg.append(err).append("<br/>"));
+                errorMsg.append("<br/><b>Optionen:</b><br/>");
+                errorMsg.append("• <b>Ja</b>: Bestellung mit verfügbarem Bestand abschließen (Fehlmenge wird protokolliert)<br/>");
+                errorMsg.append("• <b>Nein</b>: Vorgang abbrechen</html>");
+
+                int choice = JOptionPane.showConfirmDialog(this,
+                    errorMsg.toString(),
+                    "Unzureichender Lagerbestand",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+
+                if (choice != JOptionPane.YES_OPTION) {
+                    return; // User chose to abort
+                }
+
+                // User chose to continue with partial fulfillment
+                completeOrderWithPartialStock(selected, articles, idx);
+                return;
+            }
+
+            // All stock checks passed - now update stock quantities
+            boolean allStockUpdated = true;
+            List<String> updatedArticles = new ArrayList<>();
+
+            for (Article article : articles) {
+                int qty = selected.getOrderedArticles().get(article.getArticleNumber());
+                if (articleManager.removeFromStock(article.getArticleNumber(), qty)) {
+                    updatedArticles.add(article.getName());
+                } else {
+                    allStockUpdated = false;
+                    System.err.println("[CompleteOrderGUI] Fehler beim Reduzieren des Lagerbestands für Artikel: " + article.getArticleNumber());
+                }
             }
 
             // Update order status
             Order order = currentOrders.get(idx);
             order.setStatus("Abgeschlossen");
-            boolean updated = OrderManager.getInstance().updateOrder(order);
+            boolean updatedOrder = OrderManager.getInstance().updateOrder(order);
 
-            if (updated) {
+            if (updatedOrder && allStockUpdated) {
                 JOptionPane.showMessageDialog(this,
                         String.format("<html><b>Bestellung erfolgreich abgeschlossen!</b><br/><br/>" +
                                 "Bestell-ID: %s<br/>" +
+                                "Artikel: %d<br/>" +
                                 "Lagerbestände wurden aktualisiert.<br/>" +
                                 "Status: Abgeschlossen</html>",
-                                selected.getOrderId()),
+                                selected.getOrderId(),
+                                updatedArticles.size()),
                         "Erfolg",
                         JOptionPane.INFORMATION_MESSAGE);
+            } else if (!allStockUpdated) {
+                JOptionPane.showMessageDialog(this,
+                        "<html><b>Warnung: Teilweise Fehler!</b><br/><br/>" +
+                        "Einige Lagerbestände konnten nicht aktualisiert werden.<br/>" +
+                        "Bitte überprüfen Sie die Logs und aktualisieren Sie manuell.</html>",
+                        "Teilweise erfolgreich",
+                        JOptionPane.WARNING_MESSAGE);
             } else {
                 JOptionPane.showMessageDialog(this,
-                        "Warnung: Lagerbestände wurden aktualisiert, aber der Bestellstatus konnte nicht aktualisiert werden.",
+                        "<html><b>Warnung:</b><br/><br/>" +
+                        "Lagerbestände wurden aktualisiert, aber der Bestellstatus konnte nicht aktualisiert werden.</html>",
                         "Teilweise erfolgreich",
                         JOptionPane.WARNING_MESSAGE);
             }
 
             refreshList();
-        }*/
+        }
+    }
+
+    /**
+     * Completes an order with partial stock fulfillment.
+     * Deducts available stock and logs items that need to be ordered.
+     */
+    private void completeOrderWithPartialStock(Order selected, List<Article> articles, int idx) {
+        ArticleManager articleManager = ArticleManager.getInstance();
+
+        List<String> fulfilledItems = new ArrayList<>();
+        List<String> partialItems = new ArrayList<>();
+        List<String> unfulfillableItems = new ArrayList<>();
+
+        StringBuilder orderNotes = new StringBuilder();
+        orderNotes.append("Teilweise abgeschlossen - Fehlmengen:\n");
+
+        boolean hasPartialFulfillment = false;
+
+        for (Article article : articles) {
+            int qtyOrdered = selected.getOrderedArticles().get(article.getArticleNumber());
+            int currentStock = article.getStockQuantity();
+
+            if (currentStock >= qtyOrdered) {
+                // Full fulfillment possible
+                if (articleManager.removeFromStock(article.getArticleNumber(), qtyOrdered)) {
+                    fulfilledItems.add(String.format("%s: %d/%d", article.getName(), qtyOrdered, qtyOrdered));
+                } else {
+                    System.err.println("[CompleteOrderGUI] Fehler beim Reduzieren des Lagerbestands für: " + article.getArticleNumber());
+                }
+            } else if (currentStock > 0) {
+                // Partial fulfillment - use all available stock
+                int shortage = qtyOrdered - currentStock;
+                if (articleManager.removeFromStock(article.getArticleNumber(), currentStock)) {
+                    partialItems.add(String.format("%s: %d/%d (Fehlmenge: %d)",
+                        article.getName(), currentStock, qtyOrdered, shortage));
+                    orderNotes.append(String.format("- %s (%s): %d Stück fehlen\n",
+                        article.getName(), article.getArticleNumber(), shortage));
+                    hasPartialFulfillment = true;
+                }
+            } else {
+                // No stock available at all
+                unfulfillableItems.add(String.format("%s: 0/%d (Komplett fehlend)",
+                    article.getName(), qtyOrdered));
+                orderNotes.append(String.format("- %s (%s): %d Stück fehlen (kein Bestand)\n",
+                    article.getName(), article.getArticleNumber(), qtyOrdered));
+                hasPartialFulfillment = true;
+            }
+        }
+
+        // Update order status with notes
+        Order order = currentOrders.get(idx);
+        if (hasPartialFulfillment) {
+            order.setStatus("Teilweise abgeschlossen");
+            // Store shortage information in order notes (if your Order class supports it)
+            // You might want to add a notes field to the Order class
+        } else {
+            order.setStatus("Abgeschlossen");
+        }
+
+        boolean updatedOrder = OrderManager.getInstance().updateOrder(order);
+
+        // Create detailed result message
+        StringBuilder resultMsg = new StringBuilder("<html><b>Bestellung verarbeitet!</b><br/><br/>");
+        resultMsg.append("<b>Bestell-ID:</b> ").append(selected.getOrderId()).append("<br/><br/>");
+
+        if (!fulfilledItems.isEmpty()) {
+            resultMsg.append("<b style='color:green;'>✓ Vollständig erfüllt:</b><br/>");
+            fulfilledItems.forEach(item -> resultMsg.append("  ").append(item).append("<br/>"));
+            resultMsg.append("<br/>");
+        }
+
+        if (!partialItems.isEmpty()) {
+            resultMsg.append("<b style='color:orange;'>⚠ Teilweise erfüllt:</b><br/>");
+            partialItems.forEach(item -> resultMsg.append("  ").append(item).append("<br/>"));
+            resultMsg.append("<br/>");
+        }
+
+        if (!unfulfillableItems.isEmpty()) {
+            resultMsg.append("<b style='color:red;'>✕ Nicht erfüllt:</b><br/>");
+            unfulfillableItems.forEach(item -> resultMsg.append("  ").append(item).append("<br/>"));
+            resultMsg.append("<br/>");
+        }
+
+        if (hasPartialFulfillment) {
+            resultMsg.append("<br/><b style='color:red;'>WICHTIG:</b> Fehlende Artikel müssen nachbestellt werden!<br/>");
+            resultMsg.append("<b>Status:</b> Teilweise abgeschlossen<br/>");
+        } else {
+            resultMsg.append("<b>Status:</b> Abgeschlossen<br/>");
+        }
+
+        resultMsg.append("</html>");
+
+        if (updatedOrder) {
+            JOptionPane.showMessageDialog(this,
+                resultMsg.toString(),
+                "Bestellung verarbeitet",
+                hasPartialFulfillment ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+
+            // Log the shortage for ordering
+            if (hasPartialFulfillment) {
+                System.out.println("[CompleteOrderGUI] Bestellung " + selected.getOrderId() + " teilweise abgeschlossen:");
+                System.out.println(orderNotes);
+            }
+        } else {
+            JOptionPane.showMessageDialog(this,
+                "<html><b>Warnung:</b><br/><br/>" +
+                "Lagerbestände wurden teilweise aktualisiert, aber der Bestellstatus konnte nicht aktualisiert werden.<br/>" +
+                "Bitte überprüfen Sie die Bestellung manuell.</html>",
+                "Teilweise erfolgreich",
+                JOptionPane.WARNING_MESSAGE);
+        }
+
+        refreshList();
     }
 
     public void display() {
         SwingUtilities.invokeLater(() -> setVisible(true));
+    }
+
+    private User createUser(String userName) {
+        return new User(userName, new ArrayList<>());
     }
 
     private void initializeOrdersList() {
