@@ -305,10 +305,10 @@ public class Main {
         int interval = (intervalStr != null) ? Integer.parseInt(intervalStr) : 30;
 
         String enableAutoCheckStr = settings.getProperty("enable_auto_stock_check");
-        boolean enableAutoCheck = (enableAutoCheckStr != null) ? Boolean.parseBoolean(enableAutoCheckStr) : true;
+        boolean enableAutoCheck = enableAutoCheckStr == null || Boolean.parseBoolean(enableAutoCheckStr);
 
         String enableWarningsStr = settings.getProperty("enable_hourly_warnings");
-        boolean enableWarnings = (enableWarningsStr != null) ? Boolean.parseBoolean(enableWarningsStr) : true;
+        boolean enableWarnings = enableWarningsStr == null || Boolean.parseBoolean(enableWarningsStr);
 
         // Starte Scheduler basierend auf Einstellungen
         if (enableAutoCheck) {
