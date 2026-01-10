@@ -34,6 +34,8 @@ public class ClientGUI extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
         // Header
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
         headerWrapper.setBackground(new Color(245, 247, 250));

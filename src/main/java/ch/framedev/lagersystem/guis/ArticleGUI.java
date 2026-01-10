@@ -74,6 +74,8 @@ public class ArticleGUI extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
         // Load categories from JSON
         loadCategories();
 
@@ -1105,13 +1107,6 @@ public class ArticleGUI extends JFrame {
         header.setBackground(new Color(62, 84, 98));
         header.setForeground(Color.WHITE);
         header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
-
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                sendTestWarning();
-            }
-        }, 500); // slight delay to ensure test warning shows after GUI is visible
     }
 
     /**
