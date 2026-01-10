@@ -43,6 +43,9 @@ public class Main {
             // Launch GUI
             launchGUI();
 
+            // Check for updates
+            checkForUpdates();
+
         } catch (Exception e) {
             System.err.println("Kritischer Fehler beim Starten der Anwendung: " + e.getMessage());
             logUtils.addLog("Kritischer Fehler: " + e.getMessage());
@@ -352,5 +355,33 @@ public class Main {
 
         settings = new Settings("settings.properties", Main.class, settingsFile);
         System.out.println("✓ Einstellungen geladen");
+
+        // Load GitHub token if configured
+        String githubToken = settings.getProperty("github-token");
+        if (githubToken != null && !githubToken.isEmpty()) {
+            UpdateManager.getInstance().setPersonalToken(githubToken);
+        }
+    }
+
+    /**
+     * Check for application updates from GitHub
+     */
+    private static void checkForUpdates() {
+        try {
+            UpdateManager updateManager = UpdateManager.getInstance();
+
+            if (updateManager.isUpdateAvailable(VERSION)) {
+                String latestVersion = updateManager.getLatestVersion();
+                System.out.println("\n⚠️  Neue Version verfügbar: " + latestVersion);
+                System.out.println("   Aktuelle Version: " + VERSION);
+                System.out.println("   Download: https://github.com/frame-dev/VeboLagerSystem/releases/latest");
+                logUtils.addLog("Update verfügbar: " + VERSION + " -> " + latestVersion);
+            } else {
+                System.out.println("✓ Anwendung ist auf dem neuesten Stand");
+            }
+        } catch (Exception e) {
+            System.out.println("⚠️  Konnte nicht auf Updates prüfen: " + e.getMessage());
+            logUtils.addLog("Fehler beim Prüfen auf Updates: " + e.getMessage());
+        }
     }
 }
