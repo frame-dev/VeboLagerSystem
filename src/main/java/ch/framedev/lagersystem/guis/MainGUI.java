@@ -1,5 +1,7 @@
 package ch.framedev.lagersystem.guis;
 
+import ch.framedev.lagersystem.main.Main;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -17,6 +19,7 @@ public class MainGUI extends JFrame {
         setSize(1200, 800);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+        setIconImage(Main.icon.getImage());
         setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         // Background color

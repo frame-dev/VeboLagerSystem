@@ -9,8 +9,12 @@ import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
 import ch.framedev.lagersystem.utils.UserDataDir;
 import ch.framedev.simplejavautils.Settings;
+import ch.framedev.simplejavautils.SimpleJavaUtils;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.File;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +29,7 @@ public class Main {
     public static ArticleListGUI articleListGUI;
     public static LogUtils logUtils = new LogUtils();
     public static Settings settings;
+    public static ImageIcon icon;
 
     public static final String VERSION = "0.1-TESTING";
 
@@ -83,6 +88,16 @@ public class Main {
      * Initialize application settings and database
      */
     private static void initializeApplication() {
+        try {
+            ImageIcon originalIcon = new ImageIcon(new SimpleJavaUtils().getFromResourceFile("logo.png").toURL());
+            Image scaledImage = originalIcon.getImage().getScaledInstance(128, 128, Image.SCALE_SMOOTH);
+            icon = new ImageIcon(scaledImage);
+        } catch (MalformedURLException e) {
+            String errorMsg = "Fehler beim Laden des Icons: " + e.getMessage();
+            System.err.println(errorMsg);
+            logUtils.addLog(errorMsg);
+            throw new RuntimeException("Icon konnte nicht geladen werden", e);
+        }
         loadSettings();
         ensureAppDataDirectory();
         initializeDatabase();
