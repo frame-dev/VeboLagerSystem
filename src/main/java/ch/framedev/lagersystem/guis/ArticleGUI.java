@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.WarningManager;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
+import ch.framedev.lagersystem.utils.RoundButton;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -2016,8 +2017,20 @@ public class ArticleGUI extends JFrame {
                 Warning selectedWarning = warnings.get(selectedRow);
                 displayWarning(selectedWarning);
             });
+            warningsTable.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                        int selectedRow = warningsTable.getSelectedRow();
+                        if (selectedRow != -1) {
+                            Warning selectedWarning = warnings.get(selectedRow);
+                            displayWarning(selectedWarning);
+                        }
+                    }
+                }
+            });
 
-            JButton resolveBtn = new JButton("Als gelöst markieren");
+             JButton resolveBtn = new JButton("Als gelöst markieren");
             styleButton(resolveBtn, new Color(40, 180, 99), Color.WHITE);
             resolveBtn.addActionListener(e -> {
                 int selectedRow = warningsTable.getSelectedRow();

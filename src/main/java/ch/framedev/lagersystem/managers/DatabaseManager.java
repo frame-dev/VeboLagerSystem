@@ -30,6 +30,10 @@ public class DatabaseManager {
     public static final String TABLE_ARTICLES = "articles";
     public static final String TABLE_VENDORS = "vendors";
     public static final String TABLE_ORDERS = "orders";
+    public static final String TABLE_CLIENTS = "clients";
+    public static final String TABLE_DEPARTMENTS = "departments";
+    public static final String TABLE_USERS = "users";
+    public static final String TABLE_WARNINGS = "warnings";
 
     private final Connection connection;
 
@@ -221,6 +225,98 @@ public class DatabaseManager {
         } catch (SQLException | IllegalArgumentException e) {
             logger.error("SQL Exception during executePreparedQuery: ", e);
             return null;
+        }
+    }
+
+    /**
+     * Clear all data from the database.
+     * WARNING: This is a destructive operation that removes ALL data from ALL tables.
+     * This operation uses transactions to ensure atomicity (all or nothing).
+     *
+     * @return true if all tables were successfully cleared, false otherwise
+     */
+    public boolean clearDatabase() {
+        logger.warn("clearDatabase() called - this will delete all data!");
+
+        // Define all tables to clear (in dependency order to avoid foreign key issues)
+        String[] tablesToClear = {
+            TABLE_WARNINGS,      // No dependencies
+            TABLE_ORDERS,        // References users, articles
+            TABLE_USERS,         // References orders (but we clear orders first)
+            TABLE_CLIENTS,       // No dependencies
+            TABLE_DEPARTMENTS,   // No dependencies
+            TABLE_ARTICLES,      // References vendors
+            TABLE_VENDORS        // No dependencies
+        };
+
+        boolean autoCommit = true;
+        try {
+            // Start transaction
+            autoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
+            int clearedCount = 0;
+
+            // Clear each table
+            for (String table : tablesToClear) {
+                String sql = "DELETE FROM " + table;
+                try (Statement stmt = connection.createStatement()) {
+                    int rowsDeleted = stmt.executeUpdate(sql);
+                    logger.info("Cleared {} rows from table: {}", rowsDeleted, table);
+                    clearedCount++;
+                } catch (SQLException e) {
+                    logger.error("Failed to clear table: " + table, e);
+                    // Rollback on any error
+                    connection.rollback();
+                    logger.warn("Transaction rolled back - no data was deleted");
+                    return false;
+                }
+            }
+
+            // Commit transaction
+            connection.commit();
+            logger.info("Successfully cleared all {} tables", clearedCount);
+            return true;
+
+        } catch (SQLException e) {
+            logger.error("Error during clearDatabase transaction", e);
+            try {
+                connection.rollback();
+                logger.warn("Transaction rolled back due to error");
+            } catch (SQLException rollbackEx) {
+                logger.error("Failed to rollback transaction", rollbackEx);
+            }
+            return false;
+        } finally {
+            // Restore auto-commit mode
+            try {
+                connection.setAutoCommit(autoCommit);
+            } catch (SQLException e) {
+                logger.error("Failed to restore auto-commit mode", e);
+            }
+        }
+    }
+
+    /**
+     * Clear a specific table from the database.
+     *
+     * @param tableName The name of the table to clear
+     * @return true if the table was successfully cleared, false otherwise
+     */
+    public boolean clearTable(String tableName) {
+        if (tableName == null || tableName.trim().isEmpty()) {
+            logger.error("clearTable called with invalid table name");
+            return false;
+        }
+
+        String sql = "DELETE FROM " + tableName;
+        try (Statement stmt = connection.createStatement()) {
+            int rowsDeleted = stmt.executeUpdate(sql);
+            logger.info("Cleared {} rows from table: {}", rowsDeleted, tableName);
+            return true;
+        } catch (SQLException e) {
+            logger.error("Failed to clear table: " + tableName, e);
+            return false;
         }
     }
 }

@@ -7,6 +7,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
 
 /**
  * Moderne Einstellungen-GUI für das VEBO Lagersystem
@@ -191,6 +192,35 @@ public class SettingsGUI extends JFrame {
 
         settingsPanel.add(serverSection);
 
+        // === SECTION 4: Datenbank-Einstellungen ===
+        settingsPanel.add(Box.createVerticalStrut(25));
+        JPanel databaseSection = createSectionPanel("💾 Datenbank-Einstellungen",
+            "Konfiguration der Datenbank-Verbindung");
+        JLabel databaseClearLabel = new JLabel("<html><div style='width: 700px; padding: 8px 0'><p>" +
+            "Mit dem Knopf <b>Datenbank Bereinigen</b> werden alle Daten in der Datenbank gelöscht!" +
+            "</div></html>");
+        databaseClearLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        databaseClearLabel.setForeground(new Color(120, 130, 140));
+        databaseClearLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        databaseClearLabel.setMaximumSize(new Dimension(750, 60));
+
+        JPanel databaseButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        databaseButtonPanel.setOpaque(false);
+        databaseButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        databaseButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+
+        JButton clearDatabaseButton = createStyledButton("🗑️ Datenbank Bereinigen", new Color(220, 53, 69), Color.WHITE);
+        clearDatabaseButton.addActionListener(e -> clearDatabase());
+
+        databaseButtonPanel.add(clearDatabaseButton);
+
+        databaseSection.add(Box.createVerticalStrut(18));
+        databaseSection.add(databaseClearLabel);
+        databaseSection.add(Box.createVerticalStrut(15));
+        databaseSection.add(databaseButtonPanel);
+
+        settingsPanel.add(databaseSection);
+
         // Wrap settings panel in a scroll pane for proper scrolling
         JScrollPane scrollPane = new JScrollPane(settingsPanel);
         scrollPane.setBorder(null);
@@ -210,10 +240,10 @@ public class SettingsGUI extends JFrame {
         buttonPanel.setBackground(Color.WHITE);
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 225, 230)));
 
-        JButton cancelButton = createStyledButton("Abbrechen", new Color(149, 165, 166), Color.BLACK);
+        JButton cancelButton = createStyledButton("Abbrechen", new Color(149, 165, 166), Color.WHITE);
         cancelButton.addActionListener(e -> dispose());
 
-        JButton saveButton = createStyledButton("💾 Speichern", new Color(46, 204, 113), Color.BLACK);
+        JButton saveButton = createStyledButton("💾 Speichern", new Color(46, 204, 113), Color.WHITE);
         saveButton.addActionListener(e -> saveSettings());
 
         buttonPanel.add(cancelButton);
@@ -299,8 +329,9 @@ public class SettingsGUI extends JFrame {
             BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         button.setFocusPainted(false);
-        button.setOpaque(false);
+        button.setOpaque(true); // Fixed: Changed to true so button background is visible
         button.setBorderPainted(true);
+        button.setContentAreaFilled(true); // Ensure button fills with background color
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         // Hover effect
@@ -453,6 +484,98 @@ public class SettingsGUI extends JFrame {
 
     public void display() {
         setVisible(true);
+    }
+
+    /**
+     * Clears the database after user confirmation
+     */
+    private void clearDatabase() {
+        // First confirmation
+        int firstConfirm = JOptionPane.showConfirmDialog(this,
+            "<html><b>⚠️ WARNUNG: Datenbank löschen</b><br/><br/>" +
+            "Möchten Sie wirklich <b>ALLE DATEN</b> aus der Datenbank löschen?<br/><br/>" +
+            "Dies umfasst:<br/>" +
+            "• Alle Artikel<br/>" +
+            "• Alle Lieferanten<br/>" +
+            "• Alle Bestellungen<br/>" +
+            "• Alle Kunden<br/>" +
+            "• Alle Abteilungen<br/>" +
+            "• Alle Benutzer<br/>" +
+            "• Alle Warnungen<br/><br/>" +
+            "<b>Diese Aktion kann NICHT rückgängig gemacht werden!</b></html>",
+            "Datenbank löschen - Bestätigung 1/2",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE);
+
+        if (firstConfirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        // Second confirmation (extra safety)
+        String confirmText = JOptionPane.showInputDialog(this,
+            "<html><b>Zweite Bestätigung erforderlich</b><br/><br/>" +
+            "Bitte geben Sie <b>LÖSCHEN</b> ein, um fortzufahren:</html>",
+            "Datenbank löschen - Bestätigung 2/2",
+            JOptionPane.WARNING_MESSAGE);
+
+        if (confirmText == null || !confirmText.trim().equalsIgnoreCase("LÖSCHEN")) {
+            JOptionPane.showMessageDialog(this,
+                "Vorgang abgebrochen. Die Datenbank wurde nicht gelöscht.",
+                "Abgebrochen",
+                JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Perform database clearing
+        try {
+            ch.framedev.lagersystem.managers.DatabaseManager dbManager =
+                ch.framedev.lagersystem.main.Main.databaseManager;
+
+            if (dbManager != null) {
+                dbManager.clearDatabase();
+                File file = new File(Main.getAppDataDir(), "own_use_list.txt");
+                if(!file.delete())
+                    System.out.println("[SettingsGUI] own_use_list.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
+                File importQrcodesFile = new File(Main.getAppDataDir(), "imported_qrcodes.txt");
+                if(!importQrcodesFile.delete())
+                    System.out.println("[SettingsGUI] imported_qrcodes.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
+                File importedItemsFile = new File(Main.getAppDataDir(), "imported_items.txt");
+                if(!importedItemsFile.delete())
+                    System.out.println("[SettingsGUI] imported_items.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
+
+                JOptionPane.showMessageDialog(this,
+                    "<html><b>✓ Datenbank erfolgreich gelöscht</b><br/><br/>" +
+                    "Alle Daten wurden aus der Datenbank entfernt.<br/><br/>" +
+                    "Das Programm sollte nun neu gestartet werden.</html>",
+                    "Erfolgreich",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+                System.out.println("[SettingsGUI] Datenbank wurde erfolgreich bereinigt");
+
+                // Ask if user wants to restart
+                int restart = JOptionPane.showConfirmDialog(this,
+                    "Möchten Sie das Programm jetzt neu starten?",
+                    "Neustart empfohlen",
+                    JOptionPane.YES_NO_OPTION);
+
+                if (restart == JOptionPane.YES_OPTION) {
+                    System.exit(0);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this,
+                    "Fehler: Datenbankverbindung nicht verfügbar.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (Exception e) {
+            System.err.println("[SettingsGUI] Fehler beim Löschen der Datenbank: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                "<html><b>Fehler beim Löschen der Datenbank</b><br/><br/>" +
+                "Fehler: " + e.getMessage() + "</html>",
+                "Fehler",
+                JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /**

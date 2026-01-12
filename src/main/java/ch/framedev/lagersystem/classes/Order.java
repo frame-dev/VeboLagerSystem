@@ -27,7 +27,7 @@ public class Order {
         this.senderName = senderName;
         this.senderKontoNumber = senderKontoNumber;
         this.department = department;
-        this.status = "Pending";
+        this.status = "In Bearbeitung";
     }
 
     public Order(String orderId, Map<String, Integer> orderedArticles, String receiverName, String receiverKontoNumber, String orderDate, String senderName, String senderKontoNumber, String department, String status) {

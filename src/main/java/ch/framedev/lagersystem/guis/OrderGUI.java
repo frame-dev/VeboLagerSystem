@@ -10,10 +10,8 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.*;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumnModel;
-import javax.swing.table.TableRowSorter;
+import javax.swing.border.BevelBorder;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -65,6 +63,8 @@ public class OrderGUI extends JFrame {
         JButton deleteOrderButton = createRoundedButton("Bestellung löschen");
         JButton completeOrderButton = createRoundedButton("Bestellung abschließen");
         JButton refreshButton = createRoundedButton("🔄 Aktualisieren");
+        JComboBox<String> filterComboBox = new JComboBox<>(new String[]{"Alle Bestellungen", "Abgeschlossene Bestellungen", "Offene Bestellungen"});
+        toolbar.add(filterComboBox);
         toolbar.add(newOrderButton);
         toolbar.add(editOrderButton);
         toolbar.add(deleteOrderButton);
@@ -197,6 +197,17 @@ public class OrderGUI extends JFrame {
         });
         searchField.addActionListener(e -> doSearch.run());
 
+        filterComboBox.addActionListener(e -> {
+            String selected = (String) filterComboBox.getSelectedItem();
+            if ("Alle Bestellungen".equals(selected)) {
+                sorter.setRowFilter(null);
+            } else if ("Abgeschlossene Bestellungen".equals(selected)) {
+                sorter.setRowFilter(RowFilter.regexFilter("^Abgeschlossen$", 6));
+            } else if ("Offene Bestellungen".equals(selected)) {
+                sorter.setRowFilter(RowFilter.notFilter(RowFilter.regexFilter("^Abgeschlossen$", 6)));
+            }
+        });
+
         // auto resize logic
         ComponentAdapter resizeListener = new ComponentAdapter() {
             @Override
@@ -224,7 +235,7 @@ public class OrderGUI extends JFrame {
                     o.getDepartment(),
                     o.getOrderDate(),
                     o.getOrderedArticles().size() + " Artikel",
-                    o.getStatus() != null ? o.getStatus() : "Pending"
+                    o.getStatus() != null ? o.getStatus() : "In Bearbeitung"
             });
         }
         updateOrderCount();
@@ -363,13 +374,17 @@ public class OrderGUI extends JFrame {
             }
         };
         orderTable.setModel(model);
+        // Make grid lines visible and subtle (adds vertical+horizontal lines like in your mockup)
+        orderTable.setShowGrid(true);
+        orderTable.setShowHorizontalLines(true);
+        orderTable.setShowVerticalLines(true);
+        orderTable.setGridColor(new Color(226, 230, 233)); // soft light gray
+        orderTable.setIntercellSpacing(new Dimension(1, 1));
+        orderTable.setFont(new Font("Arial", Font.PLAIN, 16));
 
         // visuals
         orderTable.setRowHeight(26);
         orderTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        orderTable.setShowGrid(true);
-        orderTable.setGridColor(new Color(226, 230, 233));
-        orderTable.setIntercellSpacing(new Dimension(1, 1));
         orderTable.setSelectionBackground(new Color(184, 207, 229));
         orderTable.setSelectionForeground(Color.BLACK);
 
@@ -389,7 +404,7 @@ public class OrderGUI extends JFrame {
                     if ("Abgeschlossen".equals(status)) {
                         c.setBackground(new Color(200, 230, 201)); // Light green
                         c.setForeground(new Color(27, 94, 32)); // Dark green
-                    } else if ("Pending".equals(status)) {
+                    } else if ("In Bearbeitung".equals(status)) {
                         c.setBackground(new Color(255, 243, 224)); // Light orange
                         c.setForeground(new Color(230, 81, 0)); // Dark orange
                     } else {
@@ -408,6 +423,26 @@ public class OrderGUI extends JFrame {
         for (int i = 0; i < baseColumnWidths.length && i < tcm.getColumnCount(); i++) {
             tcm.getColumn(i).setPreferredWidth(baseColumnWidths[i]);
         }
+
+        // Alternating row colors for readability (subtle)
+        DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
+            private final Color EVEN = new Color(255, 255, 255);
+            private final Color ODD = new Color(247, 250, 253);
+
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (!isSelected) c.setBackground(row % 2 == 0 ? EVEN : ODD);
+                return c;
+            }
+        };
+        orderTable.setDefaultRenderer(Object.class, alternatingRenderer);
+
+        // Header styling
+        JTableHeader header = orderTable.getTableHeader();
+        header.setBackground(new Color(62, 84, 98));
+        header.setForeground(Color.WHITE);
+        header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
     }
 
     private void adjustColumnWidths() {
@@ -539,7 +574,7 @@ public class OrderGUI extends JFrame {
         String senderName = order.getSenderName();
         String senderKontoNumber = order.getSenderKontoNumber();
         String department = order.getDepartment();
-        String status = order.getStatus() != null ? order.getStatus() : "Pending";
+        String status = order.getStatus() != null ? order.getStatus() : "In Bearbeitung";
 
         try (PDDocument doc = new PDDocument()) {
             PDPage page = new PDPage();
@@ -811,7 +846,7 @@ public class OrderGUI extends JFrame {
             "<tr><td style='width: 180px;'><b>Bestell-ID:</b></td><td>" + order.getOrderId() + "</td></tr>" +
             "<tr><td><b>Status:</b></td><td><span style='color: " +
                 ("Abgeschlossen".equals(order.getStatus()) ? "#1b5e20" : "#e65100") + "; font-weight: bold;'>" +
-                (order.getStatus() != null ? order.getStatus() : "Pending") + "</span></td></tr>" +
+                (order.getStatus() != null ? order.getStatus() : "In Bearbeitung") + "</span></td></tr>" +
             "<tr><td><b>Datum:</b></td><td>" + order.getOrderDate() + "</td></tr>" +
             "<tr><td><b>Abteilung:</b></td><td>" + order.getDepartment() + "</td></tr>" +
             "<tr><td><b>Empfänger:</b></td><td>" + order.getReceiverName() + "</td></tr>" +
