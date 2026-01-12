@@ -2,11 +2,13 @@ package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Warning;
+import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.WarningManager;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.utils.RoundButton;
+import ch.framedev.simplejavautils.SimpleJavaUtils;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -25,12 +27,15 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 import java.util.Timer;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -419,7 +424,7 @@ public class ArticleGUI extends JFrame {
         gbc.weightx = 1.0;
 
         // Helper method for creating styled labels with icons
-        java.util.function.Function<String, JLabel> createLabel = text -> {
+        Function<String, JLabel> createLabel = text -> {
             JLabel label = new JLabel(text);
             label.setFont(new Font("Arial", Font.BOLD, 13));
             label.setForeground(new Color(44, 62, 80));
@@ -427,7 +432,7 @@ public class ArticleGUI extends JFrame {
         };
 
         // Helper method for styling text fields with hover effect
-        java.util.function.Consumer<JTextField> styleTextField = field -> {
+        Consumer<JTextField> styleTextField = field -> {
             field.setFont(new Font("Arial", Font.PLAIN, 14));
             field.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
@@ -818,7 +823,7 @@ public class ArticleGUI extends JFrame {
         gbc.weightx = 1.0;
 
         // Helper method for creating styled labels
-        java.util.function.Function<String, JLabel> createLabel = text -> {
+        Function<String, JLabel> createLabel = text -> {
             JLabel label = new JLabel(text);
             label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
             label.setForeground(new Color(52, 73, 94));
@@ -826,7 +831,7 @@ public class ArticleGUI extends JFrame {
         };
 
         // Helper method for styling text fields
-        java.util.function.Consumer<JTextField> styleTextField = field -> {
+        Consumer<JTextField> styleTextField = field -> {
             field.setFont(field.getFont().deriveFont(14f));
             field.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(new Color(220, 225, 230), 1),

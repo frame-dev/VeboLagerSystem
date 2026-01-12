@@ -4,9 +4,7 @@ import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumnModel;
-import javax.swing.table.TableRowSorter;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -26,6 +24,8 @@ public class ClientGUI extends JFrame {
     private final List<Client> clients = new ArrayList<>();
 
     private JComboBox<String> departmentCombobox;
+
+    private JComboBox<String> filterDepartmentCombobox;
 
     public ClientGUI() {
         setTitle("Kunden Verwaltung");
@@ -59,6 +59,19 @@ public class ClientGUI extends JFrame {
         toolbar.add(editClientButton);
         toolbar.add(deleteClientButton);
         toolbar.add(refreshButton);
+
+        filterDepartmentCombobox = new JComboBox<>();
+        filterDepartmentCombobox.setPreferredSize(new Dimension(200, 30));
+        filterDepartmentCombobox.addItem("Alle Abteilungen");
+        DepartmentManager departmentManager = DepartmentManager.getInstance();
+        for (var department : departmentManager.getAllDepartments()) {
+            String dept = (String) department.get("department");
+            if (dept != null && !dept.trim().isEmpty()) {
+                filterDepartmentCombobox.addItem(dept.trim());
+            }
+        }
+        toolbar.add(new JLabel("Nach Abteilung filtern:"));
+        toolbar.add(filterDepartmentCombobox);
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBackground(new Color(245, 247, 250));
         topPanel.add(toolbar, BorderLayout.SOUTH);
@@ -74,6 +87,15 @@ public class ClientGUI extends JFrame {
         initializeClientTable();
         tableScrollPane = new JScrollPane(clientTable);
         card.add(tableScrollPane, BorderLayout.CENTER);
+
+        filterDepartmentCombobox.addActionListener(listener -> {
+            String selected = (String) filterDepartmentCombobox.getSelectedItem();
+            if (selected == null || selected.equals("Alle Abteilungen")) {
+                ((TableRowSorter<?>) clientTable.getRowSorter()).setRowFilter(null);
+            } else {
+                ((TableRowSorter<?>) clientTable.getRowSorter()).setRowFilter(RowFilter.regexFilter("^" + Pattern.quote(selected) + "$", 1));
+            }
+        });
 
         // place card in center with padding
         JPanel centerWrapper = new JPanel(new GridBagLayout());
@@ -483,12 +505,33 @@ public class ClientGUI extends JFrame {
         clientTable.setIntercellSpacing(new Dimension(1, 1));
         clientTable.setSelectionBackground(new Color(184, 207, 229));
         clientTable.setSelectionForeground(Color.BLACK);
+        clientTable.setFont(new Font("Arial", Font.PLAIN, 16));
 
         TableColumnModel tcm = clientTable.getColumnModel();
 
         for (int i = 0; i < baseColumnWidths.length && i < tcm.getColumnCount(); i++) {
             tcm.getColumn(i).setPreferredWidth(baseColumnWidths[i]);
         }
+
+        // Alternating row colors for readability (subtle)
+        DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
+            private final Color EVEN = new Color(255, 255, 255);
+            private final Color ODD = new Color(247, 250, 253);
+
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (!isSelected) c.setBackground(row % 2 == 0 ? EVEN : ODD);
+                return c;
+            }
+        };
+        clientTable.setDefaultRenderer(Object.class, alternatingRenderer);
+
+        // Header styling
+        JTableHeader header = clientTable.getTableHeader();
+        header.setBackground(new Color(62, 84, 98));
+        header.setForeground(Color.WHITE);
+        header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
     }
 
     private void adjustColumnWidths() {

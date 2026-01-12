@@ -31,6 +31,7 @@ public class ImportUtils {
     private static volatile ImportUtils instance;
 
     private ImportUtils() {
+        // Load inventory file
         INVENTORY_FILE = new SimpleJavaUtils().getFromResourceFile("inventar.json", Main.class);
         if (INVENTORY_FILE == null) {
             LOGGER.warn("Inventory file 'inventar.json' not found in resources");
@@ -40,6 +41,7 @@ public class ImportUtils {
             LOGGER.info("Inventory file loaded: {}", INVENTORY_FILE.getAbsolutePath());
         }
 
+        // Load vendor file
         VENDOR_FILE = new SimpleJavaUtils().getFromResourceFile("vendor.json", Main.class);
         if (VENDOR_FILE == null) {
             LOGGER.warn("Vendor file 'vendor.json' not found in resources");
@@ -49,6 +51,7 @@ public class ImportUtils {
             LOGGER.info("Vendor file loaded: {}", VENDOR_FILE.getAbsolutePath());
         }
 
+        // Load department file
         DEPARTMENT_FILE = new SimpleJavaUtils().getFromResourceFile("departments.json", Main.class);
         if (DEPARTMENT_FILE == null) {
             LOGGER.warn("Department file 'departments.json' not found in resources");
@@ -58,6 +61,7 @@ public class ImportUtils {
             LOGGER.info("Department file loaded: {}", DEPARTMENT_FILE.getAbsolutePath());
         }
 
+        // Load clients file
         CLIENTS_FILE = new SimpleJavaUtils().getFromResourceFile("clients.json", Main.class);
         if(CLIENTS_FILE == null) {
             LOGGER.warn("Clients file 'clients.json' not found in resources");
@@ -218,6 +222,12 @@ public class ImportUtils {
         return inventoryData;
     }
 
+    /**
+     * Parse a JsonObject into a Map<String, Object>.
+     * @param gson Gson instance for parsing
+     * @param jsonObject JsonObject to parse
+     * @return Map representation of the JsonObject
+     */
     private Map<String, Object> parseJsonObject(Gson gson, JsonObject jsonObject) {
         Map<String, Object> itemData = new HashMap<>();
 
@@ -239,6 +249,11 @@ public class ImportUtils {
         return itemData;
     }
 
+    /**
+     * Parse a JsonPrimitive into the appropriate Java type.
+     * @param value JsonElement representing a primitive value
+     * @return Parsed Java Object (String, Boolean, Integer, Long, Double)
+     */
     private Object parsePrimitive(JsonElement value) {
         if (value.getAsJsonPrimitive().isString()) {
             return value.getAsString();

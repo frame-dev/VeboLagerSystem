@@ -1,5 +1,6 @@
 package ch.framedev.lagersystem.managers;
 
+import ch.framedev.lagersystem.main.Main;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -55,6 +56,7 @@ public class DatabaseManager {
         File dir = new File(prefix);
         if (!dir.exists()) {
             if (!dir.mkdirs()) {
+                Main.logUtils.addLog("Fehler beim Erstellen des Datenbank-Verzeichnisses: " + dir.getAbsolutePath());
                 throw new RuntimeException("Failed to create database directory: " + dir.getAbsolutePath());
             }
         }
@@ -62,6 +64,7 @@ public class DatabaseManager {
         try {
             this.connection = DriverManager.getConnection(url);
         } catch (SQLException e) {
+            Main.logUtils.addLog("Fehler beim Öffnen der Datenbank: " + e.getMessage());
             throw new RuntimeException("Failed to open database: " + url, e);
         }
     }
@@ -80,6 +83,7 @@ public class DatabaseManager {
             return rs;
         } catch (SQLException e) {
             logger.error("SQL Exception during executeQuery: ", e);
+            Main.logUtils.addLog("Fehler bei der Abfrage: " + e.getMessage());
             return null;
         }
     }
@@ -140,6 +144,7 @@ public class DatabaseManager {
             return true;
         } catch (SQLException e) {
             logger.error("SQL Exception during executeUpdate: ", e);
+            Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
             return false;
         }
     }
@@ -155,6 +160,7 @@ public class DatabaseManager {
             try {
                 int bindCount = pstmt.getParameterMetaData().getParameterCount();
                 if (values.length < bindCount) {
+                    Main.logUtils.addLog("Fehler bei der vorbereiteten Aktualisierung: Nicht genügend Parameter: erwartet " + bindCount + " aber erhalten " + values.length);
                     throw new IllegalArgumentException("Not enough parameters: expected " + bindCount + " but got " + values.length);
                 }
                 for (int i = 0; i < bindCount; i++) {
@@ -171,6 +177,7 @@ public class DatabaseManager {
             return true;
         } catch (SQLException | IllegalArgumentException e) {
             logger.error("SQL Exception during executeUpdate: ", e);
+            Main.logUtils.addLog("Fehler bei der vorbereiteten Aktualisierung: " + e.getMessage());
             return false;
         }
     }
@@ -206,6 +213,7 @@ public class DatabaseManager {
                 try {
                     int paramCount = pstmt.getParameterMetaData().getParameterCount();
                     if (objects.length < paramCount) {
+                        Main.logUtils.addLog("Fehler bei der vorbereiteten Abfrage: Nicht genügend Parameter: erwartet " + paramCount + " aber erhalten " + objects.length);
                         throw new IllegalArgumentException("Not enough parameters: expected " + paramCount + " but got " + objects.length);
                     }
                     for (int i = 0; i < paramCount; i++) {
@@ -224,6 +232,7 @@ public class DatabaseManager {
             return rs;
         } catch (SQLException | IllegalArgumentException e) {
             logger.error("SQL Exception during executePreparedQuery: ", e);
+            Main.logUtils.addLog("Fehler bei der vorbereiteten Abfrage: " + e.getMessage());
             return null;
         }
     }
@@ -265,10 +274,11 @@ public class DatabaseManager {
                     logger.info("Cleared {} rows from table: {}", rowsDeleted, table);
                     clearedCount++;
                 } catch (SQLException e) {
-                    logger.error("Failed to clear table: " + table, e);
+                    logger.error("Failed to clear table: {}", table, e);
                     // Rollback on any error
                     connection.rollback();
                     logger.warn("Transaction rolled back - no data was deleted");
+                    Main.logUtils.addLog("Fehler beim Löschen der Tabelle " + table + ": " + e.getMessage());
                     return false;
                 }
             }
@@ -286,6 +296,7 @@ public class DatabaseManager {
             } catch (SQLException rollbackEx) {
                 logger.error("Failed to rollback transaction", rollbackEx);
             }
+            Main.logUtils.addLog("Fehler beim Löschen der Datenbank: " + e.getMessage());
             return false;
         } finally {
             // Restore auto-commit mode
@@ -293,6 +304,7 @@ public class DatabaseManager {
                 connection.setAutoCommit(autoCommit);
             } catch (SQLException e) {
                 logger.error("Failed to restore auto-commit mode", e);
+                Main.logUtils.addLog("Failed to restore auto-commit mode");
             }
         }
     }
@@ -306,6 +318,7 @@ public class DatabaseManager {
     public boolean clearTable(String tableName) {
         if (tableName == null || tableName.trim().isEmpty()) {
             logger.error("clearTable called with invalid table name");
+            Main.logUtils.addLog("Invalid table name: " + tableName);
             return false;
         }
 
@@ -315,7 +328,8 @@ public class DatabaseManager {
             logger.info("Cleared {} rows from table: {}", rowsDeleted, tableName);
             return true;
         } catch (SQLException e) {
-            logger.error("Failed to clear table: " + tableName, e);
+            logger.error("Failed to clear table: {}", tableName, e);
+            Main.logUtils.addLog("Fehler beim Löschen der Tabelle " + tableName + ": " + e.getMessage());
             return false;
         }
     }

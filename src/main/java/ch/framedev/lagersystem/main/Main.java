@@ -375,6 +375,7 @@ public class Main {
         String githubToken = settings.getProperty("github-token");
         if (githubToken != null && !githubToken.isEmpty()) {
             UpdateManager.getInstance().setPersonalToken(githubToken);
+            logUtils.addLog("GitHub Token für Update-Manager gesetzt");
         }
     }
 

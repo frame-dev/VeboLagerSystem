@@ -73,8 +73,7 @@ Typical setup (adjust to actual implementation):
 
 - **Language:** Java
 - **Build Tool:** Maven
-- **Database:** Relational database (e.g. PostgreSQL / MySQL)
-- **Optional:** Docker
+- **Database:** Build in Database (SQLite)
 
 ---
 
@@ -85,7 +84,6 @@ Typical setup (adjust to actual implementation):
 - Git
 - Java
 - Maven
-- Database or Docker
 
 ---
 
@@ -96,20 +94,6 @@ git clone https://github.com/frame-dev/VeboLagerSystem.git
 cd VeboLagerSystem
 mvn clean install
 mvn test
-```
-
----
-
-### Configuration
-
-```env
-APP_ENV=local
-APP_PORT=8080
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=vebo_lager
-DB_USER=postgres
-DB_PASSWORD=postgres
 ```
 
 ---
@@ -130,35 +114,6 @@ DB_PASSWORD=postgres
 mvn clean install
 mvn test
 ```
-
----
-
-## Deployment
-
-- Docker image build & push
-- Environment variables / secrets
-- Database migrations
-- Reverse proxy / TLS termination
-
-CI/CD workflows (if any):
-
-.github/workflows
-
----
-
-## Troubleshooting
-
-### DB connection refused
-- Ensure DB is running
-- Verify credentials
-
-### Port already in use
-- Change `APP_PORT`
-- Stop conflicting service
-
-### Migrations fail
-- Verify DB permissions
-- Run migrations manually
 
 ---
 

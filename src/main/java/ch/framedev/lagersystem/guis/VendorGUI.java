@@ -3,11 +3,7 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.managers.VendorManager;
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.TableRowSorter;
-import javax.swing.table.TableColumnModel;
-import javax.swing.table.TableColumn;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.regex.Pattern;
@@ -380,6 +376,7 @@ public class VendorGUI extends JFrame {
         vendorTable.setShowGrid(true);
         vendorTable.setGridColor(new Color(226, 230, 233));
         vendorTable.setIntercellSpacing(new Dimension(1, 1));
+        vendorTable.setFont(new Font("Arial", Font.PLAIN, 16));
 
         DefaultTableCellRenderer center = new DefaultTableCellRenderer();
         center.setHorizontalAlignment(SwingConstants.CENTER);
@@ -387,6 +384,26 @@ public class VendorGUI extends JFrame {
         if (tcm.getColumnCount()>0) tcm.getColumn(0).setCellRenderer(center);
 
         for (int i = 0; i < baseColumnWidths.length && i < tcm.getColumnCount(); i++) tcm.getColumn(i).setPreferredWidth(baseColumnWidths[i]);
+
+        // Alternating row colors for readability (subtle)
+        DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
+            private final Color EVEN = new Color(255, 255, 255);
+            private final Color ODD = new Color(247, 250, 253);
+
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (!isSelected) c.setBackground(row % 2 == 0 ? EVEN : ODD);
+                return c;
+            }
+        };
+        vendorTable.setDefaultRenderer(Object.class, alternatingRenderer);
+
+        // Header styling
+        JTableHeader header = vendorTable.getTableHeader();
+        header.setBackground(new Color(62, 84, 98));
+        header.setForeground(Color.WHITE);
+        header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
     }
 
     private void adjustColumnWidths() {

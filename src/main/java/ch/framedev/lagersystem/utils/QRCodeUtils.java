@@ -57,10 +57,13 @@ public class QRCodeUtils {
                 }
             } else {
                 logger.error("Failed to fetch QR code data. HTTP response code: {}", responseCode);
+                Main.logUtils.addLog("Fehler beim Abrufen der QR-Code-Daten. HTTP-Antwortcode: " + responseCode);
             }
         } catch (IOException e) {
             logger.error("Error while fetching QR code data from website", e);
+            Main.logUtils.addLog("Fehler beim Abrufen der QR-Code-Daten von der Webseite: " + e.getMessage());
         } catch (URISyntaxException e) {
+            Main.logUtils.addLog("Ungültige URL-Syntax: " + e.getMessage());
             throw new RuntimeException(e);
         } finally {
             if (connection != null) {
@@ -85,6 +88,7 @@ public class QRCodeUtils {
                 }
             }
         } catch (FileNotFoundException e) {
+            Main.logUtils.addLog("Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
             throw new RuntimeException(e);
         }
         return dataList;
@@ -100,6 +104,7 @@ public class QRCodeUtils {
                 qrCodeList.add(gson.toJson(obj));
             }
         } catch (FileNotFoundException e) {
+            Main.logUtils.addLog("Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
             throw new RuntimeException(e);
         }
         return qrCodeList;
@@ -116,6 +121,7 @@ public class QRCodeUtils {
                 }
             }
         } catch (FileNotFoundException e) {
+            Main.logUtils.addLog("Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
             throw new RuntimeException(e);
         }
         return null;
@@ -138,6 +144,7 @@ public class QRCodeUtils {
                 mapList.add(map);
             }
         } catch (FileNotFoundException e) {
+            Main.logUtils.addLog("Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
             throw new RuntimeException(e);
         }
         return mapList;
@@ -145,8 +152,10 @@ public class QRCodeUtils {
 
     public static void clearStoredQRCodes() {
         if (STORE.exists()) {
-            if(!STORE.delete())
+            if(!STORE.delete()) {
                 System.err.println("Konnte gespeicherte QR-Codes nicht löschen: " + STORE.getAbsolutePath());
+                Main.logUtils.addLog("Konnte gespeicherte QR-Codes nicht löschen: " + STORE.getAbsolutePath());
+            }
         }
     }
 }
