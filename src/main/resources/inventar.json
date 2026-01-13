@@ -1221,10 +1221,10 @@
   },
   {
     "number": "4207",
-    "name": "Orange Clean (Bodenreiniger)",
+    "name": "Orange Reiniger (Bodenreiniger)",
     "details": "10 lt.",
     "stockQuantity": 4,
-    "minStockLevel": 0,
+    "minStockLevel": 3,
     "sellPrice": 57.20,
     "buyPrice": 52.0,
     "vendorName": "ZVG"
@@ -1241,13 +1241,323 @@
   },
   {
     "number": "4209",
-    "name": "Maya Forte (Grill & Backofenreiniger)",
+    "name": "Grill- und Konvektomatenreiniger GK Kombi",
     "details": "10 lt.",
     "stockQuantity": 0,
     "minStockLevel": 0,
     "sellPrice": 55.60,
     "buyPrice": 50.55,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "4210",
+    "name": "Walco 27 (Büro und Kunststoffreiniger)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 70.0,
+    "buyPrice": 63.64,
+    "vendorName": "Walco"
+  },
+  {
+    "number": "4211",
+    "name": "Spray Kombi Emulsion Steinfels",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 50.0,
+    "buyPrice": 45.45,
     "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4212",
+    "name": "Spray Primo Spraytrockenrein. Steinfels",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 57.6,
+    "buyPrice": 52.36,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4213",
+    "name": "5070 Aquanet (Steinreiniger)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 89.1,
+    "buyPrice": 81.0,
+    "vendorName": "Atramex"
+  },
+  {
+    "number": "4214",
+    "name": "Steinfels Floor DIN18032 Beschichtungsm.",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 91.85,
+    "buyPrice": 83.5,
+    "vendorName": "Steinfels"
+  },
+  {
+    "number": "4218",
+    "name": "Durgol (Entkalker)",
+    "details": "1 lt.",
+    "stockQuantity": 3,
+    "minStockLevel": 0,
+    "sellPrice": 5.0,
+    "buyPrice": 4.55,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4221",
+    "name": "Steinet 306 (Universalreiniger)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 72.45,
+    "buyPrice": 65.86,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4222",
+    "name": "Maya Uni (Allzweckreiniger)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 47.7,
+    "buyPrice": 43.36,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4223",
+    "name": "Schnelldesinfektionmittel Desipur OH",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 84.15,
+    "buyPrice": 76.5,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "4224",
+    "name": "Chromol (Chromstahlpflege)",
+    "details": "500ml",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 16.5,
+    "buyPrice": 15.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4226",
+    "name": "Kälte Spray (Kaugummientferner)",
+    "details": "Dose 500ml",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 14.0,
+    "buyPrice": 12.73,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4227",
+    "name": "Uni Top (Industriereiniger)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 121.0,
+    "buyPrice": 110.0,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "4228",
+    "name": "Maya Super Aktive",
+    "details": "5 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 23.0,
+    "buyPrice": 20.91,
+    "vendorName": "Null"
+  },
+  {
+    "number": "4229",
+    "name": "WC-Reiniger Profi",
+    "details": "10 lt.",
+    "stockQuantity": 2,
+    "minStockLevel": 3,
+    "sellPrice": 50.60,
+    "buyPrice": 45.96,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "4230",
+    "name": "Hartflüssig Wachs zum auffüllen",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 159.5,
+    "buyPrice": 144.09,
+    "vendorName": "Null"
+  },
+  {
+    "number": "4235",
+    "name": "Walco 36 (Büroreiniger)",
+    "details": "10 lt.",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 96.7,
+    "buyPrice": 87.91,
+    "vendorName": "Walco"
+  },
+  {
+    "number": "4236",
+    "name": "Maya Brillant (Glänzer Geschirrspüler)",
+    "details": "20 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 122.1,
+    "buyPrice": 111.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4237",
+    "name": "Radical Forte (Grundreiniger)",
+    "details": "10 lt.",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 60.0,
+    "buyPrice": 54.55,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "4240",
+    "name": "Maya Soft (Handabwaschmittel)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 45.1,
+    "buyPrice": 40.91,
+    "vendorName": "Null"
+  },
+  {
+    "number": "4242",
+    "name": "Händedesinfektionsmittel",
+    "details": "5 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 57.42,
+    "buyPrice": 52.2,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "4243",
+    "name": "Top Glass Forte (Scheibenreiniger Nikotin)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 77.0,
+    "buyPrice": 70.0,
+    "vendorName": "Null"
+  },
+  {
+    "number": "4246",
+    "name": "Wetrok Retex T2 (Teppichwaschmittel)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 107.4,
+    "buyPrice": 97.64,
+    "vendorName": "Wetrok"
+  },
+  {
+    "number": "4247",
+    "name": "Desoplex (Desinfektionsmittel Hallenbad)",
+    "details": "5 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 68.85,
+    "buyPrice": 62.5,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "4249",
+    "name": "Ergo 6 (Kalkentferner)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 85.0,
+    "buyPrice": 77.27,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "4253",
+    "name": "Schimmelentferner",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 82.5,
+    "buyPrice": 75.0,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "4254",
+    "name": "Ergo 24 (Schaumreiniger sauer)",
+    "details": "10 lt.",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 89.3,
+    "buyPrice": 81.18,
+    "vendorName": "Minatol/Wetrok"
+  },
+  {
+    "number": "4256",
+    "name": "Maya Multi (Allzweckreiniger)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 51.7,
+    "buyPrice": 47.0,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4259",
+    "name": "Maya (Entkalker)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 50.0,
+    "buyPrice": 45.45,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4260",
+    "name": "Ergo 30 (Schaumreiniger alkalisch)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 50.0,
+    "buyPrice": 45.45,
+    "vendorName": "Mühlethaler"
+  },
+  {
+    "number": "4261",
+    "name": "Sportreiniger Citron",
+    "details": "10 lt.",
+    "stockQuantity": 1,
+    "minStockLevel": 0,
+    "sellPrice": 93.05,
+    "buyPrice": 84.59,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "4262",
+    "name": "Maya Schmierseife flüssig (Tagesstätte)",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 43.9,
+    "buyPrice": 39.91,
+    "vendorName": "Null"
   },
   {
     "number": "4301",

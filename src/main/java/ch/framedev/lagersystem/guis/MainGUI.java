@@ -29,19 +29,19 @@ public class MainGUI extends JFrame {
         // === HEADER SECTION ===
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(new Color(30, 58, 95)); // Dark blue
-        headerPanel.setPreferredSize(new Dimension(0, 90));
+        headerPanel.setPreferredSize(new Dimension(0, 100));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 40, 15, 40));
 
         // Title
         JLabel titleLabel = new JLabel("VEBO Lagersystem");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 32));
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 42));
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         // Subtitle
         JLabel subtitleLabel = new JLabel("Zentrale Verwaltung für Artikel, Bestellungen und Lieferanten");
         subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        subtitleLabel.setForeground(new Color(200, 220, 240));
+        subtitleLabel.setForeground(new Color(163, 178, 193));
         subtitleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         JPanel headerTextPanel = new JPanel();
@@ -50,13 +50,13 @@ public class MainGUI extends JFrame {
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         headerTextPanel.add(titleLabel);
-        headerTextPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        headerTextPanel.add(Box.createRigidArea(new Dimension(0, 2)));
         headerTextPanel.add(subtitleLabel);
 
         headerPanel.add(headerTextPanel, BorderLayout.WEST);
 
         // Right panel with settings button and date
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
+        JPanel rightPanel = new JPanel(new GridBagLayout());
         rightPanel.setOpaque(false);
 
         // Settings button
@@ -78,10 +78,11 @@ public class MainGUI extends JFrame {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 settingsButton.setBackground(new Color(52, 152, 219));
+                settingsButton.setOpaque(true);
             }
             @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                settingsButton.setBackground(new Color(41, 128, 185));
+                settingsButton.setBackground(new Color(27, 93, 134));
             }
         });
 
@@ -90,7 +91,9 @@ public class MainGUI extends JFrame {
         dateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         dateLabel.setForeground(new Color(180, 200, 220));
 
+        rightPanel.add(Box.createVerticalStrut(18));
         rightPanel.add(settingsButton);
+        rightPanel.add(Box.createHorizontalStrut(8));
         rightPanel.add(dateLabel);
         headerPanel.add(rightPanel, BorderLayout.EAST);
 

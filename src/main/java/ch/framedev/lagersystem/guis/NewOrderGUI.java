@@ -101,7 +101,9 @@ public class NewOrderGUI extends JFrame {
         receiverNameCombobox.addActionListener(listener -> {
             String selected = (String) receiverNameCombobox.getSelectedItem();
             if (selected == null) {
-                JOptionPane.showMessageDialog(NewOrderGUI.this, "Kein Empfänger Name gefunden");
+                JOptionPane.showMessageDialog(NewOrderGUI.this, "Kein Empfänger Name gefunden",
+                        "Fehler", JOptionPane.ERROR_MESSAGE,
+                        Main.icon);
             }
 
             String department = ClientManager.getInstance().getDepartmentByName(selected);
@@ -220,9 +222,11 @@ public class NewOrderGUI extends JFrame {
             if (file != null) {
                 try {
                     exportOrderToPDF(file);
-                    JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(), "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(), "Erfolg", JOptionPane.INFORMATION_MESSAGE,
+                            Main.icon);
                 } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE,
+                            Main.icon);
                 }
             }
         });
@@ -332,7 +336,8 @@ public class NewOrderGUI extends JFrame {
             JOptionPane.showMessageDialog(this,
                     "Keine Artikel in der Artikelliste. Bitte fügen Sie zuerst Artikel hinzu.",
                     "Keine Artikel",
-                    JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.icon);
             return;
         }
 
@@ -352,7 +357,8 @@ public class NewOrderGUI extends JFrame {
         JOptionPane.showMessageDialog(this,
                 articlesWithQty.size() + " Artikel zur Bestellung hinzugefügt.",
                 "Erfolgreich",
-                JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.INFORMATION_MESSAGE,
+                Main.icon);
     }
 
 
@@ -387,7 +393,8 @@ public class NewOrderGUI extends JFrame {
 
     private void onCreateOrder() {
         if (orderArticles.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Keine Artikel in der Bestellung.", "Fehler", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Keine Artikel in der Bestellung.", "Fehler", JOptionPane.WARNING_MESSAGE,
+                    Main.icon);
             return;
         }
         String receiver = receiverNameCombobox.getSelectedItem() != null ? receiverNameCombobox.getSelectedItem().toString().trim() : "";
@@ -396,7 +403,8 @@ public class NewOrderGUI extends JFrame {
         String sKonto = senderKontoField.getText().trim();
         String department = departmentList.getSelectedItem() != null ? departmentList.getSelectedItem().toString().trim() : "";
         if (receiver.isEmpty() || sender.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Empfänger und Absender Namen sind erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Empfänger und Absender Namen sind erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE
+                    , Main.icon);
             return;
         }
         // convert to Map\<String,Integer\> expected by Order (use article number as key)
@@ -409,12 +417,15 @@ public class NewOrderGUI extends JFrame {
         if (file != null) {
             try {
                 exportOrderToPDF(file);
-                JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(), "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(), "Erfolg", JOptionPane.INFORMATION_MESSAGE,
+                        Main.icon);
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE,
+                        Main.icon);
             }
         }
-        JOptionPane.showMessageDialog(this, "Bestellung erstellt.", "Erfolgreich", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Bestellung erstellt.", "Erfolgreich", JOptionPane.INFORMATION_MESSAGE,
+                Main.icon);
         orderArticles.clear();
         rebuildOrderTable();
         updateTotalPrice();

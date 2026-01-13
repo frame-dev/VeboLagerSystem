@@ -1,6 +1,7 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Vendor;
+import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.VendorManager;
 import javax.swing.*;
 import javax.swing.table.*;
@@ -104,9 +105,11 @@ public class VendorGUI extends JFrame {
                 v.setSuppliedArticles(java.util.Arrays.asList(((String) row[5]).split("\\s*,\\s*")));
                 if (VendorManager.getInstance().insertVendor(v)) {
                     loadVendors(); // Refresh table
-                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
+                            Main.icon);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Fehler: Lieferant bereits vorhanden oder Insert fehlgeschlagen", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Fehler: Lieferant bereits vorhanden oder Insert fehlgeschlagen", "Fehler", JOptionPane.ERROR_MESSAGE,
+                            Main.icon);
                 }
             }
         });
@@ -114,7 +117,8 @@ public class VendorGUI extends JFrame {
         editVendorButton.addActionListener(e -> {
             int sel = vendorTable.getSelectedRow();
             if (sel == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Lieferanten zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Lieferanten zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
+                        Main.icon);
                 return;
             }
             int modelRow = vendorTable.convertRowIndexToModel(sel);
@@ -125,9 +129,11 @@ public class VendorGUI extends JFrame {
                 v.setSuppliedArticles(java.util.Arrays.asList(((String) updated[5]).split("\\s*,\\s*")));
                 if (VendorManager.getInstance().updateVendor(v)) {
                     loadVendors(); // Refresh table
-                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
+                            Main.icon);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Lieferanten.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Lieferanten.", "Fehler", JOptionPane.ERROR_MESSAGE,
+                            Main.icon);
                 }
             }
         });
@@ -135,18 +141,22 @@ public class VendorGUI extends JFrame {
         deleteVendorButton.addActionListener(e -> {
             int sel = vendorTable.getSelectedRow();
             if (sel == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Lieferanten zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Lieferanten zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
+                        Main.icon);
                 return;
             }
             int modelRow = vendorTable.convertRowIndexToModel(sel);
             String name = (String) vendorTable.getModel().getValueAt(modelRow, 0);
-            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Lieferanten wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
+            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Lieferanten wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE, Main.icon);
             if (confirm == JOptionPane.YES_OPTION) {
                 if (VendorManager.getInstance().deleteVendor(name)) {
                     loadVendors(); // Refresh table
-                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
+                            Main.icon);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE,
+                            Main.icon);
                 }
             }
         });
@@ -242,7 +252,8 @@ public class VendorGUI extends JFrame {
             String email = emailField.getText().trim();
             String addr = addressField.getText().trim();
             String arts = articlesField.getText().trim();
-            if (id.isEmpty()) { JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE); return; }
+            if (id.isEmpty()) { JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE,
+                    Main.icon); return; }
             holder[0] = new Object[]{id, contact, phone, email, addr, arts};
             dialog.dispose();
         });
@@ -290,7 +301,7 @@ public class VendorGUI extends JFrame {
             String email = emailField.getText().trim();
             String addr = addressField.getText().trim();
             String arts = articlesField.getText().trim();
-            if (id.isEmpty()) { JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE); return; }
+            if (id.isEmpty()) { JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon); return; }
             holder[0] = new Object[]{id, contact, phone, email, addr, arts};
             dialog.dispose();
         });
@@ -351,12 +362,14 @@ public class VendorGUI extends JFrame {
         int sel = vendorTable.getSelectedRow(); if (sel==-1) return;
         int modelRow = vendorTable.convertRowIndexToModel(sel);
         String name = (String) vendorTable.getModel().getValueAt(modelRow, 0);
-        int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Lieferanten wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
+        int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Lieferanten wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE, Main.icon);
         if (confirm == JOptionPane.YES_OPTION) {
             if (VendorManager.getInstance().deleteVendor(name)) {
                 ((DefaultTableModel) vendorTable.getModel()).removeRow(modelRow);
             } else {
-                JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE,
+                        Main.icon);
             }
         }
     }

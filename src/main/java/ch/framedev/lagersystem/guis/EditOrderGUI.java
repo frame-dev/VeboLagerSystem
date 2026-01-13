@@ -2,6 +2,7 @@ package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
+import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 
@@ -286,14 +287,16 @@ public class EditOrderGUI extends JFrame {
             JOptionPane.showMessageDialog(this,
                 "<html><b>Fehler beim Aktualisieren!</b><br/>Die Bestellung konnte nicht gespeichert werden.</html>",
                 "Fehler",
-                JOptionPane.ERROR_MESSAGE);
+                JOptionPane.ERROR_MESSAGE,
+                    Main.icon);
             return;
         }
 
         JOptionPane.showMessageDialog(this,
             "<html><b>✓ Erfolgreich gespeichert!</b><br/>Die Bestellung wurde aktualisiert.</html>",
             "Erfolg",
-            JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.INFORMATION_MESSAGE,
+                Main.icon);
         dispose();
     }
 

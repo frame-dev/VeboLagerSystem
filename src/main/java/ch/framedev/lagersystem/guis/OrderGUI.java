@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.actions.OrderActions;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
+import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.OrderManager;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -10,7 +11,6 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.*;
 
 import javax.swing.*;
-import javax.swing.border.BevelBorder;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
@@ -127,7 +127,8 @@ public class OrderGUI extends JFrame {
         editOrderButton.addActionListener(e -> {
             Vector<Object> rowData = getSelectedOrderData();
             if (rowData == null) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
+                        Main.icon);
                 return;
             }
             Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
@@ -147,19 +148,23 @@ public class OrderGUI extends JFrame {
         deleteOrderButton.addActionListener(e -> {
             int sel = orderTable.getSelectedRow();
             if (sel == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
+                        Main.icon);
                 return;
             }
             int modelRow = orderTable.convertRowIndexToModel(sel);
             String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
-            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
+            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE, Main.icon);
             if (confirm == JOptionPane.YES_OPTION) {
                 if (OrderManager.getInstance().deleteOrder(orderId)) {
                     loadOrders(); // Refresh table
                     updateOrderCount();
-                    JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
+                            Main.icon);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE,
+                            Main.icon);
                 }
             }
         });
@@ -169,7 +174,8 @@ public class OrderGUI extends JFrame {
         refreshButton.addActionListener(e -> {
             loadOrders();
             updateOrderCount();
-            JOptionPane.showMessageDialog(this, "Bestellungsliste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Bestellungsliste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE,
+                    Main.icon);
         });
 
         // search logic using TableRowSorter
@@ -259,7 +265,8 @@ public class OrderGUI extends JFrame {
         edit.addActionListener(e -> {
             Vector<Object> rowData = getSelectedOrderData();
             if (rowData == null) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
+                        Main.icon);
                 return;
             }
             Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
@@ -280,14 +287,17 @@ public class OrderGUI extends JFrame {
             if (sel == -1) return;
             int modelRow = orderTable.convertRowIndexToModel(sel);
             String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
-            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION);
+            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE, Main.icon);
             if (confirm == JOptionPane.YES_OPTION) {
                 if (OrderManager.getInstance().deleteOrder(orderId)) {
                     ((DefaultTableModel) orderTable.getModel()).removeRow(modelRow);
                     updateOrderCount();
-                    JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
+                            Main.icon);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE,
+                            Main.icon);
                 }
             }
         });
@@ -299,7 +309,8 @@ public class OrderGUI extends JFrame {
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
                     Vector<Object> rowData = getSelectedOrderData();
                     if (rowData == null) {
-                        JOptionPane.showMessageDialog(OrderGUI.this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+                        JOptionPane.showMessageDialog(OrderGUI.this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
+                                Main.icon);
                         return;
                     }
                     Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
@@ -395,7 +406,7 @@ public class OrderGUI extends JFrame {
         DefaultTableCellRenderer statusRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
-                    boolean isSelected, boolean hasFocus, int row, int column) {
+                                                           boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 setHorizontalAlignment(SwingConstants.CENTER);
 
@@ -517,12 +528,12 @@ public class OrderGUI extends JFrame {
             double lineTotal = quantity * a.getSellPrice();
             totalPrice += lineTotal;
             articlesHtml.append("<tr>")
-                .append("<td>").append(a.getArticleNumber()).append("</td>")
-                .append("<td>").append(a.getName()).append("</td>")
-                .append("<td align='right'>").append(quantity).append("</td>")
-                .append("<td align='right'>").append(String.format("%.2f", a.getSellPrice())).append(" CHF</td>")
-                .append("<td align='right'><b>").append(String.format("%.2f", lineTotal)).append(" CHF</b></td>")
-                .append("</tr>");
+                    .append("<td>").append(a.getArticleNumber()).append("</td>")
+                    .append("<td>").append(a.getName()).append("</td>")
+                    .append("<td align='right'>").append(quantity).append("</td>")
+                    .append("<td align='right'>").append(String.format("%.2f", a.getSellPrice())).append(" CHF</td>")
+                    .append("<td align='right'><b>").append(String.format("%.2f", lineTotal)).append(" CHF</b></td>")
+                    .append("</tr>");
         }
 
         JScrollPane scrollPane = getJScrollPane(order, articlesHtml, totalPrice);
@@ -534,11 +545,6 @@ public class OrderGUI extends JFrame {
 
         JButton exportBtn = createRoundedButton("PDF Exportieren");
         exportBtn.addActionListener(ev -> {
-            JOptionPane.showMessageDialog(detailsDialog,
-                    "PDF Export für einzelne Bestellungen wird demnächst verfügbar sein.",
-                    "Info",
-                    JOptionPane.INFORMATION_MESSAGE);
-
             createPDFExport(order);
         });
 
@@ -601,7 +607,7 @@ public class OrderGUI extends JFrame {
                 float yPosition = page.getMediaBox().getHeight() - margin;
 
                 // === HEADER SECTION ===
-                cs.setNonStrokingColor(30f/255f, 58f/255f, 95f/255f); // Dark blue
+                cs.setNonStrokingColor(30f / 255f, 58f / 255f, 95f / 255f); // Dark blue
                 cs.addRect(margin, yPosition - 60, pageWidth - 2 * margin, 60);
                 cs.fill();
 
@@ -653,9 +659,9 @@ public class OrderGUI extends JFrame {
                 cs.beginText();
                 cs.setFont(boldFont, 11);
                 if ("Abgeschlossen".equals(status)) {
-                    cs.setNonStrokingColor(27f/255f, 94f/255f, 32f/255f); // Green
+                    cs.setNonStrokingColor(27f / 255f, 94f / 255f, 32f / 255f); // Green
                 } else {
-                    cs.setNonStrokingColor(230f/255f, 81f/255f, 0f); // Orange
+                    cs.setNonStrokingColor(230f / 255f, 81f / 255f, 0f); // Orange
                 }
                 cs.newLineAtOffset(margin + 100, yPosition);
                 cs.showText(status);
@@ -665,11 +671,11 @@ public class OrderGUI extends JFrame {
 
                 // === SENDER / RECEIVER SECTION ===
                 float boxHeight = 85;
-                cs.setNonStrokingColor(245f/255f, 247f/255f, 250f/255f); // Light gray
+                cs.setNonStrokingColor(245f / 255f, 247f / 255f, 250f / 255f); // Light gray
                 cs.addRect(margin, yPosition - boxHeight, (pageWidth - 2 * margin - 10) / 2, boxHeight);
                 cs.fill();
 
-                cs.setNonStrokingColor(245f/255f, 247f/255f, 250f/255f);
+                cs.setNonStrokingColor(245f / 255f, 247f / 255f, 250f / 255f);
                 cs.addRect(margin + (pageWidth - 2 * margin) / 2 + 5, yPosition - boxHeight, (pageWidth - 2 * margin - 10) / 2, boxHeight);
                 cs.fill();
 
@@ -722,7 +728,7 @@ public class OrderGUI extends JFrame {
                 yPosition -= boxHeight + 30;
 
                 // === ARTICLES TABLE ===
-                cs.setNonStrokingColor(62f/255f, 84f/255f, 98f/255f); // Dark blue-gray
+                cs.setNonStrokingColor(62f / 255f, 84f / 255f, 98f / 255f); // Dark blue-gray
                 cs.addRect(margin, yPosition - 20, pageWidth - 2 * margin, 20);
                 cs.fill();
 
@@ -758,7 +764,7 @@ public class OrderGUI extends JFrame {
 
                     // Alternate row background
                     if (alternateRow) {
-                        cs.setNonStrokingColor(250f/255f, 250f/255f, 250f/255f);
+                        cs.setNonStrokingColor(250f / 255f, 250f / 255f, 250f / 255f);
                         cs.addRect(margin, yPosition - 15, pageWidth - 2 * margin, 18);
                         cs.fill();
                     }
@@ -793,7 +799,7 @@ public class OrderGUI extends JFrame {
 
                 // === TOTALS SECTION ===
                 yPosition -= 10;
-                cs.setNonStrokingColor(200f/255f, 200f/255f, 200f/255f);
+                cs.setNonStrokingColor(200f / 255f, 200f / 255f, 200f / 255f);
                 cs.setLineWidth(1);
                 cs.moveTo(margin, yPosition);
                 cs.lineTo(pageWidth - margin, yPosition);
@@ -802,7 +808,7 @@ public class OrderGUI extends JFrame {
                 yPosition -= 25;
 
                 // Total box
-                cs.setNonStrokingColor(30f/255f, 58f/255f, 95f/255f);
+                cs.setNonStrokingColor(30f / 255f, 58f / 255f, 95f / 255f);
                 cs.addRect(pageWidth - margin - 150, yPosition - 25, 150, 30);
                 cs.fill();
 
@@ -817,7 +823,7 @@ public class OrderGUI extends JFrame {
 
                 // === FOOTER ===
                 cs.beginText();
-                cs.setNonStrokingColor(150f/255f, 150f/255f, 150f/255f);
+                cs.setNonStrokingColor(150f / 255f, 150f / 255f, 150f / 255f);
                 cs.setFont(regularFont, 8);
                 cs.newLineAtOffset(margin, 30);
                 cs.showText("VEBO Lagersystem - Generiert am " + new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm").format(new java.util.Date()));
@@ -829,43 +835,45 @@ public class OrderGUI extends JFrame {
             JOptionPane.showMessageDialog(this,
                     "PDF erfolgreich erstellt:\n" + outputFile.getAbsolutePath(),
                     "Erfolg",
-                    JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.INFORMATION_MESSAGE,
+                    Main.icon);
 
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Fehler beim Erstellen des PDF-Dokuments:\n" + ex.getMessage(),
                     "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.icon);
         }
     }
 
     private static JScrollPane getJScrollPane(Order order, StringBuilder articlesHtml, double totalPrice) {
         String htmlContent = "<html><body style='font-family: Arial, sans-serif; padding: 10px;'>" +
-            "<h2 style='color: #1e3a5f; margin-bottom: 20px;'>Bestelldetails</h2>" +
-            "<table style='width: 100%; margin-bottom: 20px;'>" +
-            "<tr><td style='width: 180px;'><b>Bestell-ID:</b></td><td>" + order.getOrderId() + "</td></tr>" +
-            "<tr><td><b>Status:</b></td><td><span style='color: " +
+                "<h2 style='color: #1e3a5f; margin-bottom: 20px;'>Bestelldetails</h2>" +
+                "<table style='width: 100%; margin-bottom: 20px;'>" +
+                "<tr><td style='width: 180px;'><b>Bestell-ID:</b></td><td>" + order.getOrderId() + "</td></tr>" +
+                "<tr><td><b>Status:</b></td><td><span style='color: " +
                 ("Abgeschlossen".equals(order.getStatus()) ? "#1b5e20" : "#e65100") + "; font-weight: bold;'>" +
                 (order.getStatus() != null ? order.getStatus() : "In Bearbeitung") + "</span></td></tr>" +
-            "<tr><td><b>Datum:</b></td><td>" + order.getOrderDate() + "</td></tr>" +
-            "<tr><td><b>Abteilung:</b></td><td>" + order.getDepartment() + "</td></tr>" +
-            "<tr><td><b>Empfänger:</b></td><td>" + order.getReceiverName() + "</td></tr>" +
-            "<tr><td><b>Empfänger Konto:</b></td><td>" + order.getReceiverKontoNumber() + "</td></tr>" +
-            "<tr><td><b>Absender:</b></td><td>" + order.getSenderName() + "</td></tr>" +
-            "<tr><td><b>Absender Konto:</b></td><td>" + order.getSenderKontoNumber() + "</td></tr>" +
-            "</table>" +
-            "<h3 style='color: #1e3a5f; margin-top: 20px; margin-bottom: 10px;'>Bestellte Artikel</h3>" +
-            "<table border='1' cellpadding='8' cellspacing='0' style='width: 100%; border-collapse: collapse; border-color: #ddd;'>" +
-            "<tr style='background-color: #3e5462; color: white;'>" +
-            "<th>Art.-Nr.</th><th>Name</th><th>Menge</th><th>Einzelpreis</th><th>Gesamt</th>" +
-            "</tr>" +
-            articlesHtml.toString() +
-            "<tr style='background-color: #f0f0f0; font-weight: bold;'>" +
-            "<td colspan='4' align='right'>Gesamtpreis:</td>" +
-            "<td align='right' style='color: #1e3a5f; font-size: 16px;'>" + String.format("%.2f", totalPrice) + " CHF</td>" +
-            "</tr>" +
-            "</table>" +
-            "</body></html>";
+                "<tr><td><b>Datum:</b></td><td>" + order.getOrderDate() + "</td></tr>" +
+                "<tr><td><b>Abteilung:</b></td><td>" + order.getDepartment() + "</td></tr>" +
+                "<tr><td><b>Empfänger:</b></td><td>" + order.getReceiverName() + "</td></tr>" +
+                "<tr><td><b>Empfänger Konto:</b></td><td>" + order.getReceiverKontoNumber() + "</td></tr>" +
+                "<tr><td><b>Absender:</b></td><td>" + order.getSenderName() + "</td></tr>" +
+                "<tr><td><b>Absender Konto:</b></td><td>" + order.getSenderKontoNumber() + "</td></tr>" +
+                "</table>" +
+                "<h3 style='color: #1e3a5f; margin-top: 20px; margin-bottom: 10px;'>Bestellte Artikel</h3>" +
+                "<table border='1' cellpadding='8' cellspacing='0' style='width: 100%; border-collapse: collapse; border-color: #ddd;'>" +
+                "<tr style='background-color: #3e5462; color: white;'>" +
+                "<th>Art.-Nr.</th><th>Name</th><th>Menge</th><th>Einzelpreis</th><th>Gesamt</th>" +
+                "</tr>" +
+                articlesHtml.toString() +
+                "<tr style='background-color: #f0f0f0; font-weight: bold;'>" +
+                "<td colspan='4' align='right'>Gesamtpreis:</td>" +
+                "<td align='right' style='color: #1e3a5f; font-size: 16px;'>" + String.format("%.2f", totalPrice) + " CHF</td>" +
+                "</tr>" +
+                "</table>" +
+                "</body></html>";
 
         JEditorPane editorPane = new JEditorPane("text/html", htmlContent);
         editorPane.setEditable(false);

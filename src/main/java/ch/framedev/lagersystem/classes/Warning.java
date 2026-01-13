@@ -66,6 +66,9 @@ public class Warning {
         isDisplayed = displayed;
     }
 
+    /**
+     * The type of warning.
+     */
     public static enum WarningType {
         LOW_STOCK("Geringer Lagerbestand"),
         ORDER_NEEDED("Bestellung erforderlich"),

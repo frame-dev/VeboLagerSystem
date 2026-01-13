@@ -1,6 +1,7 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.main.Main;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -206,7 +207,8 @@ public class ArticleListGUI extends JFrame {
         editQtyBtn.addActionListener(e -> {
             int sel = articleJList.getSelectedIndex();
             if (sel == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
+                        Main.icon);
                 return;
             }
             ArticleDisplay selected = listModel.getElementAt(sel);
@@ -217,13 +219,15 @@ public class ArticleListGUI extends JFrame {
                 try {
                     int newQty = Integer.parseInt(input.trim());
                     if (newQty <= 0) {
-                        JOptionPane.showMessageDialog(this, "Menge muss größer als 0 sein.", "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Menge muss größer als 0 sein.", "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE,
+                                Main.icon);
                         return;
                     }
                     articlesAndQuantity.put(selected.article, newQty);
                     refreshArticleList();
                 } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(this, "Ungültige Zahl: " + input, "Fehler", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Ungültige Zahl: " + input, "Fehler", JOptionPane.ERROR_MESSAGE,
+                            Main.icon);
                 }
             }
         });
@@ -237,7 +241,7 @@ public class ArticleListGUI extends JFrame {
         });
 
         clearAllBtn.addActionListener(e -> {
-            if (JOptionPane.showConfirmDialog(this, "Alle Artikel entfernen?", "Bestätigen", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+            if (JOptionPane.showConfirmDialog(this, "Alle Artikel entfernen?", "Bestätigen", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, Main.icon) == JOptionPane.YES_OPTION) {
                 articlesAndQuantity.clear();
                 refreshArticleList();
             }
@@ -270,7 +274,8 @@ public class ArticleListGUI extends JFrame {
                             ad.article.getSellPrice(),
                             ad.article.getPurchasePrice()
                         );
-                        JOptionPane.showMessageDialog(ArticleListGUI.this, details, "Artikel Details", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(ArticleListGUI.this, details, "Artikel Details", JOptionPane.INFORMATION_MESSAGE,
+                                Main.icon);
                     }
                 }
             }

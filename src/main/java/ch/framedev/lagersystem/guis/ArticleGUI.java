@@ -7,8 +7,6 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.WarningManager;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
-import ch.framedev.lagersystem.utils.RoundButton;
-import ch.framedev.simplejavautils.SimpleJavaUtils;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -27,13 +25,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
-import java.util.Timer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -141,10 +137,10 @@ public class ArticleGUI extends JFrame {
                         (String) row[7]
                 );
                 if (!articleManager.insertArticle(article)) {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
                 } else {
                     loadArticles(); // Reload articles from database to ensure consistency
-                    JOptionPane.showMessageDialog(this, "Artikel erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Artikel erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.icon);
                 }
             }
         });
@@ -154,7 +150,7 @@ public class ArticleGUI extends JFrame {
         editArticleButton.addActionListener(e -> {
             int selectedRow = articleTable.getSelectedRow();
             if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE, Main.icon);
                 return;
             }
             int modelRow = articleTable.convertRowIndexToModel(selectedRow);
@@ -191,9 +187,9 @@ public class ArticleGUI extends JFrame {
                 );
                 if (articleManager.updateArticle(article)) {
                     loadArticles(); // Refresh to ensure consistency
-                    JOptionPane.showMessageDialog(this, "Artikel erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Artikel erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.icon);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Artikels.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Artikels.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
                 }
             }
         });
@@ -738,7 +734,8 @@ public class ArticleGUI extends JFrame {
                 JOptionPane.showMessageDialog(dialog,
                         "Artikelnummer und Name sind Pflichtfelder.",
                         "Fehler",
-                        JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.ERROR_MESSAGE,
+                        Main.icon);
                 return;
             }
 
@@ -755,7 +752,8 @@ public class ArticleGUI extends JFrame {
                 JOptionPane.showMessageDialog(dialog,
                         "Bitte gültige Preise eingeben.",
                         "Fehler",
-                        JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.ERROR_MESSAGE,
+                        Main.icon);
                 return;
             }
 
@@ -1000,7 +998,8 @@ public class ArticleGUI extends JFrame {
                 JOptionPane.showMessageDialog(dialog,
                         "Artikelnummer und Name sind Pflichtfelder.",
                         "Fehler",
-                        JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.ERROR_MESSAGE,
+                        Main.icon);
                 return;
             }
 
@@ -1017,7 +1016,8 @@ public class ArticleGUI extends JFrame {
                 JOptionPane.showMessageDialog(dialog,
                         "Bitte gültige Preise eingeben.",
                         "Fehler",
-                        JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.ERROR_MESSAGE,
+                        Main.icon);
                 return;
             }
 
@@ -1376,7 +1376,8 @@ public class ArticleGUI extends JFrame {
                     "❌ Fehler beim PDF-Export:\n\n" + ex.getMessage() +
                             "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.",
                     "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.icon);
         }
     }
 
@@ -1562,11 +1563,13 @@ public class ArticleGUI extends JFrame {
     private void deleteSelectedArticle() {
         int selectedRow = articleTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
+                    Main.icon);
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Artikel wirklich löschen?", "Artikel löschen", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Artikel wirklich löschen?", "Artikel löschen", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,
+                Main.icon);
         if (confirm != JOptionPane.YES_OPTION) return;
 
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
@@ -1579,9 +1582,9 @@ public class ArticleGUI extends JFrame {
             // Only remove from table if DB deletion succeeded
             model.removeRow(modelRow);
             updateCountLabel();
-            JOptionPane.showMessageDialog(this, "Artikel erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Artikel erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.icon);
         } else {
-            JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Artikels aus der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Artikels aus der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
         }
     }
 
@@ -1717,7 +1720,8 @@ public class ArticleGUI extends JFrame {
                     JOptionPane.showMessageDialog(dialog,
                             "Die Warnung wurde als gelöst markiert.",
                             "Erfolg",
-                            JOptionPane.INFORMATION_MESSAGE);
+                            JOptionPane.INFORMATION_MESSAGE,
+                            Main.icon);
                     dialog.dispose();
                 });
                 buttonPanel.add(resolveBtn);
@@ -1810,7 +1814,7 @@ public class ArticleGUI extends JFrame {
 
                     Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
                     if (article == null) {
-                        JOptionPane.showMessageDialog(ArticleGUI.this, "Artikel konnte nicht gefunden werden.", "Fehler", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(ArticleGUI.this, "Artikel konnte nicht gefunden werden.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
                         return;
                     }
 
@@ -1824,8 +1828,20 @@ public class ArticleGUI extends JFrame {
                     try {
                         int quantity = Integer.parseInt(input.trim());
                         if (quantity <= 0) {
-                            JOptionPane.showMessageDialog(ArticleGUI.this, "Menge muss größer als 0 sein.", "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(ArticleGUI.this, "Menge muss größer als 0 sein.", "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE, Main.icon);
                             return;
+                        }
+
+                        if (article.getStockQuantity() < quantity) {
+                            int confirm = JOptionPane.showConfirmDialog(ArticleGUI.this,
+                                    "Der Lagerbestand ist niedriger als die gewünschte Menge.\nMöchten Sie trotzdem fortfahren?",
+                                    "Niedriger Lagerbestand",
+                                    JOptionPane.YES_NO_OPTION,
+                                    JOptionPane.WARNING_MESSAGE,
+                                    Main.icon);
+                            if (confirm != JOptionPane.YES_OPTION) {
+                                return;
+                            }
                         }
 
                         ArticleListGUI.addArticle(article, quantity);
@@ -1843,7 +1859,7 @@ public class ArticleGUI extends JFrame {
                         }
 
                     } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(ArticleGUI.this, "Ungültige Menge: " + input, "Fehler", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(ArticleGUI.this, "Ungültige Menge: " + input, "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
                     }
                 }
             }
@@ -2016,7 +2032,8 @@ public class ArticleGUI extends JFrame {
                     JOptionPane.showMessageDialog(dialog,
                             "Bitte wählen Sie eine Warnung aus.",
                             "Keine Auswahl",
-                            JOptionPane.WARNING_MESSAGE);
+                            JOptionPane.WARNING_MESSAGE,
+                            Main.icon);
                     return;
                 }
                 Warning selectedWarning = warnings.get(selectedRow);
@@ -2035,7 +2052,7 @@ public class ArticleGUI extends JFrame {
                 }
             });
 
-             JButton resolveBtn = new JButton("Als gelöst markieren");
+            JButton resolveBtn = new JButton("Als gelöst markieren");
             styleButton(resolveBtn, new Color(40, 180, 99), Color.WHITE);
             resolveBtn.addActionListener(e -> {
                 int selectedRow = warningsTable.getSelectedRow();
@@ -2043,7 +2060,8 @@ public class ArticleGUI extends JFrame {
                     JOptionPane.showMessageDialog(dialog,
                             "Bitte wählen Sie eine Warnung aus.",
                             "Keine Auswahl",
-                            JOptionPane.WARNING_MESSAGE);
+                            JOptionPane.WARNING_MESSAGE,
+                            Main.icon);
                     return;
                 }
                 Warning selectedWarning = warnings.get(selectedRow);
@@ -2051,7 +2069,8 @@ public class ArticleGUI extends JFrame {
                     JOptionPane.showMessageDialog(dialog,
                             "Diese Warnung wurde bereits gelöst.",
                             "Bereits gelöst",
-                            JOptionPane.INFORMATION_MESSAGE);
+                            JOptionPane.INFORMATION_MESSAGE,
+                            Main.icon);
                     return;
                 }
                 if (warningManager.resolveWarning(selectedWarning.getTitle())) {
@@ -2059,7 +2078,8 @@ public class ArticleGUI extends JFrame {
                     JOptionPane.showMessageDialog(dialog,
                             "Warnung wurde als gelöst markiert.",
                             "Erfolg",
-                            JOptionPane.INFORMATION_MESSAGE);
+                            JOptionPane.INFORMATION_MESSAGE,
+                            Main.icon);
                 }
             });
 
@@ -2071,13 +2091,14 @@ public class ArticleGUI extends JFrame {
                     JOptionPane.showMessageDialog(dialog,
                             "Bitte wählen Sie eine Warnung aus.",
                             "Keine Auswahl",
-                            JOptionPane.WARNING_MESSAGE);
+                            JOptionPane.WARNING_MESSAGE,
+                            Main.icon);
                     return;
                 }
                 int confirm = JOptionPane.showConfirmDialog(dialog,
                         "Möchten Sie diese Warnung wirklich löschen?",
                         "Löschen bestätigen",
-                        JOptionPane.YES_NO_OPTION);
+                        JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, Main.icon);
                 if (confirm == JOptionPane.YES_OPTION) {
                     Warning selectedWarning = warnings.get(selectedRow);
                     if (warningManager.deleteWarning(selectedWarning.getTitle())) {
@@ -2087,7 +2108,8 @@ public class ArticleGUI extends JFrame {
                         JOptionPane.showMessageDialog(dialog,
                                 "Warnung wurde gelöscht.",
                                 "Erfolg",
-                                JOptionPane.INFORMATION_MESSAGE);
+                                JOptionPane.INFORMATION_MESSAGE,
+                                Main.icon);
                     }
                 }
             });
@@ -2169,7 +2191,7 @@ public class ArticleGUI extends JFrame {
 
         } catch (Exception e) {
             System.err.println("Error loading categories: " + e.getMessage());
-            JOptionPane.showMessageDialog(null, "Fehler beim Laden der Kategorien: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Fehler beim Laden der Kategorien: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
         }
     }
 
@@ -2403,7 +2425,8 @@ public class ArticleGUI extends JFrame {
                 JOptionPane.showMessageDialog(dialog,
                         "Bitte wählen Sie mindestens einen Datensatz aus.",
                         "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE);
+                        JOptionPane.WARNING_MESSAGE,
+                        Main.icon);
                 return;
             }
 
@@ -2455,7 +2478,8 @@ public class ArticleGUI extends JFrame {
                                 menge, article.getName()),
                         "Entfernen bestätigen",
                         JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE);
+                        JOptionPane.QUESTION_MESSAGE,
+                        Main.icon);
 
                 if (confirm == JOptionPane.YES_OPTION) {
                     ArticleManager.getInstance().removeFromStock(artikelNr, menge);
@@ -2681,7 +2705,8 @@ public class ArticleGUI extends JFrame {
                             selectedRows.length),
                     "Import bestätigen",
                     JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE);
+                    JOptionPane.QUESTION_MESSAGE,
+                    Main.icon);
 
             if (confirm == JOptionPane.YES_OPTION) {
                 int imported = 0;
@@ -2705,7 +2730,7 @@ public class ArticleGUI extends JFrame {
                             } else {
                                 errors++;
                             }
-                        } else if(article == null) {
+                        } else if (article == null) {
                             Article newArticle = retrieveParts(parts);
                             if (articleManager.insertArticle(newArticle)) {
                                 if (articleManager.addToStock(artikelNr, quantity)) {
@@ -2734,7 +2759,8 @@ public class ArticleGUI extends JFrame {
                 JOptionPane.showMessageDialog(dialog,
                         message,
                         "Import Ergebnis",
-                        errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+                        errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE,
+                        Main.icon);
 
                 statusLabel.setText(imported + " Datensätze importiert" + (errors > 0 ? " (" + errors + " Fehler)" : ""));
                 statusIcon.setForeground(errors > 0 ? new Color(255, 193, 7) : new Color(46, 204, 113));
@@ -2750,7 +2776,8 @@ public class ArticleGUI extends JFrame {
                             rowCount),
                     "Import bestätigen",
                     JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE);
+                    JOptionPane.QUESTION_MESSAGE,
+                    Main.icon);
 
             if (confirm == JOptionPane.YES_OPTION) {
                 statusLabel.setText("Importiere " + rowCount + " Datensätze...");
@@ -2831,7 +2858,8 @@ public class ArticleGUI extends JFrame {
                         JOptionPane.showMessageDialog(dialog,
                                 message,
                                 "Import Ergebnis",
-                                errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+                                errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE,
+                                Main.icon);
 
                         statusLabel.setText(String.format("%d importiert%s",
                                 imported,
