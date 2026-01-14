@@ -607,15 +607,7 @@ public class ArticleGUI extends JFrame {
         verkaufLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         verkaufLabel.setForeground(new Color(127, 140, 141));
         verkaufPanel.add(verkaufLabel, BorderLayout.NORTH);
-        JFormattedTextField verkaufField = new JFormattedTextField(priceFormatter);
-        verkaufField.setColumns(12);
-        verkaufField.setValue(existingVerkauf);
-        verkaufField.setFont(new Font("Arial", Font.PLAIN, 14));
-        verkaufField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-        verkaufField.setBackground(new Color(250, 251, 252));
+        JFormattedTextField verkaufField = getVerkaufField(priceFormatter, existingVerkauf);
         verkaufPanel.add(verkaufField, BorderLayout.CENTER);
 
         JPanel einkaufPanel = new JPanel(new BorderLayout(0, 6));
@@ -624,15 +616,7 @@ public class ArticleGUI extends JFrame {
         einkaufLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         einkaufLabel.setForeground(new Color(127, 140, 141));
         einkaufPanel.add(einkaufLabel, BorderLayout.NORTH);
-        JFormattedTextField einkaufField = new JFormattedTextField(priceFormatter);
-        einkaufField.setColumns(12);
-        einkaufField.setValue(existingEinkauf);
-        einkaufField.setFont(new Font("Arial", Font.PLAIN, 14));
-        einkaufField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-        einkaufField.setBackground(new Color(250, 251, 252));
+        JFormattedTextField einkaufField = getVerkaufField(priceFormatter, existingEinkauf);
         einkaufPanel.add(einkaufField, BorderLayout.CENTER);
 
         pricePanel.add(verkaufPanel);
@@ -768,6 +752,19 @@ public class ArticleGUI extends JFrame {
         dialog.setVisible(true);
 
         return resultHolder[0];
+    }
+
+    private static JFormattedTextField getVerkaufField(NumberFormatter priceFormatter, double existingVerkauf) {
+        JFormattedTextField verkaufField = new JFormattedTextField(priceFormatter);
+        verkaufField.setColumns(12);
+        verkaufField.setValue(existingVerkauf);
+        verkaufField.setFont(new Font("Arial", Font.PLAIN, 14));
+        verkaufField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
+        verkaufField.setBackground(new Color(250, 251, 252));
+        return verkaufField;
     }
 
     /**
