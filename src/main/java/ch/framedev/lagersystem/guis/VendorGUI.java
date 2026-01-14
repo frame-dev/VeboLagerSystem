@@ -434,16 +434,55 @@ public class VendorGUI extends JFrame {
     private JButton createRoundedButton(String text) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
         button.setOpaque(true);
-        button.setBackground(new Color(237, 242, 247));
-        button.setForeground(new Color(20, 30, 40));
-        button.setFont(button.getFont().deriveFont(Font.BOLD));
+
+        // Modern color scheme
+        Color defaultBg = new Color(52, 152, 219); // Blue
+        Color hoverBg = new Color(41, 128, 185);   // Darker blue
+        Color pressedBg = new Color(31, 97, 141);  // Even darker blue
+
+        button.setBackground(defaultBg);
+        button.setForeground(Color.WHITE);
+        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 210, 220), 2),
-                BorderFactory.createEmptyBorder(8, 14, 8, 14)
+                BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Add hover effects
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                button.setBackground(hoverBg);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(31, 97, 141), 1),
+                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                ));
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                button.setBackground(defaultBg);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                ));
+            }
+
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                button.setBackground(pressedBg);
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                button.setBackground(hoverBg);
+            }
+        });
+
         return button;
     }
 

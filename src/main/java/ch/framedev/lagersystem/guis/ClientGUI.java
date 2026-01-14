@@ -9,6 +9,8 @@ import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.*;
@@ -86,6 +88,7 @@ public class ClientGUI extends JFrame {
 
         // Table setup
         clientTable = new JTable();
+        // initialize the Client Table
         initializeClientTable();
         tableScrollPane = new JScrollPane(clientTable);
         card.add(tableScrollPane, BorderLayout.CENTER);
@@ -242,110 +245,450 @@ public class ClientGUI extends JFrame {
 
     private Object[] showAddClientDialog() {
         final Object[][] holder = new Object[1][];
+
         JDialog dialog = new JDialog(this, "Neuen Kunden hinzufügen", true);
-        JPanel p = new JPanel(new GridBagLayout());
-        p.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 6, 6, 6);
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        dialog.setUndecorated(true);
 
-        int row = 0;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        p.add(new JLabel("Vorname und Nachname:"), gbc);
-        JTextField nameField = new JTextField(20);
-        gbc.gridx = 1;
-        p.add(nameField, gbc);
-        row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        p.add(new JLabel("Abteilung:"), gbc);
-        departmentCombobox = new JComboBox<>();
-        fillDepartmentList();
-        gbc.gridx = 1;
-        p.add(departmentCombobox, gbc);
+        // Main container with background
+        JPanel mainContainer = new JPanel(new BorderLayout());
+        mainContainer.setBackground(new Color(245, 247, 250));
+        mainContainer.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(180, 190, 200), 2),
+            BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ));
 
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton ok = new JButton("OK");
-        JButton cancel = new JButton("Abbrechen");
-        buttons.add(cancel);
-        buttons.add(ok);
-        gbc.gridx = 0;
-        gbc.gridy = ++row;
-        gbc.gridwidth = 2;
-        p.add(buttons, gbc);
+        // Header panel with gradient-like effect
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(41, 128, 185)); // Blue
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
 
-        ok.addActionListener(ae -> {
-            String name = nameField.getText().trim();
-            String selectedDept = (String) departmentCombobox.getSelectedItem();
-            if(selectedDept == null) {
-                selectedDept = "";
+        JLabel titleLabel = new JLabel("➕  Neuen Kunden hinzufügen");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        titleLabel.setForeground(Color.WHITE);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+
+        // Styled close button
+        JButton closeBtn = new JButton("✕");
+        closeBtn.setForeground(Color.WHITE);
+        closeBtn.setBackground(new Color(192, 57, 43)); // Darker red background
+        closeBtn.setBorderPainted(false);
+        closeBtn.setFocusPainted(false);
+        closeBtn.setContentAreaFilled(true);
+        closeBtn.setOpaque(true);
+        closeBtn.setFont(new Font("Arial", Font.BOLD, 18));
+        closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        closeBtn.setPreferredSize(new Dimension(45, 45));
+        closeBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(169, 50, 38), 1),
+            BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+        closeBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                closeBtn.setBackground(new Color(231, 76, 60));
             }
-            String dept = selectedDept.trim();
-            if (name.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                        Main.icon);
-                return;
-            }
-            holder[0] = new Object[]{name, dept};
-            dialog.dispose();
-            ClientManager clientManager = ClientManager.getInstance();
-            if(!clientManager.insertClient(name, dept)) {
-                JOptionPane.showMessageDialog(dialog, "Fehler beim Hinzufügen des Kunden zur Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                        Main.icon);
+            @Override
+            public void mouseExited(MouseEvent e) {
+                closeBtn.setBackground(new Color(192, 57, 43));
             }
         });
-        cancel.addActionListener(ae -> {
+        closeBtn.addActionListener(e -> {
             holder[0] = null;
             dialog.dispose();
         });
 
-        dialog.getContentPane().add(p);
-        dialog.pack();
+        JPanel closeBtnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        closeBtnPanel.setOpaque(false);
+        closeBtnPanel.add(closeBtn);
+        headerPanel.add(closeBtnPanel, BorderLayout.EAST);
+        mainContainer.add(headerPanel, BorderLayout.NORTH);
+
+        // Content card
+        RoundedPanel contentCard = new RoundedPanel(Color.WHITE, 0);
+        contentCard.setBorder(BorderFactory.createEmptyBorder(32, 40, 32, 40));
+        contentCard.setLayout(new GridBagLayout());
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+
+        // Helper for labels
+        java.util.function.Function<String, JLabel> createLabel = text -> {
+            JLabel label = new JLabel(text);
+            label.setFont(new Font("Arial", Font.BOLD, 13));
+            label.setForeground(new Color(44, 62, 80));
+            return label;
+        };
+
+        // Helper for text fields
+        java.util.function.Consumer<JTextField> styleTextField = field -> {
+            field.setFont(new Font("Arial", Font.PLAIN, 14));
+            field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+            ));
+            field.setBackground(new Color(250, 251, 252));
+            field.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(52, 152, 219), 2, true),
+                        BorderFactory.createEmptyBorder(9, 11, 9, 11)
+                    ));
+                }
+                @Override
+                public void focusLost(FocusEvent e) {
+                    field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                        BorderFactory.createEmptyBorder(10, 12, 10, 12)
+                    ));
+                }
+            });
+        };
+
+        int row = 0;
+
+        // Name field with icon
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 1;
+        JLabel nameLabel = createLabel.apply("👤  Vorname und Nachname *");
+        contentCard.add(nameLabel, gbc);
+        row++;
+        gbc.gridy = row;
+        gbc.insets = new Insets(2, 6, 16, 6);
+        JTextField nameField = new JTextField(30);
+        styleTextField.accept(nameField);
+        contentCard.add(nameField, gbc);
+
+        row++;
+        gbc.insets = new Insets(6, 6, 6, 6);
+
+        // Department field with icon
+        gbc.gridy = row;
+        JLabel deptLabel = createLabel.apply("🏢  Abteilung");
+        contentCard.add(deptLabel, gbc);
+        row++;
+        gbc.gridy = row;
+        gbc.insets = new Insets(2, 6, 6, 6);
+        departmentCombobox = new JComboBox<>();
+        fillDepartmentList();
+        departmentCombobox.setFont(new Font("Arial", Font.PLAIN, 14));
+        departmentCombobox.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        departmentCombobox.setBackground(new Color(250, 251, 252));
+        departmentCombobox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        contentCard.add(departmentCombobox, gbc);
+
+        mainContainer.add(contentCard, BorderLayout.CENTER);
+
+        // Button panel with improved styling
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 16));
+        buttonPanel.setBackground(new Color(250, 251, 252));
+        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 225, 230)));
+
+        JButton cancelBtn = new JButton("✕  Abbrechen");
+        cancelBtn.setFont(new Font("Arial", Font.BOLD, 13));
+        cancelBtn.setForeground(new Color(52, 73, 94));
+        cancelBtn.setBackground(new Color(236, 240, 241));
+        cancelBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+            BorderFactory.createEmptyBorder(10, 20, 10, 20)
+        ));
+        cancelBtn.setFocusPainted(false);
+        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        cancelBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                cancelBtn.setBackground(new Color(220, 225, 230));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                cancelBtn.setBackground(new Color(236, 240, 241));
+            }
+        });
+
+        JButton okBtn = new JButton("✓  Hinzufügen");
+        okBtn.setFont(new Font("Arial", Font.BOLD, 13));
+        okBtn.setForeground(Color.BLACK);
+        okBtn.setBackground(new Color(52, 152, 219));
+        okBtn.setOpaque(true);
+        okBtn.setContentAreaFilled(true);
+        okBtn.setBorderPainted(true);
+        okBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+            BorderFactory.createEmptyBorder(10, 27, 10, 27)
+        ));
+        okBtn.setFocusPainted(false);
+        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        okBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                okBtn.setBackground(new Color(41, 128, 185));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                okBtn.setBackground(new Color(52, 152, 219));
+            }
+        });
+
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(okBtn);
+        mainContainer.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.getContentPane().add(mainContainer);
+        dialog.getRootPane().setDefaultButton(okBtn);
+
+        // Actions
+        cancelBtn.addActionListener(ae -> {
+            holder[0] = null;
+            dialog.dispose();
+        });
+
+        okBtn.addActionListener(ae -> {
+            String name = nameField.getText().trim();
+            String selectedDept = (String) departmentCombobox.getSelectedItem();
+            if (selectedDept == null) {
+                selectedDept = "";
+            }
+            String dept = selectedDept.trim();
+
+            if (name.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog,
+                    "Name ist erforderlich.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            holder[0] = new Object[]{name, dept};
+
+            ClientManager clientManager = ClientManager.getInstance();
+            if (!clientManager.insertClient(name, dept)) {
+                JOptionPane.showMessageDialog(dialog,
+                    "Fehler beim Hinzufügen des Kunden zur Datenbank.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
+                holder[0] = null;
+            }
+
+            dialog.dispose();
+        });
+
+        // Show dialog
+        dialog.setSize(650, 400);
         dialog.setLocationRelativeTo(this);
+        SwingUtilities.invokeLater(nameField::requestFocusInWindow);
         dialog.setVisible(true);
+
         return holder[0];
     }
 
     private Object[] showUpdateClientDialog(Object[] existing) {
         final Object[][] holder = new Object[1][];
         JDialog dialog = new JDialog(this, "Kunde bearbeiten", true);
-        JPanel p = new JPanel(new GridBagLayout());
-        p.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        dialog.setUndecorated(true);
+
+        // Main container with shadow effect
+        JPanel mainContainer = new JPanel(new BorderLayout());
+        mainContainer.setBackground(new Color(245, 247, 250));
+        mainContainer.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(180, 190, 200), 2),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ));
+
+        // Header panel with gradient-like effect
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(41, 128, 185));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+
+        JLabel titleLabel = new JLabel("✏️  Kunde bearbeiten");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        titleLabel.setForeground(Color.WHITE);
+        headerPanel.add(titleLabel, BorderLayout.WEST);
+
+        // Styled close button
+        JButton closeBtn = new JButton("✕");
+        closeBtn.setForeground(Color.WHITE);
+        closeBtn.setBackground(new Color(192, 57, 43)); // Darker red background
+        closeBtn.setBorderPainted(false);
+        closeBtn.setFocusPainted(false);
+        closeBtn.setContentAreaFilled(true);
+        closeBtn.setOpaque(true);
+        closeBtn.setFont(new Font("Arial", Font.BOLD, 18));
+        closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        closeBtn.setPreferredSize(new Dimension(45, 45));
+        closeBtn.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(169, 50, 38), 1),
+            BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+        closeBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                closeBtn.setBackground(new Color(231, 76, 60));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                closeBtn.setBackground(new Color(192, 57, 43));
+            }
+        });
+        closeBtn.addActionListener(e -> {
+            holder[0] = null;
+            dialog.dispose();
+        });
+
+        JPanel closeBtnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        closeBtnPanel.setOpaque(false);
+        closeBtnPanel.add(closeBtn);
+        headerPanel.add(closeBtnPanel, BorderLayout.EAST);
+        mainContainer.add(headerPanel, BorderLayout.NORTH);
+
+        // Content card
+        RoundedPanel contentCard = new RoundedPanel(Color.WHITE, 0);
+        contentCard.setBorder(BorderFactory.createEmptyBorder(32, 40, 32, 40));
+        contentCard.setLayout(new GridBagLayout());
+
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.insets = new Insets(8, 8, 8, 8);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
 
-        int row = 0;
+        // Name field with icon
+        JLabel nameLabel = new JLabel("👤  Vorname und Nachname *");
+        nameLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        nameLabel.setForeground(new Color(44, 62, 80));
         gbc.gridx = 0;
-        gbc.gridy = row;
-        p.add(new JLabel("Vorname und Nachname:"), gbc);
-        JTextField nameField = new JTextField(existing[0] == null ? "" : existing[0].toString(), 20);
-        gbc.gridx = 1;
-        p.add(nameField, gbc);
+        gbc.gridy = 0;
+        contentCard.add(nameLabel, gbc);
 
-        row++;
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        p.add(new JLabel("Abteilung:"), gbc);
+        JTextField nameField = new JTextField(existing[0] == null ? "" : existing[0].toString(), 25);
+        nameField.setFont(new Font("Arial", Font.PLAIN, 14));
+        nameField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
+        nameField.setBackground(new Color(250, 251, 252));
+        nameField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                nameField.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(52, 152, 219), 2, true),
+                        BorderFactory.createEmptyBorder(9, 11, 9, 11)
+                ));
+            }
+            @Override
+            public void focusLost(FocusEvent e) {
+                nameField.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                        BorderFactory.createEmptyBorder(10, 12, 10, 12)
+                ));
+            }
+        });
+        gbc.gridy = 1;
+        gbc.insets = new Insets(2, 8, 20, 8);
+        contentCard.add(nameField, gbc);
+
+        // Department field with icon
+        JLabel deptLabel = new JLabel("🏢  Abteilung");
+        deptLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        deptLabel.setForeground(new Color(44, 62, 80));
+        gbc.gridy = 2;
+        gbc.insets = new Insets(8, 8, 8, 8);
+        contentCard.add(deptLabel, gbc);
+
         departmentCombobox = new JComboBox<>();
-        gbc.gridx = 1;
-        p.add(departmentCombobox, gbc);
+        departmentCombobox.setFont(new Font("Arial", Font.PLAIN, 14));
+        departmentCombobox.setBackground(new Color(250, 251, 252));
+        departmentCombobox.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
         fillDepartmentList();
 
-        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton ok = new JButton("OK");
-        JButton cancel = new JButton("Abbrechen");
-        buttons.add(cancel);
-        buttons.add(ok);
-        gbc.gridx = 0;
-        gbc.gridy = ++row;
-        gbc.gridwidth = 2;
-        p.add(buttons, gbc);
+        // Pre-select existing department
+        if (existing[1] != null) {
+            String existingDept = existing[1].toString();
+            for (int i = 0; i < departmentCombobox.getItemCount(); i++) {
+                if (existingDept.equals(departmentCombobox.getItemAt(i))) {
+                    departmentCombobox.setSelectedIndex(i);
+                    break;
+                }
+            }
+        }
 
-        ok.addActionListener(ae -> {
+        gbc.gridy = 3;
+        gbc.insets = new Insets(2, 8, 8, 8);
+        contentCard.add(departmentCombobox, gbc);
+
+        mainContainer.add(contentCard, BorderLayout.CENTER);
+
+        // Button panel with improved styling
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
+        buttonPanel.setBackground(new Color(250, 251, 252));
+        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 225, 230)));
+
+        JButton cancelBtn = new JButton("Abbrechen");
+        cancelBtn.setFont(new Font("Arial", Font.BOLD, 13));
+        cancelBtn.setForeground(new Color(52, 73, 94));
+        cancelBtn.setBackground(new Color(236, 240, 241));
+        cancelBtn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)
+        ));
+        cancelBtn.setFocusPainted(false);
+        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        cancelBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                cancelBtn.setBackground(new Color(220, 225, 230));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                cancelBtn.setBackground(new Color(236, 240, 241));
+            }
+        });
+
+        JButton okBtn = new JButton("💾  Speichern");
+        okBtn.setFont(new Font("Arial", Font.BOLD, 13));
+        okBtn.setForeground(Color.WHITE);
+        okBtn.setBackground(new Color(46, 204, 113));
+        okBtn.setOpaque(true);
+        okBtn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(39, 174, 96), 1),
+                BorderFactory.createEmptyBorder(10, 24, 10, 24)
+        ));
+        okBtn.setFocusPainted(false);
+        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        okBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                okBtn.setBackground(new Color(39, 174, 96));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                okBtn.setBackground(new Color(46, 204, 113));
+            }
+        });
+
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(okBtn);
+        mainContainer.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.getContentPane().add(mainContainer);
+        dialog.getRootPane().setDefaultButton(okBtn);
+
+        // Actions
+        cancelBtn.addActionListener(ae -> {
+            holder[0] = null;
+            dialog.dispose();
+        });
+
+        okBtn.addActionListener(ae -> {
             String name = nameField.getText().trim();
             String selectedDept = (String) departmentCombobox.getSelectedItem();
             if(selectedDept == null) {
@@ -369,33 +712,33 @@ public class ClientGUI extends JFrame {
                 }
             }
         });
-        cancel.addActionListener(ae -> {
-            holder[0] = null;
-            dialog.dispose();
-        });
 
-        dialog.getContentPane().add(p);
-        dialog.pack();
+        // Show dialog
+        dialog.setSize(650, 450);
         dialog.setLocationRelativeTo(this);
+        SwingUtilities.invokeLater(nameField::requestFocusInWindow);
         dialog.setVisible(true);
         return holder[0];
     }
 
+    /**
+     * Optimized method to fill department combobox.
+     * Uses stream processing for better performance and cleaner code.
+     */
     private void fillDepartmentList() {
         departmentCombobox.removeAllItems();
         departmentCombobox.addItem(""); // Empty option
 
-        Set<String> departments = new LinkedHashSet<>();
-        DepartmentManager departmentManager = DepartmentManager.getInstance();
-        for (var department : departmentManager.getAllDepartments()) {
-            String dept = (String) department.get("department");
-            if (dept != null && !dept.trim().isEmpty()) {
-                departments.add(dept.trim());
-            }
-        }
-
-        // Add sorted departments to combo box
-        departments.stream().sorted().forEach(departmentCombobox::addItem);
+        // Stream-based processing: filter, map, sort, and add in one pipeline
+        DepartmentManager.getInstance()
+            .getAllDepartments()
+            .stream()
+            .map(dept -> dept.get("department"))
+            .filter(dept -> dept != null && !dept.toString().trim().isEmpty())
+            .map(dept -> dept.toString().trim())
+            .distinct()  // Remove duplicates
+            .sorted()    // Sort alphabetically
+            .forEach(departmentCombobox::addItem);
 
         // Make it editable so users can enter custom departments
         departmentCombobox.setEditable(true);
@@ -582,17 +925,59 @@ public class ClientGUI extends JFrame {
     private JButton createRoundedButton(String text) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
         button.setOpaque(true);
-        button.setBackground(new Color(237, 242, 247));
-        button.setForeground(new Color(20, 30, 40));
-        button.setFont(button.getFont().deriveFont(Font.BOLD));
+
+        // Modern color scheme
+        Color defaultBg = new Color(52, 152, 219); // Blue
+        Color hoverBg = new Color(41, 128, 185);   // Darker blue
+        Color pressedBg = new Color(31, 97, 141);  // Even darker blue
+
+        button.setBackground(defaultBg);
+        button.setForeground(Color.WHITE);
+        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 210, 220), 2),
-                BorderFactory.createEmptyBorder(10, 18, 10, 18)
+                BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Add hover effects
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(hoverBg);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(31, 97, 141), 1),
+                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                ));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(defaultBg);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                ));
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                button.setBackground(pressedBg);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (button.contains(e.getPoint())) {
+                    button.setBackground(hoverBg);
+                } else {
+                    button.setBackground(defaultBg);
+                }
+            }
+        });
+
         return button;
     }
 

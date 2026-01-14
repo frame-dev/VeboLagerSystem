@@ -40,7 +40,6 @@ import static ch.framedev.lagersystem.main.Main.articleListGUI;
 /**
  * ArticleGUI with category support for better organization.
  * Categories are loaded from categories.json and mapped to articles based on article number ranges.
- * TODO: Performance Upgrade
  */
 @SuppressWarnings("unused")
 public class ArticleGUI extends JFrame {
@@ -385,8 +384,8 @@ public class ArticleGUI extends JFrame {
         closeBtn.setForeground(Color.WHITE);
         closeBtn.setBackground(new Color(41, 128, 185));
         closeBtn.setBorderPainted(false);
-        closeBtn.setFocusPainted(false);
-        closeBtn.setContentAreaFilled(false);
+        closeBtn.setFocusPainted(true);
+        closeBtn.setContentAreaFilled(true);
         closeBtn.setFont(new Font("Arial", Font.BOLD, 24));
         closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         closeBtn.setPreferredSize(new Dimension(40, 40));
@@ -1507,27 +1506,52 @@ public class ArticleGUI extends JFrame {
         button.setBorderPainted(true);
         button.setContentAreaFilled(true);
         button.setOpaque(true);
-        // softer button background and darker text for contrast
-        button.setBackground(new Color(237, 242, 247));
-        button.setForeground(new Color(0, 0, 0));
-        button.setFont(button.getFont().deriveFont(Font.BOLD));
+
+        // Modern color scheme
+        Color defaultBg = new Color(52, 152, 219); // Blue
+        Color hoverBg = new Color(41, 128, 185);   // Darker blue
+        Color pressedBg = new Color(31, 97, 141);  // Even darker blue
+
+        button.setBackground(defaultBg);
+        button.setForeground(Color.WHITE);
+        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 210, 220), 2),
+                BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Add hover effects
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                button.setBackground(new Color(205, 205, 207));
+                button.setBackground(hoverBg);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(31, 97, 141), 1),
+                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                ));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                button.setBackground(new Color(237, 242, 247));
+                button.setBackground(defaultBg);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                ));
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                button.setBackground(pressedBg);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                button.setBackground(hoverBg);
             }
         });
-        // button.setPreferredSize(new Dimension(180, 40));
+
         return button;
     }
 

@@ -51,7 +51,6 @@ if (isset($_GET['quantity'])) {
 ?>
 <!doctype html>
 <html lang="de">
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -232,10 +231,6 @@ if (isset($_GET['quantity'])) {
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
 
-        .delete-form button {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-
         p {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
@@ -249,14 +244,6 @@ if (isset($_GET['quantity'])) {
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             position: relative;
             z-index: 1;
-        }
-
-        p[style*="color: red"] {
-            border-left: 4px solid #f5576c;
-        }
-
-        p[style*="color: green"] {
-            border-left: 4px solid #4caf50;
         }
 
         br {
@@ -301,13 +288,14 @@ if (isset($_GET['quantity'])) {
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            font-size: 20px;
             margin-bottom: 15px;
         }
 
         .camera-btn {
             width: 100%;
             padding: 14px;
-            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             border-radius: 8px;
@@ -315,30 +303,13 @@ if (isset($_GET['quantity'])) {
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-bottom: 10px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
-        }
-
-        .camera-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            transition: left 0.5s;
-        }
-
-        .camera-btn:hover::before {
-            left: 100%;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
 
         .camera-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(76, 175, 80, 0.6);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
         }
 
         .stop-btn {
@@ -351,125 +322,50 @@ if (isset($_GET['quantity'])) {
         }
 
         .scanned-result {
-            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-            padding: 18px;
-            border-radius: 12px;
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 10px;
             margin-top: 15px;
             border-left: 4px solid #4caf50;
-            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1), pulse 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
         }
 
         .scanned-label {
-            font-size: 12px;
-            color: #666;
-            text-transform: uppercase;
-            margin-bottom: 5px;
+            color: #2e7d32;
+            font-weight: 600;
+            margin-bottom: 8px;
         }
 
         .scanned-value {
-            font-size: 18px;
-            font-weight: 600;
-            color: #2e7d32;
+            color: #1b5e20;
+            font-family: monospace;
             word-break: break-all;
         }
 
         .nav-links {
-            text-align: center;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
             margin-top: 20px;
-            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.5s backwards;
+            flex-wrap: wrap;
             position: relative;
             z-index: 1;
         }
 
         .nav-links a {
-            color: white;
-            text-decoration: none;
-            margin: 0 15px;
-            font-weight: 600;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 8px 16px;
-            border-radius: 8px;
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.1);
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         }
 
         .nav-links a:hover {
-            background: rgba(255, 255, 255, 0.2);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-
-        .download-section {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-            margin-top: 20px;
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.6s backwards;
-            position: relative;
-            z-index: 1;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .download-section:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-        }
-
-        .download-section h1 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 20px;
-            margin-bottom: 15px;
-        }
-
-        .export-btn {
-            display: inline-block;
-            padding: 14px 28px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .export-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            transition: left 0.5s;
-        }
-
-        .export-btn:hover::before {
-            left: 100%;
-        }
-
-        .export-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-        }
-
-        .export-btn:active {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
     </style>
 </head>
@@ -499,6 +395,7 @@ if (isset($_GET['quantity'])) {
             ✓ Code erkannt: <strong><?php echo $data; ?></strong>
         </p>
     <?php endif; ?>
+    
     <?php if (isset($_GET["error"])): ?>
         <p style="color: red; background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; max-width: 500px; width: 100%; text-align: center; border-left: 4px solid #f44336;">
             ✗ Fehler: Kein gültiger Code gescannt. Bitte erneut versuchen.
@@ -529,9 +426,7 @@ if (isset($_GET['quantity'])) {
     </form>
 
     <div class="nav-links">
-        <a href="start.php">🏠 Start</a>
-        <a href="list.php">📋 Liste</a>
-        <a href="delete.php" onclick="return confirm('Alle Daten löschen?')">🗑️ Löschen</a>
+        <a href="index.php">🏠 Start</a>
     </div>
 
     <script>
@@ -601,11 +496,6 @@ if (isset($_GET['quantity'])) {
             document.getElementById('scannedValue').textContent = urlData;
         }
     </script>
-
-    <div class="download-section">
-        <h1>Download All Data as (scans.json)</h1>
-        <a href="scans.json" download class="export-btn">📥 Download JSON</a>
-    </div>
 </body>
 
 </html>
