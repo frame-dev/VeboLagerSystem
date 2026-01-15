@@ -14,13 +14,26 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicComboBoxUI;
+import javax.swing.plaf.basic.BasicComboPopup;
+import javax.swing.plaf.basic.ComboPopup;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.List;
 import java.util.*;
+import java.util.regex.Pattern;
 
+/**
+ * Modern new order GUI with improved visual design and user experience.
+ * Features: Split panel layout, gradient header, styled components, and PDF export (PDFBox).
+ */
 public class NewOrderGUI extends JFrame {
 
     private final DefaultTableModel orderTableModel;
@@ -35,8 +48,11 @@ public class NewOrderGUI extends JFrame {
 
     private final JComboBox<String> departmentList;
 
+    private JTable orderTable;
+
     public NewOrderGUI() {
         ThemeManager tm = ThemeManager.getInstance();
+        tm.registerWindow(this);
 
         setTitle("Neue Bestellung erstellen");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -47,6 +63,7 @@ public class NewOrderGUI extends JFrame {
         // Header with gradient
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
         headerWrapper.setBackground(tm.getBackgroundColor());
+
         GradientPanel header = new GradientPanel(
                 tm.getPrimaryColor(),
                 tm.getAccentColor()
@@ -84,8 +101,6 @@ public class NewOrderGUI extends JFrame {
         JLabel formTitle = new JLabel("📋 Bestellinformationen");
         formTitle.setFont(formTitle.getFont().deriveFont(Font.BOLD, 17f));
         formTitle.setForeground(tm.getTextPrimaryColor());
-        formTitle.setFont(formTitle.getFont().deriveFont(Font.BOLD, 17f));
-        formTitle.setForeground(new Color(31, 45, 61));
         leftCard.add(formTitle, BorderLayout.NORTH);
 
         // Form panel
@@ -98,21 +113,23 @@ public class NewOrderGUI extends JFrame {
         r.gridy = 0;
         r.weightx = 1.0;
 
+        // Comboboxes
         departmentList = new JComboBox<>();
         fillDepartmentList();
 
         receiverNameCombobox = new JComboBox<>();
         fillReceiverNameCombobox();
+
+        // Apply theme styling to inputs
+        styleComboBox(receiverNameCombobox);
+        styleComboBox(departmentList);
+
         receiverNameCombobox.addActionListener(listener -> {
             String selected = (String) receiverNameCombobox.getSelectedItem();
-            if (selected == null) {
-                JOptionPane.showMessageDialog(NewOrderGUI.this, "Kein Empfänger Name gefunden",
-                        "Fehler", JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall);
-            }
+            if (selected == null || selected.trim().isEmpty()) return;
 
             String department = ClientManager.getInstance().getDepartmentByName(selected);
-            if (department != null) {
+            if (department != null && !department.trim().isEmpty()) {
                 departmentList.setSelectedItem(department);
             }
         });
@@ -123,7 +140,6 @@ public class NewOrderGUI extends JFrame {
         senderKontoField = new JTextField();
         senderKontoField.setText("4250 - 431.689");
 
-        // Style text fields
         styleTextField(receiverKontoField);
         styleTextField(senderNameField);
         styleTextField(senderKontoField);
@@ -139,22 +155,24 @@ public class NewOrderGUI extends JFrame {
             }
         });
 
-        // Add key listener for when user types in the editable combobox
-        departmentList.getEditor().getEditorComponent().addKeyListener(new java.awt.event.KeyAdapter() {
-            @Override
-            public void keyReleased(java.awt.event.KeyEvent e) {
-                String typedDept = departmentList.getEditor().getItem().toString().trim();
-                if (!typedDept.isEmpty()) {
-                    DepartmentManager departmentManager = DepartmentManager.getInstance();
-                    Map<String, Object> dept = departmentManager.getDepartment(typedDept);
-                    if (dept != null && dept.get("kontoNumber") != null) {
-                        receiverKontoField.setText(dept.get("kontoNumber").toString());
+        // When user types in the editable combobox editor
+        Component editor = departmentList.getEditor().getEditorComponent();
+        if (editor instanceof JTextField tf) {
+            tf.addKeyListener(new java.awt.event.KeyAdapter() {
+                @Override
+                public void keyReleased(java.awt.event.KeyEvent e) {
+                    String typedDept = departmentList.getEditor().getItem().toString().trim();
+                    if (!typedDept.isEmpty()) {
+                        Map<String, Object> dept = DepartmentManager.getInstance().getDepartment(typedDept);
+                        if (dept != null && dept.get("kontoNumber") != null) {
+                            receiverKontoField.setText(dept.get("kontoNumber").toString());
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
-        // Add form fields with styled labels
+        // Add form fields
         addStyledFormRow(formPanel, r, "👤 Empfänger Name:", receiverNameCombobox);
         addStyledFormRow(formPanel, r, "💳 Empfänger Konto Nr.:", receiverKontoField);
         addStyledFormRow(formPanel, r, "👤 Absender Name:", senderNameField);
@@ -163,20 +181,18 @@ public class NewOrderGUI extends JFrame {
 
         JScrollPane formScroll = new JScrollPane(formPanel);
         formScroll.setBorder(null);
-        formScroll.setOpaque(false);
-        formScroll.getViewport().setOpaque(false);
+        formScroll.setBackground(tm.getCardBackgroundColor());
+        formScroll.getViewport().setBackground(tm.getCardBackgroundColor());
         leftCard.add(formScroll, BorderLayout.CENTER);
 
         // Right panel - Order items
-        RoundedPanel rightCard = new RoundedPanel(Color.WHITE, 16);
+        RoundedPanel rightCard = new RoundedPanel(tm.getCardBackgroundColor(), 16);
         rightCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         rightCard.setLayout(new BorderLayout(10, 10));
 
         JLabel tableTitle = new JLabel("🛒 Bestellte Artikel");
         tableTitle.setFont(tableTitle.getFont().deriveFont(Font.BOLD, 17f));
-        tableTitle.setForeground(new Color(31, 45, 61));
-        rightCard.add(tableTitle, BorderLayout.NORTH);
-
+        tableTitle.setForeground(tm.getTextPrimaryColor());
         rightCard.add(tableTitle, BorderLayout.NORTH);
 
         // Order table (show unit price and line total)
@@ -185,19 +201,23 @@ public class NewOrderGUI extends JFrame {
             public boolean isCellEditable(int row, int col) {
                 return false;
             }
+
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                return switch (columnIndex) {
+                    case 1 -> Integer.class;
+                    default -> String.class;
+                };
+            }
         };
-        JTable orderTable = new JTable(orderTableModel);
-        orderTable.setRowHeight(28);
-        orderTable.setFont(orderTable.getFont().deriveFont(13f));
-        orderTable.setShowGrid(true);
-        orderTable.setGridColor(new Color(230, 236, 240));
-        orderTable.getTableHeader().setBackground(new Color(52, 152, 219));
-        orderTable.getTableHeader().setForeground(Color.WHITE);
-        orderTable.getTableHeader().setFont(orderTable.getTableHeader().getFont().deriveFont(Font.BOLD, 13f));
-        orderTable.setSelectionBackground(new Color(52, 152, 219, 30));
+
+        orderTable = new JTable(orderTableModel);
+        applyOrderTableTheme(orderTable);
 
         JScrollPane orderScroll = new JScrollPane(orderTable);
-        orderScroll.setBorder(BorderFactory.createLineBorder(new Color(220, 225, 230), 1));
+        orderScroll.setBorder(BorderFactory.createLineBorder(tm.getBorderColor(), 1));
+        orderScroll.setBackground(tm.getCardBackgroundColor());
+        orderScroll.getViewport().setBackground(tm.getCardBackgroundColor());
         rightCard.add(orderScroll, BorderLayout.CENTER);
 
         // Bottom panel with total and buttons
@@ -205,38 +225,36 @@ public class NewOrderGUI extends JFrame {
         bottomPanel.setOpaque(false);
         bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
-        // Total price with styled label
         JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         totalPanel.setOpaque(false);
         totalPriceLabel = new JLabel("Totalpreis: 0.00 CHF");
         totalPriceLabel.setFont(totalPriceLabel.getFont().deriveFont(Font.BOLD, 16f));
-        totalPriceLabel.setForeground(new Color(46, 204, 113));
+        totalPriceLabel.setForeground(tm.getSuccessColor());
         totalPanel.add(totalPriceLabel);
         bottomPanel.add(totalPanel, BorderLayout.WEST);
 
-        // Action buttons
         JPanel actionButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionButtons.setOpaque(false);
 
-        JButton addArticlesBtn = createStyledButton("📦 Artikel hinzufügen", new Color(52, 152, 219));
+        JButton addArticlesBtn = createThemeButton("📦 Artikel hinzufügen", tm.getPrimaryColor());
         addArticlesBtn.addActionListener(e -> addArticlesFromList());
 
-        JButton exportPdfBtn = createStyledButton("📄 Export PDF", new Color(241, 196, 15));
+        JButton exportPdfBtn = createThemeButton("📄 Export PDF", tm.getWarningColor());
         exportPdfBtn.addActionListener(e -> {
             File file = chooseSaveFile();
             if (file != null) {
                 try {
                     exportOrderToPDF(file);
-                    JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(), "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
+                    JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(),
+                            "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
                 } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
+                    JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(),
+                            "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 }
             }
         });
 
-        JButton createOrderBtn = createStyledButton("✓ Bestellen", new Color(46, 204, 113));
+        JButton createOrderBtn = createThemeButton("✓ Bestellen", tm.getSuccessColor());
         createOrderBtn.addActionListener(e -> onCreateOrder());
 
         actionButtons.add(addArticlesBtn);
@@ -246,7 +264,6 @@ public class NewOrderGUI extends JFrame {
 
         rightCard.add(bottomPanel, BorderLayout.SOUTH);
 
-        // Add cards to split pane
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftCard, rightCard);
         splitPane.setDividerLocation(450);
         splitPane.setDividerSize(4);
@@ -256,26 +273,170 @@ public class NewOrderGUI extends JFrame {
         mainContent.add(splitPane, BorderLayout.CENTER);
         add(mainContent, BorderLayout.CENTER);
 
-        // Menu
         setJMenuBar(createJMenu());
 
-        // finalize
         setMinimumSize(new Dimension(900, 600));
         setLocationRelativeTo(null);
     }
 
+    @Override
+    public void dispose() {
+        ThemeManager.getInstance().unregisterWindow(this);
+        super.dispose();
+    }
+
     private void styleTextField(JTextField field) {
+        ThemeManager tm = ThemeManager.getInstance();
         field.setFont(field.getFont().deriveFont(13f));
         field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(206, 212, 218), 1),
+                BorderFactory.createLineBorder(tm.getInputBorderColor(), 1),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
+        field.setBackground(tm.getInputBackgroundColor());
+        field.setForeground(tm.getTextPrimaryColor());
+        field.setCaretColor(tm.getTextPrimaryColor());
+    }
+
+    private void styleComboBox(JComboBox<String> combo) {
+        ThemeManager tm = ThemeManager.getInstance();
+
+        Color bg = tm.getInputBackgroundColor();
+        Color fg = tm.getTextPrimaryColor();
+        Color border = tm.getInputBorderColor();
+        Color selBg = tm.getSelectionBackgroundColor();
+        Color selFg = tm.getSelectionForegroundColor();
+        Color surface = tm.getSurfaceColor();
+
+        combo.setBackground(bg);
+        combo.setForeground(fg);
+        combo.setOpaque(true);
+        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        combo.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(border, 1),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        ));
+
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+
+                JLabel c = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+                // enforce popup list colors
+                list.setBackground(bg);
+                list.setForeground(fg);
+                list.setSelectionBackground(selBg);
+                list.setSelectionForeground(selFg);
+
+                c.setOpaque(true);
+                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+
+                if (isSelected) {
+                    c.setBackground(selBg);
+                    c.setForeground(selFg);
+                } else {
+                    c.setBackground(bg);
+                    c.setForeground(fg);
+                }
+                return c;
+            }
+        });
+
+        // Theme arrow button + popup border (reliable across LAFs)
+        combo.setUI(new BasicComboBoxUI() {
+            @Override
+            protected JButton createArrowButton() {
+                JButton b = new JButton("▾");
+                b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+                b.setFocusPainted(false);
+                b.setContentAreaFilled(true);
+                b.setOpaque(true);
+                b.setBackground(bg);
+                b.setForeground(fg);
+                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                b.addMouseListener(new MouseAdapter() {
+                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(surface); }
+                    @Override public void mouseExited(MouseEvent e)  { b.setBackground(bg); }
+                });
+                return b;
+            }
+
+            @Override
+            protected ComboPopup createPopup() {
+                ComboPopup popup = super.createPopup();
+                if (popup instanceof BasicComboPopup basic) {
+                    basic.setBorder(BorderFactory.createLineBorder(border, 1));
+                    basic.getList().setBackground(bg);
+                    basic.getList().setForeground(fg);
+                    basic.getList().setSelectionBackground(selBg);
+                    basic.getList().setSelectionForeground(selFg);
+                }
+                return popup;
+            }
+        });
+
+        if (combo.isEditable()) {
+            Component editorComp = combo.getEditor().getEditorComponent();
+            if (editorComp instanceof JTextField tf) {
+                tf.setBackground(bg);
+                tf.setForeground(fg);
+                tf.setCaretColor(fg);
+                tf.setBorder(null);
+            }
+        }
+    }
+
+    private void applyOrderTableTheme(JTable table) {
+        ThemeManager tm = ThemeManager.getInstance();
+
+        table.setRowHeight(28);
+        table.setFont(table.getFont().deriveFont(13f));
+        table.setShowGrid(true);
+        table.setGridColor(tm.getTableGridColor());
+        table.setBackground(tm.getCardBackgroundColor());
+        table.setForeground(tm.getTextPrimaryColor());
+        table.setSelectionBackground(tm.getSelectionBackgroundColor());
+        table.setSelectionForeground(tm.getSelectionForegroundColor());
+        table.setFillsViewportHeight(true);
+
+        JTableHeader header = table.getTableHeader();
+        header.setBackground(tm.getTableHeaderBackgroundColor());
+        header.setForeground(tm.getTableHeaderForegroundColor());
+        header.setFont(header.getFont().deriveFont(Font.BOLD, 13f));
+        header.setReorderingAllowed(false);
+
+        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
+
+                if (isSelected) {
+                    c.setBackground(tm.getSelectionBackgroundColor());
+                    c.setForeground(tm.getSelectionForegroundColor());
+                } else {
+                    c.setBackground(row % 2 == 0 ? tm.getTableRowEvenColor() : tm.getTableRowOddColor());
+                    c.setForeground(tm.getTextPrimaryColor());
+                }
+
+                if (c instanceof JComponent jc) {
+                    jc.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+                }
+                return c;
+            }
+        };
+
+        table.setDefaultRenderer(Object.class, renderer);
+        table.setDefaultRenderer(String.class, renderer);
+        table.setDefaultRenderer(Integer.class, renderer);
     }
 
     private void addStyledFormRow(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field) {
+        ThemeManager tm = ThemeManager.getInstance();
         JLabel label = new JLabel(labelText);
         label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
-        label.setForeground(new Color(52, 73, 94));
+        label.setForeground(tm.getTextPrimaryColor());
         panel.add(label, gbc);
 
         gbc.gridy++;
@@ -288,7 +449,7 @@ public class NewOrderGUI extends JFrame {
 
     private void fillReceiverNameCombobox() {
         receiverNameCombobox.removeAllItems();
-        receiverNameCombobox.addItem(""); // Empty option
+        receiverNameCombobox.addItem("");
 
         Set<String> clientNames = new LinkedHashSet<>();
         ClientManager clientManager = ClientManager.getInstance();
@@ -299,16 +460,13 @@ public class NewOrderGUI extends JFrame {
             }
         }
 
-        // Add sorted client names to combo box
         clientNames.stream().sorted().forEach(receiverNameCombobox::addItem);
-
-        // Make it editable so users can enter custom names
         receiverNameCombobox.setEditable(true);
     }
 
     private void fillDepartmentList() {
         departmentList.removeAllItems();
-        departmentList.addItem(""); // Empty option
+        departmentList.addItem("");
 
         Set<String> departments = new LinkedHashSet<>();
         DepartmentManager departmentManager = DepartmentManager.getInstance();
@@ -319,22 +477,19 @@ public class NewOrderGUI extends JFrame {
             }
         }
 
-        // Add sorted departments to combo box
         departments.stream().sorted().forEach(departmentList::addItem);
-
-        // Make it editable so users can enter custom departments
         departmentList.setEditable(true);
     }
 
     private File chooseSaveFile() {
         JFileChooser fc = new JFileChooser();
-        fc.setSelectedFile(new File(System.getProperty("user.home"), "order_" + System.currentTimeMillis() + ".pdf"));
+        fc.setSelectedFile(new File(System.getProperty("user.home"),
+                "order_" + System.currentTimeMillis() + ".pdf"));
         int res = fc.showSaveDialog(this);
         return res == JFileChooser.APPROVE_OPTION ? fc.getSelectedFile() : null;
     }
 
     private void addArticlesFromList() {
-        // Get all articles from ArticleListGUI
         Map<Article, Integer> articlesWithQty = ArticleListGUI.getArticlesAndQuantity();
 
         if (articlesWithQty.isEmpty()) {
@@ -346,7 +501,6 @@ public class NewOrderGUI extends JFrame {
             return;
         }
 
-        // Add all articles to the order
         for (Map.Entry<Article, Integer> entry : articlesWithQty.entrySet()) {
             Article a = entry.getKey();
             Integer qty = entry.getValue();
@@ -366,7 +520,6 @@ public class NewOrderGUI extends JFrame {
                 Main.iconSmall);
     }
 
-
     private void rebuildOrderTable() {
         orderTableModel.setRowCount(0);
         for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
@@ -374,16 +527,19 @@ public class NewOrderGUI extends JFrame {
             int qty = e.getValue();
             double unit = safePrice(a);
             double line = unit * qty;
-            orderTableModel.addRow(new Object[]{a.getName(), qty, String.format("%.2f CHF", unit), String.format("%.2f CHF", line)});
+            orderTableModel.addRow(new Object[]{
+                    a.getName(),
+                    qty,
+                    String.format("%.2f CHF", unit),
+                    String.format("%.2f CHF", line)
+            });
         }
     }
 
     private double safePrice(Article a) {
         try {
-            // assumes Article has getPrice()
             return a.getSellPrice();
         } catch (NoSuchMethodError | AbstractMethodError | RuntimeException ex) {
-            // Article has no price or error: treat as 0
             return 0.0;
         }
     }
@@ -398,39 +554,52 @@ public class NewOrderGUI extends JFrame {
 
     private void onCreateOrder() {
         if (orderArticles.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Keine Artikel in der Bestellung.", "Fehler", JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            JOptionPane.showMessageDialog(this, "Keine Artikel in der Bestellung.",
+                    "Fehler", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
             return;
         }
-        String receiver = receiverNameCombobox.getSelectedItem() != null ? receiverNameCombobox.getSelectedItem().toString().trim() : "";
+
+        String receiver = receiverNameCombobox.getSelectedItem() != null
+                ? receiverNameCombobox.getSelectedItem().toString().trim()
+                : "";
         String rKonto = receiverKontoField.getText().trim();
         String sender = senderNameField.getText().trim();
         String sKonto = senderKontoField.getText().trim();
-        String department = departmentList.getSelectedItem() != null ? departmentList.getSelectedItem().toString().trim() : "";
+        String department = departmentList.getSelectedItem() != null
+                ? departmentList.getSelectedItem().toString().trim()
+                : "";
+
         if (receiver.isEmpty() || sender.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Empfänger und Absender Namen sind erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE
-                    , Main.iconSmall);
+            JOptionPane.showMessageDialog(this,
+                    "Empfänger und Absender Namen sind erforderlich.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
             return;
         }
-        // convert to Map\<String,Integer\> expected by Order (use article number as key)
+
         Map<String, Integer> payload = new LinkedHashMap<>();
         for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
             payload.put(e.getKey().getArticleNumber(), e.getValue());
         }
+
         createOrder(payload, receiver, rKonto, sender, sKonto, department);
+
         File file = chooseSaveFile();
         if (file != null) {
             try {
                 exportOrderToPDF(file);
-                JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(), "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                        Main.iconSmall);
+                JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(),
+                        "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall);
+                JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(),
+                        "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
             }
         }
-        JOptionPane.showMessageDialog(this, "Bestellung erstellt.", "Erfolgreich", JOptionPane.INFORMATION_MESSAGE,
-                Main.iconSmall);
+
+        JOptionPane.showMessageDialog(this, "Bestellung erstellt.",
+                "Erfolgreich", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+
         orderArticles.clear();
         rebuildOrderTable();
         updateTotalPrice();
@@ -441,31 +610,12 @@ public class NewOrderGUI extends JFrame {
         if (Main.articleListGUI != null) Main.articleListGUI.display();
     }
 
-    public void createOrder(Map<String, Integer> orderArticles, String receiverName, String receiverKontoNumber,
-                            String senderName, String senderKontoNumber, String department) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
-        String date = dateFormat.format(new Date());
-        Order order = new Order(
-                "ORD" + System.currentTimeMillis(),
-                orderArticles,
-                receiverName,
-                receiverKontoNumber,
-                date,
-                senderName,
-                senderKontoNumber,
-                department
-        );
-        OrderManager orderManager = OrderManager.getInstance();
-        orderManager.insertOrder(order);
-    }
-
     @SuppressWarnings("deprecation")
     private void exportOrderToPDF(File file) throws IOException {
         try (PDDocument doc = new PDDocument()) {
             PDPage page = new PDPage();
             doc.addPage(page);
 
-            // Load fonts
             PDFont regularFont = null;
             PDFont boldFont = null;
             File regularTtf = new File("/Library/Fonts/Arial.ttf");
@@ -499,14 +649,12 @@ public class NewOrderGUI extends JFrame {
                 float margin = 50;
                 float yPosition = 750;
 
-                // === HEADER SECTION ===
-                // Company name / logo area (top right)
-                cs.setNonStrokingColor(30, 58, 95); // Dark blue
+                cs.setNonStrokingColor(30, 58, 95);
                 cs.addRect(margin, yPosition, pageWidth - 2 * margin, 60);
                 cs.fill();
 
                 cs.beginText();
-                cs.setNonStrokingColor(255, 255, 255); // White
+                cs.setNonStrokingColor(255, 255, 255);
                 cs.setFont(boldFont, 24);
                 cs.newLineAtOffset(margin + 10, yPosition + 25);
                 cs.showText("VEBO BESTELLUNG");
@@ -514,7 +662,6 @@ public class NewOrderGUI extends JFrame {
 
                 yPosition -= 80;
 
-                // Date and Order ID section
                 cs.beginText();
                 cs.setNonStrokingColor(0, 0, 0);
                 cs.setFont(boldFont, 11);
@@ -544,18 +691,16 @@ public class NewOrderGUI extends JFrame {
 
                 yPosition -= 30;
 
-                // === SENDER / RECEIVER SECTION ===
-                // Draw background boxes
                 float boxHeight = 85;
-                cs.setNonStrokingColor(245, 247, 250); // Light gray
+                cs.setNonStrokingColor(245, 247, 250);
                 cs.addRect(margin, yPosition - boxHeight, (pageWidth - 2 * margin - 10) / 2, boxHeight);
                 cs.fill();
 
                 cs.setNonStrokingColor(245, 247, 250);
-                cs.addRect(margin + (pageWidth - 2 * margin) / 2 + 5, yPosition - boxHeight, (pageWidth - 2 * margin - 10) / 2, boxHeight);
+                cs.addRect(margin + (pageWidth - 2 * margin) / 2 + 5, yPosition - boxHeight,
+                        (pageWidth - 2 * margin - 10) / 2, boxHeight);
                 cs.fill();
 
-                // Sender (left box)
                 cs.beginText();
                 cs.setNonStrokingColor(0, 0, 0);
                 cs.setFont(boldFont, 12);
@@ -575,7 +720,6 @@ public class NewOrderGUI extends JFrame {
                 cs.showText("Konto: " + senderKontoField.getText().trim());
                 cs.endText();
 
-                // Receiver (right box)
                 float rightBoxX = margin + (pageWidth - 2 * margin) / 2 + 15;
                 cs.beginText();
                 cs.setFont(boldFont, 12);
@@ -583,7 +727,9 @@ public class NewOrderGUI extends JFrame {
                 cs.showText("EMPFÄNGER");
                 cs.endText();
 
-                String receiver = receiverNameCombobox.getSelectedItem() != null ? receiverNameCombobox.getSelectedItem().toString().trim() : "";
+                String receiver = receiverNameCombobox.getSelectedItem() != null
+                        ? receiverNameCombobox.getSelectedItem().toString().trim()
+                        : "";
                 cs.beginText();
                 cs.setFont(regularFont, 10);
                 cs.newLineAtOffset(rightBoxX, yPosition - 32);
@@ -605,9 +751,7 @@ public class NewOrderGUI extends JFrame {
 
                 yPosition -= boxHeight + 30;
 
-                // === ARTICLES TABLE ===
-                // Table header
-                cs.setNonStrokingColor(62, 84, 98); // Dark blue-gray
+                cs.setNonStrokingColor(62, 84, 98);
                 cs.addRect(margin, yPosition - 20, pageWidth - 2 * margin, 20);
                 cs.fill();
 
@@ -626,7 +770,6 @@ public class NewOrderGUI extends JFrame {
 
                 yPosition -= 25;
 
-                // Table rows
                 double total = 0.0;
                 boolean alternateRow = false;
                 for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
@@ -636,7 +779,6 @@ public class NewOrderGUI extends JFrame {
                     double line = unit * qty;
                     total += line;
 
-                    // Alternate row background
                     if (alternateRow) {
                         cs.setNonStrokingColor(250, 250, 250);
                         cs.addRect(margin, yPosition - 15, pageWidth - 2 * margin, 18);
@@ -647,11 +789,10 @@ public class NewOrderGUI extends JFrame {
                     cs.setNonStrokingColor(0, 0, 0);
                     cs.setFont(regularFont, 9);
                     cs.newLineAtOffset(margin + 5, yPosition - 10);
-                    // Truncate long article names
+
                     String articleName = a.getName();
-                    if (articleName.length() > 35) {
-                        articleName = articleName.substring(0, 32) + "...";
-                    }
+                    if (articleName.length() > 35) articleName = articleName.substring(0, 32) + "...";
+
                     cs.showText(articleName + " (" + a.getArticleNumber() + ")");
                     cs.newLineAtOffset(200, 0);
                     cs.showText(String.valueOf(qty));
@@ -664,17 +805,9 @@ public class NewOrderGUI extends JFrame {
                     yPosition -= 18;
                     alternateRow = !alternateRow;
 
-                    // Check if we need a new page
-                    if (yPosition < 150) {
-                        PDPage newPage = new PDPage();
-                        doc.addPage(newPage);
-                        cs.close();
-                        // Continue on new page (simplified - in production you'd handle this better)
-                        break;
-                    }
+                    if (yPosition < 150) break;
                 }
 
-                // === TOTALS SECTION ===
                 yPosition -= 10;
                 cs.setNonStrokingColor(200, 200, 200);
                 cs.setLineWidth(1);
@@ -684,7 +817,6 @@ public class NewOrderGUI extends JFrame {
 
                 yPosition -= 25;
 
-                // Total box
                 cs.setNonStrokingColor(30, 58, 95);
                 cs.addRect(pageWidth - margin - 150, yPosition - 25, 150, 30);
                 cs.fill();
@@ -698,7 +830,6 @@ public class NewOrderGUI extends JFrame {
                 cs.showText(String.format("%.2f CHF", total));
                 cs.endText();
 
-                // === FOOTER ===
                 cs.beginText();
                 cs.setNonStrokingColor(150, 150, 150);
                 cs.setFont(regularFont, 8);
@@ -715,7 +846,8 @@ public class NewOrderGUI extends JFrame {
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("Bestellung");
         JMenuItem help = new JMenuItem("Hilfe");
-        help.addActionListener(e -> JOptionPane.showMessageDialog(this, getHelpText(), "Hilfe - Neue Bestellung erstellen", JOptionPane.INFORMATION_MESSAGE));
+        help.addActionListener(e -> JOptionPane.showMessageDialog(this, getHelpText(),
+                "Hilfe - Neue Bestellung erstellen", JOptionPane.INFORMATION_MESSAGE));
         menu.add(help);
         menuBar.add(menu);
         return menuBar;
@@ -732,33 +864,68 @@ public class NewOrderGUI extends JFrame {
                 "</ul>";
     }
 
-    private JButton createStyledButton(String text, Color bgColor) {
+    private JButton createThemeButton(String text, Color baseBg) {
+        ThemeManager tm = ThemeManager.getInstance();
+
         JButton button = new JButton(text);
         button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
         button.setOpaque(true);
-        button.setBackground(bgColor);
-        button.setForeground(Color.WHITE);
+
+        Color hoverBg = tm.getButtonHoverColor(baseBg);
+        Color pressedBg = tm.getButtonPressedColor(baseBg);
+
+        button.setBackground(baseBg);
+        button.setForeground(tm.getTextOnPrimaryColor());
         button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(bgColor.darker(), 1),
+                BorderFactory.createLineBorder(baseBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 18, 10, 18)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Hover effect
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(bgColor.brighter());
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (button.isEnabled()) button.setBackground(hoverBg);
             }
 
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(bgColor);
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (button.isEnabled()) button.setBackground(baseBg);
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (button.isEnabled()) button.setBackground(pressedBg);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (!button.isEnabled()) return;
+                button.setBackground(button.contains(e.getPoint()) ? hoverBg : baseBg);
             }
         });
 
         return button;
+    }
+
+    private void createOrder(Map<String, Integer> orderArticles, String receiverName, String receiverKontoNumber,
+                             String senderName, String senderKontoNumber, String department) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
+        String date = dateFormat.format(new Date());
+        Order order = new Order(
+                "ORD" + System.currentTimeMillis(),
+                orderArticles,
+                receiverName,
+                receiverKontoNumber,
+                date,
+                senderName,
+                senderKontoNumber,
+                department
+        );
+        OrderManager.getInstance().insertOrder(order);
     }
 
     // Gradient panel for header

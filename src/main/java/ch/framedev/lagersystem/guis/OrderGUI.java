@@ -5,12 +5,18 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.OrderManager;
+import ch.framedev.lagersystem.utils.ThemeManager;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.*;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicComboBoxUI;
+import javax.swing.plaf.basic.BasicComboPopup;
+import javax.swing.plaf.basic.ComboPopup;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
@@ -45,38 +51,48 @@ public class OrderGUI extends JFrame {
 
         // Header
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        headerWrapper.setBackground(new Color(245, 247, 250));
-        RoundedPanel headerPanel = new RoundedPanel(new Color(255, 255, 255), 20);
+        headerWrapper.setBackground(ThemeManager.getBackgroundColor());
+
+        RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
         headerPanel.setPreferredSize(new Dimension(680, 64));
+
         JLabel titleLabel = new JLabel("Bestellungen Verwaltung");
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 22f));
-        titleLabel.setForeground(new Color(31, 45, 61));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
         headerPanel.add(titleLabel);
         headerWrapper.add(headerPanel);
         add(headerWrapper, BorderLayout.NORTH);
 
         // Toolbar
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 12));
-        toolbar.setBackground(new Color(245, 247, 250));
+        toolbar.setBackground(ThemeManager.getBackgroundColor());
+
         JButton newOrderButton = createRoundedButton("Neue Bestellung erstellen");
         JButton editOrderButton = createRoundedButton("Bestellung bearbeiten");
         JButton deleteOrderButton = createRoundedButton("Bestellung löschen");
         JButton completeOrderButton = createRoundedButton("Bestellung abschließen");
         JButton refreshButton = createRoundedButton("🔄 Aktualisieren");
-        JComboBox<String> filterComboBox = new JComboBox<>(new String[]{"Alle Bestellungen", "Abgeschlossene Bestellungen", "Offene Bestellungen"});
+
+        JComboBox<String> filterComboBox = new JComboBox<>(new String[]{
+                "Alle Bestellungen", "Abgeschlossene Bestellungen", "Offene Bestellungen"
+        });
+        styleComboBox(filterComboBox);
+
         toolbar.add(filterComboBox);
         toolbar.add(newOrderButton);
         toolbar.add(editOrderButton);
         toolbar.add(deleteOrderButton);
         toolbar.add(completeOrderButton);
         toolbar.add(refreshButton);
+
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(245, 247, 250));
+        topPanel.setBackground(ThemeManager.getBackgroundColor());
         topPanel.add(toolbar, BorderLayout.SOUTH);
         add(topPanel, BorderLayout.PAGE_START);
 
         // Main card with table
-        RoundedPanel card = new RoundedPanel(Color.WHITE, 18);
+        RoundedPanel card = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
         card.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         card.setLayout(new BorderLayout(8, 8));
 
@@ -84,11 +100,13 @@ public class OrderGUI extends JFrame {
         orderTable = new JTable();
         initializeOrderTable();
         tableScrollPane = new JScrollPane(orderTable);
+        tableScrollPane.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
+        tableScrollPane.getViewport().setBackground(ThemeManager.getTableRowEvenColor());
         card.add(tableScrollPane, BorderLayout.CENTER);
 
         // place card in center with padding
         JPanel centerWrapper = new JPanel(new GridBagLayout());
-        centerWrapper.setBackground(new Color(245, 247, 250));
+        centerWrapper.setBackground(ThemeManager.getBackgroundColor());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weightx = 1.0;
@@ -98,16 +116,21 @@ public class OrderGUI extends JFrame {
 
         // Bottom search bar
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        searchPanel.setBackground(new Color(245, 247, 250));
+        searchPanel.setBackground(ThemeManager.getBackgroundColor());
 
         orderCountLabel = new JLabel("Anzahl Bestellungen: " + orderTable.getRowCount());
+        orderCountLabel.setForeground(ThemeManager.getTextPrimaryColor());
         orderCountLabel.setFont(orderCountLabel.getFont().deriveFont(Font.BOLD));
         searchPanel.add(orderCountLabel);
 
         JLabel searchLabel = new JLabel("Suche (Bestell-ID, Empfänger oder Abteilung):");
+        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
         JTextField searchField = new JTextField(28);
-        JButton searchBtn = new JButton("Suchen");
-        JButton clearBtn = new JButton("Leeren");
+        styleTextField(searchField);
+
+        JButton searchBtn = createRoundedButton("Suchen");
+        JButton clearBtn = createRoundedButton("Leeren");
 
         searchPanel.add(searchLabel);
         searchPanel.add(searchField);
@@ -127,15 +150,14 @@ public class OrderGUI extends JFrame {
         editOrderButton.addActionListener(e -> {
             Vector<Object> rowData = getSelectedOrderData();
             if (rowData == null) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl",
+                        JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                 return;
             }
             Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
             if (order != null) {
                 EditOrderGUI editGui = new EditOrderGUI(order);
                 editGui.display();
-                // Reload orders after edit window closes
                 editGui.addWindowListener(new java.awt.event.WindowAdapter() {
                     @Override
                     public void windowClosed(java.awt.event.WindowEvent e) {
@@ -148,23 +170,25 @@ public class OrderGUI extends JFrame {
         deleteOrderButton.addActionListener(e -> {
             int sel = orderTable.getSelectedRow();
             if (sel == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Löschen aus.", "Keine Auswahl",
+                        JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                 return;
             }
             int modelRow = orderTable.convertRowIndexToModel(sel);
             String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
-            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+
+            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+
             if (confirm == JOptionPane.YES_OPTION) {
                 if (OrderManager.getInstance().deleteOrder(orderId)) {
-                    loadOrders(); // Refresh table
+                    loadOrders();
                     updateOrderCount();
-                    JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
+                    JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg",
+                            JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
+                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler",
+                            JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 }
             }
         });
@@ -174,8 +198,8 @@ public class OrderGUI extends JFrame {
         refreshButton.addActionListener(e -> {
             loadOrders();
             updateOrderCount();
-            JOptionPane.showMessageDialog(this, "Bestellungsliste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+            JOptionPane.showMessageDialog(this, "Bestellungsliste wurde aktualisiert.", "Aktualisiert",
+                    JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
         });
 
         // search logic using TableRowSorter
@@ -194,12 +218,14 @@ public class OrderGUI extends JFrame {
                     sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(text), 0, 1, 3));
                 }
             }
+            updateOrderCount();
         };
 
         searchBtn.addActionListener(e -> doSearch.run());
         clearBtn.addActionListener(e -> {
             searchField.setText("");
             sorter.setRowFilter(null);
+            updateOrderCount();
         });
         searchField.addActionListener(e -> doSearch.run());
 
@@ -212,6 +238,7 @@ public class OrderGUI extends JFrame {
             } else if ("Offene Bestellungen".equals(selected)) {
                 sorter.setRowFilter(RowFilter.notFilter(RowFilter.regexFilter("^Abgeschlossen$", 6)));
             }
+            updateOrderCount();
         });
 
         // auto resize logic
@@ -233,6 +260,7 @@ public class OrderGUI extends JFrame {
         List<Order> orders = om.getOrders();
         DefaultTableModel model = (DefaultTableModel) orderTable.getModel();
         model.setRowCount(0);
+
         for (Order o : orders) {
             model.addRow(new Object[]{
                     o.getOrderId(),
@@ -248,9 +276,15 @@ public class OrderGUI extends JFrame {
     }
 
     private void updateOrderCount() {
-        if (orderCountLabel != null) {
-            orderCountLabel.setText("Anzahl Bestellungen: " + orderTable.getRowCount());
+        if (orderCountLabel == null) return;
+
+        int count;
+        if (orderTable.getRowSorter() != null) {
+            count = orderTable.getRowSorter().getViewRowCount();
+        } else {
+            count = orderTable.getRowCount();
         }
+        orderCountLabel.setText("Anzahl Bestellungen: " + count);
     }
 
     private void setupTableInteractions() {
@@ -265,15 +299,14 @@ public class OrderGUI extends JFrame {
         edit.addActionListener(e -> {
             Vector<Object> rowData = getSelectedOrderData();
             if (rowData == null) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl",
+                        JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                 return;
             }
             Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
             if (order != null) {
                 EditOrderGUI editGui = new EditOrderGUI(order);
                 editGui.display();
-                // Reload orders after edit window closes
                 editGui.addWindowListener(new java.awt.event.WindowAdapter() {
                     @Override
                     public void windowClosed(java.awt.event.WindowEvent e) {
@@ -282,25 +315,30 @@ public class OrderGUI extends JFrame {
                 });
             }
         });
+
         del.addActionListener(e -> {
             int sel = orderTable.getSelectedRow();
             if (sel == -1) return;
+
             int modelRow = orderTable.convertRowIndexToModel(sel);
             String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
-            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+
+            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+
             if (confirm == JOptionPane.YES_OPTION) {
                 if (OrderManager.getInstance().deleteOrder(orderId)) {
                     ((DefaultTableModel) orderTable.getModel()).removeRow(modelRow);
                     updateOrderCount();
-                    JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
+                    JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg",
+                            JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
+                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler",
+                            JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 }
             }
         });
+
         complete.addActionListener(e -> new OrderActions.CompleteOrderAction().actionPerformed(null));
 
         orderTable.addMouseListener(new MouseAdapter() {
@@ -309,8 +347,8 @@ public class OrderGUI extends JFrame {
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
                     Vector<Object> rowData = getSelectedOrderData();
                     if (rowData == null) {
-                        JOptionPane.showMessageDialog(OrderGUI.this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                                Main.iconSmall);
+                        JOptionPane.showMessageDialog(OrderGUI.this, "Bitte wählen Sie eine Bestellung zum Anzeigen aus.", "Keine Auswahl",
+                                JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                         return;
                     }
                     Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
@@ -346,6 +384,7 @@ public class OrderGUI extends JFrame {
         int sel = orderTable.getSelectedRow();
         if (sel == -1) return null;
         int modelRow = orderTable.convertRowIndexToModel(sel);
+
         Vector<Object> rowData = new Vector<>();
         for (int i = 0; i < orderTable.getColumnCount(); i++) {
             rowData.add(orderTable.getModel().getValueAt(modelRow, i));
@@ -354,6 +393,8 @@ public class OrderGUI extends JFrame {
     }
 
     private void initializeOrderTable() {
+        ThemeManager tm = ThemeManager.getInstance();
+
         DefaultTableModel model = new DefaultTableModel() {
             @Override
             public int getColumnCount() {
@@ -385,42 +426,51 @@ public class OrderGUI extends JFrame {
             }
         };
         orderTable.setModel(model);
-        // Make grid lines visible and subtle (adds vertical+horizontal lines like in your mockup)
+
+        // grid
         orderTable.setShowGrid(true);
         orderTable.setShowHorizontalLines(true);
         orderTable.setShowVerticalLines(true);
-        orderTable.setGridColor(new Color(226, 230, 233)); // soft light gray
+        orderTable.setGridColor(ThemeManager.getBorderColor());
         orderTable.setIntercellSpacing(new Dimension(1, 1));
-        orderTable.setFont(new Font("Arial", Font.PLAIN, 16));
+        orderTable.setFont(orderTable.getFont().deriveFont(14f));
 
         // visuals
-        orderTable.setRowHeight(26);
+        orderTable.setRowHeight(28);
         orderTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        orderTable.setSelectionBackground(new Color(184, 207, 229));
-        orderTable.setSelectionForeground(Color.BLACK);
+        orderTable.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
+        orderTable.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
 
         DefaultTableCellRenderer center = new DefaultTableCellRenderer();
         center.setHorizontalAlignment(SwingConstants.CENTER);
 
-        // Status column renderer with color coding
+        // Status column renderer with color coding (keep theme-aware background)
         DefaultTableCellRenderer statusRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
                                                            boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                setHorizontalAlignment(SwingConstants.CENTER);
+                JLabel c = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                c.setHorizontalAlignment(SwingConstants.CENTER);
 
-                if (!isSelected && value != null) {
+                if (isSelected) {
+                    c.setBackground(table.getSelectionBackground());
+                    c.setForeground(table.getSelectionForeground());
+                    return c;
+                }
+
+                // base alternating background
+                Color baseBg = (row % 2 == 0) ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor();
+                c.setBackground(baseBg);
+                c.setForeground(ThemeManager.getTextPrimaryColor());
+
+                if (value != null) {
                     String status = value.toString();
                     if ("Abgeschlossen".equals(status)) {
-                        c.setBackground(new Color(200, 230, 201)); // Light green
-                        c.setForeground(new Color(27, 94, 32)); // Dark green
+                        c.setBackground(new Color(200, 230, 201));
+                        c.setForeground(new Color(27, 94, 32));
                     } else if ("In Bearbeitung".equals(status)) {
-                        c.setBackground(new Color(255, 243, 224)); // Light orange
-                        c.setForeground(new Color(230, 81, 0)); // Dark orange
-                    } else {
-                        c.setBackground(Color.WHITE);
-                        c.setForeground(Color.BLACK);
+                        c.setBackground(new Color(255, 243, 224));
+                        c.setForeground(new Color(230, 81, 0));
                     }
                 }
                 return c;
@@ -435,15 +485,15 @@ public class OrderGUI extends JFrame {
             tcm.getColumn(i).setPreferredWidth(baseColumnWidths[i]);
         }
 
-        // Alternating row colors for readability (subtle)
+        // Alternating row colors for readability (subtle) - DO NOT override status renderer
         DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
-            private final Color EVEN = new Color(255, 255, 255);
-            private final Color ODD = new Color(247, 250, 253);
-
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (!isSelected) c.setBackground(row % 2 == 0 ? EVEN : ODD);
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+                    c.setForeground(ThemeManager.getTextPrimaryColor());
+                }
                 return c;
             }
         };
@@ -451,28 +501,38 @@ public class OrderGUI extends JFrame {
 
         // Header styling
         JTableHeader header = orderTable.getTableHeader();
-        header.setBackground(new Color(62, 84, 98));
-        header.setForeground(Color.WHITE);
-        header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
+        header.setBackground(ThemeManager.getTableHeaderBackground());
+        header.setForeground(ThemeManager.getTableHeaderForeground());
+        header.setFont(header.getFont().deriveFont(Font.BOLD, 16f));
+        header.setReorderingAllowed(true);
+
+        // keep consistent header height
+        header.setPreferredSize(new Dimension(header.getPreferredSize().width, 34));
     }
 
     private void adjustColumnWidths() {
         if (tableScrollPane == null || orderTable.getColumnCount() == 0) return;
+
         int available = tableScrollPane.getViewport().getWidth();
         if (available <= 0) available = tableScrollPane.getWidth();
         if (available <= 0) return;
+
         int totalBase = 0;
         for (int w : baseColumnWidths) totalBase += w;
+
         TableColumnModel tcm = orderTable.getColumnModel();
         int colCount = tcm.getColumnCount();
+
         int used = 0;
         int[] newW = new int[colCount];
+
         for (int i = 0; i < colCount; i++) {
             int base = i < baseColumnWidths.length ? baseColumnWidths[i] : 100;
             int w = Math.max(60, (int) Math.round((base / (double) totalBase) * available));
             newW[i] = w;
             used += w;
         }
+
         int diff = available - used;
         int idx = 0;
         while (diff != 0 && colCount > 0) {
@@ -480,9 +540,11 @@ public class OrderGUI extends JFrame {
             diff += (diff > 0 ? -1 : 1);
             idx++;
         }
+
         for (int i = 0; i < colCount; i++) {
             tcm.getColumn(i).setPreferredWidth(newW[i]);
         }
+
         orderTable.revalidate();
         orderTable.repaint();
         tableScrollPane.revalidate();
@@ -490,20 +552,18 @@ public class OrderGUI extends JFrame {
     }
 
     private JButton createRoundedButton(String text) {
-        ch.framedev.lagersystem.utils.ThemeManager tm = ch.framedev.lagersystem.utils.ThemeManager.getInstance();
-
         JButton button = new JButton(text);
         button.setFocusPainted(false);
         button.setBorderPainted(true);
         button.setContentAreaFilled(true);
         button.setOpaque(true);
 
-        Color defaultBg = tm.getAccentColor();
-        Color hoverBg = tm.getButtonHoverColor(defaultBg);
-        Color pressedBg = tm.getButtonPressedColor(defaultBg);
+        Color defaultBg = ThemeManager.getAccentColor();
+        Color hoverBg = ThemeManager.getButtonHoverColor(defaultBg);
+        Color pressedBg = ThemeManager.getButtonPressedColor(defaultBg);
 
         button.setBackground(defaultBg);
-        button.setForeground(tm.getTextOnPrimaryColor());
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(defaultBg.darker(), 1),
@@ -544,6 +604,106 @@ public class OrderGUI extends JFrame {
         return button;
     }
 
+    private void styleTextField(JTextField field) {
+        field.setFont(field.getFont().deriveFont(13f));
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        field.setBackground(ThemeManager.getInputBackgroundColor());
+        field.setForeground(ThemeManager.getTextPrimaryColor());
+        field.setCaretColor(ThemeManager.getTextPrimaryColor());
+    }
+
+    private void styleComboBox(JComboBox<String> combo) {
+        Color bg = ThemeManager.getInputBackgroundColor();
+        Color fg = ThemeManager.getTextPrimaryColor();
+        Color border = ThemeManager.getInputBorderColor();
+        Color selBg = ThemeManager.getSelectionBackgroundColor();
+        Color selFg = ThemeManager.getSelectionForegroundColor();
+        Color surface = ThemeManager.getSurfaceColor();
+
+        combo.setBackground(bg);
+        combo.setForeground(fg);
+        combo.setOpaque(true);
+        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        combo.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(border, 1),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        ));
+
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+
+                JLabel c = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+                // enforce popup list colors
+                list.setBackground(bg);
+                list.setForeground(fg);
+                list.setSelectionBackground(selBg);
+                list.setSelectionForeground(selFg);
+
+                c.setOpaque(true);
+                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+
+                if (isSelected) {
+                    c.setBackground(selBg);
+                    c.setForeground(selFg);
+                } else {
+                    c.setBackground(bg);
+                    c.setForeground(fg);
+                }
+                return c;
+            }
+        });
+
+        // Theme arrow button + popup border (reliable across LAFs)
+        combo.setUI(new BasicComboBoxUI() {
+            @Override
+            protected JButton createArrowButton() {
+                JButton b = new JButton("▾");
+                b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+                b.setFocusPainted(false);
+                b.setContentAreaFilled(true);
+                b.setOpaque(true);
+                b.setBackground(bg);
+                b.setForeground(fg);
+                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                b.addMouseListener(new MouseAdapter() {
+                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(surface); }
+                    @Override public void mouseExited(MouseEvent e)  { b.setBackground(bg); }
+                });
+                return b;
+            }
+
+            @Override
+            protected ComboPopup createPopup() {
+                ComboPopup popup = super.createPopup();
+                if (popup instanceof BasicComboPopup basic) {
+                    basic.setBorder(BorderFactory.createLineBorder(border, 1));
+                    basic.getList().setBackground(bg);
+                    basic.getList().setForeground(fg);
+                    basic.getList().setSelectionBackground(selBg);
+                    basic.getList().setSelectionForeground(selFg);
+                }
+                return popup;
+            }
+        });
+
+        if (combo.isEditable()) {
+            Component editorComp = combo.getEditor().getEditorComponent();
+            if (editorComp instanceof JTextField tf) {
+                tf.setBackground(bg);
+                tf.setForeground(fg);
+                tf.setCaretColor(fg);
+                tf.setBorder(null);
+            }
+        }
+    }
+
     private void showOrderDetailsDialog(Order order) {
         JDialog detailsDialog = new JDialog(this, "Bestelldetails - " + order.getOrderId(), true);
         detailsDialog.setSize(600, 500);
@@ -551,7 +711,7 @@ public class OrderGUI extends JFrame {
 
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        panel.setBackground(Color.WHITE);
+        panel.setBackground(ThemeManager.getCardBackgroundColor());
 
         // Build HTML content
         List<Article> articles = OrderManager.getInstance().getOrderArticles(order);
@@ -565,6 +725,7 @@ public class OrderGUI extends JFrame {
             }
             double lineTotal = quantity * a.getSellPrice();
             totalPrice += lineTotal;
+
             articlesHtml.append("<tr>")
                     .append("<td>").append(a.getArticleNumber()).append("</td>")
                     .append("<td>").append(a.getName()).append("</td>")
@@ -579,12 +740,10 @@ public class OrderGUI extends JFrame {
 
         // Buttons
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
-        btnPanel.setBackground(Color.WHITE);
+        btnPanel.setOpaque(false);
 
         JButton exportBtn = createRoundedButton("PDF Exportieren");
-        exportBtn.addActionListener(ev -> {
-            createPDFExport(order);
-        });
+        exportBtn.addActionListener(ev -> createPDFExport(order));
 
         JButton closeBtn = createRoundedButton("Schließen");
         closeBtn.addActionListener(ev -> detailsDialog.dispose());
@@ -603,13 +762,10 @@ public class OrderGUI extends JFrame {
         fc.setSelectedFile(new File(System.getProperty("user.home"), "order_" + order.getOrderId() + ".pdf"));
         int result = fc.showSaveDialog(this);
 
-        if (result != JFileChooser.APPROVE_OPTION) {
-            return; // User cancelled
-        }
+        if (result != JFileChooser.APPROVE_OPTION) return;
 
         File outputFile = fc.getSelectedFile();
 
-        // Extract order data
         String orderId = order.getOrderId();
         Map<String, Integer> orderedArticles = order.getOrderedArticles();
         String receiverName = order.getReceiverName();
@@ -624,7 +780,7 @@ public class OrderGUI extends JFrame {
             PDPage page = new PDPage();
             doc.addPage(page);
 
-            // Load fonts
+            // Fonts (macOS path first, then fallback)
             PDFont regularFont;
             PDFont boldFont;
             File regularTtf = new File("/Library/Fonts/Arial.ttf");
@@ -634,7 +790,6 @@ public class OrderGUI extends JFrame {
                 regularFont = PDType0Font.load(doc, regularTtf);
                 boldFont = boldTtf.exists() ? PDType0Font.load(doc, boldTtf) : regularFont;
             } else {
-                // Fallback to built-in Type1 fonts
                 regularFont = PDType1Font.HELVETICA;
                 boldFont = PDType1Font.HELVETICA_BOLD;
             }
@@ -644,13 +799,13 @@ public class OrderGUI extends JFrame {
                 float margin = 50;
                 float yPosition = page.getMediaBox().getHeight() - margin;
 
-                // === HEADER SECTION ===
-                cs.setNonStrokingColor(30f / 255f, 58f / 255f, 95f / 255f); // Dark blue
+                // Header
+                cs.setNonStrokingColor(30f / 255f, 58f / 255f, 95f / 255f);
                 cs.addRect(margin, yPosition - 60, pageWidth - 2 * margin, 60);
                 cs.fill();
 
                 cs.beginText();
-                cs.setNonStrokingColor(1f, 1f, 1f); // White
+                cs.setNonStrokingColor(1f, 1f, 1f);
                 cs.setFont(boldFont, 24);
                 cs.newLineAtOffset(margin + 10, yPosition - 35);
                 cs.showText("VEBO BESTELLUNG");
@@ -658,9 +813,9 @@ public class OrderGUI extends JFrame {
 
                 yPosition -= 80;
 
-                // === ORDER INFO SECTION ===
+                // Order info
                 cs.beginText();
-                cs.setNonStrokingColor(0f, 0f, 0f); // Black
+                cs.setNonStrokingColor(0f, 0f, 0f);
                 cs.setFont(boldFont, 11);
                 cs.newLineAtOffset(margin, yPosition);
                 cs.showText("Bestelldatum:");
@@ -697,9 +852,9 @@ public class OrderGUI extends JFrame {
                 cs.beginText();
                 cs.setFont(boldFont, 11);
                 if ("Abgeschlossen".equals(status)) {
-                    cs.setNonStrokingColor(27f / 255f, 94f / 255f, 32f / 255f); // Green
+                    cs.setNonStrokingColor(27f / 255f, 94f / 255f, 32f / 255f);
                 } else {
-                    cs.setNonStrokingColor(230f / 255f, 81f / 255f, 0f); // Orange
+                    cs.setNonStrokingColor(230f / 255f, 81f / 255f, 0f);
                 }
                 cs.newLineAtOffset(margin + 100, yPosition);
                 cs.showText(status);
@@ -707,9 +862,9 @@ public class OrderGUI extends JFrame {
 
                 yPosition -= 30;
 
-                // === SENDER / RECEIVER SECTION ===
+                // Sender / Receiver boxes
                 float boxHeight = 85;
-                cs.setNonStrokingColor(245f / 255f, 247f / 255f, 250f / 255f); // Light gray
+                cs.setNonStrokingColor(245f / 255f, 247f / 255f, 250f / 255f);
                 cs.addRect(margin, yPosition - boxHeight, (pageWidth - 2 * margin - 10) / 2, boxHeight);
                 cs.fill();
 
@@ -717,7 +872,7 @@ public class OrderGUI extends JFrame {
                 cs.addRect(margin + (pageWidth - 2 * margin) / 2 + 5, yPosition - boxHeight, (pageWidth - 2 * margin - 10) / 2, boxHeight);
                 cs.fill();
 
-                // Sender (left box)
+                // Sender
                 cs.beginText();
                 cs.setNonStrokingColor(0f, 0f, 0f);
                 cs.setFont(boldFont, 12);
@@ -737,7 +892,7 @@ public class OrderGUI extends JFrame {
                 cs.showText("Konto: " + senderKontoNumber);
                 cs.endText();
 
-                // Receiver (right box)
+                // Receiver
                 float rightBoxX = margin + (pageWidth - 2 * margin) / 2 + 15;
                 cs.beginText();
                 cs.setFont(boldFont, 12);
@@ -765,8 +920,8 @@ public class OrderGUI extends JFrame {
 
                 yPosition -= boxHeight + 30;
 
-                // === ARTICLES TABLE ===
-                cs.setNonStrokingColor(62f / 255f, 84f / 255f, 98f / 255f); // Dark blue-gray
+                // Table header
+                cs.setNonStrokingColor(62f / 255f, 84f / 255f, 98f / 255f);
                 cs.addRect(margin, yPosition - 20, pageWidth - 2 * margin, 20);
                 cs.fill();
 
@@ -785,22 +940,19 @@ public class OrderGUI extends JFrame {
 
                 yPosition -= 25;
 
-                // Get article details and calculate totals
+                // Rows
                 List<Article> articles = OrderManager.getInstance().getOrderArticles(order);
                 double total = 0.0;
                 boolean alternateRow = false;
 
                 for (Article article : articles) {
                     int qty = orderedArticles.getOrDefault(article.getArticleNumber(), 0);
-                    if (qty == 0) {
-                        qty = orderedArticles.getOrDefault(article.getName(), 0);
-                    }
+                    if (qty == 0) qty = orderedArticles.getOrDefault(article.getName(), 0);
 
                     double unit = article.getSellPrice();
                     double line = unit * qty;
                     total += line;
 
-                    // Alternate row background
                     if (alternateRow) {
                         cs.setNonStrokingColor(250f / 255f, 250f / 255f, 250f / 255f);
                         cs.addRect(margin, yPosition - 15, pageWidth - 2 * margin, 18);
@@ -812,11 +964,9 @@ public class OrderGUI extends JFrame {
                     cs.setFont(regularFont, 9);
                     cs.newLineAtOffset(margin + 5, yPosition - 10);
 
-                    // Truncate long article names
                     String articleName = article.getName();
-                    if (articleName.length() > 35) {
-                        articleName = articleName.substring(0, 32) + "...";
-                    }
+                    if (articleName.length() > 35) articleName = articleName.substring(0, 32) + "...";
+
                     cs.showText(articleName + " (" + article.getArticleNumber() + ")");
                     cs.newLineAtOffset(200, 0);
                     cs.showText(String.valueOf(qty));
@@ -829,13 +979,10 @@ public class OrderGUI extends JFrame {
                     yPosition -= 18;
                     alternateRow = !alternateRow;
 
-                    // Check if we need a new page
-                    if (yPosition < 150) {
-                        break; // Stop if running out of space
-                    }
+                    if (yPosition < 150) break;
                 }
 
-                // === TOTALS SECTION ===
+                // Totals
                 yPosition -= 10;
                 cs.setNonStrokingColor(200f / 255f, 200f / 255f, 200f / 255f);
                 cs.setLineWidth(1);
@@ -845,7 +992,6 @@ public class OrderGUI extends JFrame {
 
                 yPosition -= 25;
 
-                // Total box
                 cs.setNonStrokingColor(30f / 255f, 58f / 255f, 95f / 255f);
                 cs.addRect(pageWidth - margin - 150, yPosition - 25, 150, 30);
                 cs.fill();
@@ -859,7 +1005,7 @@ public class OrderGUI extends JFrame {
                 cs.showText(String.format("%.2f CHF", total));
                 cs.endText();
 
-                // === FOOTER ===
+                // Footer
                 cs.beginText();
                 cs.setNonStrokingColor(150f / 255f, 150f / 255f, 150f / 255f);
                 cs.setFont(regularFont, 8);
@@ -905,7 +1051,7 @@ public class OrderGUI extends JFrame {
                 "<tr style='background-color: #3e5462; color: white;'>" +
                 "<th>Art.-Nr.</th><th>Name</th><th>Menge</th><th>Einzelpreis</th><th>Gesamt</th>" +
                 "</tr>" +
-                articlesHtml.toString() +
+                articlesHtml +
                 "<tr style='background-color: #f0f0f0; font-weight: bold;'>" +
                 "<td colspan='4' align='right'>Gesamtpreis:</td>" +
                 "<td align='right' style='color: #1e3a5f; font-size: 16px;'>" + String.format("%.2f", totalPrice) + " CHF</td>" +
@@ -941,4 +1087,3 @@ public class OrderGUI extends JFrame {
         }
     }
 }
-

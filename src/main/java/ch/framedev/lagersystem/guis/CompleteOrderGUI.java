@@ -7,6 +7,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.UserManager;
+import ch.framedev.lagersystem.utils.ThemeManager;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -20,6 +21,7 @@ public class CompleteOrderGUI extends JFrame {
     private JList<OrderListItem> ordersList;
     private DefaultListModel<OrderListItem> listModel;
     private List<Order> currentOrders;
+
     private final JPanel detailsPanel;
     private final JButton completeButton;
     private final JButton refreshButton;
@@ -28,18 +30,27 @@ public class CompleteOrderGUI extends JFrame {
     private final JLabel statusIconLabel;
 
     public CompleteOrderGUI() {
+        ThemeManager.getInstance().registerWindow(this);
+
         setTitle("Bestellung Abschließen");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(850, 650);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(0, 0));
 
+        Color bg = ThemeManager.getBackgroundColor();
+        Color card = ThemeManager.getCardBackgroundColor();
+        Color text = ThemeManager.getTextPrimaryColor();
+        Color muted = ThemeManager.getTextSecondaryColor();
+        Color border = ThemeManager.getBorderColor();
+
         // Header with gradient
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        headerWrapper.setBackground(new Color(245, 247, 250));
+        headerWrapper.setBackground(bg);
+
         GradientPanel headerPanel = new GradientPanel(
-            new Color(30, 58, 95),
-            new Color(52, 84, 122)
+                ThemeManager.getHeaderBackgroundColor(),
+                ThemeManager.getButtonHoverColor(ThemeManager.getHeaderBackgroundColor())
         );
         headerPanel.setPreferredSize(new Dimension(720, 80));
         headerPanel.setLayout(new GridBagLayout());
@@ -50,7 +61,7 @@ public class CompleteOrderGUI extends JFrame {
 
         JLabel title = new JLabel("  Bestellung Abschließen");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
-        title.setForeground(Color.WHITE);
+        title.setForeground(ThemeManager.getHeaderForegroundColor());
 
         JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
         headerContent.setOpaque(false);
@@ -66,58 +77,58 @@ public class CompleteOrderGUI extends JFrame {
         splitPane.setDividerLocation(400);
         splitPane.setDividerSize(4);
         splitPane.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-        splitPane.setBackground(new Color(245, 247, 250));
+        splitPane.setBackground(bg);
 
-        // Left panel - Orders list with search
+        // Left panel - Orders list
         JPanel leftPanel = new JPanel(new BorderLayout(8, 8));
         leftPanel.setOpaque(false);
 
-        RoundedPanel leftCard = new RoundedPanel(Color.WHITE, 16);
+        RoundedPanel leftCard = new RoundedPanel(card, 16);
         leftCard.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         leftCard.setLayout(new BorderLayout(8, 8));
 
         JLabel listTitle = new JLabel("📋 Offene Bestellungen");
         listTitle.setFont(listTitle.getFont().deriveFont(Font.BOLD, 16f));
-        listTitle.setForeground(new Color(31, 45, 61));
+        listTitle.setForeground(text);
         leftCard.add(listTitle, BorderLayout.NORTH);
 
-        // Initialize orderCountLabel early
         orderCountLabel = new JLabel("Anzahl Bestellungen: 0");
         orderCountLabel.setFont(orderCountLabel.getFont().deriveFont(Font.PLAIN, 12f));
-        orderCountLabel.setForeground(new Color(100, 110, 120));
+        orderCountLabel.setForeground(muted);
         leftCard.add(orderCountLabel, BorderLayout.SOUTH);
 
         leftPanel.add(leftCard, BorderLayout.CENTER);
         splitPane.setLeftComponent(leftPanel);
 
-        // Right panel - Details (MUST be created before initializeOrdersList)
+        // Right panel - Details
         JPanel rightPanel = new JPanel(new BorderLayout(8, 8));
         rightPanel.setOpaque(false);
 
-        RoundedPanel rightCard = new RoundedPanel(Color.WHITE, 16);
+        RoundedPanel rightCard = new RoundedPanel(card, 16);
         rightCard.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         rightCard.setLayout(new BorderLayout(10, 10));
 
         JLabel detailsTitle = new JLabel("📄 Bestelldetails");
         detailsTitle.setFont(detailsTitle.getFont().deriveFont(Font.BOLD, 16f));
-        detailsTitle.setForeground(new Color(31, 45, 61));
+        detailsTitle.setForeground(text);
         rightCard.add(detailsTitle, BorderLayout.NORTH);
 
-        // Details panel with better styling (initialize EARLY)
+        // Details panel (initialize early)
         detailsPanel = new JPanel();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
         detailsPanel.setOpaque(false);
         detailsPanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+                BorderFactory.createLineBorder(border, 1),
+                BorderFactory.createEmptyBorder(15, 15, 15, 15)
         ));
 
         statusIconLabel = new JLabel("ℹ️", SwingConstants.CENTER);
         statusIconLabel.setFont(statusIconLabel.getFont().deriveFont(48f));
 
-        JLabel placeholderText = new JLabel("<html><div style='text-align:center; color:#6c757d;'>" +
-            "Wählen Sie eine Bestellung aus<br/>um Details anzuzeigen</div></html>", SwingConstants.CENTER);
+        JLabel placeholderText = new JLabel("<html><div style='text-align:center;'>" +
+                "Wählen Sie eine Bestellung aus<br/>um Details anzuzeigen</div></html>", SwingConstants.CENTER);
         placeholderText.setFont(placeholderText.getFont().deriveFont(14f));
+        placeholderText.setForeground(muted);
 
         detailsPanel.add(Box.createVerticalGlue());
         detailsPanel.add(statusIconLabel);
@@ -127,37 +138,39 @@ public class CompleteOrderGUI extends JFrame {
 
         JScrollPane detailsScroll = new JScrollPane(detailsPanel);
         detailsScroll.setBorder(null);
-        detailsScroll.setBackground(Color.WHITE);
+        detailsScroll.setBackground(card);
+        detailsScroll.getViewport().setBackground(card);
         rightCard.add(detailsScroll, BorderLayout.CENTER);
 
         rightPanel.add(rightCard, BorderLayout.CENTER);
         splitPane.setRightComponent(rightPanel);
 
-        // NOW initialize orders list after detailsPanel is ready
+        // Orders list
         initializeOrdersList();
         JScrollPane scrollPane = new JScrollPane(ordersList);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(220, 225, 230), 1));
-        scrollPane.setBackground(Color.WHITE);
+        scrollPane.setBorder(BorderFactory.createLineBorder(border, 1));
+        scrollPane.setBackground(card);
+        scrollPane.getViewport().setBackground(card);
         leftCard.add(scrollPane, BorderLayout.CENTER);
 
         // Wrapper for split pane
         JPanel centerWrapper = new JPanel(new BorderLayout());
-        centerWrapper.setBackground(new Color(245, 247, 250));
+        centerWrapper.setBackground(bg);
         centerWrapper.add(splitPane, BorderLayout.CENTER);
         add(centerWrapper, BorderLayout.CENTER);
 
         // Bottom panel with styled buttons
         JPanel bottomPanel = new JPanel(new BorderLayout(15, 10));
-        bottomPanel.setBackground(new Color(245, 247, 250));
+        bottomPanel.setBackground(bg);
         bottomPanel.setBorder(BorderFactory.createEmptyBorder(5, 20, 15, 20));
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
         buttons.setOpaque(false);
 
-        refreshButton = createStyledButton("🔄 Aktualisieren", new Color(108, 117, 125), Color.WHITE);
-        completeButton = createStyledButton("✓ Abschließen", new Color(40, 167, 69), Color.WHITE);
+        refreshButton = createThemeButton("🔄 Aktualisieren", ThemeManager.getSecondaryColor());
+        completeButton = createThemeButton("✓ Abschließen", ThemeManager.getSuccessColor());
         completeButton.setEnabled(false);
-        closeButton = createStyledButton("✕ Schließen", new Color(220, 53, 69), Color.WHITE);
+        closeButton = createThemeButton("✕ Schließen", ThemeManager.getDangerColor());
 
         buttons.add(refreshButton);
         buttons.add(completeButton);
@@ -167,6 +180,12 @@ public class CompleteOrderGUI extends JFrame {
         add(bottomPanel, BorderLayout.SOUTH);
 
         attachListeners();
+    }
+
+    @Override
+    public void dispose() {
+        ThemeManager.getInstance().unregisterWindow(this);
+        super.dispose();
     }
 
     private void attachListeners() {
@@ -185,8 +204,8 @@ public class CompleteOrderGUI extends JFrame {
         completeButton.addActionListener(e -> completeSelectedOrder());
         refreshButton.addActionListener(e -> {
             refreshList();
-            JOptionPane.showMessageDialog(this, "Liste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+            JOptionPane.showMessageDialog(this, "Liste wurde aktualisiert.", "Aktualisiert",
+                    JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
         });
         closeButton.addActionListener(e -> dispose());
     }
@@ -198,9 +217,10 @@ public class CompleteOrderGUI extends JFrame {
         statusIconLabel.setText("ℹ️");
         statusIconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel placeholderText = new JLabel("<html><div style='text-align:center; color:#6c757d;'>" +
-            "Wählen Sie eine Bestellung aus<br/>um Details anzuzeigen</div></html>");
+        JLabel placeholderText = new JLabel("<html><div style='text-align:center;'>" +
+                "Wählen Sie eine Bestellung aus<br/>um Details anzuzeigen</div></html>");
         placeholderText.setFont(placeholderText.getFont().deriveFont(14f));
+        placeholderText.setForeground(ThemeManager.getTextSecondaryColor());
         placeholderText.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         detailsPanel.add(Box.createVerticalGlue());
@@ -216,6 +236,7 @@ public class CompleteOrderGUI extends JFrame {
     private void showOrderDetails(Order order) {
         detailsPanel.removeAll();
         detailsPanel.setLayout(new GridBagLayout());
+
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
@@ -224,27 +245,23 @@ public class CompleteOrderGUI extends JFrame {
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.NORTHWEST;
 
-        // Order info fields
-        addDetailRow(detailsPanel, gbc, "Bestell-ID:", order.getOrderId(), new Color(52, 152, 219));
-        addDetailRow(detailsPanel, gbc, "Empfänger:", order.getReceiverName(), new Color(46, 204, 113));
-        addDetailRow(detailsPanel, gbc, "Abteilung:", order.getDepartment(), new Color(155, 89, 182));
-        addDetailRow(detailsPanel, gbc, "Datum:", order.getOrderDate(), new Color(241, 196, 15));
+        addDetailRow(detailsPanel, gbc, "Bestell-ID:", safe(order.getOrderId()), ThemeManager.getAccentColor());
+        addDetailRow(detailsPanel, gbc, "Empfänger:", safe(order.getReceiverName()), ThemeManager.getSuccessColor());
+        addDetailRow(detailsPanel, gbc, "Abteilung:", safe(order.getDepartment()), new Color(155, 89, 182));
+        addDetailRow(detailsPanel, gbc, "Datum:", safe(order.getOrderDate()), ThemeManager.getWarningColor());
 
-        // Article count with icon
         int articleCount = order.getOrderedArticles().size();
         addDetailRow(detailsPanel, gbc, "Artikel:", articleCount + " Position(en)", new Color(230, 126, 34));
 
-        // Separator
         gbc.gridy++;
         JSeparator sep = new JSeparator();
-        sep.setForeground(new Color(220, 225, 230));
+        sep.setForeground(ThemeManager.getDividerColor());
         detailsPanel.add(sep, gbc);
 
-        // Article details
         gbc.gridy++;
         JLabel articlesTitle = new JLabel("📦 Bestellte Artikel:");
         articlesTitle.setFont(articlesTitle.getFont().deriveFont(Font.BOLD, 14f));
-        articlesTitle.setForeground(new Color(52, 73, 94));
+        articlesTitle.setForeground(ThemeManager.getTextPrimaryColor());
         detailsPanel.add(articlesTitle, gbc);
 
         List<Article> articles = order.getOrderedArticles().keySet().stream()
@@ -256,14 +273,13 @@ public class CompleteOrderGUI extends JFrame {
             gbc.gridy++;
             int qty = order.getOrderedArticles().get(article.getArticleNumber());
             String articleInfo = String.format("  • %s (%s) - Menge: %d",
-                article.getName(), article.getArticleNumber(), qty);
+                    safe(article.getName()), safe(article.getArticleNumber()), qty);
             JLabel articleLabel = new JLabel(articleInfo);
             articleLabel.setFont(articleLabel.getFont().deriveFont(12f));
-            articleLabel.setForeground(new Color(73, 80, 87));
+            articleLabel.setForeground(ThemeManager.getTextSecondaryColor());
             detailsPanel.add(articleLabel, gbc);
         }
 
-        // Add glue to push content to top
         gbc.gridy++;
         gbc.weighty = 1.0;
         gbc.fill = GridBagConstraints.BOTH;
@@ -280,7 +296,7 @@ public class CompleteOrderGUI extends JFrame {
 
         JLabel labelComp = new JLabel(label);
         labelComp.setFont(labelComp.getFont().deriveFont(Font.BOLD, 13f));
-        labelComp.setForeground(new Color(52, 73, 94));
+        labelComp.setForeground(ThemeManager.getTextPrimaryColor());
 
         JLabel valueComp = new JLabel(value);
         valueComp.setFont(valueComp.getFont().deriveFont(Font.PLAIN, 13f));
@@ -295,183 +311,154 @@ public class CompleteOrderGUI extends JFrame {
 
     private void completeSelectedOrder() {
         int idx = ordersList.getSelectedIndex();
-        if (idx < 0 || currentOrders == null || idx >= currentOrders.size()) {
-            return;
-        }
+        if (idx < 0 || currentOrders == null || idx >= currentOrders.size()) return;
 
         Order selected = currentOrders.get(idx);
 
-        // Validate stock availability first
-        List<String> warnings = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
+        // Final confirmation FIRST
+        int res = JOptionPane.showConfirmDialog(this,
+                "Möchten Sie die Bestellung " + safe(selected.getOrderId()) + " abschließen?\n" +
+                        "Der Lagerbestand wird entsprechend reduziert.",
+                "Bestätigung",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE, Main.iconSmall);
 
+        if (res != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        // Resolve articles
         List<Article> articles = selected.getOrderedArticles().keySet().stream()
                 .map(s -> ArticleManager.getInstance().getArticleByNumber(s))
                 .filter(Objects::nonNull)
                 .toList();
+
+        // Validate stock availability first
+        List<String> warnings = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
 
         for (Article article : articles) {
             int qty = selected.getOrderedArticles().get(article.getArticleNumber());
             int currentStock = article.getStockQuantity();
             int newStock = currentStock - qty;
 
-            // Critical: Not enough stock
             if (currentStock < qty) {
                 errors.add(String.format("• %s (%s): Lager=%d, Bestellt=%d (Fehlt: %d)",
-                        article.getName(), article.getArticleNumber(),
+                        safe(article.getName()), safe(article.getArticleNumber()),
                         currentStock, qty, qty - currentStock));
-            }
-            // Warning: Below minimum stock
-            else if (newStock < article.getMinStockLevel()) {
+            } else if (newStock < article.getMinStockLevel()) {
                 warnings.add(String.format("• %s (%s): Neuer Bestand=%d < Mindestbestand=%d",
-                        article.getName(), article.getArticleNumber(),
+                        safe(article.getName()), safe(article.getArticleNumber()),
                         newStock, article.getMinStockLevel()));
             }
         }
 
-        // Show errors if any
         if (!errors.isEmpty()) {
             StringBuilder msg = new StringBuilder("<html><b>FEHLER: Nicht genügend Lagerbestand!</b><br/><br/>");
             errors.forEach(err -> msg.append(err).append("<br/>"));
             msg.append("<br/>Die Bestellung kann nicht abgeschlossen werden.</html>");
-            JOptionPane.showMessageDialog(this, msg.toString(), "Lagerbestand unzureichend", JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            JOptionPane.showMessageDialog(this, msg.toString(), "Lagerbestand unzureichend",
+                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
             return;
         }
 
-        // Show warnings if any
         if (!warnings.isEmpty()) {
             StringBuilder msg = new StringBuilder("<html><b>WARNUNG: Mindestbestand wird unterschritten!</b><br/><br/>");
             warnings.forEach(warn -> msg.append(warn).append("<br/>"));
             msg.append("<br/>Möchten Sie trotzdem fortfahren?</html>");
-            int res = JOptionPane.showConfirmDialog(this, msg.toString(), "Warnung", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
-            if (res != JOptionPane.YES_OPTION) {
-                return;
-            }
+            int warnRes = JOptionPane.showConfirmDialog(this, msg.toString(), "Warnung",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+            if (warnRes != JOptionPane.YES_OPTION) return;
         }
 
-        // Final confirmation
-        //noinspection unused
-        int res = JOptionPane.showConfirmDialog(this,
-                "Möchten Sie die Bestellung " + selected.getOrderId() + " abschließen?\n" +
-                        "Der Lagerbestand wird entsprechend reduziert.",
-                "Bestätigung",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE, Main.iconSmall);
-        UserManager userManager = UserManager.getInstance();
-        User user = userManager.getUserByName(selected.getSenderName().toLowerCase())
-                == null ? createUser(selected.getSenderName()) : userManager.getUserByName(selected.getSenderName().toLowerCase());
-        if (!user.getOrders().contains(selected.getOrderId()))
-            user.getOrders().add(selected.getOrderId());
-        userManager.updateUser(user);
-
-        selected.setStatus("Abgeschlossen");
-        boolean updated = OrderManager.getInstance().updateOrder(selected);
-        if (updated)
-            JOptionPane.showMessageDialog(null, "Die Bestellung wurde erfolgreich abgeschlossen.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
-        else
-            JOptionPane.showMessageDialog(null, "Fehler beim Abschließen der Bestellung.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
-        refreshList();
-
-        if (res == JOptionPane.YES_OPTION) {
-            ArticleManager articleManager = ArticleManager.getInstance();
-
-            // Validate stock levels first - check if ALL articles have enough stock
-            List<String> insufficientStockErrors = new ArrayList<>();
-            for (Article article : articles) {
-                int qty = selected.getOrderedArticles().get(article.getArticleNumber());
-                int currentStock = article.getStockQuantity();
-
-                if (currentStock < qty) {
-                    insufficientStockErrors.add(String.format(
+        // Optional: partial fulfillment (if you want to keep it)
+        // Here we only check again if something changed (usually not needed),
+        // but you had the feature, so we keep it as a single controlled branch.
+        List<String> insufficientStockErrors = new ArrayList<>();
+        for (Article article : articles) {
+            int qty = selected.getOrderedArticles().get(article.getArticleNumber());
+            int currentStock = article.getStockQuantity();
+            if (currentStock < qty) {
+                insufficientStockErrors.add(String.format(
                         "• %s (%s): Benötigt=%d, Verfügbar=%d (Fehlt: %d)",
-                        article.getName(),
-                        article.getArticleNumber(),
+                        safe(article.getName()),
+                        safe(article.getArticleNumber()),
                         qty,
                         currentStock,
                         qty - currentStock
-                    ));
-                }
+                ));
             }
+        }
 
-            // If ANY article has insufficient stock, offer to complete partially or abort
-            if (!insufficientStockErrors.isEmpty()) {
-                StringBuilder errorMsg = new StringBuilder("<html><b>WARNUNG: Nicht genügend Lagerbestand!</b><br/><br/>");
-                errorMsg.append("Folgende Artikel haben nicht ausreichend Lagerbestand:<br/><br/>");
-                insufficientStockErrors.forEach(err -> errorMsg.append(err).append("<br/>"));
-                errorMsg.append("<br/><b>Optionen:</b><br/>");
-                errorMsg.append("• <b>Ja</b>: Bestellung mit verfügbarem Bestand abschließen (Fehlmenge wird protokolliert)<br/>");
-                errorMsg.append("• <b>Nein</b>: Vorgang abbrechen</html>");
+        if (!insufficientStockErrors.isEmpty()) {
+            StringBuilder errorMsg = new StringBuilder("<html><b>WARNUNG: Nicht genügend Lagerbestand!</b><br/><br/>");
+            errorMsg.append("Folgende Artikel haben nicht ausreichend Lagerbestand:<br/><br/>");
+            insufficientStockErrors.forEach(err -> errorMsg.append(err).append("<br/>"));
+            errorMsg.append("<br/><b>Optionen:</b><br/>");
+            errorMsg.append("• <b>Ja</b>: Bestellung mit verfügbarem Bestand abschließen (Fehlmenge wird protokolliert)<br/>");
+            errorMsg.append("• <b>Nein</b>: Vorgang abbrechen</html>");
 
-                int choice = JOptionPane.showConfirmDialog(this,
+            int choice = JOptionPane.showConfirmDialog(this,
                     errorMsg.toString(),
                     "Unzureichender Lagerbestand",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                    Main.iconSmall);
 
-                if (choice != JOptionPane.YES_OPTION) {
-                    return; // User chose to abort
-                }
-
-                // User chose to continue with partial fulfillment
-                completeOrderWithPartialStock(selected, articles, idx);
+            if (choice != JOptionPane.YES_OPTION) {
                 return;
             }
 
-            // All stock checks passed - now update stock quantities
-            boolean allStockUpdated = true;
-            List<String> updatedArticles = new ArrayList<>();
-
-            for (Article article : articles) {
-                int qty = selected.getOrderedArticles().get(article.getArticleNumber());
-                if (articleManager.removeFromStock(article.getArticleNumber(), qty)) {
-                    updatedArticles.add(article.getName());
-                } else {
-                    allStockUpdated = false;
-                    System.err.println("[CompleteOrderGUI] Fehler beim Reduzieren des Lagerbestands für Artikel: " + article.getArticleNumber());
-                }
-            }
-
-            // Update order status
-            Order order = currentOrders.get(idx);
-            order.setStatus("Abgeschlossen");
-            boolean updatedOrder = OrderManager.getInstance().updateOrder(order);
-
-            if (updatedOrder && allStockUpdated) {
-                JOptionPane.showMessageDialog(this,
-                        String.format("<html><b>Bestellung erfolgreich abgeschlossen!</b><br/><br/>" +
-                                "Bestell-ID: %s<br/>" +
-                                "Artikel: %d<br/>" +
-                                "Lagerbestände wurden aktualisiert.<br/>" +
-                                "Status: Abgeschlossen</html>",
-                                selected.getOrderId(),
-                                updatedArticles.size()),
-                        "Erfolg",
-                        JOptionPane.INFORMATION_MESSAGE,
-                        Main.iconSmall);
-            } else if (!allStockUpdated) {
-                JOptionPane.showMessageDialog(this,
-                        "<html><b>Warnung: Teilweise Fehler!</b><br/><br/>" +
-                        "Einige Lagerbestände konnten nicht aktualisiert werden.<br/>" +
-                        "Bitte überprüfen Sie die Logs und aktualisieren Sie manuell.</html>",
-                        "Teilweise erfolgreich",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
-            } else {
-                JOptionPane.showMessageDialog(this,
-                        "<html><b>Warnung:</b><br/><br/>" +
-                        "Lagerbestände wurden aktualisiert, aber der Bestellstatus konnte nicht aktualisiert werden.</html>",
-                        "Teilweise erfolgreich",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
-            }
-
-            refreshList();
+            completeOrderWithPartialStock(selected, articles, idx);
+            return;
         }
+
+        // Deduct stock & update order
+        ArticleManager articleManager = ArticleManager.getInstance();
+
+        boolean allStockUpdated = true;
+        for (Article article : articles) {
+            int qty = selected.getOrderedArticles().get(article.getArticleNumber());
+            if (!articleManager.removeFromStock(article.getArticleNumber(), qty)) {
+                allStockUpdated = false;
+                System.err.println("[CompleteOrderGUI] Fehler beim Reduzieren des Lagerbestands für Artikel: " + article.getArticleNumber());
+            }
+        }
+
+        // Update user
+        UserManager userManager = UserManager.getInstance();
+        User user = userManager.getUserByName(selected.getSenderName().toLowerCase());
+        if (user == null) user = createUser(selected.getSenderName());
+        if (!user.getOrders().contains(selected.getOrderId())) user.getOrders().add(selected.getOrderId());
+        userManager.updateUser(user);
+
+        // Update order
+        selected.setStatus("Abgeschlossen");
+        boolean updated = OrderManager.getInstance().updateOrder(selected);
+
+        if (updated && allStockUpdated) {
+            JOptionPane.showMessageDialog(this,
+                    "Die Bestellung wurde erfolgreich abgeschlossen.",
+                    "Erfolg",
+                    JOptionPane.INFORMATION_MESSAGE,
+                    Main.iconSmall);
+        } else if (!allStockUpdated) {
+            JOptionPane.showMessageDialog(this,
+                    "<html><b>Warnung: Teilweise Fehler!</b><br/><br/>" +
+                            "Einige Lagerbestände konnten nicht aktualisiert werden.<br/>" +
+                            "Bitte überprüfen Sie die Logs und aktualisieren Sie manuell.</html>",
+                    "Teilweise erfolgreich",
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim Abschließen der Bestellung.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+        }
+
+        refreshList();
     }
 
     /**
@@ -495,47 +482,36 @@ public class CompleteOrderGUI extends JFrame {
             int currentStock = article.getStockQuantity();
 
             if (currentStock >= qtyOrdered) {
-                // Full fulfillment possible
                 if (articleManager.removeFromStock(article.getArticleNumber(), qtyOrdered)) {
-                    fulfilledItems.add(String.format("%s: %d/%d", article.getName(), qtyOrdered, qtyOrdered));
+                    fulfilledItems.add(String.format("%s: %d/%d", safe(article.getName()), qtyOrdered, qtyOrdered));
                 } else {
                     System.err.println("[CompleteOrderGUI] Fehler beim Reduzieren des Lagerbestands für: " + article.getArticleNumber());
                 }
             } else if (currentStock > 0) {
-                // Partial fulfillment - use all available stock
                 int shortage = qtyOrdered - currentStock;
                 if (articleManager.removeFromStock(article.getArticleNumber(), currentStock)) {
                     partialItems.add(String.format("%s: %d/%d (Fehlmenge: %d)",
-                        article.getName(), currentStock, qtyOrdered, shortage));
+                            safe(article.getName()), currentStock, qtyOrdered, shortage));
                     orderNotes.append(String.format("- %s (%s): %d Stück fehlen\n",
-                        article.getName(), article.getArticleNumber(), shortage));
+                            safe(article.getName()), safe(article.getArticleNumber()), shortage));
                     hasPartialFulfillment = true;
                 }
             } else {
-                // No stock available at all
                 unfulfillableItems.add(String.format("%s: 0/%d (Komplett fehlend)",
-                    article.getName(), qtyOrdered));
+                        safe(article.getName()), qtyOrdered));
                 orderNotes.append(String.format("- %s (%s): %d Stück fehlen (kein Bestand)\n",
-                    article.getName(), article.getArticleNumber(), qtyOrdered));
+                        safe(article.getName()), safe(article.getArticleNumber()), qtyOrdered));
                 hasPartialFulfillment = true;
             }
         }
 
-        // Update order status with notes
         Order order = currentOrders.get(idx);
-        if (hasPartialFulfillment) {
-            order.setStatus("Teilweise abgeschlossen");
-            // Store shortage information in order notes (if your Order class supports it)
-            // You might want to add a notes field to the Order class
-        } else {
-            order.setStatus("Abgeschlossen");
-        }
+        order.setStatus(hasPartialFulfillment ? "Teilweise abgeschlossen" : "Abgeschlossen");
 
         boolean updatedOrder = OrderManager.getInstance().updateOrder(order);
 
-        // Create detailed result message
         StringBuilder resultMsg = new StringBuilder("<html><b>Bestellung verarbeitet!</b><br/><br/>");
-        resultMsg.append("<b>Bestell-ID:</b> ").append(selected.getOrderId()).append("<br/><br/>");
+        resultMsg.append("<b>Bestell-ID:</b> ").append(safe(selected.getOrderId())).append("<br/><br/>");
 
         if (!fulfilledItems.isEmpty()) {
             resultMsg.append("<b style='color:green;'>✓ Vollständig erfüllt:</b><br/>");
@@ -566,23 +542,22 @@ public class CompleteOrderGUI extends JFrame {
 
         if (updatedOrder) {
             JOptionPane.showMessageDialog(this,
-                resultMsg.toString(),
-                "Bestellung verarbeitet",
-                hasPartialFulfillment ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE,
+                    resultMsg.toString(),
+                    "Bestellung verarbeitet",
+                    hasPartialFulfillment ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE,
                     Main.iconSmall);
 
-            // Log the shortage for ordering
             if (hasPartialFulfillment) {
-                System.out.println("[CompleteOrderGUI] Bestellung " + selected.getOrderId() + " teilweise abgeschlossen:");
+                System.out.println("[CompleteOrderGUI] Bestellung " + safe(selected.getOrderId()) + " teilweise abgeschlossen:");
                 System.out.println(orderNotes);
             }
         } else {
             JOptionPane.showMessageDialog(this,
-                "<html><b>Warnung:</b><br/><br/>" +
-                "Lagerbestände wurden teilweise aktualisiert, aber der Bestellstatus konnte nicht aktualisiert werden.<br/>" +
-                "Bitte überprüfen Sie die Bestellung manuell.</html>",
-                "Teilweise erfolgreich",
-                JOptionPane.WARNING_MESSAGE,
+                    "<html><b>Warnung:</b><br/><br/>" +
+                            "Lagerbestände wurden teilweise aktualisiert, aber der Bestellstatus konnte nicht aktualisiert werden.<br/>" +
+                            "Bitte überprüfen Sie die Bestellung manuell.</html>",
+                    "Teilweise erfolgreich",
+                    JOptionPane.WARNING_MESSAGE,
                     Main.iconSmall);
         }
 
@@ -600,13 +575,19 @@ public class CompleteOrderGUI extends JFrame {
     private void initializeOrdersList() {
         listModel = new DefaultListModel<>();
         ordersList = new JList<>(listModel);
+
         ordersList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         ordersList.setFont(ordersList.getFont().deriveFont(13f));
         ordersList.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         ordersList.setFixedCellHeight(60);
+
         ordersList.setCellRenderer(new OrderListCellRenderer());
-        ordersList.setSelectionBackground(new Color(52, 152, 219, 30));
-        ordersList.setSelectionForeground(Color.BLACK);
+
+        ordersList.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
+        ordersList.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
+        ordersList.setBackground(ThemeManager.getCardBackgroundColor());
+        ordersList.setForeground(ThemeManager.getTextPrimaryColor());
+
         refreshList();
     }
 
@@ -614,22 +595,21 @@ public class CompleteOrderGUI extends JFrame {
         listModel.clear();
         try {
             List<Order> allOrders = OrderManager.getInstance().getOrders();
-            // Filter to show only pending orders (not completed)
             currentOrders = allOrders.stream()
                     .filter(order -> !"Abgeschlossen".equals(order.getStatus()))
                     .toList();
         } catch (Exception ex) {
             currentOrders = null;
         }
+
         if (currentOrders != null) {
             for (Order order : currentOrders) {
                 listModel.addElement(new OrderListItem(order));
             }
         }
+
         showPlaceholder();
-        if (completeButton != null) {
-            completeButton.setEnabled(false);
-        }
+        if (completeButton != null) completeButton.setEnabled(false);
         updateOrderCount();
     }
 
@@ -638,35 +618,48 @@ public class CompleteOrderGUI extends JFrame {
         orderCountLabel.setText("Anzahl Bestellungen: " + count);
     }
 
-    private JButton createStyledButton(String text, Color bgColor, Color fgColor) {
+    private JButton createThemeButton(String text, Color baseBg) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
         button.setOpaque(true);
-        button.setBackground(bgColor);
-        button.setForeground(fgColor);
+
+        Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
+        Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
+
+        button.setBackground(baseBg);
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(bgColor.darker(), 1),
+                BorderFactory.createLineBorder(baseBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Hover effect
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(bgColor.brighter());
+                if (button.isEnabled()) button.setBackground(hoverBg);
             }
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(bgColor);
+                if (button.isEnabled()) button.setBackground(baseBg);
+            }
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                if (button.isEnabled()) button.setBackground(pressedBg);
+            }
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                if (!button.isEnabled()) return;
+                button.setBackground(button.contains(evt.getPoint()) ? hoverBg : baseBg);
             }
         });
 
         return button;
     }
 
-    // Order list item wrapper class
+    private static String safe(String s) {
+        return s == null ? "" : s;
+    }
+
     private static class OrderListItem {
         final Order order;
 
@@ -680,7 +673,6 @@ public class CompleteOrderGUI extends JFrame {
         }
     }
 
-    // Custom cell renderer for prettier list items
     private static class OrderListCellRenderer extends JPanel implements ListCellRenderer<OrderListItem> {
         private final JLabel idLabel;
         private final JLabel nameLabel;
@@ -690,32 +682,33 @@ public class CompleteOrderGUI extends JFrame {
 
         OrderListCellRenderer() {
             setLayout(new BorderLayout(10, 5));
+            setOpaque(true);
+
             padding = BorderFactory.createEmptyBorder(8, 12, 8, 12);
 
             idLabel = new JLabel();
             idLabel.setFont(idLabel.getFont().deriveFont(Font.BOLD, 13f));
-            idLabel.setForeground(new Color(52, 152, 219));
 
             JPanel infoPanel = new JPanel(new GridLayout(2, 1, 0, 2));
             infoPanel.setOpaque(false);
 
             nameLabel = new JLabel();
             nameLabel.setFont(nameLabel.getFont().deriveFont(Font.PLAIN, 12f));
-            nameLabel.setForeground(new Color(52, 73, 94));
 
             JPanel bottomRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
             bottomRow.setOpaque(false);
 
             deptLabel = new JLabel();
             deptLabel.setFont(deptLabel.getFont().deriveFont(Font.PLAIN, 11f));
-            deptLabel.setForeground(new Color(108, 117, 125));
 
             dateLabel = new JLabel();
             dateLabel.setFont(dateLabel.getFont().deriveFont(Font.PLAIN, 11f));
-            dateLabel.setForeground(new Color(108, 117, 125));
+
+            JLabel sep = new JLabel("|");
+            sep.setForeground(ThemeManager.getTextSecondaryColor());
 
             bottomRow.add(deptLabel);
-            bottomRow.add(new JLabel("|"));
+            bottomRow.add(sep);
             bottomRow.add(dateLabel);
 
             infoPanel.add(nameLabel);
@@ -727,34 +720,46 @@ public class CompleteOrderGUI extends JFrame {
 
         @Override
         public Component getListCellRendererComponent(JList<? extends OrderListItem> list,
-                OrderListItem value, int index, boolean isSelected, boolean cellHasFocus) {
+                                                      OrderListItem value, int index,
+                                                      boolean isSelected, boolean cellHasFocus) {
 
             Order order = value.order;
-            idLabel.setText("📋 " + order.getOrderId());
-            nameLabel.setText("Empfänger: " + order.getReceiverName());
-            deptLabel.setText("🏢 " + order.getDepartment());
-            dateLabel.setText("📅 " + order.getOrderDate());
+
+            idLabel.setText("📋 " + safe(order.getOrderId()));
+            nameLabel.setText("Empfänger: " + safe(order.getReceiverName()));
+            deptLabel.setText("🏢 " + safe(order.getDepartment()));
+            dateLabel.setText("📅 " + safe(order.getOrderDate()));
+
+            Color bg = ThemeManager.getCardBackgroundColor();
+            Color fg = ThemeManager.getTextPrimaryColor();
+            Color muted = ThemeManager.getTextSecondaryColor();
+            Color divider = ThemeManager.getDividerColor();
+            Color accent = ThemeManager.getAccentColor();
+
+            idLabel.setForeground(accent);
+            nameLabel.setForeground(fg);
+            deptLabel.setForeground(muted);
+            dateLabel.setForeground(muted);
 
             setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(240, 240, 240)),
-                padding
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, divider),
+                    padding
             ));
 
             if (isSelected) {
-                setBackground(new Color(52, 152, 219, 30));
+                setBackground(ThemeManager.getSelectionBackgroundColor());
                 setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 3, 1, 0, new Color(52, 152, 219)),
-                    padding
+                        BorderFactory.createMatteBorder(0, 3, 1, 0, accent),
+                        padding
                 ));
             } else {
-                setBackground(Color.WHITE);
+                setBackground(bg);
             }
 
             return this;
         }
     }
 
-    // Gradient panel for header
     private static class GradientPanel extends JPanel {
         private final Color color1;
         private final Color color2;
@@ -777,7 +782,6 @@ public class CompleteOrderGUI extends JFrame {
         }
     }
 
-    // Rounded panel for card styling
     private static class RoundedPanel extends JPanel {
         private final Color bg;
         private final int radius;

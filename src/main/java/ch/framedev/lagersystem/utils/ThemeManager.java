@@ -106,7 +106,7 @@ public class ThemeManager {
     public static class Dark {
 
         // Base surfaces
-        public static final Color BACKGROUND = new Color(30, 30, 30);
+        public static final Color BACKGROUND = new Color(26, 26, 26, 255);
         public static final Color CARD_BACKGROUND = new Color(45, 45, 45);
         public static final Color SURFACE = new Color(50, 50, 50);
 

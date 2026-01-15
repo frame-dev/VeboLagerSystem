@@ -7,6 +7,7 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.WarningManager;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
+import ch.framedev.lagersystem.utils.RoundButton;
 import ch.framedev.lagersystem.utils.ThemeManager;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -71,13 +72,16 @@ public class ArticleGUI extends JFrame {
 
     public ArticleGUI() {
         ThemeManager.getInstance().registerWindow(this);
+
         setTitle("Artikel Verwaltung");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(1000, 700);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
-
         setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        // Apply current theme defaults (important if you switched theme before opening)
+        ThemeManager.applyUIDefaults();
 
         // Load categories from JSON
         loadCategories();
@@ -86,30 +90,36 @@ public class ArticleGUI extends JFrame {
         articleTable = new JTable();
         initializeTable();
 
-        // Header (rounded white pill)
+        // =========================
+        // Header
+        // =========================
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        // soft neutral background that's easy on the eyes
-        headerWrapper.setBackground(new Color(245, 247, 250));
-        RoundedPanel headerPanel = new RoundedPanel(new Color(255, 255, 255), 20);
+        headerWrapper.setBackground(ThemeManager.getBackgroundColor());
+
+        RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
         headerPanel.setLayout(new GridBagLayout());
         headerPanel.setPreferredSize(new Dimension(760, 64));
 
         JLabel title = new JLabel("Artikel Verwaltung");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
-        // dark but soft title color
-        title.setForeground(new Color(31, 45, 61));
+        title.setForeground(ThemeManager.getTextPrimaryColor());
         headerPanel.add(title);
         headerWrapper.add(headerPanel);
 
-        // Toolbar with rounded buttons centered
+        // =========================
+        // Toolbar
+        // =========================
         JPanel toolbarWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 18));
-        toolbarWrapper.setBackground(new Color(236, 239, 241));
+        toolbarWrapper.setBackground(ThemeManager.getSurfaceColor());
 
         // Category filter
         JPanel categoryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         categoryPanel.setOpaque(false);
+
         JLabel categoryLabel = new JLabel("📁 Kategorie:");
         categoryLabel.setFont(categoryLabel.getFont().deriveFont(Font.BOLD));
+        categoryLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
         categoryFilter = new JComboBox<>();
         categoryFilter.addItem("Alle Kategorien");
         if (categories != null) {
@@ -117,6 +127,54 @@ public class ArticleGUI extends JFrame {
         }
         categoryFilter.setPreferredSize(new Dimension(200, 35));
         categoryFilter.addActionListener(e -> filterByCategory());
+
+// Base colors
+        Color bg = ThemeManager.getInputBackgroundColor();
+        Color fg = ThemeManager.getTextPrimaryColor();
+        Color borderInput = ThemeManager.getInputBorderColor();
+        Color selBg = ThemeManager.getSelectionBackgroundColor();
+        Color selFg = ThemeManager.getSelectionForegroundColor();
+
+// Combo itself
+        categoryFilter.setBackground(bg);
+        categoryFilter.setForeground(fg);
+        categoryFilter.setOpaque(true);
+        categoryFilter.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(borderInput, 1),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        ));
+
+// Editor (when editable or LAF uses one)
+        categoryFilter.setEditable(true);
+        Component editorComp = categoryFilter.getEditor().getEditorComponent();
+        if (editorComp instanceof JTextField tf) {
+            tf.setBorder(null);
+            tf.setBackground(bg);
+            tf.setForeground(fg);
+            tf.setCaretColor(fg);
+        }
+
+// Popup list (THIS is what most people forget)
+        categoryFilter.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+
+                JLabel c = (JLabel) super.getListCellRendererComponent(
+                        list, value, index, isSelected, cellHasFocus);
+
+                if (isSelected) {
+                    c.setBackground(selBg);
+                    c.setForeground(selFg);
+                } else {
+                    c.setBackground(bg);
+                    c.setForeground(fg);
+                }
+                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+                return c;
+            }
+        });
         categoryPanel.add(categoryLabel);
         categoryPanel.add(categoryFilter);
         toolbarWrapper.add(categoryPanel);
@@ -138,10 +196,14 @@ public class ArticleGUI extends JFrame {
                         (String) row[7]
                 );
                 if (!articleManager.insertArticle(article)) {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                    JOptionPane.showMessageDialog(this,
+                            "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.",
+                            "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 } else {
-                    loadArticles(); // Reload articles from database to ensure consistency
-                    JOptionPane.showMessageDialog(this, "Artikel erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+                    loadArticles();
+                    JOptionPane.showMessageDialog(this,
+                            "Artikel erfolgreich hinzugefügt.",
+                            "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
                 }
             }
         });
@@ -151,22 +213,25 @@ public class ArticleGUI extends JFrame {
         editArticleButton.addActionListener(e -> {
             int selectedRow = articleTable.getSelectedRow();
             if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+                JOptionPane.showMessageDialog(this,
+                        "Bitte wählen Sie einen Artikel zum Bearbeiten aus.",
+                        "Keine Auswahl", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                 return;
             }
+
             int modelRow = articleTable.convertRowIndexToModel(selectedRow);
-            Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector().elementAt(modelRow).toArray();
+            Object[] existingData = ((DefaultTableModel) articleTable.getModel())
+                    .getDataVector().elementAt(modelRow).toArray();
+
             Object[] updatedRow = showUpdateArticleDialog(existingData);
             if (updatedRow != null) {
-                // updatedRow has 8 elements: [artikelNr, name, details, lager, mindest, verkauf, einkauf, lieferant]
-                // Table has 9 columns: [artikelNr, name, CATEGORY, details, lager, mindest, verkauf, einkauf, lieferant]
+                // updatedRow: [artikelNr, name, details, lager, mindest, verkauf, einkauf, lieferant]
                 DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
 
-                // Update table with category
                 model.setValueAt(updatedRow[0], modelRow, 0); // Artikelnummer
                 model.setValueAt(updatedRow[1], modelRow, 1); // Name
                 String category = getCategoryForArticle((String) updatedRow[0]);
-                model.setValueAt(category, modelRow, 2); // Category (recalculated)
+                model.setValueAt(category, modelRow, 2); // Kategorie (recalculated)
                 model.setValueAt(updatedRow[2], modelRow, 3); // Details
                 model.setValueAt(updatedRow[3], modelRow, 4); // Lagerbestand
                 model.setValueAt(updatedRow[4], modelRow, 5); // Mindestbestand
@@ -174,23 +239,27 @@ public class ArticleGUI extends JFrame {
                 model.setValueAt(updatedRow[6], modelRow, 7); // Einkaufspreis
                 model.setValueAt(updatedRow[7], modelRow, 8); // Lieferant
 
-                // Create Article object (without category)
                 ArticleManager articleManager = ArticleManager.getInstance();
                 Article article = new Article(
-                        (String) updatedRow[0],  // artikelNr
-                        (String) updatedRow[1],  // name
-                        (String) updatedRow[2],  // details
-                        (Integer) updatedRow[3], // lagerbestand
-                        (Integer) updatedRow[4], // mindestbestand
-                        (Double) updatedRow[5],  // verkaufspreis
-                        (Double) updatedRow[6],  // einkaufspreis
-                        (String) updatedRow[7]   // lieferant
+                        (String) updatedRow[0],
+                        (String) updatedRow[1],
+                        (String) updatedRow[2],
+                        (Integer) updatedRow[3],
+                        (Integer) updatedRow[4],
+                        (Double) updatedRow[5],
+                        (Double) updatedRow[6],
+                        (String) updatedRow[7] // lieferant
                 );
+
                 if (articleManager.updateArticle(article)) {
-                    loadArticles(); // Refresh to ensure consistency
-                    JOptionPane.showMessageDialog(this, "Artikel erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+                    loadArticles();
+                    JOptionPane.showMessageDialog(this,
+                            "Artikel erfolgreich aktualisiert.",
+                            "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Artikels.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                    JOptionPane.showMessageDialog(this,
+                            "Fehler beim Aktualisieren des Artikels.",
+                            "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 }
             }
         });
@@ -208,28 +277,31 @@ public class ArticleGUI extends JFrame {
         toolbarWrapper.add(deleteArticleButton);
         toolbarWrapper.add(retrieveQrCodeDataButton);
 
-        // top area: header + toolbar stacked
+        // Top area: header + toolbar stacked
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(245, 247, 250));
+        topPanel.setBackground(ThemeManager.getBackgroundColor());
         topPanel.add(headerWrapper, BorderLayout.NORTH);
         topPanel.add(toolbarWrapper, BorderLayout.SOUTH);
         add(topPanel, BorderLayout.NORTH);
 
-        // Main card area (rounded white background with padding)
-        RoundedPanel card = new RoundedPanel(Color.WHITE, 20);
+        // =========================
+        // Main card/table area
+        // =========================
+        RoundedPanel card = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
         card.setLayout(new BorderLayout());
         card.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
 
-        // make the table viewport wider and taller so it looks more like the design
         articleTable.setPreferredScrollableViewportSize(new Dimension(920, 420));
         tableScrollPane = new JScrollPane(articleTable);
-        // allow the scroll pane to grow/shrink with the window (no fixed preferredSize)
         tableScrollPane.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        tableScrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
+        tableScrollPane.setBackground(ThemeManager.getScrollbarBackgroundColor());
+        tableScrollPane.setForeground(ThemeManager.getScrollbarForegroundColor());
         card.add(tableScrollPane, BorderLayout.CENTER);
 
-        // add surrounding shadow background and place in center
         JPanel centerWrapper = new JPanel(new GridBagLayout());
-        centerWrapper.setBackground(new Color(245, 247, 250));
+        centerWrapper.setBackground(ThemeManager.getBackgroundColor());
+
         GridBagConstraints gbcCenter = new GridBagConstraints();
         gbcCenter.gridx = 0;
         gbcCenter.gridy = 0;
@@ -237,6 +309,7 @@ public class ArticleGUI extends JFrame {
         gbcCenter.weighty = 1.0;
         gbcCenter.fill = GridBagConstraints.BOTH;
         centerWrapper.add(card, gbcCenter);
+
         add(centerWrapper, BorderLayout.CENTER);
 
         // Load existing articles from DB
@@ -245,16 +318,67 @@ public class ArticleGUI extends JFrame {
         // Setup table interactions (context menu, double-click)
         setupTableInteractions();
 
-        // Bottom search bar (search by article number or name)
+        // =========================
+        // Bottom search bar
+        // =========================
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 12));
-        searchPanel.setBackground(new Color(245, 247, 250));
-        JLabel searchLabel = new JLabel("Suche:");
-        searchLabel.setForeground(new Color(31, 45, 61));
-        JTextField searchField = new JTextField(30);
-        JButton searchBtn = new JButton("Suchen");
-        JButton clearBtn = new JButton("Leeren");
+        searchPanel.setBackground(ThemeManager.getBackgroundColor());
 
-        // perform search using a RowFilter on columns 0 (Artikelnummer) and 1 (Name)
+        JLabel searchLabel = new JLabel("Suche:");
+        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JTextField searchField = new JTextField(30);
+        searchField.setBackground(ThemeManager.getInputBackgroundColor());
+        searchField.setForeground(ThemeManager.getTextPrimaryColor());
+        searchField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+
+        JButton searchBtn = new JButton("Suchen");
+        JButton clearBtn  = new JButton("Leeren");
+
+// base colors
+        Color normalFg = ThemeManager.getTextPrimaryColor();
+        Color hoverFg  = ThemeManager.getTextLinkColor();      // good hover text color
+        Color border   = ThemeManager.getBorderColor();
+
+        for (JButton b : new JButton[]{searchBtn, clearBtn}) {
+            b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            b.setOpaque(false);
+            b.setContentAreaFilled(false);
+            b.setBorderPainted(true);
+            b.setFocusPainted(false);
+
+            b.setForeground(normalFg);
+            b.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(border, 1),
+                    BorderFactory.createEmptyBorder(8, 16, 8, 16)
+            ));
+
+            b.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    b.setForeground(hoverFg);
+                    // optional: slightly stronger border on hover
+                    b.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(ThemeManager.getBorderFocusColor(), 1),
+                            BorderFactory.createEmptyBorder(8, 16, 8, 16)
+                    ));
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    b.setForeground(normalFg);
+                    b.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(border, 1),
+                            BorderFactory.createEmptyBorder(8, 16, 8, 16)
+                    ));
+                }
+            });
+        }
+
         Runnable doSearch = () -> {
             String text = searchField.getText().trim();
             TableRowSorter<DefaultTableModel> sorter;
@@ -275,6 +399,7 @@ public class ArticleGUI extends JFrame {
                     sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(text), 0, 1));
                 }
             }
+            updateCountLabel();
         };
 
         searchBtn.addActionListener(e -> doSearch.run());
@@ -283,16 +408,20 @@ public class ArticleGUI extends JFrame {
             if (articleTable.getRowSorter() instanceof TableRowSorter) {
                 ((TableRowSorter<?>) articleTable.getRowSorter()).setRowFilter(null);
             }
+            updateCountLabel();
         });
 
-        // Enter key triggers search
         searchField.addActionListener(e -> doSearch.run());
+        searchField.setForeground(ThemeManager.getTextPrimaryColor());
+        searchField.setBackground(ThemeManager.getInputBackgroundColor());
 
         JButton exportTableAsPdfBtn = createRoundedButton("Tabelle als PDF exportieren");
         exportTableAsPdfBtn.addActionListener(e -> exportTableAsPDF());
         searchPanel.add(exportTableAsPdfBtn);
 
         countLabel = new JLabel("Anzahl Artikel: " + articleTable.getRowCount());
+        countLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        countLabel.setBackground(ThemeManager.getTextSecondaryColor());
         searchPanel.add(countLabel);
 
         searchPanel.add(searchLabel);
@@ -306,11 +435,13 @@ public class ArticleGUI extends JFrame {
         showWarningsBottomBtn.setBorderPainted(false);
         showWarningsBottomBtn.setContentAreaFilled(false);
         showWarningsBottomBtn.setOpaque(true);
-        showWarningsBottomBtn.setBackground(new Color(241, 196, 15));
+        showWarningsBottomBtn.setBackground(ThemeManager.isDarkMode()
+                ? ThemeManager.getWarningForegroundColor()
+                : new Color(241, 196, 15));
         showWarningsBottomBtn.setForeground(Color.WHITE);
         showWarningsBottomBtn.setFont(showWarningsBottomBtn.getFont().deriveFont(Font.BOLD, 13f));
         showWarningsBottomBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(243, 156, 18), 2),
+                BorderFactory.createLineBorder(showWarningsBottomBtn.getBackground().darker(), 2),
                 BorderFactory.createEmptyBorder(8, 16, 8, 16)
         ));
         showWarningsBottomBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -318,12 +449,14 @@ public class ArticleGUI extends JFrame {
         showWarningsBottomBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                showWarningsBottomBtn.setBackground(new Color(243, 156, 18));
+                showWarningsBottomBtn.setBackground(showWarningsBottomBtn.getBackground().darker());
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                showWarningsBottomBtn.setBackground(new Color(241, 196, 15));
+                showWarningsBottomBtn.setBackground(ThemeManager.isDarkMode()
+                        ? ThemeManager.getWarningForegroundColor()
+                        : new Color(241, 196, 15));
             }
         });
         searchPanel.add(showWarningsBottomBtn);
@@ -337,12 +470,9 @@ public class ArticleGUI extends JFrame {
                 adjustColumnWidths();
             }
         };
-        // listen to frame resizes
         this.addComponentListener(resizeListener);
-        // and listen to viewport resizes (when card/scrollpane changes)
         tableScrollPane.getViewport().addComponentListener(resizeListener);
 
-        // Ensure columns are adjusted once UI is visible
         SwingUtilities.invokeLater(this::adjustColumnWidths);
     }
 
@@ -1048,20 +1178,18 @@ public class ArticleGUI extends JFrame {
         articleTable.setShowGrid(true);
         articleTable.setShowHorizontalLines(true);
         articleTable.setShowVerticalLines(true);
-        articleTable.setGridColor(new Color(226, 230, 233)); // soft light gray
+        articleTable.setGridColor(ThemeManager.getTableGridColor()); // soft light gray // soft light gray
         articleTable.setIntercellSpacing(new Dimension(1, 1));
         articleTable.setFont(new Font("Arial", Font.PLAIN, 16));
 
 
         // Alternating row colors for readability (subtle)
         DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
-            private final Color EVEN = new Color(255, 255, 255);
-            private final Color ODD = new Color(247, 250, 253);
 
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (!isSelected) c.setBackground(row % 2 == 0 ? EVEN : ODD);
+                if (!isSelected) c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
                 return c;
             }
         };
@@ -1104,8 +1232,8 @@ public class ArticleGUI extends JFrame {
 
         // Header styling
         JTableHeader header = articleTable.getTableHeader();
-        header.setBackground(new Color(62, 84, 98));
-        header.setForeground(Color.WHITE);
+        header.setBackground(ThemeManager.getTableHeaderBackground());
+        header.setForeground(ThemeManager.getTableHeaderForeground());
         header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
     }
 

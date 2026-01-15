@@ -8,8 +8,11 @@ import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.utils.ThemeManager;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,8 +35,12 @@ public class EditOrderGUI extends JFrame {
     private final DefaultTableModel tableModel;
     private final Map<String, Article> articleCache = new HashMap<>();
 
+    private JTable articlesTable;
+
     public EditOrderGUI(Order order) {
         this.order = order;
+
+        ThemeManager.getInstance().registerWindow(this);
 
         setTitle("Bestellung Bearbeiten");
         setSize(1000, 700);
@@ -41,25 +48,24 @@ public class EditOrderGUI extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(0, 0));
 
-        setLayout(new BorderLayout(0, 0));
-
         // Gradient header with icon
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
         headerWrapper.setBackground(ThemeManager.getBackgroundColor());
+
         GradientPanel header = new GradientPanel(
-            ThemeManager.getHeaderBackgroundColor(),
-            ThemeManager.getHeaderBackgroundColor().brighter()
+                ThemeManager.getHeaderBackgroundColor(),
+                ThemeManager.getButtonHoverColor(ThemeManager.getHeaderBackgroundColor())
         );
         header.setPreferredSize(new Dimension(850, 80));
         header.setLayout(new GridBagLayout());
 
         JLabel iconLabel = new JLabel("✏️");
         iconLabel.setFont(iconLabel.getFont().deriveFont(Font.BOLD, 36f));
-        iconLabel.setForeground(Color.WHITE);
+        iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
 
         JLabel title = new JLabel("  Bestellung Bearbeiten");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
-        title.setForeground(Color.WHITE);
+        title.setForeground(ThemeManager.getTextOnPrimaryColor());
 
         JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
         headerContent.setOpaque(false);
@@ -96,24 +102,25 @@ public class EditOrderGUI extends JFrame {
         gbc.weightx = 1.0;
 
         // Initialize fields
-        JTextField orderIdField = new JTextField(order.getOrderId());
+        JTextField orderIdField = new JTextField(safe(order.getOrderId()));
         orderIdField.setEditable(false);
-        orderIdField.setBackground(ThemeManager.getInputBackgroundColor().darker());
         styleTextField(orderIdField);
+        orderIdField.setBackground(ThemeManager.getInputDisabledBackgroundColor());
+        orderIdField.setForeground(ThemeManager.getInputDisabledForegroundColor());
 
-        receiverNameField = new JTextField(order.getReceiverName());
+        receiverNameField = new JTextField(safe(order.getReceiverName()));
         styleTextField(receiverNameField);
 
-        receiverKontoNumberField = new JTextField(order.getReceiverKontoNumber());
+        receiverKontoNumberField = new JTextField(safe(order.getReceiverKontoNumber()));
         styleTextField(receiverKontoNumberField);
 
-        orderDateField = new JTextField(order.getOrderDate());
+        orderDateField = new JTextField(safe(order.getOrderDate()));
         styleTextField(orderDateField);
 
-        senderNameField = new JTextField(order.getSenderName());
+        senderNameField = new JTextField(safe(order.getSenderName()));
         styleTextField(senderNameField);
 
-        senderKontoNumberField = new JTextField(order.getSenderKontoNumber());
+        senderKontoNumberField = new JTextField(safe(order.getSenderKontoNumber()));
         styleTextField(senderKontoNumberField);
 
         departmentField = new JTextField(order.getDepartment() != null ? order.getDepartment() : "");
@@ -130,10 +137,8 @@ public class EditOrderGUI extends JFrame {
 
         JScrollPane formScroll = new JScrollPane(formPanel);
         formScroll.setBorder(null);
-        formScroll.setOpaque(false);
-        formScroll.getViewport().setOpaque(false);
-        leftCard.add(formScroll, BorderLayout.CENTER);
-
+        formScroll.setBackground(ThemeManager.getCardBackgroundColor());
+        formScroll.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
         leftCard.add(formScroll, BorderLayout.CENTER);
 
         // Right panel - Articles table
@@ -153,23 +158,23 @@ public class EditOrderGUI extends JFrame {
             public boolean isCellEditable(int row, int column) {
                 return column == 1; // Only quantity is editable
             }
+
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                return switch (columnIndex) {
+                    case 1 -> Integer.class;
+                    default -> String.class;
+                };
+            }
         };
-        JTable articlesTable = new JTable(tableModel);
-        articlesTable.setRowHeight(28);
-        articlesTable.setFont(articlesTable.getFont().deriveFont(13f));
-        articlesTable.setShowGrid(true);
-        articlesTable.setGridColor(ThemeManager.getBorderColor());
-        articlesTable.setBackground(ThemeManager.getTableRowEvenColor());
-        articlesTable.setForeground(ThemeManager.getTextPrimaryColor());
-        articlesTable.getTableHeader().setBackground(ThemeManager.getTableHeaderBackground());
-        articlesTable.getTableHeader().setForeground(ThemeManager.getTableHeaderForeground());
-        articlesTable.getTableHeader().setFont(articlesTable.getTableHeader().getFont().deriveFont(Font.BOLD, 13f));
-        articlesTable.setSelectionBackground(ThemeManager.getTableHeaderBackground());
-        articlesTable.setSelectionForeground(Color.WHITE);
+
+        articlesTable = new JTable(tableModel);
+        applyTableTheme(articlesTable);
 
         JScrollPane scrollPane = new JScrollPane(articlesTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
-        scrollPane.getViewport().setBackground(ThemeManager.getTableRowEvenColor());
+        scrollPane.setBackground(ThemeManager.getCardBackgroundColor());
+        scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
         rightCard.add(scrollPane, BorderLayout.CENTER);
 
         // Bottom action panel
@@ -177,20 +182,18 @@ public class EditOrderGUI extends JFrame {
         actionPanel.setOpaque(false);
         actionPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
-        // Info label on left
         JLabel infoLabel = new JLabel("💡 Tipp: Doppelklick zum Bearbeiten der Menge");
         infoLabel.setFont(infoLabel.getFont().deriveFont(Font.ITALIC, 11f));
         infoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         actionPanel.add(infoLabel, BorderLayout.WEST);
 
-        // Action buttons on right
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setOpaque(false);
 
-        JButton cancelButton = createStyledButton("✕ Abbrechen", new Color(220, 53, 69), Color.WHITE);
+        JButton cancelButton = createThemeButton("✕ Abbrechen", ThemeManager.getDangerColor());
         cancelButton.addActionListener(e -> dispose());
 
-        JButton saveButton = createStyledButton("💾 Speichern", new Color(40, 167, 69), Color.WHITE);
+        JButton saveButton = createThemeButton("💾 Speichern", ThemeManager.getSuccessColor());
         saveButton.addActionListener(e -> saveChanges());
 
         buttonPanel.add(cancelButton);
@@ -213,12 +216,72 @@ public class EditOrderGUI extends JFrame {
         loadArticles();
     }
 
+    @Override
+    public void dispose() {
+        ThemeManager.getInstance().unregisterWindow(this);
+        super.dispose();
+    }
+
+    private void applyTableTheme(JTable table) {
+        table.setRowHeight(28);
+        table.setFont(table.getFont().deriveFont(13f));
+        table.setShowGrid(true);
+        table.setGridColor(ThemeManager.getTableGridColor());
+        table.setBackground(ThemeManager.getCardBackgroundColor());
+        table.setForeground(ThemeManager.getTextPrimaryColor());
+        table.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
+        table.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
+        table.setFillsViewportHeight(true);
+
+        JTableHeader th = table.getTableHeader();
+        th.setBackground(ThemeManager.getTableHeaderBackgroundColor());
+        th.setForeground(ThemeManager.getTableHeaderForegroundColor());
+        th.setFont(th.getFont().deriveFont(Font.BOLD, 13f));
+        th.setReorderingAllowed(false);
+
+        // Alternating rows + proper selection + theme-safe colors
+        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected,
+                                                           boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
+
+                if (isSelected) {
+                    c.setBackground(ThemeManager.getSelectionBackgroundColor());
+                    c.setForeground(ThemeManager.getSelectionForegroundColor());
+                } else {
+                    c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+                    c.setForeground(ThemeManager.getTextPrimaryColor());
+                }
+
+                if (c instanceof JComponent jc) {
+                    jc.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+                }
+
+                return c;
+            }
+        };
+        table.setDefaultRenderer(Object.class, renderer);
+        table.setDefaultRenderer(String.class, renderer);
+        table.setDefaultRenderer(Integer.class, renderer);
+
+        // Editor styling for quantity column
+        JTextField editorField = new JTextField();
+        editorField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getInputFocusBorderColor(), 1),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)
+        ));
+        editorField.setBackground(ThemeManager.getInputBackgroundColor());
+        editorField.setForeground(ThemeManager.getTextPrimaryColor());
+        editorField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        table.setDefaultEditor(Integer.class, new DefaultCellEditor(editorField));
+    }
+
     private void styleTextField(JTextField field) {
-        ThemeManager tm = ThemeManager.getInstance();
         field.setFont(field.getFont().deriveFont(13f));
         field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
@@ -240,44 +303,37 @@ public class EditOrderGUI extends JFrame {
     }
 
     private void loadArticles() {
-        // Load articles from order into table with caching for performance
+        tableModel.setRowCount(0);
+
         Map<String, Integer> orderedArticles = order.getOrderedArticles();
         List<Article> articles = new ArrayList<>();
 
-        // Use cache to avoid repeated database queries
-        for(Map.Entry<String, Integer> entry : orderedArticles.entrySet()) {
+        for (Map.Entry<String, Integer> entry : orderedArticles.entrySet()) {
             String articleNumber = entry.getKey();
-            Article article;
-
-            // Check cache first
-            if (articleCache.containsKey(articleNumber)) {
-                article = articleCache.get(articleNumber);
-            } else {
+            Article article = articleCache.get(articleNumber);
+            if (article == null) {
                 article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
                 if (article != null) {
                     articleCache.put(articleNumber, article);
                 }
             }
-
             if (article != null) {
                 articles.add(article);
             }
         }
 
-        // Populate table
         for (Article article : articles) {
             int quantity = orderedArticles.get(article.getArticleNumber());
             Object[] rowData = {
-                article.getName() + " (" + article.getArticleNumber() + ")",
-                quantity,
-                String.format("%.2f CHF", article.getSellPrice())
+                    article.getName() + " (" + article.getArticleNumber() + ")",
+                    quantity,
+                    String.format("%.2f CHF", article.getSellPrice())
             };
             tableModel.addRow(rowData);
         }
     }
 
     private void saveChanges() {
-        // Update order with form values
         order.setReceiverName(receiverNameField.getText().trim());
         order.setReceiverKontoNumber(receiverKontoNumberField.getText().trim());
         order.setOrderDate(orderDateField.getText().trim());
@@ -285,27 +341,25 @@ public class EditOrderGUI extends JFrame {
         order.setSenderKontoNumber(senderKontoNumberField.getText().trim());
         order.setDepartment(departmentField.getText().trim());
 
-        // Get updated quantities from table
         Map<String, Integer> tableData = getTableData();
         order.setOrderedArticles(new HashMap<>(tableData));
 
-        // Save to database
         OrderManager orderManager = OrderManager.getInstance();
         boolean success = orderManager.updateOrder(order);
 
         if (!success) {
             JOptionPane.showMessageDialog(this,
-                "<html><b>Fehler beim Aktualisieren!</b><br/>Die Bestellung konnte nicht gespeichert werden.</html>",
-                "Fehler",
-                JOptionPane.ERROR_MESSAGE,
+                    "<html><b>Fehler beim Aktualisieren!</b><br/>Die Bestellung konnte nicht gespeichert werden.</html>",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE,
                     Main.iconSmall);
             return;
         }
 
         JOptionPane.showMessageDialog(this,
-            "<html><b>✓ Erfolgreich gespeichert!</b><br/>Die Bestellung wurde aktualisiert.</html>",
-            "Erfolg",
-            JOptionPane.INFORMATION_MESSAGE,
+                "<html><b>✓ Erfolgreich gespeichert!</b><br/>Die Bestellung wurde aktualisiert.</html>",
+                "Erfolg",
+                JOptionPane.INFORMATION_MESSAGE,
                 Main.iconSmall);
         dispose();
     }
@@ -316,7 +370,6 @@ public class EditOrderGUI extends JFrame {
         for (int i = 0; i < tableModel.getRowCount(); i++) {
             String articleNameWithNumber = (String) tableModel.getValueAt(i, 0);
 
-            // Extract article number from "Name (Number)" format
             String articleNumber = null;
             int openParen = articleNameWithNumber.lastIndexOf('(');
             int closeParen = articleNameWithNumber.lastIndexOf(')');
@@ -324,7 +377,6 @@ public class EditOrderGUI extends JFrame {
                 articleNumber = articleNameWithNumber.substring(openParen + 1, closeParen).trim();
             }
 
-            // Get quantity from table
             int quantity;
             try {
                 Object qtyObj = tableModel.getValueAt(i, 1);
@@ -335,14 +387,12 @@ public class EditOrderGUI extends JFrame {
                 }
             } catch (NumberFormatException | ClassCastException e) {
                 System.err.println("Invalid quantity at row " + i + ": " + tableModel.getValueAt(i, 1));
-                continue; // Skip this row
+                continue;
             }
 
-            // Use article number if extracted, otherwise try to find by name
             if (articleNumber != null && !articleNumber.isEmpty()) {
                 data.put(articleNumber, quantity);
             } else {
-                // Fallback: extract just the name part and look it up
                 String articleName = articleNameWithNumber;
                 if (openParen != -1) {
                     articleName = articleNameWithNumber.substring(0, openParen).trim();
@@ -361,32 +411,53 @@ public class EditOrderGUI extends JFrame {
         SwingUtilities.invokeLater(() -> setVisible(true));
     }
 
-    private JButton createStyledButton(String text, Color bgColor, Color fgColor) {
+    private JButton createThemeButton(String text, Color baseBg) {
         JButton button = new JButton(text);
         button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setContentAreaFilled(false);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
         button.setOpaque(true);
-        button.setBackground(bgColor);
-        button.setForeground(fgColor);
+
+        Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
+        Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
+
+        button.setBackground(baseBg);
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(bgColor.darker(), 1),
+                BorderFactory.createLineBorder(baseBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 18, 10, 18)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Hover effect
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
+        button.addMouseListener(new MouseAdapter() {
+            @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setBackground(bgColor.brighter());
+                if (button.isEnabled()) button.setBackground(hoverBg);
             }
+
+            @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setBackground(bgColor);
+                if (button.isEnabled()) button.setBackground(baseBg);
+            }
+
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                if (button.isEnabled()) button.setBackground(pressedBg);
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                if (!button.isEnabled()) return;
+                button.setBackground(button.contains(evt.getPoint()) ? hoverBg : baseBg);
             }
         });
 
         return button;
+    }
+
+    private static String safe(String s) {
+        return s == null ? "" : s;
     }
 
     // Gradient panel for header

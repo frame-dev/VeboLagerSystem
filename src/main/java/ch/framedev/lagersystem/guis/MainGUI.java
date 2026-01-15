@@ -1,9 +1,12 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.ThemeManager;
 
 import javax.swing.*;
 import java.awt.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * Modern Main Dashboard for VEBO Lagersystem with Tabbed Interface
@@ -11,9 +14,23 @@ import java.awt.*;
 public class MainGUI extends JFrame {
 
     private final JTabbedPane tabbedPane;
+
+    // Keep references so content stays alive and doesn't get disposed accidentally
     public static ArticleGUI articleGUI;
+    private VendorGUI vendorGUI;
+    private OrderGUI orderGUI;
+    private ClientGUI clientGUI;
+
+    // Tab wrappers
+    private final JPanel articleWrapper = createTabWrapper();
+    private final JPanel vendorWrapper  = createTabWrapper();
+    private final JPanel orderWrapper   = createTabWrapper();
+    private final JPanel clientWrapper  = createTabWrapper();
 
     public MainGUI() {
+        ThemeManager.getInstance().registerWindow(this);
+        ThemeManager.applyUIDefaults();
+
         setTitle("VEBO Lagersystem");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 800);
@@ -22,26 +39,24 @@ public class MainGUI extends JFrame {
         setIconImage(Main.icon.getImage());
         setExtendedState(JFrame.MAXIMIZED_BOTH);
 
-        // Background color
+        // Background
         JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(new Color(245, 247, 250));
+        mainPanel.setBackground(ThemeManager.getBackgroundColor());
 
-        // === HEADER SECTION ===
+        // ===== HEADER =====
         JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(new Color(30, 58, 95)); // Dark blue
+        headerPanel.setBackground(ThemeManager.getHeaderBackgroundColor());
         headerPanel.setPreferredSize(new Dimension(0, 100));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 40, 15, 40));
 
-        // Title
         JLabel titleLabel = new JLabel("VEBO Lagersystem");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 42));
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setForeground(ThemeManager.getHeaderForegroundColor());
         titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
-        // Subtitle
         JLabel subtitleLabel = new JLabel("Zentrale Verwaltung für Artikel, Bestellungen und Lieferanten");
         subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        subtitleLabel.setForeground(new Color(163, 178, 193));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
         subtitleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         JPanel headerTextPanel = new JPanel();
@@ -55,105 +70,72 @@ public class MainGUI extends JFrame {
 
         headerPanel.add(headerTextPanel, BorderLayout.WEST);
 
-        // Right panel with settings button and date
-        JPanel rightPanel = new JPanel(new GridBagLayout());
+        // Right panel with settings + date
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         rightPanel.setOpaque(false);
 
-        // Settings button
         JButton settingsButton = new JButton("⚙️ Einstellungen");
-        settingsButton.setFont(new Font("Arial", Font.BOLD, 12));
-        settingsButton.setForeground(Color.WHITE);
-        settingsButton.setBackground(new Color(41, 128, 185));
-        settingsButton.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(52, 152, 219), 1),
-            BorderFactory.createEmptyBorder(8, 16, 8, 16)
-        ));
-        settingsButton.setFocusPainted(false);
-        settingsButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        styleHeaderButton(settingsButton);
         settingsButton.addActionListener(e -> {
             SettingsGUI settingsGUI = new SettingsGUI();
             settingsGUI.display();
         });
-        settingsButton.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                settingsButton.setBackground(new Color(52, 152, 219));
-                settingsButton.setOpaque(true);
-            }
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                settingsButton.setBackground(new Color(27, 93, 134));
-            }
-        });
 
-        // Add date/time label on the right
-        JLabel dateLabel = new JLabel("07. Januar 2026");
+        JLabel dateLabel = new JLabel(new SimpleDateFormat("dd. MMMM yyyy").format(new Date()));
         dateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        dateLabel.setForeground(new Color(180, 200, 220));
+        dateLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        rightPanel.add(Box.createVerticalStrut(18));
         rightPanel.add(settingsButton);
-        rightPanel.add(Box.createHorizontalStrut(8));
         rightPanel.add(dateLabel);
-        headerPanel.add(rightPanel, BorderLayout.EAST);
 
+        headerPanel.add(rightPanel, BorderLayout.EAST);
         mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // === TABBED PANE SECTION ===
+        // ===== TABS =====
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         tabbedPane.setFont(new Font("Arial", Font.BOLD, 15));
-        tabbedPane.setBackground(Color.WHITE);
-        tabbedPane.setForeground(new Color(31, 45, 61));
+        tabbedPane.setBackground(ThemeManager.getBackgroundColor());
+        tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
 
-        // Customize tab appearance
-        UIManager.put("TabbedPane.selected", new Color(30, 58, 95));
-        UIManager.put("TabbedPane.contentAreaColor", new Color(245, 247, 250));
-
-        // Create wrapper panels for each GUI to add padding
-        JPanel articleWrapper = createTabWrapper();
-        JPanel vendorWrapper = createTabWrapper();
-        JPanel orderWrapper = createTabWrapper();
-        JPanel clientWrapper = createTabWrapper();
-
-        // Add the actual GUI content to each wrapper
-        // Note: We'll initialize these lazily when the tab is first selected
-
-        // Add tabs with icons (using emoji as simple icons)
+        // Tabs
         tabbedPane.addTab("  📦 Artikel  ", null, articleWrapper, "Artikelverwaltung");
         tabbedPane.addTab("  🚚 Lieferanten  ", null, vendorWrapper, "Lieferantenverwaltung");
         tabbedPane.addTab("  📋 Bestellungen  ", null, orderWrapper, "Bestellungsverwaltung");
         tabbedPane.addTab("  👥 Kunden  ", null, clientWrapper, "Kundenverwaltung");
 
-        // Set custom colors for tabs
-        tabbedPane.setBackgroundAt(0, new Color(66, 133, 244, 30));
-        tabbedPane.setBackgroundAt(1, new Color(52, 168, 83, 30));
-        tabbedPane.setBackgroundAt(2, new Color(251, 188, 5, 30));
-        tabbedPane.setBackgroundAt(3, new Color(234, 67, 53, 30));
+        // Theme-safe subtle tab backgrounds (works in light + dark)
+        Color tabTint = ThemeManager.isDarkMode()
+                ? new Color(255, 255, 255, 16)
+                : new Color(0, 0, 0, 12);
 
-        // Lazy loading: Initialize content when tab is selected
+        for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+            tabbedPane.setBackgroundAt(i, tabTint);
+        }
+
+        // Lazy loading
         tabbedPane.addChangeListener(e -> {
-            int selectedIndex = tabbedPane.getSelectedIndex();
-            JPanel selectedWrapper = (JPanel) tabbedPane.getComponentAt(selectedIndex);
-
-            // Check if content is already loaded
-            if (selectedWrapper.getComponentCount() == 0) {
-                loadTabContent(selectedIndex, selectedWrapper);
+            int idx = tabbedPane.getSelectedIndex();
+            JPanel wrapper = (JPanel) tabbedPane.getComponentAt(idx);
+            if (wrapper.getClientProperty("loaded") == null) {
+                loadTabContent(idx, wrapper);
+                wrapper.putClientProperty("loaded", Boolean.TRUE);
             }
         });
 
-        // Load the first tab immediately
+        // Load first tab immediately
         loadTabContent(0, articleWrapper);
+        articleWrapper.putClientProperty("loaded", Boolean.TRUE);
 
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
-        // === FOOTER ===
+        // ===== FOOTER =====
         JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        footerPanel.setBackground(new Color(240, 242, 245));
+        footerPanel.setBackground(ThemeManager.getBackgroundColor());
         footerPanel.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
 
         JLabel footerLabel = new JLabel("© 2026 VEBO Lagersystem | Entwickelt von Darryl Huber");
         footerLabel.setFont(new Font("Arial", Font.PLAIN, 11));
-        footerLabel.setForeground(new Color(120, 120, 120));
+        footerLabel.setForeground(ThemeManager.getTextSecondaryColor());
         footerPanel.add(footerLabel);
 
         mainPanel.add(footerPanel, BorderLayout.SOUTH);
@@ -161,48 +143,109 @@ public class MainGUI extends JFrame {
         setContentPane(mainPanel);
     }
 
+    @Override
+    public void dispose() {
+        ThemeManager.getInstance().unregisterWindow(this);
+        super.dispose();
+    }
+
     /**
      * Creates a wrapper panel with padding for tab content
      */
-    private JPanel createTabWrapper() {
+    private static JPanel createTabWrapper() {
         JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setBackground(new Color(245, 247, 250));
+        wrapper.setBackground(ThemeManager.getBackgroundColor());
         wrapper.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         return wrapper;
     }
 
     /**
-     * Lazy loads the content for a specific tab
+     * Loads the content for a specific tab into the wrapper.
+     * IMPORTANT: We do NOT dispose the child frames. Disposing kills listeners/resources.
      */
     private void loadTabContent(int tabIndex, JPanel wrapper) {
-        wrapper.removeAll(); // Clear any existing content
+        wrapper.removeAll();
 
         JFrame frame = switch (tabIndex) {
             case 0 -> {
-                articleGUI = new ArticleGUI();
+                if (articleGUI == null) articleGUI = new ArticleGUI();
                 yield articleGUI;
             }
-            case 1 -> new VendorGUI();
-            case 2 -> new OrderGUI();
-            case 3 -> new ClientGUI();
+            case 1 -> {
+                if (vendorGUI == null) vendorGUI = new VendorGUI();
+                yield vendorGUI;
+            }
+            case 2 -> {
+                if (orderGUI == null) orderGUI = new OrderGUI();
+                yield orderGUI;
+            }
+            case 3 -> {
+                if (clientGUI == null) clientGUI = new ClientGUI();
+                yield clientGUI;
+            }
             default -> null;
         };
 
-        if (frame != null) {
-            // Prevent the frame from being visible as a separate window
-            frame.setVisible(false);
+        if (frame == null) return;
 
-            // Extract the content panel
-            JPanel contentPanel = (JPanel) frame.getContentPane();
+        // Keep it from behaving like an independent window
+        frame.setVisible(false);
+        frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 
-            // Dispose the frame to release resources (but keep the content)
-            frame.dispose();
-
-            // Add the content to our wrapper
-            wrapper.add(contentPanel, BorderLayout.CENTER);
-            wrapper.revalidate();
-            wrapper.repaint();
+        // Extract content panel (safe)
+        Container cp = frame.getContentPane();
+        if (cp instanceof JPanel panel) {
+            wrapper.add(panel, BorderLayout.CENTER);
+        } else {
+            JPanel fallback = new JPanel(new BorderLayout());
+            fallback.setOpaque(false);
+            fallback.add(cp, BorderLayout.CENTER);
+            wrapper.add(fallback, BorderLayout.CENTER);
         }
+
+        wrapper.revalidate();
+        wrapper.repaint();
+    }
+
+    private void styleHeaderButton(JButton button) {
+        Color base = ThemeManager.getAccentColor();
+        Color hover = ThemeManager.getButtonHoverColor(base);
+        Color pressed = ThemeManager.getButtonPressedColor(base);
+
+        button.setFont(new Font("Arial", Font.BOLD, 12));
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
+        button.setBackground(base);
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setBorderPainted(true);
+        button.setFocusPainted(false);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(base.darker(), 1),
+                BorderFactory.createEmptyBorder(8, 16, 8, 16)
+        ));
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(hover);
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(base);
+            }
+
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                button.setBackground(pressed);
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                button.setBackground(button.contains(evt.getPoint()) ? hover : base);
+            }
+        });
     }
 
     public void display() {
