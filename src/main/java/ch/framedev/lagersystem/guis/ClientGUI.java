@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
+import ch.framedev.lagersystem.utils.ThemeManager;
 
 import javax.swing.*;
 import javax.swing.table.*;
@@ -144,7 +145,7 @@ public class ClientGUI extends JFrame {
             int sel = clientTable.getSelectedRow();
             if (sel == -1) {
                 JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Kunden zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
             int modelRow = clientTable.convertRowIndexToModel(sel);
@@ -162,21 +163,21 @@ public class ClientGUI extends JFrame {
             int sel = clientTable.getSelectedRow();
             if (sel == -1) {
                 JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Kunden zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
             int modelRow = clientTable.convertRowIndexToModel(sel);
             String name = (String) clientTable.getModel().getValueAt(modelRow, 0);
             int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Kunden wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE, Main.icon);
+                    JOptionPane.QUESTION_MESSAGE, Main.iconSmall);
             if (confirm == JOptionPane.YES_OPTION) {
                 if (ClientManager.getInstance().deleteClient(name)) {
                     loadClients(); // Refresh table
                     JOptionPane.showMessageDialog(this, "Kunde erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 } else {
                     JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Kunden aus der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 }
             }
         });
@@ -184,7 +185,7 @@ public class ClientGUI extends JFrame {
         refreshButton.addActionListener(e -> {
             loadClients();
             JOptionPane.showMessageDialog(this, "Kundenliste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
         });
 
         // search logic using TableRowSorter
@@ -696,7 +697,7 @@ public class ClientGUI extends JFrame {
             }
             String dept = selectedDept.trim();
             if (name.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
+                JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 return;
             }
             holder[0] = new Object[]{name, dept};
@@ -704,11 +705,11 @@ public class ClientGUI extends JFrame {
             ClientManager clientManager = ClientManager.getInstance();
             if(!clientManager.existsClient(name)) {
                 if(!clientManager.insertClient(name, dept)) {
-                    JOptionPane.showMessageDialog(dialog, "Fehler beim Hinzufügen des Kunden zur Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
+                    JOptionPane.showMessageDialog(dialog, "Fehler beim Hinzufügen des Kunden zur Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 }
             } else {
                 if(!clientManager.updateClient(name, dept)) {
-                    JOptionPane.showMessageDialog(dialog, "Fehler beim Aktualisieren des Kunden in der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
+                    JOptionPane.showMessageDialog(dialog, "Fehler beim Aktualisieren des Kunden in der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 }
             }
         });
@@ -772,14 +773,14 @@ public class ClientGUI extends JFrame {
             String name = (String) clientTable.getModel().getValueAt(modelRow, 0);
 
             int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Kunden wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE, Main.icon);
+                    JOptionPane.QUESTION_MESSAGE, Main.iconSmall);
             if (confirm == JOptionPane.YES_OPTION) {
                 if (ClientManager.getInstance().deleteClient(name)) {
                     clients.remove(modelRow);
                     ((DefaultTableModel) clientTable.getModel()).removeRow(modelRow);
                 } else {
                     JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Kunden aus der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 }
             }
         });
@@ -929,28 +930,26 @@ public class ClientGUI extends JFrame {
         button.setContentAreaFilled(true);
         button.setOpaque(true);
 
-        // Modern color scheme
-        Color defaultBg = new Color(52, 152, 219); // Blue
-        Color hoverBg = new Color(41, 128, 185);   // Darker blue
-        Color pressedBg = new Color(31, 97, 141);  // Even darker blue
+        Color defaultBg = ThemeManager.getAccentColor();
+        Color hoverBg = ThemeManager.getButtonHoverColor(defaultBg);
+        Color pressedBg = ThemeManager.getButtonPressedColor(defaultBg);
 
         button.setBackground(defaultBg);
-        button.setForeground(Color.WHITE);
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                BorderFactory.createLineBorder(defaultBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Add hover effects
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
                 button.setBackground(hoverBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(31, 97, 141), 1),
-                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                        BorderFactory.createLineBorder(hoverBg.darker(), 2),
+                        BorderFactory.createEmptyBorder(9, 19, 9, 19)
                 ));
             }
 
@@ -958,7 +957,7 @@ public class ClientGUI extends JFrame {
             public void mouseExited(MouseEvent e) {
                 button.setBackground(defaultBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                        BorderFactory.createLineBorder(defaultBg.darker(), 1),
                         BorderFactory.createEmptyBorder(10, 20, 10, 20)
                 ));
             }

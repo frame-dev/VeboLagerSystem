@@ -4,10 +4,13 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Warning;
 import ch.framedev.lagersystem.guis.MainGUI;
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.ImportUtils;
+import ch.framedev.lagersystem.utils.QRCodeUtils;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -108,6 +111,17 @@ public class SchedulerManager {
                 unit
         );
         System.out.printf("[SchedulerManager] Warnanzeige gestartet (Intervall: %d %s)%n",
+                interval, unit.toString().toLowerCase());
+    }
+
+    public void startAutoImportQrCodes(long interval, TimeUnit unit) {
+        executor.scheduleAtFixedRate(
+                this::autoImportQrCodes,
+                0,
+                interval,
+                unit
+        );
+        System.out.printf("[SchedulerManager] Automatischer QR-Code Import gestartet (Intervall: %d %s)%n",
                 interval, unit.toString().toLowerCase());
     }
 
@@ -254,6 +268,31 @@ public class SchedulerManager {
         } catch (Exception e) {
             System.err.println("[SchedulerManager] Fehler beim Anzeigen von Warnungen: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private void autoImportQrCodes() {
+        List<Map<String, Object>> qrData = QRCodeUtils.retrieveQrCodeDataFromWebsite();
+        if(qrData.isEmpty())
+            return;
+        ArticleManager articleManager = ArticleManager.getInstance();
+        for(Map<String, Object> data : qrData) {
+            if(data.get("type").equals("buy")) {
+                String[] parts = QRCodeUtils.getPartsFromData((String) data.get("data"));
+                if(parts.length < 2)
+                    continue;
+                String articleNumber = parts[0];
+                int quantity = (int) data.get("quantity");
+                String id = data.get("id").toString();
+                if(!ImportUtils.getImportedQrCodes().contains(id)) {
+                    if (!articleManager.addToStock(articleNumber, quantity))
+                        System.err.println("[SchedulerManager] Fehler beim automatischen Importieren des QR-Codes für Artikel " + articleNumber);
+                    else {
+                        System.out.println("[SchedulerManager] Erfolgreich automatisch " + quantity + " Einheiten zu Artikel " + articleNumber + " hinzugefügt.");
+                        ImportUtils.addQrCodeImport(id);
+                    }
+                }
+            }
         }
     }
 }

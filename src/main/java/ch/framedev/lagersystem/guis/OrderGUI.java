@@ -128,7 +128,7 @@ public class OrderGUI extends JFrame {
             Vector<Object> rowData = getSelectedOrderData();
             if (rowData == null) {
                 JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
             Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
@@ -149,22 +149,22 @@ public class OrderGUI extends JFrame {
             int sel = orderTable.getSelectedRow();
             if (sel == -1) {
                 JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
             int modelRow = orderTable.convertRowIndexToModel(sel);
             String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
             int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE, Main.icon);
+                    JOptionPane.WARNING_MESSAGE, Main.iconSmall);
             if (confirm == JOptionPane.YES_OPTION) {
                 if (OrderManager.getInstance().deleteOrder(orderId)) {
                     loadOrders(); // Refresh table
                     updateOrderCount();
                     JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 } else {
                     JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 }
             }
         });
@@ -175,7 +175,7 @@ public class OrderGUI extends JFrame {
             loadOrders();
             updateOrderCount();
             JOptionPane.showMessageDialog(this, "Bestellungsliste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
         });
 
         // search logic using TableRowSorter
@@ -266,7 +266,7 @@ public class OrderGUI extends JFrame {
             Vector<Object> rowData = getSelectedOrderData();
             if (rowData == null) {
                 JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
             Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
@@ -288,16 +288,16 @@ public class OrderGUI extends JFrame {
             int modelRow = orderTable.convertRowIndexToModel(sel);
             String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
             int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE, Main.icon);
+                    JOptionPane.WARNING_MESSAGE, Main.iconSmall);
             if (confirm == JOptionPane.YES_OPTION) {
                 if (OrderManager.getInstance().deleteOrder(orderId)) {
                     ((DefaultTableModel) orderTable.getModel()).removeRow(modelRow);
                     updateOrderCount();
                     JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 } else {
                     JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 }
             }
         });
@@ -310,7 +310,7 @@ public class OrderGUI extends JFrame {
                     Vector<Object> rowData = getSelectedOrderData();
                     if (rowData == null) {
                         JOptionPane.showMessageDialog(OrderGUI.this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                                Main.icon);
+                                Main.iconSmall);
                         return;
                     }
                     Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
@@ -490,34 +490,34 @@ public class OrderGUI extends JFrame {
     }
 
     private JButton createRoundedButton(String text) {
+        ch.framedev.lagersystem.utils.ThemeManager tm = ch.framedev.lagersystem.utils.ThemeManager.getInstance();
+
         JButton button = new JButton(text);
         button.setFocusPainted(false);
         button.setBorderPainted(true);
         button.setContentAreaFilled(true);
         button.setOpaque(true);
 
-        // Modern color scheme
-        Color defaultBg = new Color(52, 152, 219); // Blue
-        Color hoverBg = new Color(41, 128, 185);   // Darker blue
-        Color pressedBg = new Color(31, 97, 141);  // Even darker blue
+        Color defaultBg = tm.getAccentColor();
+        Color hoverBg = tm.getButtonHoverColor(defaultBg);
+        Color pressedBg = tm.getButtonPressedColor(defaultBg);
 
         button.setBackground(defaultBg);
-        button.setForeground(Color.WHITE);
+        button.setForeground(tm.getTextOnPrimaryColor());
         button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                BorderFactory.createLineBorder(defaultBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Add hover effects
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
                 button.setBackground(hoverBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(31, 97, 141), 1),
-                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                        BorderFactory.createLineBorder(hoverBg.darker(), 2),
+                        BorderFactory.createEmptyBorder(9, 19, 9, 19)
                 ));
             }
 
@@ -525,7 +525,7 @@ public class OrderGUI extends JFrame {
             public void mouseExited(java.awt.event.MouseEvent e) {
                 button.setBackground(defaultBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                        BorderFactory.createLineBorder(defaultBg.darker(), 1),
                         BorderFactory.createEmptyBorder(10, 20, 10, 20)
                 ));
             }
@@ -537,7 +537,7 @@ public class OrderGUI extends JFrame {
 
             @Override
             public void mouseReleased(java.awt.event.MouseEvent e) {
-                button.setBackground(hoverBg);
+                button.setBackground(button.contains(e.getPoint()) ? hoverBg : defaultBg);
             }
         });
 
@@ -874,14 +874,14 @@ public class OrderGUI extends JFrame {
                     "PDF erfolgreich erstellt:\n" + outputFile.getAbsolutePath(),
                     "Erfolg",
                     JOptionPane.INFORMATION_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
 
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Fehler beim Erstellen des PDF-Dokuments:\n" + ex.getMessage(),
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
         }
     }
 
@@ -941,3 +941,4 @@ public class OrderGUI extends JFrame {
         }
     }
 }
+

@@ -186,7 +186,7 @@ public class CompleteOrderGUI extends JFrame {
         refreshButton.addActionListener(e -> {
             refreshList();
             JOptionPane.showMessageDialog(this, "Liste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
         });
         closeButton.addActionListener(e -> dispose());
     }
@@ -335,7 +335,7 @@ public class CompleteOrderGUI extends JFrame {
             errors.forEach(err -> msg.append(err).append("<br/>"));
             msg.append("<br/>Die Bestellung kann nicht abgeschlossen werden.</html>");
             JOptionPane.showMessageDialog(this, msg.toString(), "Lagerbestand unzureichend", JOptionPane.ERROR_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
             return;
         }
 
@@ -345,7 +345,7 @@ public class CompleteOrderGUI extends JFrame {
             warnings.forEach(warn -> msg.append(warn).append("<br/>"));
             msg.append("<br/>Möchten Sie trotzdem fortfahren?</html>");
             int res = JOptionPane.showConfirmDialog(this, msg.toString(), "Warnung", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
             if (res != JOptionPane.YES_OPTION) {
                 return;
             }
@@ -358,7 +358,7 @@ public class CompleteOrderGUI extends JFrame {
                         "Der Lagerbestand wird entsprechend reduziert.",
                 "Bestätigung",
                 JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE, Main.icon);
+                JOptionPane.QUESTION_MESSAGE, Main.iconSmall);
         UserManager userManager = UserManager.getInstance();
         User user = userManager.getUserByName(selected.getSenderName().toLowerCase())
                 == null ? createUser(selected.getSenderName()) : userManager.getUserByName(selected.getSenderName().toLowerCase());
@@ -370,10 +370,10 @@ public class CompleteOrderGUI extends JFrame {
         boolean updated = OrderManager.getInstance().updateOrder(selected);
         if (updated)
             JOptionPane.showMessageDialog(null, "Die Bestellung wurde erfolgreich abgeschlossen.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
         else
             JOptionPane.showMessageDialog(null, "Fehler beim Abschließen der Bestellung.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
         refreshList();
 
         if (res == JOptionPane.YES_OPTION) {
@@ -411,7 +411,7 @@ public class CompleteOrderGUI extends JFrame {
                     "Unzureichender Lagerbestand",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.WARNING_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
 
                 if (choice != JOptionPane.YES_OPTION) {
                     return; // User chose to abort
@@ -452,7 +452,7 @@ public class CompleteOrderGUI extends JFrame {
                                 updatedArticles.size()),
                         "Erfolg",
                         JOptionPane.INFORMATION_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
             } else if (!allStockUpdated) {
                 JOptionPane.showMessageDialog(this,
                         "<html><b>Warnung: Teilweise Fehler!</b><br/><br/>" +
@@ -460,14 +460,14 @@ public class CompleteOrderGUI extends JFrame {
                         "Bitte überprüfen Sie die Logs und aktualisieren Sie manuell.</html>",
                         "Teilweise erfolgreich",
                         JOptionPane.WARNING_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
             } else {
                 JOptionPane.showMessageDialog(this,
                         "<html><b>Warnung:</b><br/><br/>" +
                         "Lagerbestände wurden aktualisiert, aber der Bestellstatus konnte nicht aktualisiert werden.</html>",
                         "Teilweise erfolgreich",
                         JOptionPane.WARNING_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
             }
 
             refreshList();
@@ -569,7 +569,7 @@ public class CompleteOrderGUI extends JFrame {
                 resultMsg.toString(),
                 "Bestellung verarbeitet",
                 hasPartialFulfillment ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
 
             // Log the shortage for ordering
             if (hasPartialFulfillment) {
@@ -583,7 +583,7 @@ public class CompleteOrderGUI extends JFrame {
                 "Bitte überprüfen Sie die Bestellung manuell.</html>",
                 "Teilweise erfolgreich",
                 JOptionPane.WARNING_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
         }
 
         refreshList();

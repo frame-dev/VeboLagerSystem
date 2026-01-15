@@ -101,7 +101,7 @@ public class MainGUI extends JFrame {
 
         // === TABBED PANE SECTION ===
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
-        tabbedPane.setFont(new Font("Arial", Font.BOLD, 13));
+        tabbedPane.setFont(new Font("Arial", Font.BOLD, 15));
         tabbedPane.setBackground(Color.WHITE);
         tabbedPane.setForeground(new Color(31, 45, 61));
 

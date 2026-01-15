@@ -5,6 +5,7 @@ import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
+import ch.framedev.lagersystem.utils.ThemeManager;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -33,6 +34,7 @@ public class EditOrderGUI extends JFrame {
 
     public EditOrderGUI(Order order) {
         this.order = order;
+
         setTitle("Bestellung Bearbeiten");
         setSize(1000, 700);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -43,17 +45,17 @@ public class EditOrderGUI extends JFrame {
 
         // Gradient header with icon
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        headerWrapper.setBackground(new Color(245, 247, 250));
+        headerWrapper.setBackground(ThemeManager.getBackgroundColor());
         GradientPanel header = new GradientPanel(
-            new Color(142, 68, 173),
-            new Color(155, 89, 182)
+            ThemeManager.getHeaderBackgroundColor(),
+            ThemeManager.getHeaderBackgroundColor().brighter()
         );
         header.setPreferredSize(new Dimension(850, 80));
         header.setLayout(new GridBagLayout());
 
         JLabel iconLabel = new JLabel("✏️");
         iconLabel.setFont(iconLabel.getFont().deriveFont(Font.BOLD, 36f));
-        iconLabel.setForeground(new Color(255, 255, 255, 180));
+        iconLabel.setForeground(Color.WHITE);
 
         JLabel title = new JLabel("  Bestellung Bearbeiten");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
@@ -70,17 +72,17 @@ public class EditOrderGUI extends JFrame {
 
         // Main content area
         JPanel mainContent = new JPanel(new BorderLayout(15, 15));
-        mainContent.setBackground(new Color(245, 247, 250));
+        mainContent.setBackground(ThemeManager.getBackgroundColor());
         mainContent.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         // Left panel - Order details form
-        RoundedPanel leftCard = new RoundedPanel(Color.WHITE, 16);
+        RoundedPanel leftCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
         leftCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         leftCard.setLayout(new BorderLayout(10, 10));
 
         JLabel formTitle = new JLabel("📋 Bestelldetails");
         formTitle.setFont(formTitle.getFont().deriveFont(Font.BOLD, 17f));
-        formTitle.setForeground(new Color(31, 45, 61));
+        formTitle.setForeground(ThemeManager.getTextPrimaryColor());
         leftCard.add(formTitle, BorderLayout.NORTH);
 
         // Form panel with GridBagLayout
@@ -96,7 +98,7 @@ public class EditOrderGUI extends JFrame {
         // Initialize fields
         JTextField orderIdField = new JTextField(order.getOrderId());
         orderIdField.setEditable(false);
-        orderIdField.setBackground(new Color(240, 240, 240));
+        orderIdField.setBackground(ThemeManager.getInputBackgroundColor().darker());
         styleTextField(orderIdField);
 
         receiverNameField = new JTextField(order.getReceiverName());
@@ -135,13 +137,13 @@ public class EditOrderGUI extends JFrame {
         leftCard.add(formScroll, BorderLayout.CENTER);
 
         // Right panel - Articles table
-        RoundedPanel rightCard = new RoundedPanel(Color.WHITE, 16);
+        RoundedPanel rightCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
         rightCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         rightCard.setLayout(new BorderLayout(10, 10));
 
         JLabel tableTitle = new JLabel("📦 Bestellte Artikel");
         tableTitle.setFont(tableTitle.getFont().deriveFont(Font.BOLD, 17f));
-        tableTitle.setForeground(new Color(31, 45, 61));
+        tableTitle.setForeground(ThemeManager.getTextPrimaryColor());
         rightCard.add(tableTitle, BorderLayout.NORTH);
 
         // Articles Table with modern styling
@@ -156,14 +158,18 @@ public class EditOrderGUI extends JFrame {
         articlesTable.setRowHeight(28);
         articlesTable.setFont(articlesTable.getFont().deriveFont(13f));
         articlesTable.setShowGrid(true);
-        articlesTable.setGridColor(new Color(230, 236, 240));
-        articlesTable.getTableHeader().setBackground(new Color(155, 89, 182));
-        articlesTable.getTableHeader().setForeground(Color.WHITE);
+        articlesTable.setGridColor(ThemeManager.getBorderColor());
+        articlesTable.setBackground(ThemeManager.getTableRowEvenColor());
+        articlesTable.setForeground(ThemeManager.getTextPrimaryColor());
+        articlesTable.getTableHeader().setBackground(ThemeManager.getTableHeaderBackground());
+        articlesTable.getTableHeader().setForeground(ThemeManager.getTableHeaderForeground());
         articlesTable.getTableHeader().setFont(articlesTable.getTableHeader().getFont().deriveFont(Font.BOLD, 13f));
-        articlesTable.setSelectionBackground(new Color(155, 89, 182, 30));
+        articlesTable.setSelectionBackground(ThemeManager.getTableHeaderBackground());
+        articlesTable.setSelectionForeground(Color.WHITE);
 
         JScrollPane scrollPane = new JScrollPane(articlesTable);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(220, 225, 230), 1));
+        scrollPane.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
+        scrollPane.getViewport().setBackground(ThemeManager.getTableRowEvenColor());
         rightCard.add(scrollPane, BorderLayout.CENTER);
 
         // Bottom action panel
@@ -174,7 +180,7 @@ public class EditOrderGUI extends JFrame {
         // Info label on left
         JLabel infoLabel = new JLabel("💡 Tipp: Doppelklick zum Bearbeiten der Menge");
         infoLabel.setFont(infoLabel.getFont().deriveFont(Font.ITALIC, 11f));
-        infoLabel.setForeground(new Color(108, 117, 125));
+        infoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         actionPanel.add(infoLabel, BorderLayout.WEST);
 
         // Action buttons on right
@@ -208,17 +214,21 @@ public class EditOrderGUI extends JFrame {
     }
 
     private void styleTextField(JTextField field) {
+        ThemeManager tm = ThemeManager.getInstance();
         field.setFont(field.getFont().deriveFont(13f));
         field.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(206, 212, 218), 1),
+            BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
             BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
+        field.setBackground(ThemeManager.getInputBackgroundColor());
+        field.setForeground(ThemeManager.getTextPrimaryColor());
+        field.setCaretColor(ThemeManager.getTextPrimaryColor());
     }
 
     private void addStyledFormRow(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field) {
         JLabel label = new JLabel(labelText);
         label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
-        label.setForeground(new Color(52, 73, 94));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
         panel.add(label, gbc);
 
         gbc.gridy++;
@@ -288,7 +298,7 @@ public class EditOrderGUI extends JFrame {
                 "<html><b>Fehler beim Aktualisieren!</b><br/>Die Bestellung konnte nicht gespeichert werden.</html>",
                 "Fehler",
                 JOptionPane.ERROR_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
             return;
         }
 
@@ -296,7 +306,7 @@ public class EditOrderGUI extends JFrame {
             "<html><b>✓ Erfolgreich gespeichert!</b><br/>Die Bestellung wurde aktualisiert.</html>",
             "Erfolg",
             JOptionPane.INFORMATION_MESSAGE,
-                Main.icon);
+                Main.iconSmall);
         dispose();
     }
 

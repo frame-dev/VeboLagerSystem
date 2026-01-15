@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.OrderManager;
+import ch.framedev.lagersystem.utils.ThemeManager;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -35,6 +36,8 @@ public class NewOrderGUI extends JFrame {
     private final JComboBox<String> departmentList;
 
     public NewOrderGUI() {
+        ThemeManager tm = ThemeManager.getInstance();
+
         setTitle("Neue Bestellung erstellen");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(1100, 700);
@@ -43,21 +46,21 @@ public class NewOrderGUI extends JFrame {
 
         // Header with gradient
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        headerWrapper.setBackground(new Color(245, 247, 250));
+        headerWrapper.setBackground(tm.getBackgroundColor());
         GradientPanel header = new GradientPanel(
-                new Color(46, 134, 193),
-                new Color(52, 152, 219)
+                tm.getPrimaryColor(),
+                tm.getAccentColor()
         );
         header.setPreferredSize(new Dimension(900, 80));
         header.setLayout(new GridBagLayout());
 
         JLabel iconLabel = new JLabel("📝");
         iconLabel.setFont(iconLabel.getFont().deriveFont(Font.BOLD, 36f));
-        iconLabel.setForeground(new Color(255, 255, 255, 180));
+        iconLabel.setForeground(tm.getTextOnPrimaryColor());
 
         JLabel title = new JLabel("  Neue Bestellung Erstellen");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
-        title.setForeground(Color.WHITE);
+        title.setForeground(tm.getTextOnPrimaryColor());
 
         JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
         headerContent.setOpaque(false);
@@ -70,15 +73,17 @@ public class NewOrderGUI extends JFrame {
 
         // Main content with split pane
         JPanel mainContent = new JPanel(new BorderLayout(15, 15));
-        mainContent.setBackground(new Color(245, 247, 250));
+        mainContent.setBackground(tm.getBackgroundColor());
         mainContent.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         // Left panel - Form details
-        RoundedPanel leftCard = new RoundedPanel(Color.WHITE, 16);
+        RoundedPanel leftCard = new RoundedPanel(tm.getCardBackgroundColor(), 16);
         leftCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         leftCard.setLayout(new BorderLayout(10, 10));
 
         JLabel formTitle = new JLabel("📋 Bestellinformationen");
+        formTitle.setFont(formTitle.getFont().deriveFont(Font.BOLD, 17f));
+        formTitle.setForeground(tm.getTextPrimaryColor());
         formTitle.setFont(formTitle.getFont().deriveFont(Font.BOLD, 17f));
         formTitle.setForeground(new Color(31, 45, 61));
         leftCard.add(formTitle, BorderLayout.NORTH);
@@ -103,7 +108,7 @@ public class NewOrderGUI extends JFrame {
             if (selected == null) {
                 JOptionPane.showMessageDialog(NewOrderGUI.this, "Kein Empfänger Name gefunden",
                         "Fehler", JOptionPane.ERROR_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
             }
 
             String department = ClientManager.getInstance().getDepartmentByName(selected);
@@ -223,10 +228,10 @@ public class NewOrderGUI extends JFrame {
                 try {
                     exportOrderToPDF(file);
                     JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(), "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 } catch (IOException ex) {
                     JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 }
             }
         });
@@ -337,7 +342,7 @@ public class NewOrderGUI extends JFrame {
                     "Keine Artikel in der Artikelliste. Bitte fügen Sie zuerst Artikel hinzu.",
                     "Keine Artikel",
                     JOptionPane.WARNING_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
             return;
         }
 
@@ -358,7 +363,7 @@ public class NewOrderGUI extends JFrame {
                 articlesWithQty.size() + " Artikel zur Bestellung hinzugefügt.",
                 "Erfolgreich",
                 JOptionPane.INFORMATION_MESSAGE,
-                Main.icon);
+                Main.iconSmall);
     }
 
 
@@ -394,7 +399,7 @@ public class NewOrderGUI extends JFrame {
     private void onCreateOrder() {
         if (orderArticles.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Keine Artikel in der Bestellung.", "Fehler", JOptionPane.WARNING_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
             return;
         }
         String receiver = receiverNameCombobox.getSelectedItem() != null ? receiverNameCombobox.getSelectedItem().toString().trim() : "";
@@ -404,7 +409,7 @@ public class NewOrderGUI extends JFrame {
         String department = departmentList.getSelectedItem() != null ? departmentList.getSelectedItem().toString().trim() : "";
         if (receiver.isEmpty() || sender.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Empfänger und Absender Namen sind erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE
-                    , Main.icon);
+                    , Main.iconSmall);
             return;
         }
         // convert to Map\<String,Integer\> expected by Order (use article number as key)
@@ -418,14 +423,14 @@ public class NewOrderGUI extends JFrame {
             try {
                 exportOrderToPDF(file);
                 JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(), "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
             }
         }
         JOptionPane.showMessageDialog(this, "Bestellung erstellt.", "Erfolgreich", JOptionPane.INFORMATION_MESSAGE,
-                Main.icon);
+                Main.iconSmall);
         orderArticles.clear();
         rebuildOrderTable();
         updateTotalPrice();

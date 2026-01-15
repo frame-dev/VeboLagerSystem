@@ -7,6 +7,7 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.WarningManager;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
+import ch.framedev.lagersystem.utils.ThemeManager;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -40,8 +41,8 @@ import static ch.framedev.lagersystem.main.Main.articleListGUI;
 /**
  * ArticleGUI with category support for better organization.
  * Categories are loaded from categories.json and mapped to articles based on article number ranges.
+ * TODO: Performance Check
  */
-@SuppressWarnings("unused")
 public class ArticleGUI extends JFrame {
 
     private final JTable articleTable;
@@ -69,6 +70,7 @@ public class ArticleGUI extends JFrame {
     }
 
     public ArticleGUI() {
+        ThemeManager.getInstance().registerWindow(this);
         setTitle("Artikel Verwaltung");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(1000, 700);
@@ -136,10 +138,10 @@ public class ArticleGUI extends JFrame {
                         (String) row[7]
                 );
                 if (!articleManager.insertArticle(article)) {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
+                    JOptionPane.showMessageDialog(this, "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 } else {
                     loadArticles(); // Reload articles from database to ensure consistency
-                    JOptionPane.showMessageDialog(this, "Artikel erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.icon);
+                    JOptionPane.showMessageDialog(this, "Artikel erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
                 }
             }
         });
@@ -149,7 +151,7 @@ public class ArticleGUI extends JFrame {
         editArticleButton.addActionListener(e -> {
             int selectedRow = articleTable.getSelectedRow();
             if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE, Main.icon);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                 return;
             }
             int modelRow = articleTable.convertRowIndexToModel(selectedRow);
@@ -186,9 +188,9 @@ public class ArticleGUI extends JFrame {
                 );
                 if (articleManager.updateArticle(article)) {
                     loadArticles(); // Refresh to ensure consistency
-                    JOptionPane.showMessageDialog(this, "Artikel erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.icon);
+                    JOptionPane.showMessageDialog(this, "Artikel erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Artikels.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
+                    JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Artikels.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 }
             }
         });
@@ -344,15 +346,10 @@ public class ArticleGUI extends JFrame {
         SwingUtilities.invokeLater(this::adjustColumnWidths);
     }
 
-    private String prettyPrintQRData(String jsonData) {
-        Gson gson = new Gson();
-        Map<String, Object> dataMap = gson.fromJson(jsonData, new TypeToken<Map<String, Object>>() {
-        }.getType());
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, Object> entry : dataMap.entrySet()) {
-            sb.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
-        }
-        return sb.toString();
+    @Override
+    public void dispose() {
+        ThemeManager.getInstance().unregisterWindow(this);
+        super.dispose();
     }
 
     private Object[] showUpdateArticleDialog(Object[] existingData) {
@@ -718,7 +715,7 @@ public class ArticleGUI extends JFrame {
                         "Artikelnummer und Name sind Pflichtfelder.",
                         "Fehler",
                         JOptionPane.ERROR_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
 
@@ -736,7 +733,7 @@ public class ArticleGUI extends JFrame {
                         "Bitte gültige Preise eingeben.",
                         "Fehler",
                         JOptionPane.ERROR_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
 
@@ -935,16 +932,17 @@ public class ArticleGUI extends JFrame {
 
         pricePanel.add(verkaufPanel);
         pricePanel.add(einkaufPanel);
-
-        gbc.gridy = row;
         contentCard.add(pricePanel, gbc);
 
         row++;
-        // Lieferant
+        gbc.insets = new Insets(6, 6, 6, 6);
+        // Lieferant with icon
         gbc.gridy = row;
-        contentCard.add(createLabel.apply("Lieferant"), gbc);
+        JLabel lieferantLabel = createLabel.apply("🚚  Lieferant");
+        contentCard.add(lieferantLabel, gbc);
         row++;
         gbc.gridy = row;
+        gbc.insets = new Insets(2, 6, 6, 6);
         JTextField lieferantField = new JTextField(25);
         styleTextField.accept(lieferantField);
         contentCard.add(lieferantField, gbc);
@@ -995,7 +993,7 @@ public class ArticleGUI extends JFrame {
                         "Artikelnummer und Name sind Pflichtfelder.",
                         "Fehler",
                         JOptionPane.ERROR_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
 
@@ -1013,7 +1011,7 @@ public class ArticleGUI extends JFrame {
                         "Bitte gültige Preise eingeben.",
                         "Fehler",
                         JOptionPane.ERROR_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
 
@@ -1373,7 +1371,7 @@ public class ArticleGUI extends JFrame {
                             "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.",
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
         }
     }
 
@@ -1451,36 +1449,6 @@ public class ArticleGUI extends JFrame {
         articleTable.revalidate();
     }
 
-    public void refreshTableData(Object[][] data) {
-        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-        model.setRowCount(0); // Clear existing data
-        for (Object[] row : data) {
-            model.addRow(row);
-        }
-    }
-
-    public void addArticleRow(Object[] rowData) {
-        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-        // Insert category after name (index 2)
-        Object[] rowWithCategory = new Object[9];
-        rowWithCategory[0] = rowData[0]; // Article number
-        rowWithCategory[1] = rowData[1]; // Name
-        rowWithCategory[2] = getCategoryForArticle((String) rowData[0]); // Category
-        System.arraycopy(rowData, 2, rowWithCategory, 3, rowData.length - 2);
-        model.addRow(rowWithCategory);
-        updateCountLabel();
-    }
-
-    public void removeArticleRow(int rowIndex) {
-        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-        model.removeRow(rowIndex);
-        updateCountLabel();
-    }
-
-    public JTable getArticleTable() {
-        return articleTable;
-    }
-
     public void display() {
         setVisible(true);
     }
@@ -1492,40 +1460,36 @@ public class ArticleGUI extends JFrame {
         });
     }
 
-    private void sendTestWarning() {
-        Warning warning = new Warning("Test warning", "Der Lagerbestand für Artikel A123 ist niedrig.", Warning.WarningType.LOW_STOCK, new SimpleDateFormat("yyyy.MM.dd HH:mm:ss").format(new Date()), false, false);
-        displayWarning(warning);
-    }
-
     private JButton createRoundedButton(String text) {
+        ThemeManager tm = ThemeManager.getInstance();
+
         JButton button = new JButton(text);
         button.setFocusPainted(false);
         button.setBorderPainted(true);
         button.setContentAreaFilled(true);
         button.setOpaque(true);
 
-        // Modern color scheme
-        Color defaultBg = new Color(52, 152, 219); // Blue
-        Color hoverBg = new Color(41, 128, 185);   // Darker blue
-        Color pressedBg = new Color(31, 97, 141);  // Even darker blue
+        // Use ThemeManager for consistent Light/Dark styling
+        Color defaultBg = tm.getAccentColor();
+        Color hoverBg = tm.getButtonHoverColor(defaultBg);
+        Color pressedBg = tm.getButtonPressedColor(defaultBg);
 
         button.setBackground(defaultBg);
-        button.setForeground(Color.WHITE);
+        button.setForeground(tm.getTextOnPrimaryColor());
         button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                BorderFactory.createLineBorder(defaultBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Add hover effects
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
                 button.setBackground(hoverBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(31, 97, 141), 1),
-                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                        BorderFactory.createLineBorder(hoverBg.darker(), 2),
+                        BorderFactory.createEmptyBorder(9, 19, 9, 19)
                 ));
             }
 
@@ -1533,7 +1497,7 @@ public class ArticleGUI extends JFrame {
             public void mouseExited(MouseEvent e) {
                 button.setBackground(defaultBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                        BorderFactory.createLineBorder(defaultBg.darker(), 1),
                         BorderFactory.createEmptyBorder(10, 20, 10, 20)
                 ));
             }
@@ -1545,7 +1509,7 @@ public class ArticleGUI extends JFrame {
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                button.setBackground(hoverBg);
+                button.setBackground(button.contains(e.getPoint()) ? hoverBg : defaultBg);
             }
         });
 
@@ -1585,12 +1549,12 @@ public class ArticleGUI extends JFrame {
         int selectedRow = articleTable.getSelectedRow();
         if (selectedRow == -1) {
             JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
             return;
         }
 
         int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Artikel wirklich löschen?", "Artikel löschen", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,
-                Main.icon);
+                Main.iconSmall);
         if (confirm != JOptionPane.YES_OPTION) return;
 
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
@@ -1603,9 +1567,9 @@ public class ArticleGUI extends JFrame {
             // Only remove from table if DB deletion succeeded
             model.removeRow(modelRow);
             updateCountLabel();
-            JOptionPane.showMessageDialog(this, "Artikel erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.icon);
+            JOptionPane.showMessageDialog(this, "Artikel erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
         } else {
-            JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Artikels aus der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
+            JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Artikels aus der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
         }
     }
 
@@ -1742,7 +1706,7 @@ public class ArticleGUI extends JFrame {
                             "Die Warnung wurde als gelöst markiert.",
                             "Erfolg",
                             JOptionPane.INFORMATION_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                     dialog.dispose();
                 });
                 buttonPanel.add(resolveBtn);
@@ -1835,7 +1799,7 @@ public class ArticleGUI extends JFrame {
 
                     Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
                     if (article == null) {
-                        JOptionPane.showMessageDialog(ArticleGUI.this, "Artikel konnte nicht gefunden werden.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
+                        JOptionPane.showMessageDialog(ArticleGUI.this, "Artikel konnte nicht gefunden werden.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                         return;
                     }
 
@@ -1849,7 +1813,7 @@ public class ArticleGUI extends JFrame {
                     try {
                         int quantity = Integer.parseInt(input.trim());
                         if (quantity <= 0) {
-                            JOptionPane.showMessageDialog(ArticleGUI.this, "Menge muss größer als 0 sein.", "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE, Main.icon);
+                            JOptionPane.showMessageDialog(ArticleGUI.this, "Menge muss größer als 0 sein.", "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                             return;
                         }
 
@@ -1859,7 +1823,7 @@ public class ArticleGUI extends JFrame {
                                     "Niedriger Lagerbestand",
                                     JOptionPane.YES_NO_OPTION,
                                     JOptionPane.WARNING_MESSAGE,
-                                    Main.icon);
+                                    Main.iconSmall);
                             if (confirm != JOptionPane.YES_OPTION) {
                                 return;
                             }
@@ -1880,7 +1844,7 @@ public class ArticleGUI extends JFrame {
                         }
 
                     } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(ArticleGUI.this, "Ungültige Menge: " + input, "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
+                        JOptionPane.showMessageDialog(ArticleGUI.this, "Ungültige Menge: " + input, "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                     }
                 }
             }
@@ -1992,16 +1956,10 @@ public class ArticleGUI extends JFrame {
                 });
             }
 
-            JTable warningsTable = new JTable(tableModel);
-            warningsTable.setRowHeight(32);
-            warningsTable.setFont(warningsTable.getFont().deriveFont(14f));
-            warningsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-            warningsTable.setShowGrid(true);
-            warningsTable.setGridColor(new Color(226, 230, 233));
-            warningsTable.setIntercellSpacing(new Dimension(1, 1));
+            JTable warningsTable = getWarningsTable(tableModel);
 
-            // Custom renderer for status column
-            warningsTable.getColumnModel().getColumn(0).setCellRenderer(new DefaultTableCellRenderer() {
+            // Alternating row colors
+            warningsTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
                 @Override
                 public Component getTableCellRendererComponent(JTable table, Object value,
                                                                boolean isSelected, boolean hasFocus, int row, int column) {
@@ -2054,7 +2012,7 @@ public class ArticleGUI extends JFrame {
                             "Bitte wählen Sie eine Warnung aus.",
                             "Keine Auswahl",
                             JOptionPane.WARNING_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                     return;
                 }
                 Warning selectedWarning = warnings.get(selectedRow);
@@ -2082,7 +2040,7 @@ public class ArticleGUI extends JFrame {
                             "Bitte wählen Sie eine Warnung aus.",
                             "Keine Auswahl",
                             JOptionPane.WARNING_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                     return;
                 }
                 Warning selectedWarning = warnings.get(selectedRow);
@@ -2091,7 +2049,7 @@ public class ArticleGUI extends JFrame {
                             "Diese Warnung wurde bereits gelöst.",
                             "Bereits gelöst",
                             JOptionPane.INFORMATION_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                     return;
                 }
                 if (warningManager.resolveWarning(selectedWarning.getTitle())) {
@@ -2100,7 +2058,7 @@ public class ArticleGUI extends JFrame {
                             "Warnung wurde als gelöst markiert.",
                             "Erfolg",
                             JOptionPane.INFORMATION_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 }
             });
 
@@ -2113,13 +2071,13 @@ public class ArticleGUI extends JFrame {
                             "Bitte wählen Sie eine Warnung aus.",
                             "Keine Auswahl",
                             JOptionPane.WARNING_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                     return;
                 }
                 int confirm = JOptionPane.showConfirmDialog(dialog,
                         "Möchten Sie diese Warnung wirklich löschen?",
                         "Löschen bestätigen",
-                        JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, Main.icon);
+                        JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, Main.iconSmall);
                 if (confirm == JOptionPane.YES_OPTION) {
                     Warning selectedWarning = warnings.get(selectedRow);
                     if (warningManager.deleteWarning(selectedWarning.getTitle())) {
@@ -2130,7 +2088,7 @@ public class ArticleGUI extends JFrame {
                                 "Warnung wurde gelöscht.",
                                 "Erfolg",
                                 JOptionPane.INFORMATION_MESSAGE,
-                                Main.icon);
+                                Main.iconSmall);
                     }
                 }
             });
@@ -2167,6 +2125,19 @@ public class ArticleGUI extends JFrame {
         }
 
         dialog.setVisible(true);
+    }
+
+    private static JTable getWarningsTable(DefaultTableModel tableModel) {
+        JTable warningsTable = new JTable(tableModel);
+        warningsTable.setRowHeight(32);
+        warningsTable.setFont(warningsTable.getFont().deriveFont(14f));
+        warningsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        warningsTable.setShowGrid(true);
+        warningsTable.setGridColor(new Color(226, 230, 233));
+        warningsTable.setIntercellSpacing(new Dimension(1, 1));
+        warningsTable.setSelectionBackground(new Color(100, 181, 246));
+        warningsTable.setSelectionForeground(Color.WHITE);
+        return warningsTable;
     }
 
 
@@ -2212,7 +2183,7 @@ public class ArticleGUI extends JFrame {
 
         } catch (Exception e) {
             System.err.println("Error loading categories: " + e.getMessage());
-            JOptionPane.showMessageDialog(null, "Fehler beim Laden der Kategorien: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon);
+            JOptionPane.showMessageDialog(null, "Fehler beim Laden der Kategorien: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
         }
     }
 
@@ -2447,7 +2418,7 @@ public class ArticleGUI extends JFrame {
                         "Bitte wählen Sie mindestens einen Datensatz aus.",
                         "Keine Auswahl",
                         JOptionPane.WARNING_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
 
@@ -2500,7 +2471,7 @@ public class ArticleGUI extends JFrame {
                         "Entfernen bestätigen",
                         JOptionPane.YES_NO_OPTION,
                         JOptionPane.QUESTION_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
 
                 if (confirm == JOptionPane.YES_OPTION) {
                     ArticleManager.getInstance().removeFromStock(artikelNr, menge);
@@ -2727,7 +2698,7 @@ public class ArticleGUI extends JFrame {
                     "Import bestätigen",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
 
             if (confirm == JOptionPane.YES_OPTION) {
                 int imported = 0;
@@ -2781,7 +2752,7 @@ public class ArticleGUI extends JFrame {
                         message,
                         "Import Ergebnis",
                         errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
 
                 statusLabel.setText(imported + " Datensätze importiert" + (errors > 0 ? " (" + errors + " Fehler)" : ""));
                 statusIcon.setForeground(errors > 0 ? new Color(255, 193, 7) : new Color(46, 204, 113));
@@ -2798,7 +2769,7 @@ public class ArticleGUI extends JFrame {
                     "Import bestätigen",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE,
-                    Main.icon);
+                    Main.iconSmall);
 
             if (confirm == JOptionPane.YES_OPTION) {
                 statusLabel.setText("Importiere " + rowCount + " Datensätze...");
@@ -2880,7 +2851,7 @@ public class ArticleGUI extends JFrame {
                                 message,
                                 "Import Ergebnis",
                                 errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE,
-                                Main.icon);
+                                Main.iconSmall);
 
                         statusLabel.setText(String.format("%d importiert%s",
                                 imported,

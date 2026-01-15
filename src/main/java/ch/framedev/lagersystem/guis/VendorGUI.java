@@ -3,6 +3,8 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.VendorManager;
+import ch.framedev.lagersystem.utils.ThemeManager;
+
 import javax.swing.*;
 import javax.swing.table.*;
 import java.awt.*;
@@ -30,19 +32,19 @@ public class VendorGUI extends JFrame {
 
         // Header
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        headerWrapper.setBackground(new Color(245, 247, 250));
-        RoundedPanel headerPanel = new RoundedPanel(new Color(255, 255, 255), 20);
+        headerWrapper.setBackground(ThemeManager.getBackgroundColor());
+        RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
         headerPanel.setPreferredSize(new Dimension(680, 64));
         JLabel titleLabel = new JLabel("Lieferant Verwaltung");
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 22f));
-        titleLabel.setForeground(new Color(31, 45, 61));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
         headerPanel.add(titleLabel);
         headerWrapper.add(headerPanel);
         add(headerWrapper, BorderLayout.NORTH);
 
         // Toolbar
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 12));
-        toolbar.setBackground(new Color(245, 247, 250));
+        toolbar.setBackground(ThemeManager.getBackgroundColor());
         JButton addVendorButton = createRoundedButton("Lieferant hinzufügen");
         JButton editVendorButton = createRoundedButton("Lieferant bearbeiten");
         JButton deleteVendorButton = createRoundedButton("Lieferant löschen");
@@ -52,12 +54,12 @@ public class VendorGUI extends JFrame {
         toolbar.add(deleteVendorButton);
         toolbar.add(refreshButton);
         JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(new Color(245, 247, 250));
+        topPanel.setBackground(ThemeManager.getBackgroundColor());
         topPanel.add(toolbar, BorderLayout.SOUTH);
         add(topPanel, BorderLayout.PAGE_START);
 
         // Main card with table
-        RoundedPanel card = new RoundedPanel(Color.WHITE, 18);
+        RoundedPanel card = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
         card.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         card.setLayout(new BorderLayout(8, 8));
 
@@ -65,11 +67,13 @@ public class VendorGUI extends JFrame {
         vendorTable = new JTable();
         initializeVendorTable();
         tableScrollPane = new JScrollPane(vendorTable);
+        tableScrollPane.setBackground(ThemeManager.getCardBackgroundColor());
+        tableScrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
         card.add(tableScrollPane, BorderLayout.CENTER);
 
         // place card in center with padding
         JPanel centerWrapper = new JPanel(new GridBagLayout());
-        centerWrapper.setBackground(new Color(245, 247, 250));
+        centerWrapper.setBackground(ThemeManager.getBackgroundColor());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weightx = 1.0;
@@ -79,9 +83,13 @@ public class VendorGUI extends JFrame {
 
         // Bottom search bar
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        searchPanel.setBackground(new Color(245, 247, 250));
+        searchPanel.setBackground(ThemeManager.getBackgroundColor());
         JLabel searchLabel = new JLabel("Suche (Name oder Kontakt):");
+        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
         JTextField searchField = new JTextField(28);
+        searchField.setBackground(ThemeManager.getInputBackgroundColor());
+        searchField.setForeground(ThemeManager.getTextPrimaryColor());
+        searchField.setCaretColor(ThemeManager.getTextPrimaryColor());
         JButton searchBtn = new JButton("Suchen");
         JButton clearBtn = new JButton("Leeren");
 
@@ -106,10 +114,10 @@ public class VendorGUI extends JFrame {
                 if (VendorManager.getInstance().insertVendor(v)) {
                     loadVendors(); // Refresh table
                     JOptionPane.showMessageDialog(this, "Lieferant erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 } else {
                     JOptionPane.showMessageDialog(this, "Fehler: Lieferant bereits vorhanden oder Insert fehlgeschlagen", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 }
             }
         });
@@ -118,7 +126,7 @@ public class VendorGUI extends JFrame {
             int sel = vendorTable.getSelectedRow();
             if (sel == -1) {
                 JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Lieferanten zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
             int modelRow = vendorTable.convertRowIndexToModel(sel);
@@ -130,10 +138,10 @@ public class VendorGUI extends JFrame {
                 if (VendorManager.getInstance().updateVendor(v)) {
                     loadVendors(); // Refresh table
                     JOptionPane.showMessageDialog(this, "Lieferant erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 } else {
                     JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Lieferanten.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 }
             }
         });
@@ -142,21 +150,21 @@ public class VendorGUI extends JFrame {
             int sel = vendorTable.getSelectedRow();
             if (sel == -1) {
                 JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Lieferanten zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
                 return;
             }
             int modelRow = vendorTable.convertRowIndexToModel(sel);
             String name = (String) vendorTable.getModel().getValueAt(modelRow, 0);
             int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Lieferanten wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE, Main.icon);
+                    JOptionPane.WARNING_MESSAGE, Main.iconSmall);
             if (confirm == JOptionPane.YES_OPTION) {
                 if (VendorManager.getInstance().deleteVendor(name)) {
                     loadVendors(); // Refresh table
                     JOptionPane.showMessageDialog(this, "Lieferant erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 } else {
                     JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.icon);
+                            Main.iconSmall);
                 }
             }
         });
@@ -219,7 +227,9 @@ public class VendorGUI extends JFrame {
     private Object[] showAddVendorDialog() {
         final Object[][] holder = new Object[1][];
         JDialog dialog = new JDialog(this, "Neuen Lieferanten hinzufügen", true);
+
         JPanel p = new JPanel(new GridBagLayout());
+        p.setBackground(ThemeManager.getBackgroundColor());
         p.setBorder(BorderFactory.createEmptyBorder(12,12,12,12));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(6,6,6,6);
@@ -227,21 +237,70 @@ public class VendorGUI extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         int row = 0;
-        gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Name:"), gbc);
-        JTextField idField = new JTextField(20); gbc.gridx = 1; p.add(idField, gbc);
-        row++; gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Kontaktperson:"), gbc);
-        JTextField contactField = new JTextField(20); gbc.gridx = 1; p.add(contactField, gbc);
-        row++; gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Telefon:"), gbc);
-        JTextField phoneField = new JTextField(20); gbc.gridx = 1; p.add(phoneField, gbc);
-        row++; gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Email:"), gbc);
-        JTextField emailField = new JTextField(20); gbc.gridx = 1; p.add(emailField, gbc);
-        row++; gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Adresse:"), gbc);
-        JTextField addressField = new JTextField(20); gbc.gridx = 1; p.add(addressField, gbc);
-        row++; gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Gelieferte Artikel (kommagetrennt):"), gbc);
-        JTextField articlesField = new JTextField(20); gbc.gridx = 1; p.add(articlesField, gbc);
+        gbc.gridx = 0; gbc.gridy = row;
+        JLabel nameLabel = new JLabel("Name:");
+        nameLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(nameLabel, gbc);
+        JTextField idField = new JTextField(20);
+        idField.setBackground(ThemeManager.getInputBackgroundColor());
+        idField.setForeground(ThemeManager.getTextPrimaryColor());
+        idField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(idField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row;
+        JLabel contactLabel = new JLabel("Kontaktperson:");
+        contactLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(contactLabel, gbc);
+        JTextField contactField = new JTextField(20);
+        contactField.setBackground(ThemeManager.getInputBackgroundColor());
+        contactField.setForeground(ThemeManager.getTextPrimaryColor());
+        contactField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(contactField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row;
+        JLabel phoneLabel = new JLabel("Telefon:");
+        phoneLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(phoneLabel, gbc);
+        JTextField phoneField = new JTextField(20);
+        phoneField.setBackground(ThemeManager.getInputBackgroundColor());
+        phoneField.setForeground(ThemeManager.getTextPrimaryColor());
+        phoneField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(phoneField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row;
+        JLabel emailLabel = new JLabel("Email:");
+        emailLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(emailLabel, gbc);
+        JTextField emailField = new JTextField(20);
+        emailField.setBackground(ThemeManager.getInputBackgroundColor());
+        emailField.setForeground(ThemeManager.getTextPrimaryColor());
+        emailField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(emailField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row;
+        JLabel addressLabel = new JLabel("Adresse:");
+        addressLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(addressLabel, gbc);
+        JTextField addressField = new JTextField(20);
+        addressField.setBackground(ThemeManager.getInputBackgroundColor());
+        addressField.setForeground(ThemeManager.getTextPrimaryColor());
+        addressField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(addressField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row;
+        JLabel articlesLabel = new JLabel("Gelieferte Artikel (kommagetrennt):");
+        articlesLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(articlesLabel, gbc);
+        JTextField articlesField = new JTextField(20);
+        articlesField.setBackground(ThemeManager.getInputBackgroundColor());
+        articlesField.setForeground(ThemeManager.getTextPrimaryColor());
+        articlesField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(articlesField, gbc);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton ok = new JButton("OK"); JButton cancel = new JButton("Abbrechen");
+        buttons.setOpaque(false);
+        JButton ok = new JButton("OK");
+        JButton cancel = new JButton("Abbrechen");
         buttons.add(cancel); buttons.add(ok);
         gbc.gridx = 0; gbc.gridy = ++row; gbc.gridwidth = 2; p.add(buttons, gbc);
 
@@ -253,13 +312,14 @@ public class VendorGUI extends JFrame {
             String addr = addressField.getText().trim();
             String arts = articlesField.getText().trim();
             if (id.isEmpty()) { JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                    Main.icon); return; }
+                    Main.iconSmall); return; }
             holder[0] = new Object[]{id, contact, phone, email, addr, arts};
             dialog.dispose();
         });
         cancel.addActionListener(ae -> { holder[0] = null; dialog.dispose(); });
 
         dialog.getContentPane().add(p);
+        dialog.getContentPane().setBackground(ThemeManager.getBackgroundColor());
         dialog.pack(); dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
         return holder[0];
@@ -269,6 +329,7 @@ public class VendorGUI extends JFrame {
         final Object[][] holder = new Object[1][];
         JDialog dialog = new JDialog(this, "Lieferant bearbeiten", true);
         JPanel p = new JPanel(new GridBagLayout());
+        p.setBackground(ThemeManager.getBackgroundColor());
         p.setBorder(BorderFactory.createEmptyBorder(12,12,12,12));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(6,6,6,6);
@@ -276,20 +337,68 @@ public class VendorGUI extends JFrame {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         int row = 0;
-        gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Name:"), gbc);
-        JTextField idField = new JTextField(existing[0]==null?"":existing[0].toString(),20); gbc.gridx = 1; p.add(idField, gbc);
-        row++; gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Kontaktperson:"), gbc);
-        JTextField contactField = new JTextField(existing[1]==null?"":existing[1].toString(),20); gbc.gridx = 1; p.add(contactField, gbc);
-        row++; gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Telefon:"), gbc);
-        JTextField phoneField = new JTextField(existing[2]==null?"":existing[2].toString(),20); gbc.gridx = 1; p.add(phoneField, gbc);
-        row++; gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Email:"), gbc);
-        JTextField emailField = new JTextField(existing[3]==null?"":existing[3].toString(),20); gbc.gridx = 1; p.add(emailField, gbc);
-        row++; gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Adresse:"), gbc);
-        JTextField addressField = new JTextField(existing[4]==null?"":existing[4].toString(),20); gbc.gridx = 1; p.add(addressField, gbc);
-        row++; gbc.gridx = 0; gbc.gridy = row; p.add(new JLabel("Gelieferte Artikel (kommagetrennt):"), gbc);
-        JTextField articlesField = new JTextField(existing[5]==null?"":existing[5].toString(),20); gbc.gridx = 1; p.add(articlesField, gbc);
+        gbc.gridx = 0; gbc.gridy = row;
+        JLabel nameLabel = new JLabel("Name:");
+        nameLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(nameLabel, gbc);
+        JTextField idField = new JTextField(existing[0]==null?"":existing[0].toString(),20);
+        idField.setBackground(ThemeManager.getInputBackgroundColor());
+        idField.setForeground(ThemeManager.getTextPrimaryColor());
+        idField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(idField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row;
+        JLabel contactLabel = new JLabel("Kontaktperson:");
+        contactLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(contactLabel, gbc);
+        JTextField contactField = new JTextField(existing[1]==null?"":existing[1].toString(),20);
+        contactField.setBackground(ThemeManager.getInputBackgroundColor());
+        contactField.setForeground(ThemeManager.getTextPrimaryColor());
+        contactField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(contactField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row;
+        JLabel phoneLabel = new JLabel("Telefon:");
+        phoneLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(phoneLabel, gbc);
+        JTextField phoneField = new JTextField(existing[2]==null?"":existing[2].toString(),20);
+        phoneField.setBackground(ThemeManager.getInputBackgroundColor());
+        phoneField.setForeground(ThemeManager.getTextPrimaryColor());
+        phoneField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(phoneField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row;
+        JLabel emailLabel = new JLabel("Email:");
+        emailLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(emailLabel, gbc);
+        JTextField emailField = new JTextField(existing[3]==null?"":existing[3].toString(),20);
+        emailField.setBackground(ThemeManager.getInputBackgroundColor());
+        emailField.setForeground(ThemeManager.getTextPrimaryColor());
+        emailField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(emailField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row;
+        JLabel addressLabel = new JLabel("Adresse:");
+        addressLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(addressLabel, gbc);
+        JTextField addressField = new JTextField(existing[4]==null?"":existing[4].toString(),20);
+        addressField.setBackground(ThemeManager.getInputBackgroundColor());
+        addressField.setForeground(ThemeManager.getTextPrimaryColor());
+        addressField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(addressField, gbc);
+
+        row++; gbc.gridx = 0; gbc.gridy = row;
+        JLabel articlesLabel = new JLabel("Gelieferte Artikel (kommagetrennt):");
+        articlesLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        p.add(articlesLabel, gbc);
+        JTextField articlesField = new JTextField(existing[5]==null?"":existing[5].toString(),20);
+        articlesField.setBackground(ThemeManager.getInputBackgroundColor());
+        articlesField.setForeground(ThemeManager.getTextPrimaryColor());
+        articlesField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        gbc.gridx = 1; p.add(articlesField, gbc);
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttons.setOpaque(false);
         JButton ok = new JButton("OK"); JButton cancel = new JButton("Abbrechen");
         buttons.add(cancel); buttons.add(ok);
         gbc.gridx = 0; gbc.gridy = ++row; gbc.gridwidth = 2; p.add(buttons, gbc);
@@ -301,13 +410,14 @@ public class VendorGUI extends JFrame {
             String email = emailField.getText().trim();
             String addr = addressField.getText().trim();
             String arts = articlesField.getText().trim();
-            if (id.isEmpty()) { JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.icon); return; }
+            if (id.isEmpty()) { JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall); return; }
             holder[0] = new Object[]{id, contact, phone, email, addr, arts};
             dialog.dispose();
         });
         cancel.addActionListener(ae -> { holder[0] = null; dialog.dispose(); });
 
         dialog.getContentPane().add(p);
+        dialog.getContentPane().setBackground(ThemeManager.getBackgroundColor());
         dialog.pack(); dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
         return holder[0];
@@ -363,13 +473,13 @@ public class VendorGUI extends JFrame {
         int modelRow = vendorTable.convertRowIndexToModel(sel);
         String name = (String) vendorTable.getModel().getValueAt(modelRow, 0);
         int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Lieferanten wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE, Main.icon);
+                JOptionPane.WARNING_MESSAGE, Main.iconSmall);
         if (confirm == JOptionPane.YES_OPTION) {
             if (VendorManager.getInstance().deleteVendor(name)) {
                 ((DefaultTableModel) vendorTable.getModel()).removeRow(modelRow);
             } else {
                 JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                        Main.icon);
+                        Main.iconSmall);
             }
         }
     }
@@ -387,9 +497,13 @@ public class VendorGUI extends JFrame {
         vendorTable.setRowHeight(26);
         vendorTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         vendorTable.setShowGrid(true);
-        vendorTable.setGridColor(new Color(226, 230, 233));
+        vendorTable.setGridColor(ThemeManager.getTableGridColor());
         vendorTable.setIntercellSpacing(new Dimension(1, 1));
         vendorTable.setFont(new Font("Arial", Font.PLAIN, 16));
+        vendorTable.setBackground(ThemeManager.getTableRowEvenColor());
+        vendorTable.setForeground(ThemeManager.getTextPrimaryColor());
+        vendorTable.setSelectionBackground(ThemeManager.getTableSelectionColor());
+        vendorTable.setSelectionForeground(ThemeManager.getTextOnPrimaryColor());
 
         DefaultTableCellRenderer center = new DefaultTableCellRenderer();
         center.setHorizontalAlignment(SwingConstants.CENTER);
@@ -400,13 +514,19 @@ public class VendorGUI extends JFrame {
 
         // Alternating row colors for readability (subtle)
         DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
-            private final Color EVEN = new Color(255, 255, 255);
-            private final Color ODD = new Color(247, 250, 253);
+            private final Color EVEN = ThemeManager.getTableRowEvenColor();
+            private final Color ODD = ThemeManager.getTableRowOddColor();
 
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (!isSelected) c.setBackground(row % 2 == 0 ? EVEN : ODD);
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? EVEN : ODD);
+                    c.setForeground(ThemeManager.getTextPrimaryColor());
+                } else {
+                    c.setBackground(ThemeManager.getTableSelectionColor());
+                    c.setForeground(ThemeManager.getTextOnPrimaryColor());
+                }
                 return c;
             }
         };
@@ -414,8 +534,8 @@ public class VendorGUI extends JFrame {
 
         // Header styling
         JTableHeader header = vendorTable.getTableHeader();
-        header.setBackground(new Color(62, 84, 98));
-        header.setForeground(Color.WHITE);
+        header.setBackground(ThemeManager.getTableHeaderColor());
+        header.setForeground(ThemeManager.getTextOnPrimaryColor());
         header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
     }
 
@@ -438,28 +558,26 @@ public class VendorGUI extends JFrame {
         button.setContentAreaFilled(true);
         button.setOpaque(true);
 
-        // Modern color scheme
-        Color defaultBg = new Color(52, 152, 219); // Blue
-        Color hoverBg = new Color(41, 128, 185);   // Darker blue
-        Color pressedBg = new Color(31, 97, 141);  // Even darker blue
+        Color defaultBg = ThemeManager.getAccentColor();
+        Color hoverBg = ThemeManager.getButtonHoverColor(defaultBg);
+        Color pressedBg = ThemeManager.getButtonPressedColor(defaultBg);
 
         button.setBackground(defaultBg);
-        button.setForeground(Color.WHITE);
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                BorderFactory.createLineBorder(defaultBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Add hover effects
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent e) {
                 button.setBackground(hoverBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(31, 97, 141), 1),
-                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                        BorderFactory.createLineBorder(hoverBg.darker(), 2),
+                        BorderFactory.createEmptyBorder(9, 19, 9, 19)
                 ));
             }
 
@@ -467,7 +585,7 @@ public class VendorGUI extends JFrame {
             public void mouseExited(java.awt.event.MouseEvent e) {
                 button.setBackground(defaultBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(41, 128, 185), 1),
+                        BorderFactory.createLineBorder(defaultBg.darker(), 1),
                         BorderFactory.createEmptyBorder(10, 20, 10, 20)
                 ));
             }
@@ -479,7 +597,7 @@ public class VendorGUI extends JFrame {
 
             @Override
             public void mouseReleased(java.awt.event.MouseEvent e) {
-                button.setBackground(hoverBg);
+                button.setBackground(button.contains(e.getPoint()) ? hoverBg : defaultBg);
             }
         });
 

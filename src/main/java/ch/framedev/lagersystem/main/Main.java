@@ -7,6 +7,7 @@ import ch.framedev.lagersystem.guis.MainGUI;
 import ch.framedev.lagersystem.managers.*;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
+import ch.framedev.lagersystem.utils.ThemeManager;
 import ch.framedev.lagersystem.utils.UserDataDir;
 import ch.framedev.simplejavautils.Settings;
 import ch.framedev.simplejavautils.SimpleJavaUtils;
@@ -30,6 +31,7 @@ public class Main {
     public static LogUtils logUtils = new LogUtils();
     public static Settings settings;
     public static ImageIcon icon;
+    public static ImageIcon iconSmall;
 
     public static final String VERSION = "0.1-TESTING";
 
@@ -92,6 +94,9 @@ public class Main {
             ImageIcon originalIcon = new ImageIcon(new SimpleJavaUtils().getFromResourceFile("logo.png").toURL());
             Image scaledImage = originalIcon.getImage().getScaledInstance(128, 128, Image.SCALE_SMOOTH);
             icon = new ImageIcon(scaledImage);
+            ImageIcon smallIcon = new ImageIcon(new SimpleJavaUtils().getFromResourceFile("logo-small.png").toURL());
+            Image scaledSmallImage = smallIcon.getImage().getScaledInstance(64, 64, Image.SCALE_SMOOTH);
+            iconSmall = new ImageIcon(scaledSmallImage);
         } catch (MalformedURLException e) {
             String errorMsg = "Fehler beim Laden des Icons: " + e.getMessage();
             System.err.println(errorMsg);
@@ -99,6 +104,11 @@ public class Main {
             throw new RuntimeException("Icon konnte nicht geladen werden", e);
         }
         loadSettings();
+
+        // Initialize theme manager
+        ch.framedev.lagersystem.utils.ThemeManager.initialize();
+        System.out.println("[Main] Theme initialized - Dark mode: " + ch.framedev.lagersystem.utils.ThemeManager.isDarkMode());
+
         ensureAppDataDirectory();
         initializeDatabase();
     }
@@ -325,6 +335,12 @@ public class Main {
         String enableWarningsStr = settings.getProperty("enable_hourly_warnings");
         boolean enableWarnings = enableWarningsStr == null || Boolean.parseBoolean(enableWarningsStr);
 
+        String enableAutomaticImportStr = settings.getProperty("enable_automatic_import_qrcode");
+        boolean enableAutomaticImport = enableAutomaticImportStr == null || Boolean.parseBoolean(enableAutomaticImportStr);
+
+        String automaticImportIntervalStr = settings.getProperty("qrcode_import_interval");
+        int automaticImportInterval = (automaticImportIntervalStr != null) ? Integer.parseInt(automaticImportIntervalStr) : 10;
+
         // Starte Scheduler basierend auf Einstellungen
         if (enableAutoCheck) {
             schedulerManager.startScheduledStockCheck(interval, java.util.concurrent.TimeUnit.MINUTES);
@@ -334,6 +350,11 @@ public class Main {
         if (enableWarnings) {
             schedulerManager.startHourlyWarningDisplay();
             System.out.println("✓ Stündliche Warnanzeige gestartet");
+        }
+
+        if (enableAutomaticImport) {
+            schedulerManager.startAutoImportQrCodes(automaticImportInterval, java.util.concurrent.TimeUnit.MINUTES);
+            System.out.println("✓ Automatischer QR-Code Import gestartet");
         }
     }
 
@@ -370,6 +391,13 @@ public class Main {
 
         settings = new Settings("settings.properties", Main.class, settingsFile);
         System.out.println("✓ Einstellungen geladen");
+
+        // Load and apply theme setting
+        String darkModeStr = settings.getProperty("dark_mode");
+        boolean darkMode = darkModeStr != null && Boolean.parseBoolean(darkModeStr);
+        ThemeManager themeManager = ThemeManager.getInstance();
+        themeManager.setTheme(darkMode ? ThemeManager.Theme.DARK : ThemeManager.Theme.LIGHT);
+        System.out.println("✓ Theme gesetzt: " + (darkMode ? "Dark Mode" : "Light Mode"));
 
         // Load GitHub token if configured
         String githubToken = settings.getProperty("github-token");
