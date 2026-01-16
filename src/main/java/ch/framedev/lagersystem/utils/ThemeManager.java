@@ -259,9 +259,11 @@ public class ThemeManager {
             Color inputFg = ThemeManager.getTextPrimaryColor();
             Color caret = ThemeManager.getTextPrimaryColor();
 
-            // Buttons
-            Color btnBg = ThemeManager.getAccentColor();
-            Color btnFg = ThemeManager.getTextOnPrimaryColor();
+            // Buttons - use proper button colors with white text for visibility
+            Color btnBg = ThemeManager.getButtonBackgroundColor();
+            Color btnFg = Color.WHITE;  // Always white text on blue buttons for best contrast
+            Color btnHover = ThemeManager.getButtonHoverColor();
+            Color btnPressed = ThemeManager.getButtonPressedColor();
 
             // Selection
             Color selBg = ThemeManager.getSelectionBackgroundColor();
@@ -271,7 +273,8 @@ public class ThemeManager {
             UIManager.put("OptionPane.background", new ColorUIResource(bg));
             UIManager.put("OptionPane.messageForeground", new ColorUIResource(fg));
             UIManager.put("OptionPane.foreground", new ColorUIResource(fg));
-            UIManager.put("OptionPane.border", BorderFactory.createLineBorder(border, 1));
+            UIManager.put("OptionPane.messageAreaBorder", BorderFactory.createEmptyBorder(12, 15, 12, 15));
+            UIManager.put("OptionPane.buttonAreaBorder", BorderFactory.createEmptyBorder(12, 15, 0, 15));
 
             // ---- Panels ----
             UIManager.put("Panel.background", new ColorUIResource(bg));
@@ -282,12 +285,41 @@ public class ThemeManager {
             UIManager.put("Label.background", new ColorUIResource(bg));
             UIManager.put("Label.disabledForeground", new ColorUIResource(secondaryFg));
 
-            // ---- Buttons ----
+            // ---- Buttons - Modern styling with shadows and hover effects ----
             UIManager.put("Button.background", new ColorUIResource(btnBg));
             UIManager.put("Button.foreground", new ColorUIResource(btnFg));
-            UIManager.put("Button.select", new ColorUIResource(ThemeManager.getButtonPressedColor(btnBg)));
-            UIManager.put("Button.focus", new ColorUIResource(border));
-            UIManager.put("Button.border", BorderFactory.createLineBorder(border, 1));
+            UIManager.put("Button.select", new ColorUIResource(btnPressed));
+            UIManager.put("Button.focus", new ColorUIResource(btnBg));  // Keep original on focus
+
+            // Hover effect colors
+            Color btnHoverBg = btnHover;
+            UIManager.put("Button.highlight", new ColorUIResource(btnHoverBg));
+            UIManager.put("Button.light", new ColorUIResource(btnHoverBg));
+            UIManager.put("Button.shadow", new ColorUIResource(btnPressed));
+            UIManager.put("Button.darkShadow", new ColorUIResource(btnPressed.darker()));
+
+            // Create prettier button border with subtle shadow effect
+            Color btnBorderColor = ThemeManager.isDarkMode()
+                ? new Color(Math.max(0, btnBg.getRed() - 30), Math.max(0, btnBg.getGreen() - 30), Math.max(0, btnBg.getBlue() - 30))
+                : new Color(Math.max(0, btnBg.getRed() - 20), Math.max(0, btnBg.getGreen() - 20), Math.max(0, btnBg.getBlue() - 20));
+
+            UIManager.put("Button.border", BorderFactory.createCompoundBorder(
+                    BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(btnBorderColor, 1, true),
+                        BorderFactory.createEmptyBorder(1, 1, 2, 1)  // Subtle shadow for depth
+                    ),
+                    BorderFactory.createEmptyBorder(8, 20, 8, 20)
+            ));
+            UIManager.put("Button.margin", new Insets(8, 20, 8, 20));
+            UIManager.put("Button.opaque", Boolean.TRUE);
+            UIManager.put("Button.contentAreaFilled", Boolean.TRUE);
+
+            // Enable mouse hover effects
+            UIManager.put("Button.rolloverEnabled", Boolean.TRUE);
+            UIManager.put("Button.rollover", new ColorUIResource(btnHoverBg));
+
+            // Font styling for buttons
+            UIManager.put("Button.font", new Font("Arial", Font.BOLD, 13));
 
             // ---- TextField / PasswordField ----
             UIManager.put("TextField.background", new ColorUIResource(inputBg));

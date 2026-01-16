@@ -154,7 +154,11 @@ public class MainGUI extends JFrame {
 
         JLabel subtitleLabel = new JLabel("Zentrale Verwaltung für Artikel, Bestellungen und Lieferanten");
         subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        subtitleLabel.setForeground(new Color(255, 255, 255, 200)); // Slightly transparent white for better contrast on blue
+        // Slightly transparent white for better contrast on blue background
+        Color subtitleColor = ThemeManager.isDarkMode()
+            ? new Color(200, 220, 240)  // Light blue-ish for dark mode
+            : new Color(255, 255, 255, 200);  // Transparent white for light mode
+        subtitleLabel.setForeground(subtitleColor);
         subtitleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         JPanel headerTextPanel = new JPanel();
@@ -185,7 +189,11 @@ public class MainGUI extends JFrame {
 
         JLabel dateLabel = new JLabel(new SimpleDateFormat("dd. MMMM yyyy").format(new Date()));
         dateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        dateLabel.setForeground(new Color(255, 255, 255, 180)); // Slightly transparent white for blue background
+        // Slightly transparent white for blue background
+        Color dateColor = ThemeManager.isDarkMode()
+            ? new Color(200, 220, 240, 180)  // Light blue-ish with transparency for dark mode
+            : new Color(255, 255, 255, 180);  // Transparent white for light mode
+        dateLabel.setForeground(dateColor);
 
         rightPanel.add(settingsButton);
         rightPanel.add(dateLabel);

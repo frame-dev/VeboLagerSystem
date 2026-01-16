@@ -395,7 +395,7 @@ public class Main {
 
         // Load and apply theme setting
         String darkModeStr = settings.getProperty("dark_mode");
-        boolean darkMode = darkModeStr != null && Boolean.parseBoolean(darkModeStr);
+        boolean darkMode = Boolean.parseBoolean(darkModeStr);
         ThemeManager themeManager = ThemeManager.getInstance();
         themeManager.setTheme(darkMode ? ThemeManager.Theme.DARK : ThemeManager.Theme.LIGHT);
         System.out.println("✓ Theme gesetzt: " + (darkMode ? "Dark Mode" : "Light Mode"));
