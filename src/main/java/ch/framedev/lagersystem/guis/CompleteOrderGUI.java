@@ -7,6 +7,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.UserManager;
+import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.ThemeManager;
 
 import javax.swing.*;
@@ -431,6 +432,7 @@ public class CompleteOrderGUI extends JFrame {
         if (user == null) user = createUser(selected.getSenderName().toLowerCase());
         if (!user.getOrders().contains(selected.getOrderId())) user.getOrders().add(selected.getOrderId());
         userManager.updateUser(user);
+        OrderLoggingUtils.getInstance().addLogEntry(selected, user);
 
         // Update order
         selected.setStatus("Abgeschlossen");

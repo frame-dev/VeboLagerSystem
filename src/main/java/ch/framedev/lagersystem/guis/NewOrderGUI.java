@@ -866,22 +866,158 @@ public class NewOrderGUI extends JFrame {
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("Bestellung");
         JMenuItem help = new JMenuItem("Hilfe");
-        help.addActionListener(e -> JOptionPane.showMessageDialog(this, getHelpText(),
-                "Hilfe - Neue Bestellung erstellen", JOptionPane.INFORMATION_MESSAGE));
+        help.addActionListener(e -> showHelpDialog());
         menu.add(help);
         menuBar.add(menu);
         return menuBar;
     }
 
+    /**
+     * Displays the help dialog with scrollable content
+     */
+    private void showHelpDialog() {
+
+        // Create custom dialog
+        JDialog helpDialog = new JDialog(this, "Hilfe - Neue Bestellung erstellen", true);
+        helpDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        helpDialog.setLayout(new BorderLayout(0, 0));
+
+        // Create JEditorPane to display HTML content
+        JEditorPane editorPane = new JEditorPane("text/html", getHelpText());
+        editorPane.setEditable(false);
+
+        // Set theme colors
+        Color bg = ThemeManager.getCardBackgroundColor();
+        Color fg = ThemeManager.getTextPrimaryColor();
+
+        editorPane.setBackground(bg);
+        editorPane.setForeground(fg);
+        editorPane.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        // IMPORTANT: Make JEditorPane honor display properties (use set colors instead of HTML defaults)
+        editorPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
+        editorPane.setFont(new Font("Arial", Font.PLAIN, 13));
+
+        // Create scroll pane with the editor pane
+        JScrollPane scrollPane = new JScrollPane(editorPane);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.setBackground(bg);
+        scrollPane.getViewport().setBackground(bg);
+
+        // Set preferred size for the scroll pane
+        scrollPane.setPreferredSize(new Dimension(700, 600));
+
+        // Create button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 15));
+        buttonPanel.setBackground(ThemeManager.getCardBackgroundColor());
+        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
+
+        JButton closeButton = createThemeButton("✓ Schließen", ThemeManager.getPrimaryColor());
+        closeButton.addActionListener(e -> helpDialog.dispose());
+        buttonPanel.add(closeButton);
+
+        // Add components to dialog
+        helpDialog.add(scrollPane, BorderLayout.CENTER);
+        helpDialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Set dialog properties
+        helpDialog.pack();
+        helpDialog.setLocationRelativeTo(this);
+        helpDialog.setVisible(true);
+    }
+
     private String getHelpText() {
-        return "<html><h2>Hilfe - Neue Bestellung erstellen</h2>" +
-                "<p>In diesem Fenster können Sie eine neue Bestellung zusammenstellen.</p>" +
-                "<ul>" +
-                "<li>Wählen Sie Artikel aus der Liste und fügen Sie Mengen hinzu.</li>" +
-                "<li>Geben Sie Empfänger und Absender an.</li>" +
-                "<li>Klicken Sie auf \"Bestellen\" um die Bestellung zu speichern.</li>" +
-                "<li>Mit \"Export PDF\" erzeugen Sie ein PDF mit allen Daten.</li>" +
-                "</ul>";
+        return "<html><div style='width: 600px; font-family: Arial, sans-serif;'>" +
+                "<h2 style='color: #2980b9; margin-bottom: 10px;'>📝 Hilfe - Neue Bestellung erstellen</h2>" +
+
+                "<h3 style='color: #34495e; margin-top: 15px;'>Übersicht</h3>" +
+                "<p style='margin: 5px 0;'>In diesem Fenster können Sie eine neue Bestellung für Artikel aus dem Lager zusammenstellen. " +
+                "Die Bestellung wird gespeichert und kann als PDF exportiert werden.</p>" +
+
+                "<h3 style='color: #34495e; margin-top: 15px;'>🎯 Schritt-für-Schritt Anleitung</h3>" +
+                "<ol style='margin: 5px 0; padding-left: 20px;'>" +
+                "<li><b>Empfänger auswählen:</b> Wählen Sie den Empfänger aus der Dropdown-Liste oder geben Sie einen neuen Namen ein.</li>" +
+                "<li><b>Empfänger-Kontonummer:</b> Geben Sie die Kontonummer des Empfängers ein.</li>" +
+                "<li><b>Absender auswählen:</b> Wählen Sie den Absender der Bestellung aus.</li>" +
+                "<li><b>Absender-Kontonummer:</b> Geben Sie die Kontonummer des Absenders ein.</li>" +
+                "<li><b>Abteilung wählen:</b> Ordnen Sie die Bestellung einer Abteilung zu.</li>" +
+                "<li><b>Artikel hinzufügen:</b> Wählen Sie Artikel aus der Liste und geben Sie die gewünschte Menge ein.</li>" +
+                "<li><b>Bestellung prüfen:</b> Überprüfen Sie alle Positionen in der Bestelltabelle.</li>" +
+                "<li><b>Bestellung abschicken:</b> Klicken Sie auf \"📦 Bestellen\" um die Bestellung zu speichern.</li>" +
+                "</ol>" +
+
+                "<h3 style='color: #34495e; margin-top: 15px;'>📋 Artikelverwaltung</h3>" +
+                "<ul style='margin: 5px 0; padding-left: 20px;'>" +
+                "<li><b>Artikel hinzufügen:</b> Wählen Sie einen Artikel aus der Dropdown-Liste und klicken Sie auf \"➕ Hinzufügen\".</li>" +
+                "<li><b>Menge ändern:</b> Doppelklicken Sie in der Tabelle auf die Menge und geben Sie einen neuen Wert ein.</li>" +
+                "<li><b>Artikel entfernen:</b> Wählen Sie eine Zeile aus und klicken Sie auf \"🗑️ Entfernen\".</li>" +
+                "<li><b>Gesamtpreis:</b> Der Gesamtpreis wird automatisch berechnet und angezeigt.</li>" +
+                "</ul>" +
+
+                "<h3 style='color: #34495e; margin-top: 15px;'>✅ Pflichtfelder</h3>" +
+                "<p style='margin: 5px 0;'><b style='color: #e74c3c;'>Folgende Felder müssen ausgefüllt werden:</b></p>" +
+                "<ul style='margin: 5px 0; padding-left: 20px;'>" +
+                "<li>Empfängername</li>" +
+                "<li>Empfänger-Kontonummer</li>" +
+                "<li>Absendername</li>" +
+                "<li>Absender-Kontonummer</li>" +
+                "<li>Abteilung</li>" +
+                "<li>Mindestens ein Artikel mit Menge > 0</li>" +
+                "</ul>" +
+
+                "<h3 style='color: #34495e; margin-top: 15px;'>📄 PDF Export</h3>" +
+                "<p style='margin: 5px 0;'>Mit der Funktion \"📄 Export PDF\" können Sie eine detaillierte Bestellübersicht erstellen:</p>" +
+                "<ul style='margin: 5px 0; padding-left: 20px;'>" +
+                "<li>Enthält alle Bestelldetails (Empfänger, Absender, Datum, Artikelliste)</li>" +
+                "<li>Zeigt Einzelpreise, Mengen und Gesamtpreis an</li>" +
+                "<li>Professionelles Layout mit Logo und Firmendaten</li>" +
+                "<li>Wird im Benutzerverzeichnis gespeichert</li>" +
+                "</ul>" +
+
+                "<h3 style='color: #34495e; margin-top: 15px;'>💡 Tipps & Hinweise</h3>" +
+                "<ul style='margin: 5px 0; padding-left: 20px;'>" +
+                "<li><b>Artikelsuche:</b> Beginnen Sie mit der Eingabe in der Artikel-Auswahl, um die Liste zu filtern.</li>" +
+                "<li><b>Mengenvalidierung:</b> Negative Mengen werden automatisch korrigiert.</li>" +
+                "<li><b>Lagerbestand:</b> Der aktuelle Lagerbestand wird bei jedem Artikel angezeigt.</li>" +
+                "<li><b>Preisberechnung:</b> Verkaufspreise werden verwendet (nicht Einkaufspreise).</li>" +
+                "<li><b>Kontonummern:</b> Verwenden Sie eindeutige Nummern zur besseren Nachverfolgung.</li>" +
+                "<li><b>Speichern:</b> Bestellungen werden automatisch mit Datum und Uhrzeit versehen.</li>" +
+                "</ul>" +
+
+                "<h3 style='color: #34495e; margin-top: 15px;'>⚠️ Wichtige Hinweise</h3>" +
+                "<ul style='margin: 5px 0; padding-left: 20px;'>" +
+                "<li>Prüfen Sie vor dem Absenden alle Daten auf Richtigkeit.</li>" +
+                "<li>Gespeicherte Bestellungen können nachträglich bearbeitet werden.</li>" +
+                "<li>Der Lagerbestand wird nach Abschluss der Bestellung automatisch aktualisiert.</li>" +
+                "<li>Bei niedrigem Lagerbestand erscheinen automatische Warnungen.</li>" +
+                "<li>PDF-Export ist unabhängig vom Speichern - Sie können Bestellungen vor dem Absenden exportieren.</li>" +
+                "</ul>" +
+
+                "<h3 style='color: #34495e; margin-top: 15px;'>🔍 Fehlerbehandlung</h3>" +
+                "<p style='margin: 5px 0;'><b>Häufige Probleme und Lösungen:</b></p>" +
+                "<ul style='margin: 5px 0; padding-left: 20px;'>" +
+                "<li><b>\"Fehlende Pflichtfelder\":</b> Füllen Sie alle mit * markierten Felder aus.</li>" +
+                "<li><b>\"Ungültige Menge\":</b> Geben Sie eine positive Ganzzahl ein.</li>" +
+                "<li><b>\"Keine Artikel\":</b> Fügen Sie mindestens einen Artikel zur Bestellung hinzu.</li>" +
+                "<li><b>PDF nicht erstellt:</b> Prüfen Sie Schreibrechte im Zielordner.</li>" +
+                "</ul>" +
+
+                "<h3 style='color: #27ae60; margin-top: 15px;'>✨ Weitere Funktionen</h3>" +
+                "<ul style='margin: 5px 0; padding-left: 20px;'>" +
+                "<li><b>Mehrfachbestellungen:</b> Fügen Sie mehrere Artikel gleichzeitig hinzu.</li>" +
+                "<li><b>Schnelleingabe:</b> Drücken Sie Enter nach der Mengeneingabe zum schnellen Hinzufügen.</li>" +
+                "<li><b>Bestellhistorie:</b> Alle Bestellungen werden im System gespeichert und sind einsehbar.</li>" +
+                "</ul>" +
+
+                "<hr style='margin: 15px 0; border: 1px solid #ddd;'/>" +
+                "<p style='margin: 10px 0; font-size: 11px; color: #7f8c8d;'>" +
+                "<b>Hinweis:</b> Bei Fragen oder Problemen wenden Sie sich bitte an den Administrator.<br/>" +
+                "Version: " + Main.VERSION + " | © 2026 VEBO Lagersystem" +
+                "</p>" +
+                "</div></html>";
     }
 
     private JButton createThemeButton(String text, Color baseBg) {
