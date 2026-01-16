@@ -37,9 +37,11 @@ public class ThemeManager {
         public static final Color BACKGROUND = new Color(245, 247, 250);
         public static final Color CARD_BACKGROUND = Color.WHITE;
         public static final Color SURFACE = new Color(252, 253, 254);
+        public static final Color SURFACE_DARKER = SURFACE.darker();
 
         // Text
         public static final Color TEXT_PRIMARY = new Color(31, 45, 61);
+        public static final Color TEXT_PRIMARY_DARKER = TEXT_PRIMARY.darker();
         public static final Color TEXT_SECONDARY = new Color(108, 117, 125);
         public static final Color TEXT_DISABLED = new Color(160, 170, 180);
         public static final Color TEXT_LINK = new Color(52, 152, 219);
@@ -113,9 +115,11 @@ public class ThemeManager {
         public static final Color BACKGROUND = new Color(26, 26, 26, 255);
         public static final Color CARD_BACKGROUND = new Color(45, 45, 45);
         public static final Color SURFACE = new Color(50, 50, 50);
+        public static final Color SURFACE_DARKER = SURFACE.darker();
 
         // Text
         public static final Color TEXT_PRIMARY = new Color(240, 240, 240);
+        public static final Color TEXT_PRIMARY_DARKER = TEXT_PRIMARY.darker();
         public static final Color TEXT_SECONDARY = new Color(180, 180, 180);
         public static final Color TEXT_DISABLED = new Color(120, 120, 120);
         public static final Color TEXT_LINK = new Color(100, 170, 255);
@@ -972,5 +976,21 @@ public class ThemeManager {
 
     public static Color getTitleTextHighlightColor() {
         return isDarkMode() ? Dark.TITLE_TEXT_HIGHLIGHT : Light.TITLE_TEXT_HIGHLIGHT;
+    }
+
+    public static Color getTitleTextHighlightDarkColor() {
+        return isDarkMode() ? Dark.TITLE_TEXT_HIGHLIGHT_DARK : Light.TITLE_TEXT_HIGHLIGHT_DARK;
+    }
+
+    public static Color getInfoBorderColor() {
+        return isDarkMode() ? new Color(2, 136, 209) : new Color(23, 162, 184);
+    }
+
+    public static Color getTextPrimaryDarkerColor() {
+        return isDarkMode() ? Dark.TEXT_PRIMARY_DARKER : Light.TEXT_PRIMARY_DARKER;
+    }
+
+    public static Color getSurfaceDarkerColor() {
+        return isDarkMode() ? Dark.SURFACE_DARKER : Light.SURFACE_DARKER;
     }
 }

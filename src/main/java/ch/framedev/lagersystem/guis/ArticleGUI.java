@@ -490,28 +490,28 @@ public class ArticleGUI extends JFrame {
 
         // Main container with shadow effect
         JPanel mainContainer = new JPanel(new BorderLayout());
-        mainContainer.setBackground(new Color(245, 247, 250));
+        mainContainer.setBackground(ThemeManager.getBackgroundColor());
         mainContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(180, 190, 200), 2),
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 2),
                 BorderFactory.createEmptyBorder(0, 0, 0, 0)
         ));
 
-        // Header panel with gradient-like effect
+        // Header panel with theme colors
         JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(new Color(41, 128, 185)); // Brighter blue
+        headerPanel.setBackground(ThemeManager.getPrimaryColor());
         headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
 
         JLabel titleLabel = new JLabel("✏️  Artikel Bearbeiten");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
         // Styled close button
         JButton closeBtn = new JButton("✕");
-        closeBtn.setForeground(Color.WHITE);
-        closeBtn.setBackground(new Color(41, 128, 185));
+        closeBtn.setForeground(ThemeManager.getTextOnPrimaryColor());
+        closeBtn.setBackground(ThemeManager.getPrimaryColor());
         closeBtn.setBorderPainted(false);
-        closeBtn.setFocusPainted(true);
+        closeBtn.setFocusPainted(false);
         closeBtn.setContentAreaFilled(true);
         closeBtn.setFont(new Font("Arial", Font.BOLD, 24));
         closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -519,12 +519,12 @@ public class ArticleGUI extends JFrame {
         closeBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                closeBtn.setForeground(new Color(231, 76, 60));
+                closeBtn.setForeground(ThemeManager.getErrorColor());
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                closeBtn.setForeground(Color.WHITE);
+                closeBtn.setForeground(ThemeManager.getTextOnPrimaryColor());
             }
         });
         closeBtn.addActionListener(e -> {
@@ -535,7 +535,7 @@ public class ArticleGUI extends JFrame {
         mainContainer.add(headerPanel, BorderLayout.NORTH);
 
         // Scrollable content card
-        RoundedPanel contentCard = new RoundedPanel(Color.WHITE, 0);
+        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
         contentCard.setBorder(BorderFactory.createEmptyBorder(32, 40, 32, 40));
         contentCard.setLayout(new GridBagLayout());
 
@@ -549,23 +549,25 @@ public class ArticleGUI extends JFrame {
         Function<String, JLabel> createLabel = text -> {
             JLabel label = new JLabel(text);
             label.setFont(new Font("Arial", Font.BOLD, 13));
-            label.setForeground(new Color(44, 62, 80));
+            label.setForeground(ThemeManager.getTextPrimaryColor());
             return label;
         };
 
         // Helper method for styling text fields with hover effect
         Consumer<JTextField> styleTextField = field -> {
             field.setFont(new Font("Arial", Font.PLAIN, 14));
+            field.setBackground(ThemeManager.getInputBackgroundColor());
+            field.setForeground(ThemeManager.getTextPrimaryColor());
+            field.setCaretColor(ThemeManager.getTextPrimaryColor());
             field.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                    BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1, true),
                     BorderFactory.createEmptyBorder(10, 12, 10, 12)
             ));
-            field.setBackground(new Color(250, 251, 252));
             field.addFocusListener(new FocusAdapter() {
                 @Override
                 public void focusGained(FocusEvent e) {
                     field.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(new Color(52, 152, 219), 2, true),
+                            BorderFactory.createLineBorder(ThemeManager.getInputFocusBorderColor(), 2, true),
                             BorderFactory.createEmptyBorder(9, 11, 9, 11)
                     ));
                 }
@@ -573,7 +575,7 @@ public class ArticleGUI extends JFrame {
                 @Override
                 public void focusLost(FocusEvent e) {
                     field.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                            BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1, true),
                             BorderFactory.createEmptyBorder(10, 12, 10, 12)
                     ));
                 }
@@ -656,14 +658,18 @@ public class ArticleGUI extends JFrame {
         lagerPanel.setOpaque(false);
         JLabel lagerLabel = new JLabel("Aktuell");
         lagerLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        lagerLabel.setForeground(new Color(127, 140, 141));
+        lagerLabel.setForeground(ThemeManager.getTextSecondaryColor());
         lagerPanel.add(lagerLabel, BorderLayout.NORTH);
         JSpinner lagerSpinner = new JSpinner(new SpinnerNumberModel(existingLager, 0, Integer.MAX_VALUE, 1));
         lagerSpinner.setFont(new Font("Arial", Font.PLAIN, 14));
         ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setColumns(10);
-        ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setBorder(
+        JTextField lagerField = ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField();
+        lagerField.setBackground(ThemeManager.getInputBackgroundColor());
+        lagerField.setForeground(ThemeManager.getTextPrimaryColor());
+        lagerField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        lagerField.setBorder(
                 BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                        BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
                         BorderFactory.createEmptyBorder(8, 10, 8, 10)
                 )
         );
@@ -673,14 +679,18 @@ public class ArticleGUI extends JFrame {
         mindestPanel.setOpaque(false);
         JLabel mindestLabel = new JLabel("Mindestbestand");
         mindestLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        mindestLabel.setForeground(new Color(127, 140, 141));
+        mindestLabel.setForeground(ThemeManager.getTextSecondaryColor());
         mindestPanel.add(mindestLabel, BorderLayout.NORTH);
         JSpinner mindestSpinner = new JSpinner(new SpinnerNumberModel(existingMindest, 0, Integer.MAX_VALUE, 1));
         mindestSpinner.setFont(new Font("Arial", Font.PLAIN, 14));
         ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setColumns(10);
-        ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setBorder(
+        JTextField mindestField = ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField();
+        mindestField.setBackground(ThemeManager.getInputBackgroundColor());
+        mindestField.setForeground(ThemeManager.getTextPrimaryColor());
+        mindestField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        mindestField.setBorder(
                 BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                        BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
                         BorderFactory.createEmptyBorder(8, 10, 8, 10)
                 )
         );
@@ -732,7 +742,7 @@ public class ArticleGUI extends JFrame {
         verkaufPanel.setOpaque(false);
         JLabel verkaufLabel = new JLabel("Verkaufspreis (CHF)");
         verkaufLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        verkaufLabel.setForeground(new Color(127, 140, 141));
+        verkaufLabel.setForeground(ThemeManager.getTextSecondaryColor());
         verkaufPanel.add(verkaufLabel, BorderLayout.NORTH);
         JFormattedTextField verkaufField = getVerkaufField(priceFormatter, existingVerkauf);
         verkaufPanel.add(verkaufField, BorderLayout.CENTER);
@@ -741,7 +751,7 @@ public class ArticleGUI extends JFrame {
         einkaufPanel.setOpaque(false);
         JLabel einkaufLabel = new JLabel("Einkaufspreis (CHF)");
         einkaufLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        einkaufLabel.setForeground(new Color(127, 140, 141));
+        einkaufLabel.setForeground(ThemeManager.getTextSecondaryColor());
         einkaufPanel.add(einkaufLabel, BorderLayout.NORTH);
         JFormattedTextField einkaufField = getVerkaufField(priceFormatter, existingEinkauf);
         einkaufPanel.add(einkaufField, BorderLayout.CENTER);
@@ -771,15 +781,18 @@ public class ArticleGUI extends JFrame {
 
         // Button panel with improved styling
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 16));
-        buttonPanel.setBackground(new Color(250, 251, 252));
-        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 225, 230)));
+        buttonPanel.setBackground(ThemeManager.getBackgroundColor());
+        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
+        Color cancelBtnColor = ThemeManager.getErrorColor();
         JButton cancelBtn = new JButton("✕  Abbrechen");
         cancelBtn.setFont(new Font("Arial", Font.BOLD, 13));
-        cancelBtn.setForeground(new Color(52, 73, 94));
-        cancelBtn.setBackground(new Color(255, 57, 57));
+        cancelBtn.setForeground(Color.WHITE);
+        cancelBtn.setBackground(cancelBtnColor);
+        cancelBtn.setOpaque(true);
+        cancelBtn.setContentAreaFilled(true);
         cancelBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                BorderFactory.createLineBorder(cancelBtnColor.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
         cancelBtn.setFocusPainted(false);
@@ -787,24 +800,25 @@ public class ArticleGUI extends JFrame {
         cancelBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                cancelBtn.setBackground(new Color(220, 225, 230));
+                cancelBtn.setBackground(ThemeManager.getButtonHoverColor(cancelBtnColor));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                cancelBtn.setBackground(new Color(236, 240, 241));
+                cancelBtn.setBackground(cancelBtnColor);
             }
         });
 
+        Color okBtnColor = ThemeManager.getSuccessColor();
         JButton okBtn = new JButton("✓  Speichern");
         okBtn.setFont(new Font("Arial", Font.BOLD, 13));
-        okBtn.setForeground(Color.BLACK);
-        okBtn.setBackground(new Color(46, 204, 113));
+        okBtn.setForeground(Color.WHITE);
+        okBtn.setBackground(okBtnColor);
         okBtn.setOpaque(true);
         okBtn.setContentAreaFilled(true);
         okBtn.setBorderPainted(true);
         okBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(39, 174, 96), 1),
+                BorderFactory.createLineBorder(okBtnColor.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 27, 10, 27)
         ));
         okBtn.setFocusPainted(false);
@@ -812,12 +826,12 @@ public class ArticleGUI extends JFrame {
         okBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                okBtn.setBackground(new Color(39, 174, 96));
+                okBtn.setBackground(ThemeManager.getButtonHoverColor(okBtnColor));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                okBtn.setBackground(new Color(46, 204, 113));
+                okBtn.setBackground(okBtnColor);
             }
         });
 
@@ -886,11 +900,13 @@ public class ArticleGUI extends JFrame {
         verkaufField.setColumns(12);
         verkaufField.setValue(existingVerkauf);
         verkaufField.setFont(new Font("Arial", Font.PLAIN, 14));
+        verkaufField.setBackground(ThemeManager.getInputBackgroundColor());
+        verkaufField.setForeground(ThemeManager.getTextPrimaryColor());
+        verkaufField.setCaretColor(ThemeManager.getTextPrimaryColor());
         verkaufField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(189, 195, 199), 1),
+                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
                 BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
-        verkaufField.setBackground(new Color(250, 251, 252));
         return verkaufField;
     }
 
