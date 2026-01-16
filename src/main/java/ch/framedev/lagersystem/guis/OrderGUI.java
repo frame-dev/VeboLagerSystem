@@ -433,7 +433,7 @@ public class OrderGUI extends JFrame {
         orderTable.setShowVerticalLines(true);
         orderTable.setGridColor(ThemeManager.getBorderColor());
         orderTable.setIntercellSpacing(new Dimension(1, 1));
-        orderTable.setFont(orderTable.getFont().deriveFont(14f));
+        orderTable.setFont(new Font("Arial", Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
 
         // visuals
         orderTable.setRowHeight(28);

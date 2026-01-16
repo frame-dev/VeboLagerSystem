@@ -900,264 +900,671 @@ public class ArticleGUI extends JFrame {
     private Object[] showAddArticleDialog() {
         final Object[][] resultHolder = new Object[1][];
 
+        JDialog dialog = createAddArticleDialog();
+        ArticleDialogComponents components = createArticleDialogComponents(dialog, resultHolder);
+
+        showDialog(dialog, components.nummerField());
+
+        return resultHolder[0];
+    }
+
+    /**
+     * Creates and configures the main dialog
+     */
+    private JDialog createAddArticleDialog() {
         JDialog dialog = new JDialog(this, "Neuen Artikel hinzufügen", true);
         dialog.setUndecorated(true);
+        return dialog;
+    }
 
-        // Main container with background
+    /**
+     * Creates all dialog components
+     */
+    private ArticleDialogComponents createArticleDialogComponents(JDialog dialog, Object[][] resultHolder) {
+        JPanel mainContainer = createDialogMainContainer();
+
+        // Header
+        JPanel headerPanel = createDialogHeader(dialog, resultHolder);
+        mainContainer.add(headerPanel, BorderLayout.NORTH);
+
+        // Content with form fields
+        ArticleFormFields formFields = createArticleFormFields();
+        mainContainer.add(formFields.contentCard(), BorderLayout.CENTER);
+
+        // Buttons
+        DialogButtons dialogButtons = createDialogButtons(dialog, resultHolder, formFields);
+        mainContainer.add(dialogButtons.buttonPanel(), BorderLayout.SOUTH);
+
+        dialog.getContentPane().add(mainContainer);
+        dialog.getRootPane().setDefaultButton(dialogButtons.okButton());
+
+        return new ArticleDialogComponents(
+            formFields.nummerField(),
+            formFields.nameField(),
+            formFields.detailsField(),
+            formFields.lagerSpinner(),
+            formFields.mindestSpinner(),
+            formFields.verkaufField(),
+            formFields.einkaufField(),
+            formFields.lieferantField()
+        );
+    }
+
+    /**
+     * Creates the main container panel with shadow effect
+     */
+    private JPanel createDialogMainContainer() {
         JPanel mainContainer = new JPanel(new BorderLayout());
-        mainContainer.setBackground(new Color(245, 247, 250));
-        mainContainer.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        mainContainer.setBackground(ThemeManager.getBackgroundColor());
 
-        // Header panel
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(new Color(62, 84, 98));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
-        JLabel titleLabel = new JLabel("➕ Neuen Artikel hinzufügen");
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 20f));
+        // Add subtle shadow border
+        Color shadowColor = ThemeManager.isDarkMode()
+            ? new Color(0, 0, 0, 80)
+            : new Color(0, 0, 0, 30);
+        mainContainer.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(shadowColor, 1, true),
+            BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ));
+
+        return mainContainer;
+    }
+
+    /**
+     * Creates the dialog header with title and close button - modern blue gradient design
+     */
+    private JPanel createDialogHeader(JDialog dialog, Object[][] resultHolder) {
+        // Create gradient panel for modern look
+        JPanel headerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+                Color color1 = ThemeManager.isDarkMode()
+                    ? new Color(30, 58, 95)   // Dark navy blue
+                    : new Color(41, 128, 185); // Professional blue
+                Color color2 = ThemeManager.isDarkMode()
+                    ? new Color(44, 62, 80)   // Slightly lighter
+                    : new Color(52, 152, 219); // Brighter blue
+
+                GradientPaint gradient = new GradientPaint(
+                    0, 0, color1,
+                    getWidth(), 0, color2
+                );
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.dispose();
+            }
+        };
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+
+        // Icon and title panel
+        JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        titlePanel.setOpaque(false);
+
+        JLabel iconLabel = new JLabel("➕");
+        iconLabel.setFont(iconLabel.getFont().deriveFont(24f));
+        iconLabel.setForeground(Color.WHITE);
+
+        JLabel titleLabel = new JLabel("Neuen Artikel hinzufügen");
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 22f));
         titleLabel.setForeground(Color.WHITE);
-        headerPanel.add(titleLabel, BorderLayout.WEST);
 
-        // Close button
+        titlePanel.add(iconLabel);
+        titlePanel.add(titleLabel);
+        headerPanel.add(titlePanel, BorderLayout.WEST);
+
+        JButton closeBtn = createDialogCloseButton(dialog, resultHolder);
+        headerPanel.add(closeBtn, BorderLayout.EAST);
+
+        return headerPanel;
+    }
+
+    /**
+     * Creates the close button for the dialog header with modern styling
+     */
+    private JButton createDialogCloseButton(JDialog dialog, Object[][] resultHolder) {
         JButton closeBtn = new JButton("✕");
-        closeBtn.setForeground(Color.WHITE);
-        closeBtn.setBackground(new Color(62, 84, 98));
+        closeBtn.setForeground(new Color(255, 255, 255, 200));
+        closeBtn.setBackground(new Color(255, 255, 255, 0));
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
-        closeBtn.setFont(closeBtn.getFont().deriveFont(20f));
+        closeBtn.setContentAreaFilled(false);
+        closeBtn.setFont(closeBtn.getFont().deriveFont(Font.BOLD, 22f));
         closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        closeBtn.setPreferredSize(new Dimension(40, 40));
+
+        // Hover effect
+        closeBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                closeBtn.setForeground(Color.WHITE);
+                closeBtn.setBackground(new Color(231, 76, 60, 100)); // Red tint on hover
+                closeBtn.setContentAreaFilled(true);
+                closeBtn.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                closeBtn.setForeground(new Color(255, 255, 255, 200));
+                closeBtn.setBackground(new Color(255, 255, 255, 0));
+                closeBtn.setContentAreaFilled(false);
+                closeBtn.setBorder(null);
+            }
+        });
+
         closeBtn.addActionListener(e -> {
             resultHolder[0] = null;
             dialog.dispose();
         });
-        headerPanel.add(closeBtn, BorderLayout.EAST);
-        mainContainer.add(headerPanel, BorderLayout.NORTH);
+        return closeBtn;
+    }
 
-        // Content card
-        RoundedPanel contentCard = new RoundedPanel(Color.WHITE, 12);
-        contentCard.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+    /**
+     * Creates all form fields for the article dialog with modern card design
+     */
+    private ArticleFormFields createArticleFormFields() {
+        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
+        contentCard.setBorder(BorderFactory.createEmptyBorder(28, 32, 28, 32));
         contentCard.setLayout(new GridBagLayout());
 
+        GridBagConstraints gbc = createDefaultGridBagConstraints();
+        int row = 0;
+
+        // Create form fields
+        JTextField nummerField = addLabeledTextField(contentCard, gbc, row, "Artikelnummer *");
+        row += 2;
+
+        JTextField nameField = addLabeledTextField(contentCard, gbc, row, "Name *");
+        row += 2;
+
+        JTextField detailsField = addLabeledTextField(contentCard, gbc, row, "Details");
+        row += 2;
+
+        // Stock spinners
+        gbc.gridy = row++;
+        JPanel stockPanel = createStockSpinnersPanel();
+        contentCard.add(stockPanel, gbc);
+        JSpinner lagerSpinner = (JSpinner) ((JPanel) stockPanel.getComponent(0)).getComponent(1);
+        JSpinner mindestSpinner = (JSpinner) ((JPanel) stockPanel.getComponent(1)).getComponent(1);
+
+        // Price fields
+        gbc.gridy = row++;
+        JPanel pricePanel = createPriceFieldsPanel();
+        contentCard.add(pricePanel, gbc);
+        JFormattedTextField verkaufField = (JFormattedTextField) ((JPanel) pricePanel.getComponent(0)).getComponent(1);
+        JFormattedTextField einkaufField = (JFormattedTextField) ((JPanel) pricePanel.getComponent(1)).getComponent(1);
+
+        // Supplier field
+        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.gridy = row++;
+        contentCard.add(createDialogLabel("🚚  Lieferant"), gbc);
+        gbc.gridy = row;
+        gbc.insets = new Insets(2, 6, 6, 6);
+        JTextField lieferantField = createDialogTextField(25);
+        contentCard.add(lieferantField, gbc);
+
+        return new ArticleFormFields(contentCard, nummerField, nameField, detailsField,
+                lagerSpinner, mindestSpinner, verkaufField, einkaufField, lieferantField);
+    }
+
+    /**
+     * Creates default GridBagConstraints for dialog layout
+     */
+    private GridBagConstraints createDefaultGridBagConstraints() {
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
-
-        // Helper method for creating styled labels
-        Function<String, JLabel> createLabel = text -> {
-            JLabel label = new JLabel(text);
-            label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
-            label.setForeground(new Color(52, 73, 94));
-            return label;
-        };
-
-        // Helper method for styling text fields
-        Consumer<JTextField> styleTextField = field -> {
-            field.setFont(field.getFont().deriveFont(14f));
-            field.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
-                    BorderFactory.createEmptyBorder(8, 10, 8, 10)
-            ));
-        };
-
-        int row = 0;
-
-        // Artikelnummer
         gbc.gridx = 0;
-        gbc.gridy = row;
         gbc.gridwidth = 1;
-        contentCard.add(createLabel.apply("Artikelnummer *"), gbc);
-        row++;
-        gbc.gridy = row;
-        JTextField nummerField = new JTextField(25);
-        styleTextField.accept(nummerField);
-        contentCard.add(nummerField, gbc);
+        return gbc;
+    }
 
-        row++;
-        // Name
+    /**
+     * Adds a labeled text field to the content panel
+     */
+    private JTextField addLabeledTextField(JPanel panel, GridBagConstraints gbc, int row, String labelText) {
         gbc.gridy = row;
-        contentCard.add(createLabel.apply("Name *"), gbc);
-        row++;
-        gbc.gridy = row;
-        JTextField nameField = new JTextField(25);
-        styleTextField.accept(nameField);
-        contentCard.add(nameField, gbc);
+        panel.add(createDialogLabel(labelText), gbc);
+        gbc.gridy = row + 1;
+        JTextField textField = createDialogTextField(25);
+        panel.add(textField, gbc);
+        return textField;
+    }
 
-        row++;
-        // Details
-        gbc.gridy = row;
-        contentCard.add(createLabel.apply("Details"), gbc);
-        row++;
-        gbc.gridy = row;
-        JTextField detailsField = new JTextField(25);
-        styleTextField.accept(detailsField);
-        contentCard.add(detailsField, gbc);
+    /**
+     * Creates a styled label for dialog forms with blue accent for required fields
+     */
+    private JLabel createDialogLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
 
-        row++;
-        // Two columns for stock fields
+        // Blue accent for required fields (marked with *)
+        if (text.contains("*")) {
+            Color blueAccent = ThemeManager.isDarkMode()
+                ? new Color(100, 170, 255) // Lighter blue for dark mode
+                : new Color(52, 152, 219);  // Professional blue for light mode
+
+            // Split text to style the asterisk differently
+            String labelText = text.replace("*", "").trim();
+            label.setText("<html>" + labelText + " <span style='color: rgb(" +
+                blueAccent.getRed() + "," + blueAccent.getGreen() + "," + blueAccent.getBlue() +
+                ");'>*</span></html>");
+        }
+
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        return label;
+    }
+
+    /**
+     * Creates a styled text field for dialog forms with blue focus effect
+     */
+    private JTextField createDialogTextField(int columns) {
+        JTextField field = new JTextField(columns);
+        field.setFont(field.getFont().deriveFont(14f));
+        field.setBackground(ThemeManager.getInputBackgroundColor());
+        field.setForeground(ThemeManager.getTextPrimaryColor());
+        field.setCaretColor(ThemeManager.getAccentColor());
+
+        Color normalBorder = ThemeManager.getBorderColor();
+        Color focusBorder = ThemeManager.isDarkMode()
+            ? new Color(100, 170, 255)  // Lighter blue for dark mode
+            : new Color(52, 152, 219);   // Professional blue
+
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(normalBorder, 1, true),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
+
+        // Blue focus effect
+        field.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(focusBorder, 2, true),
+                        BorderFactory.createEmptyBorder(9, 11, 9, 11)
+                ));
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(normalBorder, 1, true),
+                        BorderFactory.createEmptyBorder(10, 12, 10, 12)
+                ));
+            }
+        });
+
+        return field;
+    }
+
+    /**
+     * Creates the panel with stock quantity spinners
+     */
+    private JPanel createStockSpinnersPanel() {
         JPanel stockPanel = new JPanel(new GridLayout(1, 2, 16, 0));
         stockPanel.setOpaque(false);
 
-        JPanel lagerPanel = new JPanel(new BorderLayout(0, 4));
-        lagerPanel.setOpaque(false);
-        lagerPanel.add(createLabel.apply("Lagerbestand"), BorderLayout.NORTH);
-        JSpinner lagerSpinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
-        lagerSpinner.setFont(lagerSpinner.getFont().deriveFont(14f));
-        ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setColumns(8);
-        lagerPanel.add(lagerSpinner, BorderLayout.CENTER);
+        stockPanel.add(createLabeledSpinnerPanel("Lagerbestand"));
+        stockPanel.add(createLabeledSpinnerPanel("Mindestbestand"));
 
-        JPanel mindestPanel = new JPanel(new BorderLayout(0, 4));
-        mindestPanel.setOpaque(false);
-        mindestPanel.add(createLabel.apply("Mindestbestand"), BorderLayout.NORTH);
-        JSpinner mindestSpinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
-        mindestSpinner.setFont(mindestSpinner.getFont().deriveFont(14f));
-        ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setColumns(8);
-        mindestPanel.add(mindestSpinner, BorderLayout.CENTER);
+        return stockPanel;
+    }
 
-        stockPanel.add(lagerPanel);
-        stockPanel.add(mindestPanel);
+    /**
+     * Creates a panel with label and spinner
+     */
+    private JPanel createLabeledSpinnerPanel(String labelText) {
+        JPanel panel = new JPanel(new BorderLayout(0, 4));
+        panel.setOpaque(false);
+        panel.add(createDialogLabel(labelText), BorderLayout.NORTH);
 
-        gbc.gridy = row;
-        contentCard.add(stockPanel, gbc);
+        JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
+        spinner.setFont(spinner.getFont().deriveFont(14f));
+        ((JSpinner.DefaultEditor) spinner.getEditor()).getTextField().setColumns(8);
+        styleDialogSpinner(spinner);
+        panel.add(spinner, BorderLayout.CENTER);
 
-        // Price fields with formatter
+        return panel;
+    }
+
+    /**
+     * Styles a spinner for dialog forms with blue focus effect
+     */
+    private void styleDialogSpinner(JSpinner spinner) {
+        spinner.setBackground(ThemeManager.getInputBackgroundColor());
+
+        Color normalBorder = ThemeManager.getBorderColor();
+        Color focusBorder = ThemeManager.isDarkMode()
+            ? new Color(100, 170, 255)
+            : new Color(52, 152, 219);
+
+        JComponent editor = spinner.getEditor();
+        if (editor instanceof JSpinner.DefaultEditor defaultEditor) {
+            JTextField textField = defaultEditor.getTextField();
+            textField.setBackground(ThemeManager.getInputBackgroundColor());
+            textField.setForeground(ThemeManager.getTextPrimaryColor());
+            textField.setCaretColor(ThemeManager.getAccentColor());
+            textField.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(normalBorder, 1, true),
+                    BorderFactory.createEmptyBorder(6, 8, 6, 8)
+            ));
+
+            // Blue focus effect
+            textField.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    textField.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(focusBorder, 2, true),
+                            BorderFactory.createEmptyBorder(5, 7, 5, 7)
+                    ));
+                }
+
+                @Override
+                public void focusLost(FocusEvent e) {
+                    textField.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(normalBorder, 1, true),
+                            BorderFactory.createEmptyBorder(6, 8, 6, 8)
+                    ));
+                }
+            });
+        }
+    }
+
+    /**
+     * Creates the panel with price input fields
+     */
+    private JPanel createPriceFieldsPanel() {
+        JPanel pricePanel = new JPanel(new GridLayout(1, 2, 16, 0));
+        pricePanel.setOpaque(false);
+
+        NumberFormatter priceFormatter = createPriceFormatter();
+
+        pricePanel.add(createLabeledPriceField("Verkaufspreis (CHF)", priceFormatter));
+        pricePanel.add(createLabeledPriceField("Einkaufspreis (CHF)", priceFormatter));
+
+        return pricePanel;
+    }
+
+    /**
+     * Creates a number formatter for price fields
+     */
+    private NumberFormatter createPriceFormatter() {
         NumberFormat priceFormat = NumberFormat.getNumberInstance();
         priceFormat.setMinimumFractionDigits(2);
         priceFormat.setMaximumFractionDigits(2);
+
         NumberFormatter priceFormatter = new NumberFormatter(priceFormat);
         priceFormatter.setValueClass(Double.class);
         priceFormatter.setAllowsInvalid(false);
         priceFormatter.setMinimum(0.0);
 
-        row++;
-        // Two columns for price fields
-        JPanel pricePanel = new JPanel(new GridLayout(1, 2, 16, 0));
-        pricePanel.setOpaque(false);
+        return priceFormatter;
+    }
 
-        JPanel verkaufPanel = new JPanel(new BorderLayout(0, 4));
-        verkaufPanel.setOpaque(false);
-        verkaufPanel.add(createLabel.apply("Verkaufspreis (CHF)"), BorderLayout.NORTH);
-        JFormattedTextField verkaufField = new JFormattedTextField(priceFormatter);
-        verkaufField.setColumns(10);
-        verkaufField.setValue(0.0);
-        verkaufField.setFont(verkaufField.getFont().deriveFont(14f));
-        verkaufField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+    /**
+     * Creates a panel with label and price field with blue focus effect
+     */
+    private JPanel createLabeledPriceField(String labelText, NumberFormatter formatter) {
+        JPanel panel = new JPanel(new BorderLayout(0, 4));
+        panel.setOpaque(false);
+        panel.add(createDialogLabel(labelText), BorderLayout.NORTH);
+
+        Color normalBorder = ThemeManager.getBorderColor();
+        Color focusBorder = ThemeManager.isDarkMode()
+            ? new Color(100, 170, 255)
+            : new Color(52, 152, 219);
+
+        JFormattedTextField field = new JFormattedTextField(formatter);
+        field.setColumns(10);
+        field.setValue(0.0);
+        field.setFont(field.getFont().deriveFont(14f));
+        field.setBackground(ThemeManager.getInputBackgroundColor());
+        field.setForeground(ThemeManager.getTextPrimaryColor());
+        field.setCaretColor(ThemeManager.getAccentColor());
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(normalBorder, 1, true),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
-        verkaufPanel.add(verkaufField, BorderLayout.CENTER);
 
-        JPanel einkaufPanel = new JPanel(new BorderLayout(0, 4));
-        einkaufPanel.setOpaque(false);
-        einkaufPanel.add(createLabel.apply("Einkaufspreis (CHF)"), BorderLayout.NORTH);
-        JFormattedTextField einkaufField = new JFormattedTextField(priceFormatter);
-        einkaufField.setColumns(10);
-        einkaufField.setValue(0.0);
-        einkaufField.setFont(einkaufField.getFont().deriveFont(14f));
-        einkaufField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-        einkaufPanel.add(einkaufField, BorderLayout.CENTER);
+        // Blue focus effect
+        field.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(focusBorder, 2, true),
+                        BorderFactory.createEmptyBorder(9, 11, 9, 11)
+                ));
+            }
 
-        pricePanel.add(verkaufPanel);
-        pricePanel.add(einkaufPanel);
-        contentCard.add(pricePanel, gbc);
+            @Override
+            public void focusLost(FocusEvent e) {
+                field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(normalBorder, 1, true),
+                        BorderFactory.createEmptyBorder(10, 12, 10, 12)
+                ));
+            }
+        });
 
-        row++;
-        gbc.insets = new Insets(6, 6, 6, 6);
-        // Lieferant with icon
-        gbc.gridy = row;
-        JLabel lieferantLabel = createLabel.apply("🚚  Lieferant");
-        contentCard.add(lieferantLabel, gbc);
-        row++;
-        gbc.gridy = row;
-        gbc.insets = new Insets(2, 6, 6, 6);
-        JTextField lieferantField = new JTextField(25);
-        styleTextField.accept(lieferantField);
-        contentCard.add(lieferantField, gbc);
+        panel.add(field, BorderLayout.CENTER);
 
-        mainContainer.add(contentCard, BorderLayout.CENTER);
+        return panel;
+    }
 
-        // Button panel
+    /**
+     * Creates the button panel for the dialog
+     */
+    private DialogButtons createDialogButtons(JDialog dialog, Object[][] resultHolder, ArticleFormFields formFields) {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
-        buttonPanel.setBackground(new Color(245, 247, 250));
+        buttonPanel.setBackground(ThemeManager.getBackgroundColor());
 
-        JButton cancelBtn = new JButton("Abbrechen");
-        cancelBtn.setFont(cancelBtn.getFont().deriveFont(Font.BOLD, 13f));
-        cancelBtn.setForeground(new Color(52, 73, 94));
-        cancelBtn.setBackground(new Color(236, 240, 241));
-        cancelBtn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        cancelBtn.setFocusPainted(false);
-        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        JButton okBtn = new JButton("➕ Hinzufügen");
-        okBtn.setFont(okBtn.getFont().deriveFont(Font.BOLD, 13f));
-        okBtn.setForeground(Color.BLACK);
-        okBtn.setBackground(new Color(52, 152, 219));
-        okBtn.setBorder(BorderFactory.createEmptyBorder(10, 24, 10, 24));
-        okBtn.setFocusPainted(false);
-        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        JButton cancelBtn = createDialogCancelButton(dialog, resultHolder);
+        JButton okBtn = createDialogOkButton(dialog, resultHolder, formFields);
 
         buttonPanel.add(cancelBtn);
         buttonPanel.add(okBtn);
-        mainContainer.add(buttonPanel, BorderLayout.SOUTH);
 
-        dialog.getContentPane().add(mainContainer);
-        dialog.getRootPane().setDefaultButton(okBtn);
+        return new DialogButtons(buttonPanel, okBtn);
+    }
 
-        // Actions
+    /**
+     * Creates the cancel button with modern styling and hover effects
+     */
+    private JButton createDialogCancelButton(JDialog dialog, Object[][] resultHolder) {
+        JButton cancelBtn = new JButton("Abbrechen");
+        cancelBtn.setFont(cancelBtn.getFont().deriveFont(Font.BOLD, 14f));
+        cancelBtn.setForeground(ThemeManager.getTextPrimaryColor());
+
+        Color baseColor = ThemeManager.getSurfaceColor();
+        Color hoverColor = ThemeManager.isDarkMode()
+            ? new Color(70, 70, 70)
+            : new Color(220, 225, 230);
+
+        cancelBtn.setBackground(baseColor);
+        cancelBtn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(12, 24, 12, 24)
+        ));
+        cancelBtn.setFocusPainted(false);
+        cancelBtn.setOpaque(true);
+        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Hover effect
+        cancelBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                cancelBtn.setBackground(hoverColor);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                cancelBtn.setBackground(baseColor);
+            }
+        });
+
         cancelBtn.addActionListener(ae -> {
             resultHolder[0] = null;
             dialog.dispose();
         });
+        return cancelBtn;
+    }
 
-        okBtn.addActionListener(ae -> {
-            String nummer = nummerField.getText().trim();
-            String name = nameField.getText().trim();
-            String details = detailsField.getText().trim();
-            String lieferant = lieferantField.getText().trim();
+    /**
+     * Creates the OK button with modern blue styling and smooth hover effects
+     */
+    private JButton createDialogOkButton(JDialog dialog, Object[][] resultHolder, ArticleFormFields formFields) {
+        JButton okBtn = new JButton("➕ Hinzufügen");
+        okBtn.setFont(okBtn.getFont().deriveFont(Font.BOLD, 14f));
+        okBtn.setForeground(Color.WHITE);
 
-            if (nummer.isEmpty() || name.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog,
-                        "Artikelnummer und Name sind Pflichtfelder.",
-                        "Fehler",
-                        JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall);
-                return;
+        // Blue gradient colors
+        Color baseColor = ThemeManager.isDarkMode()
+            ? new Color(52, 152, 219)   // Bright blue for dark mode
+            : new Color(41, 128, 185);   // Professional blue for light mode
+        Color hoverColor = ThemeManager.isDarkMode()
+            ? new Color(72, 170, 240)
+            : new Color(52, 152, 219);
+        Color pressedColor = ThemeManager.isDarkMode()
+            ? new Color(32, 120, 200)
+            : new Color(31, 97, 141);
+
+        okBtn.setBackground(baseColor);
+        okBtn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(baseColor.darker(), 1, true),
+                BorderFactory.createEmptyBorder(12, 28, 12, 28)
+        ));
+        okBtn.setFocusPainted(false);
+        okBtn.setOpaque(true);
+        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Smooth hover effects
+        okBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                okBtn.setBackground(hoverColor);
+                okBtn.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(hoverColor.darker(), 1, true),
+                        BorderFactory.createEmptyBorder(12, 28, 12, 28)
+                ));
             }
 
-            int lagerbestand = ((Number) lagerSpinner.getValue()).intValue();
-            int mindestbestand = ((Number) mindestSpinner.getValue()).intValue();
-            double verkaufspreis;
-            double einkaufspreis;
-            try {
-                verkaufField.commitEdit();
-                einkaufField.commitEdit();
-                verkaufspreis = ((Number) verkaufField.getValue()).doubleValue();
-                einkaufspreis = ((Number) einkaufField.getValue()).doubleValue();
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog,
-                        "Bitte gültige Preise eingeben.",
-                        "Fehler",
-                        JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall);
-                return;
+            @Override
+            public void mouseExited(MouseEvent e) {
+                okBtn.setBackground(baseColor);
+                okBtn.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(baseColor.darker(), 1, true),
+                        BorderFactory.createEmptyBorder(12, 28, 12, 28)
+                ));
             }
 
-            resultHolder[0] = new Object[]{nummer, name, details, lagerbestand, mindestbestand,
-                    verkaufspreis, einkaufspreis, lieferant};
-            dialog.dispose();
+            @Override
+            public void mousePressed(MouseEvent e) {
+                okBtn.setBackground(pressedColor);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                okBtn.setBackground(okBtn.contains(e.getPoint()) ? hoverColor : baseColor);
+            }
         });
 
-        // Show dialog
+        okBtn.addActionListener(ae -> handleAddArticleConfirm(dialog, resultHolder, formFields));
+        return okBtn;
+    }
+
+    /**
+     * Handles the confirmation of adding a new article
+     */
+    private void handleAddArticleConfirm(JDialog dialog, Object[][] resultHolder, ArticleFormFields fields) {
+        String nummer = fields.nummerField().getText().trim();
+        String name = fields.nameField().getText().trim();
+        String details = fields.detailsField().getText().trim();
+        String lieferant = fields.lieferantField().getText().trim();
+
+        if (nummer.isEmpty() || name.isEmpty()) {
+            JOptionPane.showMessageDialog(dialog,
+                    "Artikelnummer und Name sind Pflichtfelder.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+            return;
+        }
+
+        int lagerbestand = ((Number) fields.lagerSpinner().getValue()).intValue();
+        int mindestbestand = ((Number) fields.mindestSpinner().getValue()).intValue();
+
+        double verkaufspreis;
+        double einkaufspreis;
+        try {
+            fields.verkaufField().commitEdit();
+            fields.einkaufField().commitEdit();
+            verkaufspreis = ((Number) fields.verkaufField().getValue()).doubleValue();
+            einkaufspreis = ((Number) fields.einkaufField().getValue()).doubleValue();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(dialog,
+                    "Bitte gültige Preise eingeben.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+            return;
+        }
+
+        resultHolder[0] = new Object[]{nummer, name, details, lagerbestand, mindestbestand,
+                verkaufspreis, einkaufspreis, lieferant};
+        dialog.dispose();
+    }
+
+
+    /**
+     * Shows the dialog and sets initial focus
+     */
+    private void showDialog(JDialog dialog, JTextField initialFocusField) {
         dialog.pack();
         dialog.setLocationRelativeTo(this);
-        SwingUtilities.invokeLater(nummerField::requestFocusInWindow);
+        SwingUtilities.invokeLater(initialFocusField::requestFocusInWindow);
         dialog.setVisible(true);
-
-        return resultHolder[0];
     }
+
+    /**
+     * Record to hold dialog component references
+     */
+    private record ArticleDialogComponents(
+            JTextField nummerField,
+            JTextField nameField,
+            JTextField detailsField,
+            JSpinner lagerSpinner,
+            JSpinner mindestSpinner,
+            JFormattedTextField verkaufField,
+            JFormattedTextField einkaufField,
+            JTextField lieferantField
+    ) {}
+
+    /**
+     * Record to hold form fields during creation
+     */
+    private record ArticleFormFields(
+            JPanel contentCard,
+            JTextField nummerField,
+            JTextField nameField,
+            JTextField detailsField,
+            JSpinner lagerSpinner,
+            JSpinner mindestSpinner,
+            JFormattedTextField verkaufField,
+            JFormattedTextField einkaufField,
+            JTextField lieferantField
+    ) {}
+
+    /**
+     * Record to hold dialog buttons
+     */
+    private record DialogButtons(
+            JPanel buttonPanel,
+            JButton okButton
+    ) {}
 
     private void initializeTable() {
         // Provide a typed, non-editable table model so sorting & renderers behave correctly
@@ -1180,7 +1587,7 @@ public class ArticleGUI extends JFrame {
         articleTable.setShowVerticalLines(true);
         articleTable.setGridColor(ThemeManager.getTableGridColor()); // soft light gray // soft light gray
         articleTable.setIntercellSpacing(new Dimension(1, 1));
-        articleTable.setFont(new Font("Arial", Font.PLAIN, 16));
+        articleTable.setFont(new Font("Arial", Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
 
 
         // Alternating row colors for readability (subtle)

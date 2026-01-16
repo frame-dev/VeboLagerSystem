@@ -455,6 +455,11 @@ public class VendorGUI extends JFrame {
         return holder[0];
     }
 
+    /**
+     * Shows a dialog to update an existing vendor.
+     * @param existing The existing vendor data as an Object array.
+     * @return The updated vendor data as an Object array, or null if canceled.
+     */
     private Object[] showUpdateVendorDialog(Object[] existing) {
         final Object[][] holder = new Object[1][];
         JDialog dialog = new JDialog(this, "Lieferant bearbeiten", true);
@@ -556,6 +561,10 @@ public class VendorGUI extends JFrame {
         return holder[0];
     }
 
+    /**
+     * Adjusts column widths based on the current size of the table's viewport.
+     * Distributes extra space proportionally based on baseColumnWidths.
+     */
     private void setupTableInteractions() {
         JPopupMenu popup = new JPopupMenu();
         JMenuItem edit = new JMenuItem("Bearbeiten");
@@ -644,7 +653,7 @@ public class VendorGUI extends JFrame {
         vendorTable.setShowGrid(true);
         vendorTable.setGridColor(ThemeManager.getTableGridColor());
         vendorTable.setIntercellSpacing(new Dimension(1, 1));
-        vendorTable.setFont(new Font("Arial", Font.PLAIN, 16));
+        vendorTable.setFont(new Font("Arial", Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
         vendorTable.setBackground(ThemeManager.getTableRowEvenColor());
         vendorTable.setForeground(ThemeManager.getTextPrimaryColor());
         vendorTable.setSelectionBackground(ThemeManager.getTableSelectionColor());

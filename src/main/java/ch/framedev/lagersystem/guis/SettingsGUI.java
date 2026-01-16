@@ -10,11 +10,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
+import javax.swing.plaf.basic.ComboPopup;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -33,8 +35,11 @@ public class SettingsGUI extends JFrame {
     private final JCheckBox darkModeCheckbox;
     private final JSpinner qrCodeImportIntervalSpinner;
     private final JSpinner fontSizeTableSpinner;
+    private final JSpinner fontSizeTabSpinner;
     private final JTextField serverUrlField;
     private final JComboBox<String> themeComboBox;
+
+    public static int TABLE_FONT_SIZE = 16;
 
     public SettingsGUI() {
         setTitle("Einstellungen");
@@ -45,21 +50,21 @@ public class SettingsGUI extends JFrame {
 
         // Background color
         JPanel mainContainer = new JPanel(new BorderLayout());
-        mainContainer.setBackground(new Color(245, 247, 250));
+        mainContainer.setBackground(ThemeManager.getBackgroundColor());
 
         // Header Panel
         JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(new Color(30, 58, 95));
+        headerPanel.setBackground(ThemeManager.getPrimaryColor());
         headerPanel.setPreferredSize(new Dimension(0, 90));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
 
         JLabel titleLabel = new JLabel("⚙️  Einstellungen");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
 
         JLabel subtitleLabel = new JLabel("Konfiguration für das Lagersystem");
         subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        subtitleLabel.setForeground(new Color(200, 220, 240));
+        subtitleLabel.setForeground(ThemeManager.getTextOnPrimaryColor().brighter());
 
         JPanel headerTextPanel = new JPanel();
         headerTextPanel.setLayout(new BoxLayout(headerTextPanel, BoxLayout.Y_AXIS));
@@ -75,16 +80,16 @@ public class SettingsGUI extends JFrame {
 
         // Content Area with Tabbed Categories
         JPanel contentWrapper = new JPanel(new BorderLayout());
-        contentWrapper.setBackground(new Color(245, 247, 250));
+        contentWrapper.setBackground(ThemeManager.getBackgroundColor());
         contentWrapper.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
 
         // Create tabbed pane for categories
         JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.LEFT);
         tabbedPane.setFont(new Font("Arial", Font.BOLD, 13));
-        tabbedPane.setBackground(Color.WHITE);
-        tabbedPane.setForeground(new Color(31, 45, 61));
+        tabbedPane.setBackground(ThemeManager.getCardBackgroundColor());
+        tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
         tabbedPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
 
@@ -100,29 +105,8 @@ public class SettingsGUI extends JFrame {
         styleCheckbox(enableAutoStockCheckCheckbox);
         enableAutoStockCheckCheckbox.setSelected(true);
 
-        JPanel intervalPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        intervalPanel.setOpaque(false);
-        intervalPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        intervalPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-
-        JLabel intervalLabel = new JLabel("Prüfintervall:");
-        intervalLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        intervalLabel.setForeground(new Color(70, 80, 90));
-
         stockCheckIntervalSpinner = new JSpinner(new SpinnerNumberModel(30, 5, 1440, 5));
-        stockCheckIntervalSpinner.setFont(new Font("Arial", Font.PLAIN, 13));
-        ((JSpinner.DefaultEditor) stockCheckIntervalSpinner.getEditor()).getTextField().setColumns(6);
-        styleSpinner(stockCheckIntervalSpinner);
-
-        JLabel minutesLabel = new JLabel("Minuten");
-        minutesLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        minutesLabel.setForeground(new Color(100, 110, 120));
-
-        intervalPanel.add(intervalLabel);
-        intervalPanel.add(Box.createHorizontalStrut(12));
-        intervalPanel.add(stockCheckIntervalSpinner);
-        intervalPanel.add(Box.createHorizontalStrut(10));
-        intervalPanel.add(minutesLabel);
+        JPanel intervalPanel = createLabeledSpinnerPanel("Prüfintervall:", stockCheckIntervalSpinner, "Minuten", 6);
 
         stockCheckSection.add(Box.createVerticalStrut(18));
         stockCheckSection.add(enableAutoStockCheckCheckbox);
@@ -140,29 +124,8 @@ public class SettingsGUI extends JFrame {
         styleCheckbox(enableWarningDisplayCheckbox);
         enableWarningDisplayCheckbox.setSelected(true);
 
-        JPanel warningIntervalPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        warningIntervalPanel.setOpaque(false);
-        warningIntervalPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        warningIntervalPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-
-        JLabel warningIntervalLabel = new JLabel("Anzeigeintervall:");
-        warningIntervalLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        warningIntervalLabel.setForeground(new Color(70, 80, 90));
-
         warningDisplayIntervalSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 24, 1));
-        warningDisplayIntervalSpinner.setFont(new Font("Arial", Font.PLAIN, 13));
-        ((JSpinner.DefaultEditor) warningDisplayIntervalSpinner.getEditor()).getTextField().setColumns(6);
-        styleSpinner(warningDisplayIntervalSpinner);
-
-        JLabel hoursLabel = new JLabel("Stunde(n)");
-        hoursLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        hoursLabel.setForeground(new Color(100, 110, 120));
-
-        warningIntervalPanel.add(warningIntervalLabel);
-        warningIntervalPanel.add(Box.createHorizontalStrut(12));
-        warningIntervalPanel.add(warningDisplayIntervalSpinner);
-        warningIntervalPanel.add(Box.createHorizontalStrut(10));
-        warningIntervalPanel.add(hoursLabel);
+        JPanel warningIntervalPanel = createLabeledSpinnerPanel("Anzeigeintervall:", warningDisplayIntervalSpinner, "Stunde(n)", 6);
 
         JLabel warningInfoLabel = getWarningInfoLabel();
 
@@ -189,29 +152,8 @@ public class SettingsGUI extends JFrame {
         qrCodeOptionsPanel.add(automaticImportCheckBox);
         qrCodeOptionsPanel.add(Box.createVerticalStrut(15));
 
-        JPanel qrIntervalPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        qrIntervalPanel.setOpaque(false);
-        qrIntervalPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        qrIntervalPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-
-        JLabel qrCodeImportIntervalLabel = new JLabel("Import-Intervall:");
-        qrCodeImportIntervalLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        qrCodeImportIntervalLabel.setForeground(new Color(70, 80, 90));
-
         qrCodeImportIntervalSpinner = new JSpinner(new SpinnerNumberModel(10, 1, 60, 5));
-        qrCodeImportIntervalSpinner.setFont(new Font("Arial", Font.PLAIN, 13));
-        ((JSpinner.DefaultEditor) qrCodeImportIntervalSpinner.getEditor()).getTextField().setColumns(6);
-        styleSpinner(qrCodeImportIntervalSpinner);
-
-        JLabel qrMinutesLabel = new JLabel("Minuten");
-        qrMinutesLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        qrMinutesLabel.setForeground(new Color(100, 110, 120));
-
-        qrIntervalPanel.add(qrCodeImportIntervalLabel);
-        qrIntervalPanel.add(Box.createHorizontalStrut(12));
-        qrIntervalPanel.add(qrCodeImportIntervalSpinner);
-        qrIntervalPanel.add(Box.createHorizontalStrut(10));
-        qrIntervalPanel.add(qrMinutesLabel);
+        JPanel qrIntervalPanel = createLabeledSpinnerPanel("Import-Intervall:", qrCodeImportIntervalSpinner, "Minuten", 6);
 
         qrCodeOptionsPanel.add(qrIntervalPanel);
 
@@ -233,31 +175,25 @@ public class SettingsGUI extends JFrame {
         fontSettingsPanel.add(fontTableInfoLabel);
         fontSettingsPanel.add(Box.createVerticalStrut(10));
 
-        JPanel fontSizePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        fontSizePanel.setOpaque(false);
-        fontSizePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fontSizePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-
-        JLabel fontSizeLabel = new JLabel("Tabellen-Schriftgröße:");
-        fontSizeLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        fontSizeLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
-        fontSizeTableSpinner = new JSpinner(new SpinnerNumberModel(14, 10, 24, 1));
-        fontSizeTableSpinner.setFont(new Font("Arial", Font.PLAIN, 13));
-        ((JSpinner.DefaultEditor) fontSizeTableSpinner.getEditor()).getTextField().setColumns(4);
-        styleSpinner(fontSizeTableSpinner);
-
-        JLabel pxLabel = new JLabel("px");
-        pxLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        pxLabel.setForeground(ThemeManager.getTextSecondaryColor());
-
-        fontSizePanel.add(fontSizeLabel);
-        fontSizePanel.add(Box.createHorizontalStrut(12));
-        fontSizePanel.add(fontSizeTableSpinner);
-        fontSizePanel.add(Box.createHorizontalStrut(8));
-        fontSizePanel.add(pxLabel);
+        fontSizeTableSpinner = new JSpinner(new SpinnerNumberModel(16, 10, 44, 1));
+        JPanel fontSizePanel = createLabeledSpinnerPanel("Tabellen-Schriftgröße:", fontSizeTableSpinner, "px", 4);
 
         fontSettingsPanel.add(fontSizePanel);
+        fontSettingsPanel.add(Box.createVerticalStrut(15));
+
+        JLabel fontTabInfoLabel = new JLabel(
+                "<html><p style='font-size: 12px;'>Diese Einstellung wird verwendet um die Schriftgrösse in den Tabs zu ändern!</p></html>"
+        );
+        fontTabInfoLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        fontTabInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
+        fontTabInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fontSettingsPanel.add(Box.createVerticalStrut(18));
+        fontSettingsPanel.add(fontTabInfoLabel);
+        fontSettingsPanel.add(Box.createVerticalStrut(10));
+
+        fontSizeTabSpinner = new JSpinner(new SpinnerNumberModel(15, 10, 40, 1));
+        JPanel fontTabSizePanel = createLabeledSpinnerPanel("Tabs-Schriftgröße:", fontSizeTabSpinner, "px", 4);
+        fontSettingsPanel.add(fontTabSizePanel);
 
         systemPanel.add(fontSettingsPanel);
 
@@ -275,22 +211,12 @@ public class SettingsGUI extends JFrame {
         themeSection.add(darkModeCheckbox);
         themeSection.add(Box.createVerticalStrut(15));
 
-        // Theme Selection ComboBox
-        JPanel themeSelectionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        themeSelectionPanel.setOpaque(false);
-        themeSelectionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        themeSelectionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-
-        JLabel themeLabel = new JLabel("Design-Schema:");
-        themeLabel.setFont(new Font("Arial", Font.BOLD, 13));
-        themeLabel.setForeground(new Color(70, 80, 90));
-
         String[] themes = {"Light", "Dark"};
         themeComboBox = new JComboBox<>(themes);
-        themeComboBox.setFont(new Font("Arial", Font.PLAIN, 13));
-        themeComboBox.setPreferredSize(new Dimension(200, 35));
         styleComboBox(themeComboBox);
         themeComboBox.setSelectedItem(ThemeManager.isDarkMode() ? "Dark" : "Light");
+
+        JPanel themeSelectionPanel = createLabeledComboBoxPanel("Design-Schema:", themeComboBox, true);
 
         // Add listeners after both components are initialized
         darkModeCheckbox.addActionListener(e -> {
@@ -306,9 +232,6 @@ public class SettingsGUI extends JFrame {
             darkModeCheckbox.setSelected("Dark".equals(selected));
         });
 
-        themeSelectionPanel.add(themeLabel);
-        themeSelectionPanel.add(Box.createHorizontalStrut(12));
-        themeSelectionPanel.add(themeComboBox);
 
         themeSection.add(themeSelectionPanel);
         themeSection.add(Box.createVerticalStrut(15));
@@ -319,7 +242,7 @@ public class SettingsGUI extends JFrame {
                 "Der Dark Mode schont die Augen bei Arbeiten in dunkler Umgebung.</i>" +
                 "</div></html>");
         themeInfoLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        themeInfoLabel.setForeground(new Color(120, 130, 140));
+        themeInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         themeInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         themeSection.add(themeInfoLabel);
 
@@ -345,12 +268,15 @@ public class SettingsGUI extends JFrame {
 
         JLabel serverUrlLabel = new JLabel("Server URL:");
         serverUrlLabel.setFont(new Font("Arial", Font.BOLD, 13));
-        serverUrlLabel.setForeground(new Color(70, 80, 90));
+        serverUrlLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         serverUrlField = new JTextField("http://localhost/scan/list.php");
         serverUrlField.setFont(new Font("Arial", Font.PLAIN, 13));
+        serverUrlField.setBackground(ThemeManager.getInputBackgroundColor());
+        serverUrlField.setForeground(ThemeManager.getTextPrimaryColor());
+        serverUrlField.setCaretColor(ThemeManager.getTextPrimaryColor());
         serverUrlField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 210, 220), 1),
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                 BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
         serverUrlField.setPreferredSize(new Dimension(600, 40));
@@ -395,25 +321,11 @@ public class SettingsGUI extends JFrame {
         databaseSection.add(Box.createVerticalStrut(10));
         databaseSection.add(selectedDatabaseClear);
 
-        // Table selection panel
-        JPanel tableSelectionPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        tableSelectionPanel.setOpaque(false);
-        tableSelectionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        tableSelectionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-
-        JLabel tableLabel = new JLabel("Tabelle auswählen:");
-        tableLabel.setFont(new Font("Arial", Font.BOLD, 13));
-        tableLabel.setForeground(new Color(70, 80, 90));
-
         List<String> tableNames = new ArrayList<>(List.of("articles", "vendors", "orders", "clients", "departments", "users", "warnings"));
         JComboBox<String> tableComboBox = new JComboBox<>(tableNames.toArray(new String[0]));
-        tableComboBox.setFont(new Font("Arial", Font.PLAIN, 13));
-        tableComboBox.setPreferredSize(new Dimension(200, 35));
         styleComboBox(tableComboBox);
 
-        tableSelectionPanel.add(tableLabel);
-        tableSelectionPanel.add(Box.createHorizontalStrut(12));
-        tableSelectionPanel.add(tableComboBox);
+        JPanel tableSelectionPanel = createLabeledComboBoxPanel("Tabelle auswählen:", tableComboBox, true);
 
         databaseSection.add(Box.createVerticalStrut(15));
         databaseSection.add(tableSelectionPanel);
@@ -480,40 +392,25 @@ public class SettingsGUI extends JFrame {
                 "Datenimport und -export Funktionen");
         importExportSection.add(Box.createVerticalStrut(15));
 
-        JLabel importLabel = new JLabel("Import:");
-        importLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        importLabel.setForeground(new Color(30, 40, 50));
-        importLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        importExportSection.add(importLabel);
+        importExportSection.add(createStyledLabel("Import:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
         importExportSection.add(Box.createVerticalStrut(5));
-        JLabel importDesc = new JLabel("<html><div style='width:650px;'>" +
+
+        importExportSection.add(createInfoLabel("<html><div style='width:650px;'>" +
                 "Importieren Sie Artikel, Lieferanten oder andere Daten aus CSV-Dateien.<br/>" +
-                "Stellen Sie sicher, dass die CSV-Dateien das richtige Format haben.</div></html>");
-        importDesc.setFont(new Font("Arial", Font.PLAIN, 12));
-        importDesc.setForeground(new Color(100, 110, 120));
-        importDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
-        importExportSection.add(importDesc);
+                "Stellen Sie sicher, dass die CSV-Dateien das richtige Format haben.</div></html>"));
         importExportSection.add(Box.createVerticalStrut(10));
+
         JButton importButton = createStyledButton("⬆️ Datenbank Importieren", new Color(39, 174, 96));
         importButton.addActionListener(e -> importFromCsv());
         importExportSection.add(importButton);
         importExportSection.add(Box.createVerticalStrut(20));
 
-
-        JLabel exportLabel = new JLabel("Export:");
-        exportLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        exportLabel.setForeground(new Color(30, 40, 50));
-        exportLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         importExportSection.add(Box.createVerticalStrut(15));
-        importExportSection.add(exportLabel);
+        importExportSection.add(createStyledLabel("Export:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
         importExportSection.add(Box.createVerticalStrut(5));
 
-        JLabel exportDesc = new JLabel("<html><div style='width:650px;'>" +
-                "Exportieren Sie Ihre Datenbankinhalte in CSV-Dateien zur Sicherung oder Weiterverarbeitung.</div></html>");
-        exportDesc.setFont(new Font("Arial", Font.PLAIN, 12));
-        exportDesc.setForeground(new Color(100, 110, 120));
-        exportDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
-        importExportSection.add(exportDesc);
+        importExportSection.add(createInfoLabel("<html><div style='width:650px;'>" +
+                "Exportieren Sie Ihre Datenbankinhalte in CSV-Dateien zur Sicherung oder Weiterverarbeitung.</div></html>"));
         importExportSection.add(Box.createVerticalStrut(10));
         JButton exportButton = createStyledButton("⬇️ Datenbank Exportieren", new Color(52, 152, 219));
         exportButton.addActionListener(e -> {
@@ -576,12 +473,34 @@ public class SettingsGUI extends JFrame {
         // Logo/Title
         JLabel appNameLabel = new JLabel("VEBO Lagersystem");
         appNameLabel.setFont(new Font("Arial", Font.BOLD, 28));
-        appNameLabel.setForeground(new Color(30, 58, 95));
+        appNameLabel.setForeground(ThemeManager.getTitleTextColor());
         appNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        appNameLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                try {
+                    Desktop.getDesktop().browse(new java.net.URI("https://vebo.ch"));
+                } catch (Exception ex) {
+                    logger.error("Fehler beim Öffnen der VEBO-Website: {}", ex.getMessage());
+                }
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                appNameLabel.setForeground(ThemeManager.getTitleTextHighlightColor());
+                appNameLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                appNameLabel.setForeground(ThemeManager.getTitleTextColor());
+                appNameLabel.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+            }
+        });
+        appNameLabel.setToolTipText("Besuchen Sie unsere Website: https://vebo.ch");
 
         JLabel versionLabel = new JLabel("Version " + Main.VERSION);
         versionLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        versionLabel.setForeground(new Color(100, 110, 120));
+        versionLabel.setForeground(ThemeManager.getTextSecondaryColor());
         versionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         appInfoPanel.add(appNameLabel);
@@ -599,7 +518,7 @@ public class SettingsGUI extends JFrame {
 
         JLabel descTitle = new JLabel("Beschreibung:");
         descTitle.setFont(new Font("Arial", Font.BOLD, 14));
-        descTitle.setForeground(new Color(30, 40, 50));
+        descTitle.setForeground(ThemeManager.getTextPrimaryColor());
 
         JTextArea descriptionArea = new JTextArea(
                 "VEBO Lagersystem ist eine moderne Lagerverwaltungssoftware für die effiziente " +
@@ -611,10 +530,10 @@ public class SettingsGUI extends JFrame {
         descriptionArea.setLineWrap(true);
         descriptionArea.setEditable(false);
         descriptionArea.setFont(new Font("Arial", Font.PLAIN, 13));
-        descriptionArea.setForeground(new Color(70, 80, 90));
-        descriptionArea.setBackground(new Color(248, 250, 252));
+        descriptionArea.setForeground(ThemeManager.getTextPrimaryColor());
+        descriptionArea.setBackground(ThemeManager.getInputBackgroundColor());
         descriptionArea.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                 BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
         descriptionArea.setRows(4);
@@ -632,26 +551,11 @@ public class SettingsGUI extends JFrame {
         developerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         developerPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
 
-        JLabel devTitle = new JLabel("👨‍💻 Entwickler:");
-        devTitle.setFont(new Font("Arial", Font.BOLD, 14));
-        devTitle.setForeground(new Color(30, 40, 50));
-        devTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel devName = new JLabel("Darryl Huber");
-        devName.setFont(new Font("Arial", Font.PLAIN, 13));
-        devName.setForeground(new Color(70, 80, 90));
-        devName.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel devOrg = new JLabel("Organisation: VEBO Oensingen");
-        devOrg.setFont(new Font("Arial", Font.PLAIN, 13));
-        devOrg.setForeground(new Color(100, 110, 120));
-        devOrg.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        developerPanel.add(devTitle);
+        developerPanel.add(createStyledLabel("👨‍💻 Entwickler:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
         developerPanel.add(Box.createVerticalStrut(8));
-        developerPanel.add(devName);
+        developerPanel.add(createStyledLabel("Darryl Huber", 13, Font.PLAIN, ThemeManager.getTextPrimaryColor()));
         developerPanel.add(Box.createVerticalStrut(5));
-        developerPanel.add(devOrg);
+        developerPanel.add(createStyledLabel("Organisation: VEBO Oensingen", 13, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
 
         aboutSection.add(Box.createVerticalStrut(15));
         aboutSection.add(developerPanel);
@@ -663,33 +567,13 @@ public class SettingsGUI extends JFrame {
         systemInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         systemInfoPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
 
-        JLabel systemTitle = new JLabel("🖥️ System-Information:");
-        systemTitle.setFont(new Font("Arial", Font.BOLD, 14));
-        systemTitle.setForeground(new Color(30, 40, 50));
-        systemTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel javaVersion = new JLabel("Java Version: " + System.getProperty("java.version"));
-        javaVersion.setFont(new Font("Arial", Font.PLAIN, 12));
-        javaVersion.setForeground(new Color(100, 110, 120));
-        javaVersion.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel osName = new JLabel("Betriebssystem: " + System.getProperty("os.name") + " " + System.getProperty("os.version"));
-        osName.setFont(new Font("Arial", Font.PLAIN, 12));
-        osName.setForeground(new Color(100, 110, 120));
-        osName.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel dataDir = new JLabel("Datenverzeichnis: " + Main.getAppDataDir().getAbsolutePath());
-        dataDir.setFont(new Font("Arial", Font.PLAIN, 12));
-        dataDir.setForeground(new Color(100, 110, 120));
-        dataDir.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        systemInfoPanel.add(systemTitle);
+        systemInfoPanel.add(createStyledLabel("🖥️ System-Information:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
         systemInfoPanel.add(Box.createVerticalStrut(8));
-        systemInfoPanel.add(javaVersion);
+        systemInfoPanel.add(createStyledLabel("Java Version: " + System.getProperty("java.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
         systemInfoPanel.add(Box.createVerticalStrut(5));
-        systemInfoPanel.add(osName);
+        systemInfoPanel.add(createStyledLabel("Betriebssystem: " + System.getProperty("os.name") + " " + System.getProperty("os.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
         systemInfoPanel.add(Box.createVerticalStrut(5));
-        systemInfoPanel.add(dataDir);
+        systemInfoPanel.add(createStyledLabel("Datenverzeichnis: " + Main.getAppDataDir().getAbsolutePath(), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
 
         aboutSection.add(Box.createVerticalStrut(15));
         aboutSection.add(systemInfoPanel);
@@ -700,22 +584,14 @@ public class SettingsGUI extends JFrame {
         copyrightPanel.setOpaque(false);
         copyrightPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         copyrightPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 225, 230)),
+                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
                 BorderFactory.createEmptyBorder(15, 0, 0, 0)
         ));
 
-        JLabel copyrightLabel = new JLabel("© 2026 VEBO Oensingen. Alle Rechte vorbehalten.");
-        copyrightLabel.setFont(new Font("Arial", Font.PLAIN, 11));
-        copyrightLabel.setForeground(new Color(120, 130, 140));
-        copyrightLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel licenseLabel = new JLabel("Diese Software wird bereitgestellt \"wie sie ist\", ohne jegliche Garantie.");
-        licenseLabel.setFont(new Font("Arial", Font.ITALIC, 11));
-        licenseLabel.setForeground(new Color(150, 160, 170));
-        licenseLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        copyrightPanel.add(copyrightLabel);
+        copyrightPanel.add(createStyledLabel("© 2026 VEBO Oensingen. Alle Rechte vorbehalten.", 11, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
         copyrightPanel.add(Box.createVerticalStrut(5));
+
+        JLabel licenseLabel = createStyledLabel("Diese Software wird bereitgestellt \"wie sie ist\", ohne jegliche Garantie.", 11, Font.ITALIC, ThemeManager.getTextSecondaryColor());
         copyrightPanel.add(licenseLabel);
 
         aboutSection.add(Box.createVerticalStrut(20));
@@ -734,8 +610,8 @@ public class SettingsGUI extends JFrame {
 
         // Button Panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 15));
-        buttonPanel.setBackground(Color.WHITE);
-        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 225, 230)));
+        buttonPanel.setBackground(ThemeManager.getCardBackgroundColor());
+        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
         JButton cancelButton = createStyledButton("Abbrechen", new Color(149, 165, 166));
         cancelButton.addActionListener(e -> dispose());
@@ -760,7 +636,7 @@ public class SettingsGUI extends JFrame {
     private JPanel createCategoryPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBackground(new Color(248, 249, 250));
+        panel.setBackground(ThemeManager.getBackgroundColor());
         panel.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
         return panel;
     }
@@ -776,7 +652,7 @@ public class SettingsGUI extends JFrame {
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
-        scrollPane.getViewport().setBackground(new Color(248, 249, 250));
+        scrollPane.getViewport().setBackground(ThemeManager.getBackgroundColor());
 
 
         return scrollPane;
@@ -787,7 +663,7 @@ public class SettingsGUI extends JFrame {
                 "<i>Hinweis: Diese Aktion löscht eine bestimmte Tabelle. Bitte seien Sie vorsichtig!</i>" +
                 "</div></html>");
         selectedDatabaseClear.setFont(new Font("Arial", Font.PLAIN, 12));
-        selectedDatabaseClear.setForeground(new Color(150, 160, 170));
+        selectedDatabaseClear.setForeground(ThemeManager.getTextSecondaryColor());
         selectedDatabaseClear.setAlignmentX(Component.LEFT_ALIGNMENT);
         return selectedDatabaseClear;
     }
@@ -797,7 +673,7 @@ public class SettingsGUI extends JFrame {
                 "Mit dem Knopf <b>Datenbank Bereinigen</b> werden alle Daten in der Datenbank gelöscht!" +
                 "</div></html>");
         databaseClearLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        databaseClearLabel.setForeground(new Color(120, 130, 140));
+        databaseClearLabel.setForeground(ThemeManager.getTextSecondaryColor());
         databaseClearLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         return databaseClearLabel;
     }
@@ -807,7 +683,7 @@ public class SettingsGUI extends JFrame {
                 "<i>Warnungen werden automatisch in diesem Intervall angezeigt, wenn neue ungelesene Warnungen vorhanden sind.</i>" +
                 "</div></html>");
         warningInfoLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        warningInfoLabel.setForeground(new Color(120, 130, 140));
+        warningInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         warningInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         return warningInfoLabel;
     }
@@ -827,7 +703,7 @@ public class SettingsGUI extends JFrame {
 
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        titleLabel.setForeground(new Color(30, 40, 50));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         headerPanel.add(titleLabel);
 
@@ -835,13 +711,13 @@ public class SettingsGUI extends JFrame {
         JLabel descLabel = new JLabel("<html><div style='line-height: 1.7; color: #6c757d;'>" +
                 description + "</div></html>");
         descLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        descLabel.setForeground(new Color(108, 117, 125));
+        descLabel.setForeground(ThemeManager.getTextSecondaryColor());
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         descLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
 
         // Add a subtle separator line
         JSeparator separator = new JSeparator(JSeparator.HORIZONTAL);
-        separator.setForeground(new Color(233, 236, 239));
+        separator.setForeground(ThemeManager.getBorderColor());
         separator.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
         separator.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -856,14 +732,14 @@ public class SettingsGUI extends JFrame {
     }
 
     private static RoundedPanel getRoundedPanel() {
-        RoundedPanel section = new RoundedPanel(Color.WHITE, 12);
+        RoundedPanel section = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
         section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
 
         // Enhanced shadow effect with proper border
         section.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createCompoundBorder(
                         // Outer shadow
-                        BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
+                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                         // Shadow padding
                         BorderFactory.createEmptyBorder(2, 2, 4, 2)
                 ),
@@ -882,7 +758,7 @@ public class SettingsGUI extends JFrame {
      */
     private void styleCheckbox(JCheckBox checkbox) {
         checkbox.setFont(new Font("Arial", Font.PLAIN, 14));
-        checkbox.setForeground(new Color(50, 60, 70));
+        checkbox.setForeground(ThemeManager.getTextPrimaryColor());
         checkbox.setOpaque(false);
         checkbox.setFocusPainted(false);
         checkbox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -893,7 +769,7 @@ public class SettingsGUI extends JFrame {
         // Add hover effect for better UX
         checkbox.addMouseListener(new MouseAdapter() {
             private final Color originalForeground = checkbox.getForeground();
-            private final Color hoverForeground = new Color(30, 40, 50);
+            private final Color hoverForeground = ThemeManager.getPrimaryColor();
 
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -917,18 +793,20 @@ public class SettingsGUI extends JFrame {
         if (editor instanceof JSpinner.DefaultEditor) {
             JTextField textField = ((JSpinner.DefaultEditor) editor).getTextField();
             textField.setFont(new Font("Arial", Font.PLAIN, 13));
+            textField.setBackground(ThemeManager.getInputBackgroundColor());
+            textField.setForeground(ThemeManager.getTextPrimaryColor());
+            textField.setCaretColor(ThemeManager.getTextPrimaryColor());
             textField.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
                     BorderFactory.createEmptyBorder(8, 12, 8, 12)
             ));
-            textField.setBackground(new Color(250, 251, 252));
 
             // Add focus listener for better UX
             textField.addFocusListener(new java.awt.event.FocusAdapter() {
                 @Override
                 public void focusGained(java.awt.event.FocusEvent e) {
                     textField.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(new Color(52, 152, 219), 2, true),
+                            BorderFactory.createLineBorder(ThemeManager.getPrimaryColor(), 2, true),
                             BorderFactory.createEmptyBorder(7, 11, 7, 11)
                     ));
                 }
@@ -936,7 +814,7 @@ public class SettingsGUI extends JFrame {
                 @Override
                 public void focusLost(java.awt.event.FocusEvent e) {
                     textField.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
+                            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
                             BorderFactory.createEmptyBorder(8, 12, 8, 12)
                     ));
                 }
@@ -944,28 +822,8 @@ public class SettingsGUI extends JFrame {
         }
 
         // Style the spinner itself
-        spinner.setBorder(BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true));
-        spinner.setBackground(new Color(250, 251, 252));
-    }
-
-    /**
-     * Styles a combobox with modern appearance and rounded borders
-     */
-    private void styleComboBox(JComboBox<?> comboBox) {
-        comboBox.setFont(new Font("Arial", Font.PLAIN, 13));
-        comboBox.setBackground(new Color(250, 251, 252));
-        comboBox.setForeground(new Color(50, 60, 70));
-        comboBox.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(189, 195, 199), 1, true),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
-        comboBox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        // Set preferred height for consistency
-        comboBox.setPreferredSize(new Dimension(
-                comboBox.getPreferredSize().width,
-                40
-        ));
+        spinner.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true));
+        spinner.setBackground(ThemeManager.getInputBackgroundColor());
     }
 
     /**
@@ -1090,8 +948,12 @@ public class SettingsGUI extends JFrame {
 
                 // Load font size setting (default 14)
                 String fontSizeStr = Main.settings.getProperty("table_font_size");
-                int fontSize = (fontSizeStr != null) ? Integer.parseInt(fontSizeStr) : 14;
+                int fontSize = (fontSizeStr != null) ? Integer.parseInt(fontSizeStr) : 16;
                 fontSizeTableSpinner.setValue(fontSize);
+
+                String fontSizeTabStr = Main.settings.getProperty("table_font_size_tab");
+                int fontSizeTab = (fontSizeTabStr != null) ? Integer.parseInt(fontSizeTabStr) : 15;
+                fontSizeTabSpinner.setValue(fontSizeTab);
 
                 System.out.println("[SettingsGUI] Einstellungen geladen");
             }
@@ -1141,6 +1003,8 @@ public class SettingsGUI extends JFrame {
                 // Save font size setting
                 int fontSize = (Integer) fontSizeTableSpinner.getValue();
                 Main.settings.setProperty("table_font_size", String.valueOf(fontSize));
+                int fontSizeTab = (Integer) fontSizeTabSpinner.getValue();
+                Main.settings.setProperty("table_font_size_tab", String.valueOf(fontSizeTab));
 
                 Main.settings.save();
 
@@ -1416,6 +1280,80 @@ public class SettingsGUI extends JFrame {
                     JOptionPane.ERROR_MESSAGE,
                     Main.iconSmall);
         }
+    }
+
+    /**
+     * Creates a panel with a label, spinner, and unit label
+     */
+    private JPanel createLabeledSpinnerPanel(String labelText, JSpinner spinner, String unitText, int columns) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        panel.setOpaque(false);
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font("Arial", Font.PLAIN, 13));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+
+        spinner.setFont(new Font("Arial", Font.PLAIN, 13));
+        ((JSpinner.DefaultEditor) spinner.getEditor()).getTextField().setColumns(columns);
+        styleSpinner(spinner);
+
+        JLabel unitLabel = new JLabel(unitText);
+        unitLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        unitLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        panel.add(label);
+        panel.add(Box.createHorizontalStrut(12));
+        panel.add(spinner);
+        panel.add(Box.createHorizontalStrut(10));
+        panel.add(unitLabel);
+
+        return panel;
+    }
+
+    /**
+     * Creates a panel with a label and combo box
+     */
+    private JPanel createLabeledComboBoxPanel(String labelText, JComboBox<?> comboBox, boolean boldLabel) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        panel.setOpaque(false);
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font("Arial", boldLabel ? Font.BOLD : Font.PLAIN, 13));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+
+        comboBox.setPreferredSize(new Dimension(200, 35));
+
+        panel.add(label);
+        panel.add(Box.createHorizontalStrut(12));
+        panel.add(comboBox);
+
+        return panel;
+    }
+
+    /**
+     * Creates a styled label with specified font and color
+     */
+    private JLabel createStyledLabel(String text, int fontSize, int fontStyle, Color color) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Arial", fontStyle, fontSize));
+        label.setForeground(color);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return label;
+    }
+
+    /**
+     * Creates an info label with HTML content
+     */
+    private JLabel createInfoLabel(String htmlContent) {
+        JLabel label = new JLabel(htmlContent);
+        label.setFont(new Font("Arial", Font.PLAIN, 12));
+        label.setForeground(ThemeManager.getTextSecondaryColor());
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return label;
     }
 
     /**
@@ -1867,6 +1805,103 @@ public class SettingsGUI extends JFrame {
         }
         // Escape quotes by doubling them and remove any existing outer quotes
         return value.replace("\"", "\"\"");
+    }
+
+    private void styleComboBox(JComboBox<String> combo) {
+        Color bg     = ThemeManager.getInputBackgroundColor();
+        Color fg     = ThemeManager.getTextPrimaryColor();
+        Color border = ThemeManager.getInputBorderColor();
+        Color selBg  = ThemeManager.getSelectionBackgroundColor();
+        Color selFg  = ThemeManager.getSelectionForegroundColor();
+
+        combo.setOpaque(true);
+        combo.setBackground(bg);
+        combo.setForeground(fg);
+        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        combo.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(border, 1),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        ));
+
+        // IMPORTANT: force popup list colors via renderer AND list defaults
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+
+                JLabel c = (JLabel) super.getListCellRendererComponent(
+                        list, value, index, isSelected, cellHasFocus);
+
+                // enforce list base colors too (popup JList)
+                list.setBackground(bg);
+                list.setForeground(fg);
+                list.setSelectionBackground(selBg);
+                list.setSelectionForeground(selFg);
+
+                c.setOpaque(true);
+                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+
+                if (isSelected) {
+                    c.setBackground(selBg);
+                    c.setForeground(selFg);
+                } else {
+                    c.setBackground(bg);
+                    c.setForeground(fg);
+                }
+                return c;
+            }
+        });
+
+        // Theme arrow button + popup border using a small UI override (most reliable)
+        combo.setUI(new javax.swing.plaf.basic.BasicComboBoxUI() {
+            @Override
+            protected JButton createArrowButton() {
+                JButton b = new JButton("▾");
+                b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+                b.setFocusPainted(false);
+                b.setContentAreaFilled(true);
+                b.setOpaque(true);
+                b.setBackground(bg);
+                b.setForeground(fg);
+                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                b.addMouseListener(new MouseAdapter() {
+                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(ThemeManager.getSurfaceColor()); }
+                    @Override public void mouseExited(MouseEvent e)  { b.setBackground(bg); }
+                });
+                return b;
+            }
+
+            @Override
+            protected ComboPopup createPopup() {
+                ComboPopup popup = super.createPopup();
+                if (popup instanceof javax.swing.plaf.basic.BasicComboPopup basic) {
+                    basic.setBorder(BorderFactory.createLineBorder(border, 1));
+                    basic.getList().setBackground(bg);
+                    basic.getList().setForeground(fg);
+                    basic.getList().setSelectionBackground(selBg);
+                    basic.getList().setSelectionForeground(selFg);
+                }
+                return popup;
+            }
+        });
+
+        // If editable: theme the editor field
+        if (combo.isEditable()) {
+            Component editorComp = combo.getEditor().getEditorComponent();
+            if (editorComp instanceof JTextField tf) {
+                tf.setBackground(bg);
+                tf.setForeground(fg);
+                tf.setCaretColor(fg);
+                tf.setBorder(null);
+            }
+        }
+    }
+
+    private List<String> getAllFonts() {
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        String[] fontNames = ge.getAvailableFontFamilyNames();
+        return Arrays.asList(fontNames);
     }
 
 }

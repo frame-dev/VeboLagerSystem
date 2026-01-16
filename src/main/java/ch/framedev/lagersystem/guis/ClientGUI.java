@@ -743,7 +743,7 @@ public class ClientGUI extends JFrame {
         clientTable.setIntercellSpacing(new Dimension(1, 1));
         clientTable.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
         clientTable.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
-        clientTable.setFont(new Font("Arial", Font.PLAIN, 16));
+        clientTable.setFont(new Font("Arial", Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
 
         // Alternating row colors
         DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {

@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.utils;
 import ch.framedev.lagersystem.main.Main;
 
 import javax.swing.*;
+import javax.swing.plaf.ColorUIResource;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.util.ArrayList;
@@ -42,6 +43,9 @@ public class ThemeManager {
         public static final Color TEXT_SECONDARY = new Color(108, 117, 125);
         public static final Color TEXT_DISABLED = new Color(160, 170, 180);
         public static final Color TEXT_LINK = new Color(52, 152, 219);
+        public static final Color TITLE_TEXT = new Color(26, 26, 26);
+        public static final Color TITLE_TEXT_HIGHLIGHT = new Color(52, 152, 219);
+        public static final Color TITLE_TEXT_HIGHLIGHT_DARK = new Color(41, 128, 185);
 
         // Borders & dividers
         public static final Color BORDER = new Color(220, 225, 230);
@@ -49,7 +53,7 @@ public class ThemeManager {
         public static final Color DIVIDER = new Color(230, 234, 238);
 
         // Header & navigation
-        public static final Color HEADER_BG = new Color(30, 58, 95);
+        public static final Color HEADER_BG = new Color(41, 128, 185); // Professional blue
         public static final Color HEADER_FG = Color.WHITE;
         public static final Color MENU_BG = new Color(235, 238, 242);
         public static final Color MENU_HOVER = new Color(220, 226, 232);
@@ -115,6 +119,9 @@ public class ThemeManager {
         public static final Color TEXT_SECONDARY = new Color(180, 180, 180);
         public static final Color TEXT_DISABLED = new Color(120, 120, 120);
         public static final Color TEXT_LINK = new Color(100, 170, 255);
+        public static final Color TITLE_TEXT = new Color(255, 255, 255);
+        public static final Color TITLE_TEXT_HIGHLIGHT = new Color(170, 186, 255);
+        public static final Color TITLE_TEXT_HIGHLIGHT_DARK = new Color(130, 150, 255);
 
         // Borders & dividers
         public static final Color BORDER = new Color(60, 60, 60);
@@ -122,7 +129,7 @@ public class ThemeManager {
         public static final Color DIVIDER = new Color(70, 70, 70);
 
         // Header & navigation
-        public static final Color HEADER_BG = new Color(25, 25, 25);
+        public static final Color HEADER_BG = new Color(30, 58, 95); // Darker professional blue for dark mode
         public static final Color HEADER_FG = TEXT_PRIMARY;
         public static final Color MENU_BG = new Color(40, 40, 40);
         public static final Color MENU_HOVER = new Color(55, 55, 55);
@@ -203,7 +210,7 @@ public class ThemeManager {
     public static void initialize() {
         if (Main.settings != null) {
             String darkModeStr = Main.settings.getProperty("dark_mode");
-            boolean darkMode = darkModeStr != null && Boolean.parseBoolean(darkModeStr);
+            boolean darkMode = Boolean.parseBoolean(darkModeStr);
             currentTheme = darkMode ? Theme.DARK : Theme.LIGHT;
         }
     }
@@ -231,6 +238,225 @@ public class ThemeManager {
         getInstance().setTheme(enabled ? Theme.DARK : Theme.LIGHT);
     }
 
+    public static final class JOptionPaneTheme {
+
+        private JOptionPaneTheme() {}
+
+        public static void apply() {
+            // Base colors
+            Color bg = ThemeManager.getCardBackgroundColor();          // dialog panel background
+            Color surfaceBg = ThemeManager.getBackgroundColor();       // surface/window background
+            Color fg = ThemeManager.getTextPrimaryColor();             // main text color
+            Color secondaryFg = ThemeManager.getTextSecondaryColor();  // secondary text
+            Color border = ThemeManager.getBorderColor();
+
+            // Inputs
+            Color inputBg = ThemeManager.getInputBackgroundColor();
+            Color inputFg = ThemeManager.getTextPrimaryColor();
+            Color caret = ThemeManager.getTextPrimaryColor();
+
+            // Buttons
+            Color btnBg = ThemeManager.getAccentColor();
+            Color btnFg = ThemeManager.getTextOnPrimaryColor();
+
+            // Selection
+            Color selBg = ThemeManager.getSelectionBackgroundColor();
+            Color selFg = ThemeManager.getSelectionForegroundColor();
+
+            // ---- JOptionPane / OptionPane ----
+            UIManager.put("OptionPane.background", new ColorUIResource(bg));
+            UIManager.put("OptionPane.messageForeground", new ColorUIResource(fg));
+            UIManager.put("OptionPane.foreground", new ColorUIResource(fg));
+            UIManager.put("OptionPane.border", BorderFactory.createLineBorder(border, 1));
+
+            // ---- Panels ----
+            UIManager.put("Panel.background", new ColorUIResource(bg));
+            UIManager.put("Panel.foreground", new ColorUIResource(fg));
+
+            // ---- Labels ----
+            UIManager.put("Label.foreground", new ColorUIResource(fg));
+            UIManager.put("Label.background", new ColorUIResource(bg));
+            UIManager.put("Label.disabledForeground", new ColorUIResource(secondaryFg));
+
+            // ---- Buttons ----
+            UIManager.put("Button.background", new ColorUIResource(btnBg));
+            UIManager.put("Button.foreground", new ColorUIResource(btnFg));
+            UIManager.put("Button.select", new ColorUIResource(ThemeManager.getButtonPressedColor(btnBg)));
+            UIManager.put("Button.focus", new ColorUIResource(border));
+            UIManager.put("Button.border", BorderFactory.createLineBorder(border, 1));
+
+            // ---- TextField / PasswordField ----
+            UIManager.put("TextField.background", new ColorUIResource(inputBg));
+            UIManager.put("TextField.foreground", new ColorUIResource(inputFg));
+            UIManager.put("TextField.caretForeground", new ColorUIResource(caret));
+            UIManager.put("TextField.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("TextField.selectionForeground", new ColorUIResource(selFg));
+            UIManager.put("TextField.inactiveForeground", new ColorUIResource(secondaryFg));
+
+            UIManager.put("PasswordField.background", new ColorUIResource(inputBg));
+            UIManager.put("PasswordField.foreground", new ColorUIResource(inputFg));
+            UIManager.put("PasswordField.caretForeground", new ColorUIResource(caret));
+            UIManager.put("PasswordField.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("PasswordField.selectionForeground", new ColorUIResource(selFg));
+
+            // ---- TextArea ----
+            UIManager.put("TextArea.background", new ColorUIResource(inputBg));
+            UIManager.put("TextArea.foreground", new ColorUIResource(inputFg));
+            UIManager.put("TextArea.caretForeground", new ColorUIResource(caret));
+            UIManager.put("TextArea.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("TextArea.selectionForeground", new ColorUIResource(selFg));
+
+            // ---- FormattedTextField ----
+            UIManager.put("FormattedTextField.background", new ColorUIResource(inputBg));
+            UIManager.put("FormattedTextField.foreground", new ColorUIResource(inputFg));
+            UIManager.put("FormattedTextField.caretForeground", new ColorUIResource(caret));
+            UIManager.put("FormattedTextField.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("FormattedTextField.selectionForeground", new ColorUIResource(selFg));
+
+            // ---- ScrollPane / Viewport ----
+            UIManager.put("ScrollPane.background", new ColorUIResource(bg));
+            UIManager.put("ScrollPane.foreground", new ColorUIResource(fg));
+            UIManager.put("Viewport.background", new ColorUIResource(bg));
+            UIManager.put("Viewport.foreground", new ColorUIResource(fg));
+
+            // ---- List ----
+            UIManager.put("List.background", new ColorUIResource(inputBg));
+            UIManager.put("List.foreground", new ColorUIResource(fg));
+            UIManager.put("List.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("List.selectionForeground", new ColorUIResource(selFg));
+            UIManager.put("List.dropLineColor", new ColorUIResource(border));
+
+            // ---- ComboBox ----
+            UIManager.put("ComboBox.background", new ColorUIResource(inputBg));
+            UIManager.put("ComboBox.foreground", new ColorUIResource(fg));
+            UIManager.put("ComboBox.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("ComboBox.selectionForeground", new ColorUIResource(selFg));
+            UIManager.put("ComboBox.buttonBackground", new ColorUIResource(inputBg));
+            UIManager.put("ComboBox.buttonForeground", new ColorUIResource(fg));
+
+            // ---- Tree ----
+            UIManager.put("Tree.background", new ColorUIResource(inputBg));
+            UIManager.put("Tree.foreground", new ColorUIResource(fg));
+            UIManager.put("Tree.textBackground", new ColorUIResource(inputBg));
+            UIManager.put("Tree.textForeground", new ColorUIResource(fg));
+            UIManager.put("Tree.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("Tree.selectionForeground", new ColorUIResource(selFg));
+
+            // ---- Table ----
+            UIManager.put("Table.background", new ColorUIResource(inputBg));
+            UIManager.put("Table.foreground", new ColorUIResource(fg));
+            UIManager.put("Table.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("Table.selectionForeground", new ColorUIResource(selFg));
+            UIManager.put("Table.gridColor", new ColorUIResource(border));
+            UIManager.put("TableHeader.background", new ColorUIResource(bg));
+            UIManager.put("TableHeader.foreground", new ColorUIResource(fg));
+
+            // ---- TabbedPane ----
+            UIManager.put("TabbedPane.background", new ColorUIResource(bg));
+            UIManager.put("TabbedPane.foreground", new ColorUIResource(fg));
+            UIManager.put("TabbedPane.selected", new ColorUIResource(selBg));
+            UIManager.put("TabbedPane.selectedForeground", new ColorUIResource(fg));
+
+            // ---- ToolTip ----
+            UIManager.put("ToolTip.background", new ColorUIResource(ThemeManager.getTooltipBackgroundColor()));
+            UIManager.put("ToolTip.foreground", new ColorUIResource(ThemeManager.getTooltipForegroundColor()));
+
+            // ---- Menu & MenuBar ----
+            UIManager.put("Menu.background", new ColorUIResource(bg));
+            UIManager.put("Menu.foreground", new ColorUIResource(fg));
+            UIManager.put("Menu.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("Menu.selectionForeground", new ColorUIResource(selFg));
+
+            UIManager.put("MenuBar.background", new ColorUIResource(bg));
+            UIManager.put("MenuBar.foreground", new ColorUIResource(fg));
+
+            UIManager.put("MenuItem.background", new ColorUIResource(bg));
+            UIManager.put("MenuItem.foreground", new ColorUIResource(fg));
+            UIManager.put("MenuItem.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("MenuItem.selectionForeground", new ColorUIResource(selFg));
+
+            UIManager.put("PopupMenu.background", new ColorUIResource(bg));
+            UIManager.put("PopupMenu.foreground", new ColorUIResource(fg));
+
+            // ---- CheckBox & RadioButton ----
+            UIManager.put("CheckBox.background", new ColorUIResource(bg));
+            UIManager.put("CheckBox.foreground", new ColorUIResource(fg));
+
+            UIManager.put("RadioButton.background", new ColorUIResource(bg));
+            UIManager.put("RadioButton.foreground", new ColorUIResource(fg));
+
+            // ---- Spinner ----
+            UIManager.put("Spinner.background", new ColorUIResource(inputBg));
+            UIManager.put("Spinner.foreground", new ColorUIResource(fg));
+
+            // ---- Slider ----
+            UIManager.put("Slider.background", new ColorUIResource(bg));
+            UIManager.put("Slider.foreground", new ColorUIResource(fg));
+
+            // ---- ProgressBar ----
+            UIManager.put("ProgressBar.background", new ColorUIResource(bg));
+            UIManager.put("ProgressBar.foreground", new ColorUIResource(btnBg));
+            UIManager.put("ProgressBar.selectionBackground", new ColorUIResource(fg));
+            UIManager.put("ProgressBar.selectionForeground", new ColorUIResource(fg));
+
+            // ---- Separator ----
+            UIManager.put("Separator.foreground", new ColorUIResource(border));
+            UIManager.put("Separator.background", new ColorUIResource(bg));
+
+            // ---- ToolBar ----
+            UIManager.put("ToolBar.background", new ColorUIResource(bg));
+            UIManager.put("ToolBar.foreground", new ColorUIResource(fg));
+
+            // ---- SplitPane ----
+            UIManager.put("SplitPane.background", new ColorUIResource(bg));
+
+            // ---- Desktop / InternalFrame ----
+            UIManager.put("Desktop.background", new ColorUIResource(surfaceBg));
+            UIManager.put("InternalFrame.background", new ColorUIResource(bg));
+
+            // ---- ColorChooser ----
+            UIManager.put("ColorChooser.background", new ColorUIResource(bg));
+            UIManager.put("ColorChooser.foreground", new ColorUIResource(fg));
+
+            // ========================================
+            // ---- FILE CHOOSER - COMPREHENSIVE ----
+            // ========================================
+
+            // Main FileChooser colors
+            UIManager.put("FileChooser.background", new ColorUIResource(bg));
+            UIManager.put("FileChooser.foreground", new ColorUIResource(fg));
+
+            // File list
+            UIManager.put("FileChooser.listViewBackground", new ColorUIResource(inputBg));
+            UIManager.put("FileChooser.listViewForeground", new ColorUIResource(fg));
+            UIManager.put("FileChooser.detailsViewBackground", new ColorUIResource(inputBg));
+            UIManager.put("FileChooser.detailsViewForeground", new ColorUIResource(fg));
+
+            // Selection in file list
+            UIManager.put("FileChooser.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("FileChooser.selectionForeground", new ColorUIResource(selFg));
+
+            // Text fields (file name, path, etc.)
+            UIManager.put("FileChooser.textForeground", new ColorUIResource(fg));
+            UIManager.put("FileChooser.textBackground", new ColorUIResource(inputBg));
+
+            // ComboBox in FileChooser (directory dropdown)
+            UIManager.put("FileChooser.comboBoxBackground", new ColorUIResource(inputBg));
+            UIManager.put("FileChooser.comboBoxForeground", new ColorUIResource(fg));
+
+            // Buttons in FileChooser
+            UIManager.put("FileChooser.buttonBackground", new ColorUIResource(btnBg));
+            UIManager.put("FileChooser.buttonForeground", new ColorUIResource(btnFg));
+
+            // File view specific
+            UIManager.put("FileView.computerIcon", null);
+            UIManager.put("FileView.directoryIcon", null);
+            UIManager.put("FileView.fileIcon", null);
+            UIManager.put("FileView.floppyDriveIcon", null);
+            UIManager.put("FileView.hardDriveIcon", null);
+        }
+    }
+
     // =========================
     // UIManager defaults
     // =========================
@@ -238,60 +464,113 @@ public class ThemeManager {
     public static void applyUIDefaults() {
         UIDefaults d = UIManager.getDefaults();
 
-        // General
-        d.put("control", getBackgroundColor());
-        d.put("Panel.background", getBackgroundColor());
-        d.put("Viewport.background", getBackgroundColor());
+        Color bg = getBackgroundColor();
+        Color card = getCardBackgroundColor();
+        Color fg = getTextPrimaryColor();
+        Color fg2 = getTextSecondaryColor();
+        Color border = getBorderColor();
 
-        // Labels
-        d.put("Label.foreground", getTextPrimaryColor());
+        Color inputBg = getInputBackgroundColor();
+        Color inputFg = getTextPrimaryColor();
 
-        // Buttons
-        d.put("Button.background", getButtonBackgroundColor());
-        d.put("Button.foreground", getButtonForegroundColor());
-        d.put("Button.disabledText", getDisabledForeground());
+        Color selBg = getSelectionBackgroundColor();
+        Color selFg = getSelectionForegroundColor();
 
-        // Text components
-        d.put("TextField.background", getInputBackgroundColor());
-        d.put("TextField.foreground", getTextPrimaryColor());
-        d.put("TextField.inactiveBackground", getInputDisabledBackgroundColor());
-        d.put("TextField.inactiveForeground", getInputDisabledForegroundColor());
+        Color btnBg = getButtonBackgroundColor();
+        Color btnFg = getButtonForegroundColor();
 
-        d.put("TextArea.background", getInputBackgroundColor());
-        d.put("TextArea.foreground", getTextPrimaryColor());
-        d.put("TextArea.inactiveBackground", getInputDisabledBackgroundColor());
-        d.put("TextArea.inactiveForeground", getInputDisabledForegroundColor());
+        // ---------- General surfaces ----------
+        d.put("control", new ColorUIResource(bg));
+        d.put("Panel.background", new ColorUIResource(bg));
+        d.put("Viewport.background", new ColorUIResource(bg));
+        d.put("ScrollPane.background", new ColorUIResource(bg));
 
-        // Selection
-        d.put("TextField.selectionBackground", getSelectionBackgroundColor());
-        d.put("TextField.selectionForeground", getSelectionForegroundColor());
-        d.put("TextArea.selectionBackground", getSelectionBackgroundColor());
-        d.put("TextArea.selectionForeground", getSelectionForegroundColor());
+        // ---------- Text ----------
+        d.put("Label.foreground", new ColorUIResource(fg));
+        d.put("TitledBorder.titleColor", new ColorUIResource(fg));
+        d.put("ToolTip.background", new ColorUIResource(getTooltipBackgroundColor()));
+        d.put("ToolTip.foreground", new ColorUIResource(getTooltipForegroundColor()));
 
-        // Tables
-        d.put("Table.background", getCardBackgroundColor());
-        d.put("Table.foreground", getTextPrimaryColor());
-        d.put("Table.gridColor", getTableGridColor());
-        d.put("Table.selectionBackground", getTableRowSelectedColor());
-        d.put("Table.selectionForeground", getTextPrimaryColor());
+        // ---------- Buttons (Cancel/OK in dialogs are plain buttons) ----------
+        d.put("Button.background", new ColorUIResource(btnBg));
+        d.put("Button.foreground", new ColorUIResource(btnFg));
+        d.put("Button.disabledText", new ColorUIResource(getDisabledForeground()));
 
-        d.put("TableHeader.background", getTableHeaderBackgroundColor());
-        d.put("TableHeader.foreground", getTableHeaderForegroundColor());
+        // ---------- Inputs ----------
+        d.put("TextField.background", new ColorUIResource(inputBg));
+        d.put("TextField.foreground", new ColorUIResource(inputFg));
+        d.put("TextField.caretForeground", new ColorUIResource(inputFg));
+        d.put("TextField.selectionBackground", new ColorUIResource(selBg));
+        d.put("TextField.selectionForeground", new ColorUIResource(selFg));
 
-        // Tooltips
-        d.put("ToolTip.background", getTooltipBackgroundColor());
-        d.put("ToolTip.foreground", getTooltipForegroundColor());
+        d.put("PasswordField.background", new ColorUIResource(inputBg));
+        d.put("PasswordField.foreground", new ColorUIResource(inputFg));
+        d.put("PasswordField.caretForeground", new ColorUIResource(inputFg));
+        d.put("PasswordField.selectionBackground", new ColorUIResource(selBg));
+        d.put("PasswordField.selectionForeground", new ColorUIResource(selFg));
 
-        // ScrollPane + ScrollBar (best-effort; LAF-dependent)
-        d.put("ScrollPane.background", getBackgroundColor());
-        d.put("ScrollBar.background", getScrollbarBackgroundColor());
-        d.put("ScrollBar.foreground", getScrollbarForegroundColor());
+        d.put("TextArea.background", new ColorUIResource(inputBg));
+        d.put("TextArea.foreground", new ColorUIResource(inputFg));
+        d.put("TextArea.caretForeground", new ColorUIResource(inputFg));
+        d.put("TextArea.selectionBackground", new ColorUIResource(selBg));
+        d.put("TextArea.selectionForeground", new ColorUIResource(selFg));
 
-        // Some LAFs use these keys
-        d.put("ScrollBar.thumb", getScrollbarThumbColor());
-        d.put("ScrollBar.thumbHighlight", getScrollbarThumbColor());
-        d.put("ScrollBar.thumbDarkShadow", getScrollbarThumbColor());
-        d.put("ScrollBar.track", getScrollbarBackgroundColor());
+        // ---------- Lists/Combos/Menus (FileChooser uses these a lot) ----------
+        d.put("List.background", new ColorUIResource(card));
+        d.put("List.foreground", new ColorUIResource(fg));
+        d.put("List.selectionBackground", new ColorUIResource(selBg));
+        d.put("List.selectionForeground", new ColorUIResource(selFg));
+
+        d.put("ComboBox.background", new ColorUIResource(inputBg));
+        d.put("ComboBox.foreground", new ColorUIResource(fg));
+        d.put("ComboBox.selectionBackground", new ColorUIResource(selBg));
+        d.put("ComboBox.selectionForeground", new ColorUIResource(selFg));
+
+        d.put("Menu.background", new ColorUIResource(bg));
+        d.put("Menu.foreground", new ColorUIResource(fg));
+        d.put("MenuItem.background", new ColorUIResource(bg));
+        d.put("MenuItem.foreground", new ColorUIResource(fg));
+        d.put("MenuItem.selectionBackground", new ColorUIResource(selBg));
+        d.put("MenuItem.selectionForeground", new ColorUIResource(selFg));
+
+        // ---------- OptionPane (JOptionPane) ----------
+        d.put("OptionPane.background", new ColorUIResource(bg));
+        d.put("OptionPane.messageForeground", new ColorUIResource(fg));
+        d.put("OptionPane.foreground", new ColorUIResource(fg));
+
+        // ---------- FileChooser ----------
+        d.put("FileChooser.background", new ColorUIResource(bg));
+        d.put("FileChooser.foreground", new ColorUIResource(fg));
+
+        // These vary by LAF but help a lot:
+        d.put("FileChooser.listViewBackground", new ColorUIResource(card));
+        d.put("FileChooser.listViewForeground", new ColorUIResource(fg));
+        d.put("FileChooser.detailsViewBackground", new ColorUIResource(card));
+        d.put("FileChooser.detailsViewForeground", new ColorUIResource(fg));
+
+        d.put("FileChooser.readOnly", Boolean.FALSE);
+
+        // Text field inside chooser
+        d.put("FileChooser.textFieldBackground", new ColorUIResource(inputBg));
+        d.put("FileChooser.textFieldForeground", new ColorUIResource(fg));
+
+        // IMPORTANT: correct selection colors
+        d.put("FileChooser.textSelectionBackground", new ColorUIResource(selBg));
+        d.put("FileChooser.textSelectionForeground", new ColorUIResource(selFg));
+
+        // ---------- Tables (chooser "Details" view uses JTable) ----------
+        d.put("Table.background", new ColorUIResource(card));
+        d.put("Table.foreground", new ColorUIResource(fg));
+        d.put("Table.gridColor", new ColorUIResource(getTableGridColor()));
+        d.put("Table.selectionBackground", new ColorUIResource(selBg));
+        d.put("Table.selectionForeground", new ColorUIResource(selFg));
+
+        d.put("TableHeader.background", new ColorUIResource(getTableHeaderBackgroundColor()));
+        d.put("TableHeader.foreground", new ColorUIResource(getTableHeaderForegroundColor()));
+
+        // ---------- Borders ----------
+        d.put("Separator.foreground", new ColorUIResource(border));
+        d.put("Separator.background", new ColorUIResource(border));
     }
 
     // =========================
@@ -685,5 +964,13 @@ public class ThemeManager {
 
     public static Color getSecondaryColor() {
         return new Color(108, 117, 125);
+    }
+
+    public static Color getTitleTextColor() {
+        return isDarkMode() ? Dark.TITLE_TEXT : Light.TITLE_TEXT;
+    }
+
+    public static Color getTitleTextHighlightColor() {
+        return isDarkMode() ? Dark.TITLE_TEXT_HIGHLIGHT : Light.TITLE_TEXT_HIGHLIGHT;
     }
 }

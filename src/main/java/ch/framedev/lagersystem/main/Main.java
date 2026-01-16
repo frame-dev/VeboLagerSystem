@@ -4,6 +4,7 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.User;
 import ch.framedev.lagersystem.guis.ArticleListGUI;
 import ch.framedev.lagersystem.guis.MainGUI;
+import ch.framedev.lagersystem.guis.SettingsGUI;
 import ch.framedev.lagersystem.managers.*;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
@@ -33,7 +34,7 @@ public class Main {
     public static ImageIcon icon;
     public static ImageIcon iconSmall;
 
-    public static final String VERSION = "0.1-TESTING";
+    public static final String VERSION = "0.2-TESTING";
 
     public static void main(String[] args) {
         try {
@@ -398,6 +399,13 @@ public class Main {
         ThemeManager themeManager = ThemeManager.getInstance();
         themeManager.setTheme(darkMode ? ThemeManager.Theme.DARK : ThemeManager.Theme.LIGHT);
         System.out.println("✓ Theme gesetzt: " + (darkMode ? "Dark Mode" : "Light Mode"));
+
+        String tableFontSizeStr = settings.getProperty("table_font_size");
+        if (tableFontSizeStr == null || tableFontSizeStr.isEmpty()) {
+            settings.setProperty("table_font_size", String.valueOf(SettingsGUI.TABLE_FONT_SIZE));
+        }
+
+        SettingsGUI.TABLE_FONT_SIZE = Integer.parseInt(settings.getProperty("table_font_size"));
 
         // Load GitHub token if configured
         String githubToken = settings.getProperty("github-token");

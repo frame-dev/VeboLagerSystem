@@ -224,7 +224,7 @@ public class EditOrderGUI extends JFrame {
 
     private void applyTableTheme(JTable table) {
         table.setRowHeight(28);
-        table.setFont(table.getFont().deriveFont(13f));
+        table.setFont(new Font("Arial", Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
         table.setShowGrid(true);
         table.setGridColor(ThemeManager.getTableGridColor());
         table.setBackground(ThemeManager.getCardBackgroundColor());
