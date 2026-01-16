@@ -98,4 +98,17 @@ public class UserManager {
         }
         return null;
     }
+
+    public List<String> getAllUsernames() {
+        List<String> usernames = new ArrayList<>();
+        String sql = "SELECT username FROM " + TABLE_NAME + ";";
+        try (var resultSet = databaseManager.executeQuery(sql)) {
+            while (resultSet.next()) {
+                usernames.add(resultSet.getString("username"));
+            }
+        } catch (Exception e) {
+            logger.error("Error while retrieving all usernames", e);
+        }
+        return usernames;
+    }
 }

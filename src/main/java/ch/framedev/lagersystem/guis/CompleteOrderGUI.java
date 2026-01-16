@@ -428,7 +428,7 @@ public class CompleteOrderGUI extends JFrame {
         // Update user
         UserManager userManager = UserManager.getInstance();
         User user = userManager.getUserByName(selected.getSenderName().toLowerCase());
-        if (user == null) user = createUser(selected.getSenderName());
+        if (user == null) user = createUser(selected.getSenderName().toLowerCase());
         if (!user.getOrders().contains(selected.getOrderId())) user.getOrders().add(selected.getOrderId());
         userManager.updateUser(user);
 
@@ -569,7 +569,9 @@ public class CompleteOrderGUI extends JFrame {
     }
 
     private User createUser(String userName) {
-        return new User(userName, new ArrayList<>());
+        User user = new User(userName, new ArrayList<>());
+        UserManager.getInstance().insertUser(user);
+        return user;
     }
 
     private void initializeOrdersList() {

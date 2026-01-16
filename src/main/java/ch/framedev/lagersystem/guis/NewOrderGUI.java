@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.OrderManager;
+import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.utils.ThemeManager;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -43,7 +44,7 @@ public class NewOrderGUI extends JFrame {
 
     private final JComboBox<String> receiverNameCombobox;
     private final JTextField receiverKontoField;
-    private final JTextField senderNameField;
+    private final JComboBox<String> senderNameCombobox;
     private final JTextField senderKontoField;
 
     private final JComboBox<String> departmentList;
@@ -136,12 +137,13 @@ public class NewOrderGUI extends JFrame {
 
         // Receiver / Sender form
         receiverKontoField = new JTextField();
-        senderNameField = new JTextField();
+        senderNameCombobox = new JComboBox<>();
+        fillSenderNameCombobox();
         senderKontoField = new JTextField();
         senderKontoField.setText("4250 - 431.689");
 
         styleTextField(receiverKontoField);
-        styleTextField(senderNameField);
+        styleComboBox(senderNameCombobox);
         styleTextField(senderKontoField);
 
         departmentList.addActionListener(event -> {
@@ -175,7 +177,7 @@ public class NewOrderGUI extends JFrame {
         // Add form fields
         addStyledFormRow(formPanel, r, "👤 Empfänger Name:", receiverNameCombobox);
         addStyledFormRow(formPanel, r, "💳 Empfänger Konto Nr.:", receiverKontoField);
-        addStyledFormRow(formPanel, r, "👤 Absender Name:", senderNameField);
+        addStyledFormRow(formPanel, r, "👤 Absender Name:", senderNameCombobox);
         addStyledFormRow(formPanel, r, "💳 Absender Konto Nr.:", senderKontoField);
         addStyledFormRow(formPanel, r, "🏢 Abteilung:", departmentList);
 
@@ -277,6 +279,22 @@ public class NewOrderGUI extends JFrame {
 
         setMinimumSize(new Dimension(900, 600));
         setLocationRelativeTo(null);
+    }
+
+    private void fillSenderNameCombobox() {
+        senderNameCombobox.removeAllItems();
+        senderNameCombobox.addItem("VEBO AG");
+
+        Set<String> senderNames = new LinkedHashSet<>();
+        UserManager userManager = UserManager.getInstance();
+        for (var client : userManager.getAllUsernames()) {
+            if (client != null && !client.trim().isEmpty()) {
+                senderNames.add(client.trim());
+            }
+        }
+
+        senderNames.stream().sorted().forEach(senderNameCombobox::addItem);
+        senderNameCombobox.setEditable(true);
     }
 
     @Override
@@ -563,7 +581,9 @@ public class NewOrderGUI extends JFrame {
                 ? receiverNameCombobox.getSelectedItem().toString().trim()
                 : "";
         String rKonto = receiverKontoField.getText().trim();
-        String sender = senderNameField.getText().trim();
+        String sender = senderNameCombobox.getSelectedItem() != null
+                ? senderNameCombobox.getSelectedItem().toString().trim()
+                : "";
         String sKonto = senderKontoField.getText().trim();
         String department = departmentList.getSelectedItem() != null
                 ? departmentList.getSelectedItem().toString().trim()
@@ -711,7 +731,7 @@ public class NewOrderGUI extends JFrame {
                 cs.beginText();
                 cs.setFont(regularFont, 10);
                 cs.newLineAtOffset(margin + 10, yPosition - 32);
-                cs.showText(senderNameField.getText().trim());
+                cs.showText(senderNameCombobox.getSelectedItem().toString());
                 cs.endText();
 
                 cs.beginText();
