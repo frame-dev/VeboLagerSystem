@@ -7,7 +7,6 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.WarningManager;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
-import ch.framedev.lagersystem.utils.RoundButton;
 import ch.framedev.lagersystem.utils.ThemeManager;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -990,31 +989,7 @@ public class ArticleGUI extends JFrame {
      */
     private JPanel createDialogHeader(JDialog dialog, Object[][] resultHolder) {
         // Create gradient panel for modern look
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
-                Color color1 = ThemeManager.isDarkMode()
-                    ? new Color(30, 58, 95)   // Dark navy blue
-                    : new Color(41, 128, 185); // Professional blue
-                Color color2 = ThemeManager.isDarkMode()
-                    ? new Color(44, 62, 80)   // Slightly lighter
-                    : new Color(52, 152, 219); // Brighter blue
-
-                GradientPaint gradient = new GradientPaint(
-                    0, 0, color1,
-                    getWidth(), 0, color2
-                );
-                g2d.setPaint(gradient);
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-                g2d.dispose();
-            }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+        JPanel headerPanel = getHeaderPanel();
 
         // Icon and title panel
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
@@ -1035,6 +1010,39 @@ public class ArticleGUI extends JFrame {
         JButton closeBtn = createDialogCloseButton(dialog, resultHolder);
         headerPanel.add(closeBtn, BorderLayout.EAST);
 
+        return headerPanel;
+    }
+
+    private static JPanel getHeaderPanel() {
+        JPanel headerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+                GradientPaint gradient = getGradientPaint();
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.dispose();
+            }
+
+            private GradientPaint getGradientPaint() {
+                Color color1 = ThemeManager.isDarkMode()
+                    ? new Color(30, 58, 95)   // Dark navy blue
+                    : new Color(41, 128, 185); // Professional blue
+                Color color2 = ThemeManager.isDarkMode()
+                    ? new Color(44, 62, 80)   // Slightly lighter
+                    : new Color(52, 152, 219); // Brighter blue
+
+                return new GradientPaint(
+                    0, 0, color1,
+                    getWidth(), 0, color2
+                );
+            }
+        };
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
         return headerPanel;
     }
 
@@ -1119,7 +1127,7 @@ public class ArticleGUI extends JFrame {
         contentCard.add(createDialogLabel("🚚  Lieferant"), gbc);
         gbc.gridy = row;
         gbc.insets = new Insets(2, 6, 6, 6);
-        JTextField lieferantField = createDialogTextField(25);
+        JTextField lieferantField = createDialogTextField();
         contentCard.add(lieferantField, gbc);
 
         return new ArticleFormFields(contentCard, nummerField, nameField, detailsField,
@@ -1147,7 +1155,7 @@ public class ArticleGUI extends JFrame {
         gbc.gridy = row;
         panel.add(createDialogLabel(labelText), gbc);
         gbc.gridy = row + 1;
-        JTextField textField = createDialogTextField(25);
+        JTextField textField = createDialogTextField();
         panel.add(textField, gbc);
         return textField;
     }
@@ -1179,8 +1187,8 @@ public class ArticleGUI extends JFrame {
     /**
      * Creates a styled text field for dialog forms with blue focus effect
      */
-    private JTextField createDialogTextField(int columns) {
-        JTextField field = new JTextField(columns);
+    private JTextField createDialogTextField() {
+        JTextField field = new JTextField(25);
         field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
@@ -2012,8 +2020,6 @@ public class ArticleGUI extends JFrame {
     }
 
     private JButton createRoundedButton(String text) {
-        ThemeManager tm = ThemeManager.getInstance();
-
         JButton button = new JButton(text);
         button.setFocusPainted(false);
         button.setBorderPainted(true);
@@ -2021,12 +2027,12 @@ public class ArticleGUI extends JFrame {
         button.setOpaque(true);
 
         // Use ThemeManager for consistent Light/Dark styling
-        Color defaultBg = tm.getAccentColor();
-        Color hoverBg = tm.getButtonHoverColor(defaultBg);
-        Color pressedBg = tm.getButtonPressedColor(defaultBg);
+        Color defaultBg = ThemeManager.getAccentColor();
+        Color hoverBg = ThemeManager.getButtonHoverColor(defaultBg);
+        Color pressedBg = ThemeManager.getButtonPressedColor(defaultBg);
 
         button.setBackground(defaultBg);
-        button.setForeground(tm.getTextOnPrimaryColor());
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(defaultBg.darker(), 1),
@@ -2495,6 +2501,7 @@ public class ArticleGUI extends JFrame {
                 String type = switch (warning.getType()) {
                     case LOW_STOCK -> "Niedriger Bestand";
                     case ORDER_NEEDED -> "Bestellung nötig";
+                    case CRITICAL_STOCK -> "Kritischer Bestand";
                     default -> "Sonstiges";
                 };
 

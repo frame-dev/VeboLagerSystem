@@ -151,8 +151,40 @@ public class SchedulerManager {
                     continue;
                 }
 
-                // Prüfe, ob Lagerbestand unter oder gleich Mindestbestand
-                if (article.getStockQuantity() <= article.getMinStockLevel()) {
+                // Berechne kritische Schwelle (50% des Mindestbestands)
+                int criticalThreshold = (int) Math.ceil(article.getMinStockLevel() * 0.5);
+
+                // Prüfe auf kritischen Lagerbestand (50% oder weniger des Mindestbestands)
+                if (article.getStockQuantity() > 0 && article.getStockQuantity() <= criticalThreshold) {
+                    String titleCritical = "Kritischer Lagerbestand für Artikel " + article.getArticleNumber();
+
+                    // Vermeide doppelte Warnungen
+                    if (!warningManager.hasWarning(titleCritical)) {
+                        Warning warning = new Warning(
+                                titleCritical,
+                                String.format("KRITISCH: Der Lagerbestand für Artikel '%s' (Nr: %s) ist sehr niedrig! " +
+                                                "Aktueller Bestand: %d (nur noch %d%% des Mindestbestands von %d)",
+                                        article.getName(),
+                                        article.getArticleNumber(),
+                                        article.getStockQuantity(),
+                                        (article.getStockQuantity() * 100) / article.getMinStockLevel(),
+                                        article.getMinStockLevel()),
+                                Warning.WarningType.CRITICAL_STOCK,
+                                currentDateTime,
+                                false,
+                                false
+                        );
+
+                        if (warningManager.insertWarning(warning)) {
+                            warningsCreated++;
+                        } else {
+                            System.err.println("[SchedulerManager] Fehler beim Speichern der kritischen Warnung für Artikel " +
+                                    article.getArticleNumber());
+                        }
+                    }
+                }
+                // Prüfe, ob Lagerbestand unter oder gleich Mindestbestand (aber über kritischer Schwelle)
+                else if (article.getStockQuantity() > criticalThreshold && article.getStockQuantity() <= article.getMinStockLevel()) {
                     String title = "Niedriger Lagerbestand für Artikel " + article.getArticleNumber();
 
                     // Vermeide doppelte Warnungen

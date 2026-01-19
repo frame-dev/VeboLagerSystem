@@ -57,7 +57,7 @@ public class OrderGUI extends JFrame {
         headerPanel.setPreferredSize(new Dimension(680, 64));
 
         JLabel titleLabel = new JLabel("Bestellungen Verwaltung");
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 22f));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         headerPanel.add(titleLabel);
@@ -120,7 +120,7 @@ public class OrderGUI extends JFrame {
 
         orderCountLabel = new JLabel("Anzahl Bestellungen: " + orderTable.getRowCount());
         orderCountLabel.setForeground(ThemeManager.getTextPrimaryColor());
-        orderCountLabel.setFont(orderCountLabel.getFont().deriveFont(Font.BOLD));
+        orderCountLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         searchPanel.add(orderCountLabel);
 
         JLabel searchLabel = new JLabel("Suche (Bestell-ID, Empfänger oder Abteilung):");
@@ -433,7 +433,7 @@ public class OrderGUI extends JFrame {
         orderTable.setShowVerticalLines(true);
         orderTable.setGridColor(ThemeManager.getBorderColor());
         orderTable.setIntercellSpacing(new Dimension(1, 1));
-        orderTable.setFont(new Font("Arial", Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
+        orderTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
 
         // visuals
         orderTable.setRowHeight(28);
@@ -503,7 +503,7 @@ public class OrderGUI extends JFrame {
         JTableHeader header = orderTable.getTableHeader();
         header.setBackground(ThemeManager.getTableHeaderBackground());
         header.setForeground(ThemeManager.getTableHeaderForeground());
-        header.setFont(header.getFont().deriveFont(Font.BOLD, 16f));
+        header.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         header.setReorderingAllowed(true);
 
         // keep consistent header height
@@ -564,7 +564,7 @@ public class OrderGUI extends JFrame {
 
         button.setBackground(defaultBg);
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(defaultBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
@@ -605,7 +605,7 @@ public class OrderGUI extends JFrame {
     }
 
     private void styleTextField(JTextField field) {
-        field.setFont(field.getFont().deriveFont(13f));
+        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)

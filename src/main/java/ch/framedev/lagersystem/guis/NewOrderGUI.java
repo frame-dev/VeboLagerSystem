@@ -27,14 +27,13 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.List;
 import java.util.*;
-import java.util.regex.Pattern;
 
 /**
  * Modern new order GUI with improved visual design and user experience.
  * Features: Split panel layout, gradient header, styled components, and PDF export (PDFBox).
  */
+@SuppressWarnings("SwitchStatementWithTooFewBranches")
 public class NewOrderGUI extends JFrame {
 
     private final DefaultTableModel orderTableModel;
@@ -48,8 +47,6 @@ public class NewOrderGUI extends JFrame {
     private final JTextField senderKontoField;
 
     private final JComboBox<String> departmentList;
-
-    private JTable orderTable;
 
     public NewOrderGUI() {
         ThemeManager tm = ThemeManager.getInstance();
@@ -73,11 +70,11 @@ public class NewOrderGUI extends JFrame {
         header.setLayout(new GridBagLayout());
 
         JLabel iconLabel = new JLabel("📝");
-        iconLabel.setFont(iconLabel.getFont().deriveFont(Font.BOLD, 36f));
+        iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 36));
         iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
 
         JLabel title = new JLabel("  Neue Bestellung Erstellen");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
+        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 26));
         title.setForeground(ThemeManager.getTextOnPrimaryColor());
 
         JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
@@ -100,7 +97,7 @@ public class NewOrderGUI extends JFrame {
         leftCard.setLayout(new BorderLayout(10, 10));
 
         JLabel formTitle = new JLabel("📋 Bestellinformationen");
-        formTitle.setFont(formTitle.getFont().deriveFont(Font.BOLD, 17f));
+        formTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
         formTitle.setForeground(ThemeManager.getTextPrimaryColor());
         leftCard.add(formTitle, BorderLayout.NORTH);
 
@@ -193,7 +190,7 @@ public class NewOrderGUI extends JFrame {
         rightCard.setLayout(new BorderLayout(10, 10));
 
         JLabel tableTitle = new JLabel("🛒 Bestellte Artikel");
-        tableTitle.setFont(tableTitle.getFont().deriveFont(Font.BOLD, 17f));
+        tableTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
         tableTitle.setForeground(ThemeManager.getTextPrimaryColor());
         rightCard.add(tableTitle, BorderLayout.NORTH);
 
@@ -213,7 +210,7 @@ public class NewOrderGUI extends JFrame {
             }
         };
 
-        orderTable = new JTable(orderTableModel);
+        JTable orderTable = new JTable(orderTableModel);
         applyOrderTableTheme(orderTable);
 
         JScrollPane orderScroll = new JScrollPane(orderTable);
@@ -230,7 +227,7 @@ public class NewOrderGUI extends JFrame {
         JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         totalPanel.setOpaque(false);
         totalPriceLabel = new JLabel("Totalpreis: 0.00 CHF");
-        totalPriceLabel.setFont(totalPriceLabel.getFont().deriveFont(Font.BOLD, 16f));
+        totalPriceLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         totalPriceLabel.setForeground(ThemeManager.getSuccessColor());
         totalPanel.add(totalPriceLabel);
         bottomPanel.add(totalPanel, BorderLayout.WEST);
@@ -304,8 +301,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void styleTextField(JTextField field) {
-        ThemeManager tm = ThemeManager.getInstance();
-        field.setFont(field.getFont().deriveFont(13f));
+        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)
@@ -316,8 +312,6 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void styleComboBox(JComboBox<String> combo) {
-        ThemeManager tm = ThemeManager.getInstance();
-
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
         Color border = ThemeManager.getInputBorderColor();
@@ -408,7 +402,7 @@ public class NewOrderGUI extends JFrame {
 
     private void applyOrderTableTheme(JTable table) {
         table.setRowHeight(28);
-        table.setFont(table.getFont().deriveFont(13f));
+        table.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         table.setShowGrid(true);
         table.setGridColor(ThemeManager.getTableGridColor());
         table.setBackground(ThemeManager.getCardBackgroundColor());
@@ -420,7 +414,7 @@ public class NewOrderGUI extends JFrame {
         JTableHeader header = table.getTableHeader();
         header.setBackground(ThemeManager.getTableHeaderBackgroundColor());
         header.setForeground(ThemeManager.getTableHeaderForegroundColor());
-        header.setFont(header.getFont().deriveFont(Font.BOLD, 13f));
+        header.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         header.setReorderingAllowed(false);
 
         DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
@@ -449,9 +443,8 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void addStyledFormRow(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field) {
-        ThemeManager tm = ThemeManager.getInstance();
         JLabel label = new JLabel(labelText);
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         label.setForeground(ThemeManager.getTextPrimaryColor());
         panel.add(label, gbc);
 
@@ -729,7 +722,7 @@ public class NewOrderGUI extends JFrame {
                 cs.beginText();
                 cs.setFont(regularFont, 10);
                 cs.newLineAtOffset(margin + 10, yPosition - 32);
-                cs.showText(senderNameCombobox.getSelectedItem().toString());
+                cs.showText(Objects.requireNonNull(senderNameCombobox.getSelectedItem()).toString());
                 cs.endText();
 
                 cs.beginText();
@@ -894,7 +887,7 @@ public class NewOrderGUI extends JFrame {
 
         // IMPORTANT: Make JEditorPane honor display properties (use set colors instead of HTML defaults)
         editorPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
-        editorPane.setFont(new Font("Arial", Font.PLAIN, 13));
+        editorPane.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
 
         // Create scroll pane with the editor pane
         JScrollPane scrollPane = new JScrollPane(editorPane);
@@ -1030,7 +1023,7 @@ public class NewOrderGUI extends JFrame {
 
         button.setBackground(baseBg);
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(baseBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 18, 10, 18)

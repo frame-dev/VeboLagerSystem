@@ -70,7 +70,8 @@ public class Warning {
      * The type of warning.
      */
     public static enum WarningType {
-        LOW_STOCK("Geringer Lagerbestand"),
+        LOW_STOCK("Mindest Lagerbestand"),
+        CRITICAL_STOCK("Kritischer Lagerbestand"),
         ORDER_NEEDED("Bestellung erforderlich"),
         OTHER("Sonstiges");
 

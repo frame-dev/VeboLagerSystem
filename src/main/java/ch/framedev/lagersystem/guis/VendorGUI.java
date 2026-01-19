@@ -47,7 +47,7 @@ public class VendorGUI extends JFrame {
         RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
         headerPanel.setPreferredSize(new Dimension(680, 64));
         JLabel titleLabel = new JLabel("Lieferant Verwaltung");
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 22f));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
         headerPanel.add(titleLabel);
         headerWrapper.add(headerPanel);
@@ -653,7 +653,7 @@ public class VendorGUI extends JFrame {
         vendorTable.setShowGrid(true);
         vendorTable.setGridColor(ThemeManager.getTableGridColor());
         vendorTable.setIntercellSpacing(new Dimension(1, 1));
-        vendorTable.setFont(new Font("Arial", Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
+        vendorTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
         vendorTable.setBackground(ThemeManager.getTableRowEvenColor());
         vendorTable.setForeground(ThemeManager.getTextPrimaryColor());
         vendorTable.setSelectionBackground(ThemeManager.getTableSelectionColor());
@@ -749,7 +749,7 @@ public class VendorGUI extends JFrame {
 
         button.setBackground(defaultBg);
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(defaultBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
