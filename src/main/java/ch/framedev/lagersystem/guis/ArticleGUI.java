@@ -159,10 +159,8 @@ public class ArticleGUI extends JFrame {
             public Component getListCellRendererComponent(
                     JList<?> list, Object value, int index,
                     boolean isSelected, boolean cellHasFocus) {
-
                 JLabel c = (JLabel) super.getListCellRendererComponent(
                         list, value, index, isSelected, cellHasFocus);
-
                 if (isSelected) {
                     c.setBackground(selBg);
                     c.setForeground(selFg);
@@ -336,12 +334,12 @@ public class ArticleGUI extends JFrame {
         ));
 
         JButton searchBtn = new JButton("Suchen");
-        JButton clearBtn  = new JButton("Leeren");
+        JButton clearBtn = new JButton("Leeren");
 
 // base colors
         Color normalFg = ThemeManager.getTextPrimaryColor();
-        Color hoverFg  = ThemeManager.getTextLinkColor();      // good hover text color
-        Color border   = ThemeManager.getBorderColor();
+        Color hoverFg = ThemeManager.getTextLinkColor();      // good hover text color
+        Color border = ThemeManager.getBorderColor();
 
         for (JButton b : new JButton[]{searchBtn, clearBtn}) {
             b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -954,14 +952,14 @@ public class ArticleGUI extends JFrame {
         dialog.getRootPane().setDefaultButton(dialogButtons.okButton());
 
         return new ArticleDialogComponents(
-            formFields.nummerField(),
-            formFields.nameField(),
-            formFields.detailsField(),
-            formFields.lagerSpinner(),
-            formFields.mindestSpinner(),
-            formFields.verkaufField(),
-            formFields.einkaufField(),
-            formFields.lieferantField()
+                formFields.nummerField(),
+                formFields.nameField(),
+                formFields.detailsField(),
+                formFields.lagerSpinner(),
+                formFields.mindestSpinner(),
+                formFields.verkaufField(),
+                formFields.einkaufField(),
+                formFields.lieferantField()
         );
     }
 
@@ -974,11 +972,11 @@ public class ArticleGUI extends JFrame {
 
         // Add subtle shadow border
         Color shadowColor = ThemeManager.isDarkMode()
-            ? new Color(0, 0, 0, 80)
-            : new Color(0, 0, 0, 30);
+                ? new Color(0, 0, 0, 80)
+                : new Color(0, 0, 0, 30);
         mainContainer.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(shadowColor, 1, true),
-            BorderFactory.createEmptyBorder(0, 0, 0, 0)
+                BorderFactory.createLineBorder(shadowColor, 1, true),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)
         ));
 
         return mainContainer;
@@ -1029,15 +1027,15 @@ public class ArticleGUI extends JFrame {
 
             private GradientPaint getGradientPaint() {
                 Color color1 = ThemeManager.isDarkMode()
-                    ? new Color(30, 58, 95)   // Dark navy blue
-                    : new Color(41, 128, 185); // Professional blue
+                        ? new Color(30, 58, 95)   // Dark navy blue
+                        : new Color(41, 128, 185); // Professional blue
                 Color color2 = ThemeManager.isDarkMode()
-                    ? new Color(44, 62, 80)   // Slightly lighter
-                    : new Color(52, 152, 219); // Brighter blue
+                        ? new Color(44, 62, 80)   // Slightly lighter
+                        : new Color(52, 152, 219); // Brighter blue
 
                 return new GradientPaint(
-                    0, 0, color1,
-                    getWidth(), 0, color2
+                        0, 0, color1,
+                        getWidth(), 0, color2
                 );
             }
         };
@@ -1170,14 +1168,14 @@ public class ArticleGUI extends JFrame {
         // Blue accent for required fields (marked with *)
         if (text.contains("*")) {
             Color blueAccent = ThemeManager.isDarkMode()
-                ? new Color(100, 170, 255) // Lighter blue for dark mode
-                : new Color(52, 152, 219);  // Professional blue for light mode
+                    ? new Color(100, 170, 255) // Lighter blue for dark mode
+                    : new Color(52, 152, 219);  // Professional blue for light mode
 
             // Split text to style the asterisk differently
             String labelText = text.replace("*", "").trim();
             label.setText("<html>" + labelText + " <span style='color: rgb(" +
-                blueAccent.getRed() + "," + blueAccent.getGreen() + "," + blueAccent.getBlue() +
-                ");'>*</span></html>");
+                    blueAccent.getRed() + "," + blueAccent.getGreen() + "," + blueAccent.getBlue() +
+                    ");'>*</span></html>");
         }
 
         label.setForeground(ThemeManager.getTextPrimaryColor());
@@ -1196,8 +1194,8 @@ public class ArticleGUI extends JFrame {
 
         Color normalBorder = ThemeManager.getBorderColor();
         Color focusBorder = ThemeManager.isDarkMode()
-            ? new Color(100, 170, 255)  // Lighter blue for dark mode
-            : new Color(52, 152, 219);   // Professional blue
+                ? new Color(100, 170, 255)  // Lighter blue for dark mode
+                : new Color(52, 152, 219);   // Professional blue
 
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(normalBorder, 1, true),
@@ -1264,8 +1262,8 @@ public class ArticleGUI extends JFrame {
 
         Color normalBorder = ThemeManager.getBorderColor();
         Color focusBorder = ThemeManager.isDarkMode()
-            ? new Color(100, 170, 255)
-            : new Color(52, 152, 219);
+                ? new Color(100, 170, 255)
+                : new Color(52, 152, 219);
 
         JComponent editor = spinner.getEditor();
         if (editor instanceof JSpinner.DefaultEditor defaultEditor) {
@@ -1340,8 +1338,8 @@ public class ArticleGUI extends JFrame {
 
         Color normalBorder = ThemeManager.getBorderColor();
         Color focusBorder = ThemeManager.isDarkMode()
-            ? new Color(100, 170, 255)
-            : new Color(52, 152, 219);
+                ? new Color(100, 170, 255)
+                : new Color(52, 152, 219);
 
         JFormattedTextField field = new JFormattedTextField(formatter);
         field.setColumns(10);
@@ -1405,8 +1403,8 @@ public class ArticleGUI extends JFrame {
 
         Color baseColor = ThemeManager.getSurfaceColor();
         Color hoverColor = ThemeManager.isDarkMode()
-            ? new Color(70, 70, 70)
-            : new Color(220, 225, 230);
+                ? new Color(70, 70, 70)
+                : new Color(220, 225, 230);
 
         cancelBtn.setBackground(baseColor);
         cancelBtn.setBorder(BorderFactory.createCompoundBorder(
@@ -1447,14 +1445,14 @@ public class ArticleGUI extends JFrame {
 
         // Blue gradient colors
         Color baseColor = ThemeManager.isDarkMode()
-            ? new Color(52, 152, 219)   // Bright blue for dark mode
-            : new Color(41, 128, 185);   // Professional blue for light mode
+                ? new Color(52, 152, 219)   // Bright blue for dark mode
+                : new Color(41, 128, 185);   // Professional blue for light mode
         Color hoverColor = ThemeManager.isDarkMode()
-            ? new Color(72, 170, 240)
-            : new Color(52, 152, 219);
+                ? new Color(72, 170, 240)
+                : new Color(52, 152, 219);
         Color pressedColor = ThemeManager.isDarkMode()
-            ? new Color(32, 120, 200)
-            : new Color(31, 97, 141);
+                ? new Color(32, 120, 200)
+                : new Color(31, 97, 141);
 
         okBtn.setBackground(baseColor);
         okBtn.setBorder(BorderFactory.createCompoundBorder(
@@ -1565,7 +1563,8 @@ public class ArticleGUI extends JFrame {
             JFormattedTextField verkaufField,
             JFormattedTextField einkaufField,
             JTextField lieferantField
-    ) {}
+    ) {
+    }
 
     /**
      * Record to hold form fields during creation
@@ -1580,7 +1579,8 @@ public class ArticleGUI extends JFrame {
             JFormattedTextField verkaufField,
             JFormattedTextField einkaufField,
             JTextField lieferantField
-    ) {}
+    ) {
+    }
 
     /**
      * Record to hold dialog buttons
@@ -1588,7 +1588,8 @@ public class ArticleGUI extends JFrame {
     private record DialogButtons(
             JPanel buttonPanel,
             JButton okButton
-    ) {}
+    ) {
+    }
 
     private void initializeTable() {
         // Provide a typed, non-editable table model so sorting & renderers behave correctly
@@ -1620,7 +1621,8 @@ public class ArticleGUI extends JFrame {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (!isSelected) c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+                if (!isSelected)
+                    c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
                 return c;
             }
         };
