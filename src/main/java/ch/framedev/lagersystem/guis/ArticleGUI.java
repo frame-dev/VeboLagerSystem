@@ -101,7 +101,7 @@ public class ArticleGUI extends JFrame {
         headerPanel.setPreferredSize(new Dimension(760, 64));
 
         JLabel title = new JLabel("Artikel Verwaltung");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
+        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 24));
         title.setForeground(ThemeManager.getTextPrimaryColor());
         headerPanel.add(title);
         headerWrapper.add(headerPanel);
@@ -117,7 +117,7 @@ public class ArticleGUI extends JFrame {
         categoryPanel.setOpaque(false);
 
         JLabel categoryLabel = new JLabel("📁 Kategorie:");
-        categoryLabel.setFont(categoryLabel.getFont().deriveFont(Font.BOLD));
+        categoryLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 16));
         categoryLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         categoryFilter = new JComboBox<>();
@@ -502,7 +502,7 @@ public class ArticleGUI extends JFrame {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
 
         JLabel titleLabel = new JLabel("✏️  Artikel Bearbeiten");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
@@ -513,7 +513,7 @@ public class ArticleGUI extends JFrame {
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
         closeBtn.setContentAreaFilled(true);
-        closeBtn.setFont(new Font("Arial", Font.BOLD, 24));
+        closeBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 24));
         closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         closeBtn.setPreferredSize(new Dimension(40, 40));
         closeBtn.addMouseListener(new MouseAdapter() {
@@ -548,14 +548,14 @@ public class ArticleGUI extends JFrame {
         // Helper method for creating styled labels with icons
         Function<String, JLabel> createLabel = text -> {
             JLabel label = new JLabel(text);
-            label.setFont(new Font("Arial", Font.BOLD, 13));
+            label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
             label.setForeground(ThemeManager.getTextPrimaryColor());
             return label;
         };
 
         // Helper method for styling text fields with hover effect
         Consumer<JTextField> styleTextField = field -> {
-            field.setFont(new Font("Arial", Font.PLAIN, 14));
+            field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
             field.setBackground(ThemeManager.getInputBackgroundColor());
             field.setForeground(ThemeManager.getTextPrimaryColor());
             field.setCaretColor(ThemeManager.getTextPrimaryColor());
@@ -657,11 +657,11 @@ public class ArticleGUI extends JFrame {
         JPanel lagerPanel = new JPanel(new BorderLayout(0, 6));
         lagerPanel.setOpaque(false);
         JLabel lagerLabel = new JLabel("Aktuell");
-        lagerLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        lagerLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         lagerLabel.setForeground(ThemeManager.getTextSecondaryColor());
         lagerPanel.add(lagerLabel, BorderLayout.NORTH);
         JSpinner lagerSpinner = new JSpinner(new SpinnerNumberModel(existingLager, 0, Integer.MAX_VALUE, 1));
-        lagerSpinner.setFont(new Font("Arial", Font.PLAIN, 14));
+        lagerSpinner.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setColumns(10);
         JTextField lagerField = ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField();
         lagerField.setBackground(ThemeManager.getInputBackgroundColor());
@@ -678,11 +678,11 @@ public class ArticleGUI extends JFrame {
         JPanel mindestPanel = new JPanel(new BorderLayout(0, 6));
         mindestPanel.setOpaque(false);
         JLabel mindestLabel = new JLabel("Mindestbestand");
-        mindestLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        mindestLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         mindestLabel.setForeground(ThemeManager.getTextSecondaryColor());
         mindestPanel.add(mindestLabel, BorderLayout.NORTH);
         JSpinner mindestSpinner = new JSpinner(new SpinnerNumberModel(existingMindest, 0, Integer.MAX_VALUE, 1));
-        mindestSpinner.setFont(new Font("Arial", Font.PLAIN, 14));
+        mindestSpinner.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setColumns(10);
         JTextField mindestField = ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField();
         mindestField.setBackground(ThemeManager.getInputBackgroundColor());
@@ -729,7 +729,7 @@ public class ArticleGUI extends JFrame {
         // Price section
         gbc.gridy = row;
         JLabel priceSectionLabel = createLabel.apply("💰  Preise");
-        priceSectionLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        priceSectionLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         contentCard.add(priceSectionLabel, gbc);
 
         row++;
@@ -741,7 +741,7 @@ public class ArticleGUI extends JFrame {
         JPanel verkaufPanel = new JPanel(new BorderLayout(0, 6));
         verkaufPanel.setOpaque(false);
         JLabel verkaufLabel = new JLabel("Verkaufspreis (CHF)");
-        verkaufLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        verkaufLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         verkaufLabel.setForeground(ThemeManager.getTextSecondaryColor());
         verkaufPanel.add(verkaufLabel, BorderLayout.NORTH);
         JFormattedTextField verkaufField = getVerkaufField(priceFormatter, existingVerkauf);
@@ -750,7 +750,7 @@ public class ArticleGUI extends JFrame {
         JPanel einkaufPanel = new JPanel(new BorderLayout(0, 6));
         einkaufPanel.setOpaque(false);
         JLabel einkaufLabel = new JLabel("Einkaufspreis (CHF)");
-        einkaufLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        einkaufLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         einkaufLabel.setForeground(ThemeManager.getTextSecondaryColor());
         einkaufPanel.add(einkaufLabel, BorderLayout.NORTH);
         JFormattedTextField einkaufField = getVerkaufField(priceFormatter, existingEinkauf);
@@ -786,7 +786,7 @@ public class ArticleGUI extends JFrame {
 
         Color cancelBtnColor = ThemeManager.getErrorColor();
         JButton cancelBtn = new JButton("✕  Abbrechen");
-        cancelBtn.setFont(new Font("Arial", Font.BOLD, 13));
+        cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         cancelBtn.setForeground(Color.WHITE);
         cancelBtn.setBackground(cancelBtnColor);
         cancelBtn.setOpaque(true);
@@ -811,7 +811,7 @@ public class ArticleGUI extends JFrame {
 
         Color okBtnColor = ThemeManager.getSuccessColor();
         JButton okBtn = new JButton("✓  Speichern");
-        okBtn.setFont(new Font("Arial", Font.BOLD, 13));
+        okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         okBtn.setForeground(Color.WHITE);
         okBtn.setBackground(okBtnColor);
         okBtn.setOpaque(true);
@@ -899,7 +899,7 @@ public class ArticleGUI extends JFrame {
         JFormattedTextField verkaufField = new JFormattedTextField(priceFormatter);
         verkaufField.setColumns(12);
         verkaufField.setValue(existingVerkauf);
-        verkaufField.setFont(new Font("Arial", Font.PLAIN, 14));
+        verkaufField.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         verkaufField.setBackground(ThemeManager.getInputBackgroundColor());
         verkaufField.setForeground(ThemeManager.getTextPrimaryColor());
         verkaufField.setCaretColor(ThemeManager.getTextPrimaryColor());
@@ -1021,11 +1021,11 @@ public class ArticleGUI extends JFrame {
         titlePanel.setOpaque(false);
 
         JLabel iconLabel = new JLabel("➕");
-        iconLabel.setFont(iconLabel.getFont().deriveFont(24f));
+        iconLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 24));
         iconLabel.setForeground(Color.WHITE);
 
         JLabel titleLabel = new JLabel("Neuen Artikel hinzufügen");
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 22f));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(Color.WHITE);
 
         titlePanel.add(iconLabel);
@@ -1048,7 +1048,7 @@ public class ArticleGUI extends JFrame {
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
         closeBtn.setContentAreaFilled(false);
-        closeBtn.setFont(closeBtn.getFont().deriveFont(Font.BOLD, 22f));
+        closeBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         closeBtn.setPreferredSize(new Dimension(40, 40));
 
@@ -1157,7 +1157,7 @@ public class ArticleGUI extends JFrame {
      */
     private JLabel createDialogLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
 
         // Blue accent for required fields (marked with *)
         if (text.contains("*")) {
@@ -1181,7 +1181,7 @@ public class ArticleGUI extends JFrame {
      */
     private JTextField createDialogTextField(int columns) {
         JTextField field = new JTextField(columns);
-        field.setFont(field.getFont().deriveFont(14f));
+        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
         field.setCaretColor(ThemeManager.getAccentColor());
@@ -1240,7 +1240,7 @@ public class ArticleGUI extends JFrame {
         panel.add(createDialogLabel(labelText), BorderLayout.NORTH);
 
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, 0, Integer.MAX_VALUE, 1));
-        spinner.setFont(spinner.getFont().deriveFont(14f));
+        spinner.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         ((JSpinner.DefaultEditor) spinner.getEditor()).getTextField().setColumns(8);
         styleDialogSpinner(spinner);
         panel.add(spinner, BorderLayout.CENTER);
@@ -1338,7 +1338,7 @@ public class ArticleGUI extends JFrame {
         JFormattedTextField field = new JFormattedTextField(formatter);
         field.setColumns(10);
         field.setValue(0.0);
-        field.setFont(field.getFont().deriveFont(14f));
+        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
         field.setCaretColor(ThemeManager.getAccentColor());
@@ -1392,7 +1392,7 @@ public class ArticleGUI extends JFrame {
      */
     private JButton createDialogCancelButton(JDialog dialog, Object[][] resultHolder) {
         JButton cancelBtn = new JButton("Abbrechen");
-        cancelBtn.setFont(cancelBtn.getFont().deriveFont(Font.BOLD, 14f));
+        cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         cancelBtn.setForeground(ThemeManager.getTextPrimaryColor());
 
         Color baseColor = ThemeManager.getSurfaceColor();
@@ -1434,7 +1434,7 @@ public class ArticleGUI extends JFrame {
      */
     private JButton createDialogOkButton(JDialog dialog, Object[][] resultHolder, ArticleFormFields formFields) {
         JButton okBtn = new JButton("➕ Hinzufügen");
-        okBtn.setFont(okBtn.getFont().deriveFont(Font.BOLD, 14f));
+        okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         okBtn.setForeground(Color.WHITE);
 
         // Blue gradient colors
@@ -1603,7 +1603,7 @@ public class ArticleGUI extends JFrame {
         articleTable.setShowVerticalLines(true);
         articleTable.setGridColor(ThemeManager.getTableGridColor()); // soft light gray // soft light gray
         articleTable.setIntercellSpacing(new Dimension(1, 1));
-        articleTable.setFont(new Font("Arial", Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
+        articleTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
 
 
         // Alternating row colors for readability (subtle)
@@ -1657,7 +1657,7 @@ public class ArticleGUI extends JFrame {
         JTableHeader header = articleTable.getTableHeader();
         header.setBackground(ThemeManager.getTableHeaderBackground());
         header.setForeground(ThemeManager.getTableHeaderForeground());
-        header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
+        header.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
     }
 
     /**
@@ -2027,7 +2027,7 @@ public class ArticleGUI extends JFrame {
 
         button.setBackground(defaultBg);
         button.setForeground(tm.getTextOnPrimaryColor());
-        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(defaultBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
@@ -2174,13 +2174,13 @@ public class ArticleGUI extends JFrame {
             header.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
 
             JLabel typeLabel = new JLabel(icon + "  " + warning.getType().getDisplayName());
-            typeLabel.setFont(typeLabel.getFont().deriveFont(Font.BOLD, 18f));
+            typeLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
             typeLabel.setForeground(Color.WHITE);
             header.add(typeLabel, BorderLayout.WEST);
 
             // Close button
             JButton closeBtn = new JButton("✕");
-            closeBtn.setFont(closeBtn.getFont().deriveFont(Font.BOLD, 16f));
+            closeBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
             closeBtn.setForeground(Color.WHITE);
             closeBtn.setBackground(headerColor);
             closeBtn.setBorderPainted(false);
@@ -2205,7 +2205,7 @@ public class ArticleGUI extends JFrame {
 
             // Title
             JLabel titleLabel = new JLabel("<html><b>" + warning.getTitle() + "</b></html>");
-            titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 16f));
+            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
             titleLabel.setForeground(new Color(44, 62, 80));
             content.add(titleLabel, gbc);
 
@@ -2216,7 +2216,7 @@ public class ArticleGUI extends JFrame {
             messageArea.setWrapStyleWord(true);
             messageArea.setLineWrap(true);
             messageArea.setEditable(false);
-            messageArea.setFont(messageArea.getFont().deriveFont(14f));
+            messageArea.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
             messageArea.setForeground(new Color(52, 73, 94));
             messageArea.setBackground(Color.WHITE);
             messageArea.setBorder(null);
@@ -2228,7 +2228,7 @@ public class ArticleGUI extends JFrame {
             gbc.gridy++;
             gbc.insets = new Insets(0, 0, 20, 0);
             JLabel dateLabel = new JLabel("📅 Datum: " + warning.getDate());
-            dateLabel.setFont(dateLabel.getFont().deriveFont(12f));
+            dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
             dateLabel.setForeground(new Color(127, 140, 141));
             content.add(dateLabel, gbc);
 
@@ -2236,7 +2236,7 @@ public class ArticleGUI extends JFrame {
             gbc.gridy++;
             gbc.insets = new Insets(0, 0, 24, 0);
             JLabel statusLabel = new JLabel(warning.isResolved() ? "✅ Gelöst" : "❌ Ungelöst");
-            statusLabel.setFont(statusLabel.getFont().deriveFont(Font.BOLD, 12f));
+            statusLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
             statusLabel.setForeground(warning.isResolved() ? new Color(39, 174, 96) : new Color(231, 76, 60));
             content.add(statusLabel, gbc);
 
@@ -2290,7 +2290,7 @@ public class ArticleGUI extends JFrame {
     private void styleButton(JButton button, Color bgColor, Color fgColor) {
         button.setBackground(bgColor);
         button.setForeground(fgColor);
-        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setFocusPainted(false);
         button.setBorderPainted(false);
         button.setOpaque(true);
@@ -2458,11 +2458,11 @@ public class ArticleGUI extends JFrame {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
         JLabel titleLabel = new JLabel("⚠️ Warnungen Übersicht");
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 22f));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(new Color(31, 45, 61));
 
         JLabel countLabel = new JLabel(warnings.size() + " Warnung(en)");
-        countLabel.setFont(countLabel.getFont().deriveFont(14f));
+        countLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         countLabel.setForeground(new Color(100, 110, 120));
 
         headerPanel.add(titleLabel, BorderLayout.WEST);
@@ -2475,7 +2475,7 @@ public class ArticleGUI extends JFrame {
             JPanel emptyPanel = new JPanel(new GridBagLayout());
             emptyPanel.setBackground(Color.WHITE);
             JLabel emptyLabel = new JLabel("✓ Keine Warnungen vorhanden");
-            emptyLabel.setFont(emptyLabel.getFont().deriveFont(16f));
+            emptyLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 16));
             emptyLabel.setForeground(new Color(100, 180, 100));
             emptyPanel.add(emptyLabel);
             dialog.add(emptyPanel, BorderLayout.CENTER);
@@ -2538,7 +2538,7 @@ public class ArticleGUI extends JFrame {
             JTableHeader header = warningsTable.getTableHeader();
             header.setBackground(new Color(62, 84, 98));
             header.setForeground(Color.WHITE);
-            header.setFont(header.getFont().deriveFont(Font.BOLD, 14f));
+            header.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
 
             JScrollPane scrollPane = new JScrollPane(warningsTable);
             scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
@@ -2681,7 +2681,7 @@ public class ArticleGUI extends JFrame {
     private static JTable getWarningsTable(DefaultTableModel tableModel) {
         JTable warningsTable = new JTable(tableModel);
         warningsTable.setRowHeight(32);
-        warningsTable.setFont(warningsTable.getFont().deriveFont(14f));
+        warningsTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         warningsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         warningsTable.setShowGrid(true);
         warningsTable.setGridColor(new Color(226, 230, 233));
@@ -2821,12 +2821,12 @@ public class ArticleGUI extends JFrame {
         headerLeft.setOpaque(false);
 
         JLabel titleLabel = new JLabel("📱 QR-Code Daten von Server");
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 22f));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel subtitleLabel = new JLabel("Gescannte Artikel vom mobilen Scanner importieren");
-        subtitleLabel.setFont(subtitleLabel.getFont().deriveFont(Font.PLAIN, 13f));
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         subtitleLabel.setForeground(new Color(200, 220, 240));
         subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -2852,10 +2852,10 @@ public class ArticleGUI extends JFrame {
         infoPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 5));
 
         JLabel infoIcon = new JLabel("ℹ️");
-        infoIcon.setFont(infoIcon.getFont().deriveFont(18f));
+        infoIcon.setFont(SettingsGUI.getFontByName(Font.PLAIN, 18));
 
         JLabel infoLabel = new JLabel("Lädt QR-Code Scan-Daten vom Server. Bitte warten...");
-        infoLabel.setFont(infoLabel.getFont().deriveFont(Font.BOLD, 13f));
+        infoLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         infoLabel.setForeground(new Color(52, 73, 94));
 
         infoPanel.add(infoIcon);
@@ -2873,7 +2873,7 @@ public class ArticleGUI extends JFrame {
 
         JTable qrTable = new JTable(tableModel);
         qrTable.setRowHeight(32);
-        qrTable.setFont(qrTable.getFont().deriveFont(13f));
+        qrTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         qrTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         qrTable.setShowGrid(true);
         qrTable.setGridColor(new Color(230, 235, 240));
@@ -2908,7 +2908,7 @@ public class ArticleGUI extends JFrame {
         JTableHeader header = qrTable.getTableHeader();
         header.setBackground(new Color(30, 58, 95));
         header.setForeground(Color.WHITE);
-        header.setFont(header.getFont().deriveFont(Font.BOLD, 13f));
+        header.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         header.setPreferredSize(new Dimension(header.getWidth(), 40));
 
         JScrollPane scrollPane = new JScrollPane(qrTable);
@@ -2935,11 +2935,11 @@ public class ArticleGUI extends JFrame {
         statusArea.setOpaque(false);
 
         JLabel statusIcon = new JLabel("●");
-        statusIcon.setFont(statusIcon.getFont().deriveFont(16f));
+        statusIcon.setFont(SettingsGUI.getFontByName(Font.PLAIN, 16));
         statusIcon.setForeground(new Color(100, 200, 100));
 
         JLabel statusLabel = new JLabel("Bereit zum Importieren");
-        statusLabel.setFont(statusLabel.getFont().deriveFont(Font.BOLD, 13f));
+        statusLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         statusLabel.setForeground(new Color(70, 80, 90));
 
         statusArea.add(statusIcon);

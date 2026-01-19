@@ -45,7 +45,7 @@ public class ClientGUI extends JFrame {
         headerPanel.setLayout(new GridBagLayout());
 
         JLabel titleLabel = new JLabel("Kunden Verwaltung");
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 22f));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         headerPanel.add(titleLabel);
@@ -57,7 +57,7 @@ public class ClientGUI extends JFrame {
         toolbar.setBackground(ThemeManager.getBackgroundColor());
 
         JLabel filterLabel = new JLabel("Nach Abteilung filtern:");
-        filterLabel.setFont(filterLabel.getFont().deriveFont(Font.BOLD));
+        filterLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         filterLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         filterDepartmentCombobox = new JComboBox<>();
@@ -288,7 +288,7 @@ public class ClientGUI extends JFrame {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
 
         JLabel titleLabel = new JLabel("➕  Neuen Kunden hinzufügen");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
         titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
@@ -298,7 +298,7 @@ public class ClientGUI extends JFrame {
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
         closeBtn.setContentAreaFilled(false);
-        closeBtn.setFont(new Font("Arial", Font.BOLD, 18));
+        closeBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
         closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         closeBtn.addActionListener(e -> {
             holder[0] = null;
@@ -320,13 +320,13 @@ public class ClientGUI extends JFrame {
 
         java.util.function.Function<String, JLabel> createLabel = text -> {
             JLabel label = new JLabel(text);
-            label.setFont(new Font("Arial", Font.BOLD, 13));
+            label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
             label.setForeground(ThemeManager.getTextPrimaryColor());
             return label;
         };
 
         java.util.function.Consumer<JTextField> styleTextField = field -> {
-            field.setFont(new Font("Arial", Font.PLAIN, 14));
+            field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
             field.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1, true),
                     BorderFactory.createEmptyBorder(10, 12, 10, 12)
@@ -460,7 +460,7 @@ public class ClientGUI extends JFrame {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 24, 20, 24));
 
         JLabel titleLabel = new JLabel("✏️  Kunde bearbeiten");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
         titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
@@ -470,7 +470,7 @@ public class ClientGUI extends JFrame {
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
         closeBtn.setContentAreaFilled(false);
-        closeBtn.setFont(new Font("Arial", Font.BOLD, 18));
+        closeBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
         closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         closeBtn.addActionListener(e -> {
             holder[0] = null;
@@ -491,14 +491,14 @@ public class ClientGUI extends JFrame {
         gbc.weightx = 1.0;
 
         JLabel nameLabel = new JLabel("👤  Vorname und Nachname *");
-        nameLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        nameLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         nameLabel.setForeground(ThemeManager.getTextPrimaryColor());
         gbc.gridx = 0;
         gbc.gridy = 0;
         contentCard.add(nameLabel, gbc);
 
         JTextField nameField = new JTextField(existing[0] == null ? "" : existing[0].toString(), 25);
-        nameField.setFont(new Font("Arial", Font.PLAIN, 14));
+        nameField.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         nameField.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1, true),
                 BorderFactory.createEmptyBorder(10, 12, 10, 12)
@@ -529,7 +529,7 @@ public class ClientGUI extends JFrame {
         contentCard.add(nameField, gbc);
 
         JLabel deptLabel = new JLabel("🏢  Abteilung");
-        deptLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        deptLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         deptLabel.setForeground(ThemeManager.getTextPrimaryColor());
         gbc.gridy = 2;
         gbc.insets = new Insets(8, 8, 8, 8);
@@ -743,7 +743,7 @@ public class ClientGUI extends JFrame {
         clientTable.setIntercellSpacing(new Dimension(1, 1));
         clientTable.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
         clientTable.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
-        clientTable.setFont(new Font("Arial", Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
+        clientTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
 
         // Alternating row colors
         DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
@@ -762,7 +762,7 @@ public class ClientGUI extends JFrame {
         JTableHeader header = clientTable.getTableHeader();
         header.setBackground(ThemeManager.getTableHeaderBackgroundColor());
         header.setForeground(ThemeManager.getTableHeaderForegroundColor());
-        header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
+        header.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
 
         TableColumnModel tcm = clientTable.getColumnModel();
         for (int i = 0; i < baseColumnWidths.length && i < tcm.getColumnCount(); i++) {
@@ -824,7 +824,7 @@ public class ClientGUI extends JFrame {
 
         button.setBackground(defaultBg);
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(defaultBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
@@ -865,7 +865,7 @@ public class ClientGUI extends JFrame {
     }
 
     private void styleSearchField(JTextField field) {
-        field.setFont(field.getFont().deriveFont(14f));
+        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
         field.setCaretColor(ThemeManager.getTextPrimaryColor());

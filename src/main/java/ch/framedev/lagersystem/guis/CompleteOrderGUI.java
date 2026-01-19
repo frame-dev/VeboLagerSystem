@@ -57,11 +57,11 @@ public class CompleteOrderGUI extends JFrame {
         headerPanel.setLayout(new GridBagLayout());
 
         JLabel iconLabel = new JLabel("✓");
-        iconLabel.setFont(iconLabel.getFont().deriveFont(Font.BOLD, 32f));
+        iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 32));
         iconLabel.setForeground(new Color(255, 255, 255, 180));
 
         JLabel title = new JLabel("  Bestellung Abschließen");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
+        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 26));
         title.setForeground(ThemeManager.getHeaderForegroundColor());
 
         JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
@@ -89,12 +89,12 @@ public class CompleteOrderGUI extends JFrame {
         leftCard.setLayout(new BorderLayout(8, 8));
 
         JLabel listTitle = new JLabel("📋 Offene Bestellungen");
-        listTitle.setFont(listTitle.getFont().deriveFont(Font.BOLD, 16f));
+        listTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         listTitle.setForeground(text);
         leftCard.add(listTitle, BorderLayout.NORTH);
 
         orderCountLabel = new JLabel("Anzahl Bestellungen: 0");
-        orderCountLabel.setFont(orderCountLabel.getFont().deriveFont(Font.PLAIN, 12f));
+        orderCountLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         orderCountLabel.setForeground(muted);
         leftCard.add(orderCountLabel, BorderLayout.SOUTH);
 
@@ -110,7 +110,7 @@ public class CompleteOrderGUI extends JFrame {
         rightCard.setLayout(new BorderLayout(10, 10));
 
         JLabel detailsTitle = new JLabel("📄 Bestelldetails");
-        detailsTitle.setFont(detailsTitle.getFont().deriveFont(Font.BOLD, 16f));
+        detailsTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         detailsTitle.setForeground(text);
         rightCard.add(detailsTitle, BorderLayout.NORTH);
 
@@ -124,11 +124,11 @@ public class CompleteOrderGUI extends JFrame {
         ));
 
         statusIconLabel = new JLabel("ℹ️", SwingConstants.CENTER);
-        statusIconLabel.setFont(statusIconLabel.getFont().deriveFont(48f));
+        statusIconLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 48));
 
         JLabel placeholderText = new JLabel("<html><div style='text-align:center;'>" +
                 "Wählen Sie eine Bestellung aus<br/>um Details anzuzeigen</div></html>", SwingConstants.CENTER);
-        placeholderText.setFont(placeholderText.getFont().deriveFont(14f));
+        placeholderText.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         placeholderText.setForeground(muted);
 
         detailsPanel.add(Box.createVerticalGlue());
@@ -220,7 +220,7 @@ public class CompleteOrderGUI extends JFrame {
 
         JLabel placeholderText = new JLabel("<html><div style='text-align:center;'>" +
                 "Wählen Sie eine Bestellung aus<br/>um Details anzuzeigen</div></html>");
-        placeholderText.setFont(placeholderText.getFont().deriveFont(14f));
+        placeholderText.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         placeholderText.setForeground(ThemeManager.getTextSecondaryColor());
         placeholderText.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -261,7 +261,7 @@ public class CompleteOrderGUI extends JFrame {
 
         gbc.gridy++;
         JLabel articlesTitle = new JLabel("📦 Bestellte Artikel:");
-        articlesTitle.setFont(articlesTitle.getFont().deriveFont(Font.BOLD, 14f));
+        articlesTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         articlesTitle.setForeground(ThemeManager.getTextPrimaryColor());
         detailsPanel.add(articlesTitle, gbc);
 
@@ -276,7 +276,7 @@ public class CompleteOrderGUI extends JFrame {
             String articleInfo = String.format("  • %s (%s) - Menge: %d",
                     safe(article.getName()), safe(article.getArticleNumber()), qty);
             JLabel articleLabel = new JLabel(articleInfo);
-            articleLabel.setFont(articleLabel.getFont().deriveFont(12f));
+            articleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
             articleLabel.setForeground(ThemeManager.getTextSecondaryColor());
             detailsPanel.add(articleLabel, gbc);
         }
@@ -296,11 +296,11 @@ public class CompleteOrderGUI extends JFrame {
         rowPanel.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
 
         JLabel labelComp = new JLabel(label);
-        labelComp.setFont(labelComp.getFont().deriveFont(Font.BOLD, 13f));
+        labelComp.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         labelComp.setForeground(ThemeManager.getTextPrimaryColor());
 
         JLabel valueComp = new JLabel(value);
-        valueComp.setFont(valueComp.getFont().deriveFont(Font.PLAIN, 13f));
+        valueComp.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         valueComp.setForeground(accentColor);
 
         rowPanel.add(labelComp, BorderLayout.WEST);
@@ -581,7 +581,7 @@ public class CompleteOrderGUI extends JFrame {
         ordersList = new JList<>(listModel);
 
         ordersList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        ordersList.setFont(ordersList.getFont().deriveFont(13f));
+        ordersList.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         ordersList.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         ordersList.setFixedCellHeight(60);
 
@@ -634,7 +634,7 @@ public class CompleteOrderGUI extends JFrame {
 
         button.setBackground(baseBg);
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(baseBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 20, 10, 20)
@@ -691,22 +691,22 @@ public class CompleteOrderGUI extends JFrame {
             padding = BorderFactory.createEmptyBorder(8, 12, 8, 12);
 
             idLabel = new JLabel();
-            idLabel.setFont(idLabel.getFont().deriveFont(Font.BOLD, 13f));
+            idLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
 
             JPanel infoPanel = new JPanel(new GridLayout(2, 1, 0, 2));
             infoPanel.setOpaque(false);
 
             nameLabel = new JLabel();
-            nameLabel.setFont(nameLabel.getFont().deriveFont(Font.PLAIN, 12f));
+            nameLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
 
             JPanel bottomRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
             bottomRow.setOpaque(false);
 
             deptLabel = new JLabel();
-            deptLabel.setFont(deptLabel.getFont().deriveFont(Font.PLAIN, 11f));
+            deptLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
 
             dateLabel = new JLabel();
-            dateLabel.setFont(dateLabel.getFont().deriveFont(Font.PLAIN, 11f));
+            dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
 
             JLabel sep = new JLabel("|");
             sep.setForeground(ThemeManager.getTextSecondaryColor());

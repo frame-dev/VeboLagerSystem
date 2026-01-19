@@ -38,6 +38,7 @@ public class SettingsGUI extends JFrame {
     private final JSpinner fontSizeTabSpinner;
     private final JTextField serverUrlField;
     private final JComboBox<String> themeComboBox;
+    private static JComboBox<String> fontComboBox;
 
     public static int TABLE_FONT_SIZE = 16;
 
@@ -59,11 +60,11 @@ public class SettingsGUI extends JFrame {
         headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
 
         JLabel titleLabel = new JLabel("⚙️  Einstellungen");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setFont(getFontByName(Font.BOLD, 24));
         titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
 
         JLabel subtitleLabel = new JLabel("Konfiguration für das Lagersystem");
-        subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        subtitleLabel.setFont(getFontByName(Font.PLAIN, 13));
         subtitleLabel.setForeground(ThemeManager.getTextOnPrimaryColor().brighter());
 
         JPanel headerTextPanel = new JPanel();
@@ -85,7 +86,7 @@ public class SettingsGUI extends JFrame {
 
         // Create tabbed pane for categories
         JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.LEFT);
-        tabbedPane.setFont(new Font("Arial", Font.BOLD, 13));
+        tabbedPane.setFont(getFontByName(Font.BOLD, 14));
         tabbedPane.setBackground(ThemeManager.getCardBackgroundColor());
         tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
         tabbedPane.setBorder(BorderFactory.createCompoundBorder(
@@ -168,7 +169,7 @@ public class SettingsGUI extends JFrame {
         JLabel fontTableInfoLabel = new JLabel(
                 "<html><p style='font-size: 12px;'>Diese Einstellung wird verwendet um die Schriftgrösse in den Tabellen zu ändern!</p>"
         );
-        fontTableInfoLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        fontTableInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
         fontTableInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         fontTableInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         fontSettingsPanel.add(Box.createVerticalStrut(18));
@@ -195,6 +196,22 @@ public class SettingsGUI extends JFrame {
         JPanel fontTabSizePanel = createLabeledSpinnerPanel("Tabs-Schriftgröße:", fontSizeTabSpinner, "px", 4);
         fontSettingsPanel.add(fontTabSizePanel);
 
+        JLabel fontInfoLabel = new JLabel(
+                "<html><p style='font-size: 12px;'>Diese Einstellung wird verwendet um die Schriftart zu ändern!</p></html>"
+        );
+        fontInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
+        fontInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
+        fontInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fontSettingsPanel.add(Box.createVerticalStrut(15));
+        fontSettingsPanel.add(fontInfoLabel);
+        fontSettingsPanel.add(Box.createVerticalStrut(10));
+
+        fontComboBox = new JComboBox<>();
+        getAllFonts().forEach(fontComboBox::addItem);
+        styleComboBox(fontComboBox);
+        JPanel fontSelectionPanel = createLabeledComboBoxPanel("Schriftart auswählen:", fontComboBox);
+        fontSettingsPanel.add(fontSelectionPanel);
+
         systemPanel.add(fontSettingsPanel);
 
         systemPanel.add(Box.createVerticalStrut(25));
@@ -216,7 +233,7 @@ public class SettingsGUI extends JFrame {
         styleComboBox(themeComboBox);
         themeComboBox.setSelectedItem(ThemeManager.isDarkMode() ? "Dark" : "Light");
 
-        JPanel themeSelectionPanel = createLabeledComboBoxPanel("Design-Schema:", themeComboBox, true);
+        JPanel themeSelectionPanel = createLabeledComboBoxPanel("Design-Schema:", themeComboBox);
 
         // Add listeners after both components are initialized
         darkModeCheckbox.addActionListener(e -> {
@@ -241,7 +258,7 @@ public class SettingsGUI extends JFrame {
                 "<i>Hinweis: Nach dem Speichern werden alle Fenster mit dem neuen Design aktualisiert.<br/>" +
                 "Der Dark Mode schont die Augen bei Arbeiten in dunkler Umgebung.</i>" +
                 "</div></html>");
-        themeInfoLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        themeInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
         themeInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         themeInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         themeSection.add(themeInfoLabel);
@@ -267,11 +284,11 @@ public class SettingsGUI extends JFrame {
         serverUrlPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel serverUrlLabel = new JLabel("Server URL:");
-        serverUrlLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        serverUrlLabel.setFont(getFontByName(Font.BOLD, 13));
         serverUrlLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         serverUrlField = new JTextField("http://localhost/scan/list.php");
-        serverUrlField.setFont(new Font("Arial", Font.PLAIN, 13));
+        serverUrlField.setFont(getFontByName(Font.PLAIN, 13));
         serverUrlField.setBackground(ThemeManager.getInputBackgroundColor());
         serverUrlField.setForeground(ThemeManager.getTextPrimaryColor());
         serverUrlField.setCaretColor(ThemeManager.getTextPrimaryColor());
@@ -325,7 +342,7 @@ public class SettingsGUI extends JFrame {
         JComboBox<String> tableComboBox = new JComboBox<>(tableNames.toArray(new String[0]));
         styleComboBox(tableComboBox);
 
-        JPanel tableSelectionPanel = createLabeledComboBoxPanel("Tabelle auswählen:", tableComboBox, true);
+        JPanel tableSelectionPanel = createLabeledComboBoxPanel("Tabelle auswählen:", tableComboBox);
 
         databaseSection.add(Box.createVerticalStrut(15));
         databaseSection.add(tableSelectionPanel);
@@ -472,7 +489,7 @@ public class SettingsGUI extends JFrame {
 
         // Logo/Title
         JLabel appNameLabel = new JLabel("VEBO Lagersystem");
-        appNameLabel.setFont(new Font("Arial", Font.BOLD, 28));
+        appNameLabel.setFont(getFontByName(Font.BOLD, 28));
         appNameLabel.setForeground(ThemeManager.getTitleTextColor());
         appNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         appNameLabel.addMouseListener(new MouseAdapter() {
@@ -499,7 +516,7 @@ public class SettingsGUI extends JFrame {
         appNameLabel.setToolTipText("Besuchen Sie unsere Website: https://vebo.ch");
 
         JLabel versionLabel = new JLabel("Version " + Main.VERSION);
-        versionLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        versionLabel.setFont(getFontByName(Font.PLAIN, 14));
         versionLabel.setForeground(ThemeManager.getTextSecondaryColor());
         versionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -517,7 +534,7 @@ public class SettingsGUI extends JFrame {
         descriptionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel descTitle = new JLabel("Beschreibung:");
-        descTitle.setFont(new Font("Arial", Font.BOLD, 14));
+        descTitle.setFont(getFontByName(Font.PLAIN, 14));
         descTitle.setForeground(ThemeManager.getTextPrimaryColor());
 
         JTextArea descriptionArea = new JTextArea(
@@ -529,7 +546,7 @@ public class SettingsGUI extends JFrame {
         descriptionArea.setWrapStyleWord(true);
         descriptionArea.setLineWrap(true);
         descriptionArea.setEditable(false);
-        descriptionArea.setFont(new Font("Arial", Font.PLAIN, 13));
+        descriptionArea.setFont(getFontByName(Font.PLAIN, 13));
         descriptionArea.setForeground(ThemeManager.getTextPrimaryColor());
         descriptionArea.setBackground(ThemeManager.getInputBackgroundColor());
         descriptionArea.setBorder(BorderFactory.createCompoundBorder(
@@ -662,7 +679,7 @@ public class SettingsGUI extends JFrame {
         JLabel selectedDatabaseClear = new JLabel("<html><div style='padding: 8px 0'><p>" +
                 "<i>Hinweis: Diese Aktion löscht eine bestimmte Tabelle. Bitte seien Sie vorsichtig!</i>" +
                 "</div></html>");
-        selectedDatabaseClear.setFont(new Font("Arial", Font.PLAIN, 12));
+        selectedDatabaseClear.setFont(getFontByName(Font.PLAIN, 12));
         selectedDatabaseClear.setForeground(ThemeManager.getTextSecondaryColor());
         selectedDatabaseClear.setAlignmentX(Component.LEFT_ALIGNMENT);
         return selectedDatabaseClear;
@@ -672,7 +689,7 @@ public class SettingsGUI extends JFrame {
         JLabel databaseClearLabel = new JLabel("<html><div style='padding: 8px 0'><p>" +
                 "Mit dem Knopf <b>Datenbank Bereinigen</b> werden alle Daten in der Datenbank gelöscht!" +
                 "</div></html>");
-        databaseClearLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        databaseClearLabel.setFont(getFontByName(Font.PLAIN, 13));
         databaseClearLabel.setForeground(ThemeManager.getTextSecondaryColor());
         databaseClearLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         return databaseClearLabel;
@@ -682,7 +699,7 @@ public class SettingsGUI extends JFrame {
         JLabel warningInfoLabel = new JLabel("<html><div style='padding: 8px 0;'>" +
                 "<i>Warnungen werden automatisch in diesem Intervall angezeigt, wenn neue ungelesene Warnungen vorhanden sind.</i>" +
                 "</div></html>");
-        warningInfoLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        warningInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
         warningInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         warningInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         return warningInfoLabel;
@@ -702,7 +719,7 @@ public class SettingsGUI extends JFrame {
         headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setFont(getFontByName(Font.BOLD, 18));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         headerPanel.add(titleLabel);
@@ -710,7 +727,7 @@ public class SettingsGUI extends JFrame {
         // Description with better formatting
         JLabel descLabel = new JLabel("<html><div style='line-height: 1.7; color: #6c757d;'>" +
                 description + "</div></html>");
-        descLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        descLabel.setFont(getFontByName(Font.PLAIN, 13));
         descLabel.setForeground(ThemeManager.getTextSecondaryColor());
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         descLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
@@ -757,7 +774,7 @@ public class SettingsGUI extends JFrame {
      * Styles a checkbox with modern appearance and enhanced click area
      */
     private void styleCheckbox(JCheckBox checkbox) {
-        checkbox.setFont(new Font("Arial", Font.PLAIN, 14));
+        checkbox.setFont(getFontByName(Font.PLAIN, 13));
         checkbox.setForeground(ThemeManager.getTextPrimaryColor());
         checkbox.setOpaque(false);
         checkbox.setFocusPainted(false);
@@ -792,7 +809,7 @@ public class SettingsGUI extends JFrame {
         JComponent editor = spinner.getEditor();
         if (editor instanceof JSpinner.DefaultEditor) {
             JTextField textField = ((JSpinner.DefaultEditor) editor).getTextField();
-            textField.setFont(new Font("Arial", Font.PLAIN, 13));
+            textField.setFont(getFontByName(Font.PLAIN, 13));
             textField.setBackground(ThemeManager.getInputBackgroundColor());
             textField.setForeground(ThemeManager.getTextPrimaryColor());
             textField.setCaretColor(ThemeManager.getTextPrimaryColor());
@@ -831,7 +848,7 @@ public class SettingsGUI extends JFrame {
      */
     private JButton createStyledButton(String text, Color originalBg) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Arial", Font.BOLD, 13));
+        button.setFont(getFontByName(Font.BOLD, 13));
         button.setForeground(Color.WHITE);
         button.setBackground(originalBg);
         button.setBorder(BorderFactory.createCompoundBorder(
@@ -955,6 +972,11 @@ public class SettingsGUI extends JFrame {
                 int fontSizeTab = (fontSizeTabStr != null) ? Integer.parseInt(fontSizeTabStr) : 15;
                 fontSizeTabSpinner.setValue(fontSizeTab);
 
+                String fontStyle = Main.settings.getProperty("font_style");
+                if(fontStyle != null) {
+                    fontComboBox.setSelectedItem(fontStyle);
+                }
+
                 System.out.println("[SettingsGUI] Einstellungen geladen");
             }
         } catch (Exception e) {
@@ -1005,6 +1027,8 @@ public class SettingsGUI extends JFrame {
                 Main.settings.setProperty("table_font_size", String.valueOf(fontSize));
                 int fontSizeTab = (Integer) fontSizeTabSpinner.getValue();
                 Main.settings.setProperty("table_font_size_tab", String.valueOf(fontSizeTab));
+                String fontStyle = (String) fontComboBox.getSelectedItem();
+                Main.settings.setProperty("font_style", fontStyle);
 
                 Main.settings.save();
 
@@ -1032,6 +1056,15 @@ public class SettingsGUI extends JFrame {
                     JOptionPane.ERROR_MESSAGE,
                     Main.iconSmall);
         }
+    }
+
+    @SuppressWarnings("MagicConstant")
+    public static Font getFontByName(int style, int fontSize) {
+        String fontName = Main.settings.getProperty("font_style");
+        if(fontName == null || fontName.trim().isEmpty()) {
+            fontName = "Arial";
+        }
+        return new Font(fontName, style, fontSize);
     }
 
     /**
@@ -1292,15 +1325,15 @@ public class SettingsGUI extends JFrame {
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
         JLabel label = new JLabel(labelText);
-        label.setFont(new Font("Arial", Font.PLAIN, 13));
+        label.setFont(getFontByName(Font.PLAIN, 13));
         label.setForeground(ThemeManager.getTextPrimaryColor());
 
-        spinner.setFont(new Font("Arial", Font.PLAIN, 13));
+        spinner.setFont(getFontByName(Font.PLAIN, 13));
         ((JSpinner.DefaultEditor) spinner.getEditor()).getTextField().setColumns(columns);
         styleSpinner(spinner);
 
         JLabel unitLabel = new JLabel(unitText);
-        unitLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        unitLabel.setFont(getFontByName(Font.PLAIN, 13));
         unitLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
         panel.add(label);
@@ -1315,14 +1348,14 @@ public class SettingsGUI extends JFrame {
     /**
      * Creates a panel with a label and combo box
      */
-    private JPanel createLabeledComboBoxPanel(String labelText, JComboBox<?> comboBox, boolean boldLabel) {
+    private JPanel createLabeledComboBoxPanel(String labelText, JComboBox<?> comboBox) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         panel.setOpaque(false);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
 
         JLabel label = new JLabel(labelText);
-        label.setFont(new Font("Arial", boldLabel ? Font.BOLD : Font.PLAIN, 13));
+        label.setFont(getFontByName(Font.BOLD, 13));
         label.setForeground(ThemeManager.getTextPrimaryColor());
 
         comboBox.setPreferredSize(new Dimension(200, 35));
@@ -1337,9 +1370,15 @@ public class SettingsGUI extends JFrame {
     /**
      * Creates a styled label with specified font and color
      */
+    @SuppressWarnings("MagicConstant")
     private JLabel createStyledLabel(String text, int fontSize, int fontStyle, Color color) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Arial", fontStyle, fontSize));
+        String selectedItem = (String) fontComboBox.getSelectedItem();
+        if(selectedItem == null) {
+            logger.error("Font-ComboBox hat kein ausgewähltes Element, Standardwert wird verwendet");
+            selectedItem = "Arial";
+        }
+        label.setFont(new Font(selectedItem, fontStyle, fontSize));
         label.setForeground(color);
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         return label;
@@ -1350,7 +1389,7 @@ public class SettingsGUI extends JFrame {
      */
     private JLabel createInfoLabel(String htmlContent) {
         JLabel label = new JLabel(htmlContent);
-        label.setFont(new Font("Arial", Font.PLAIN, 12));
+        label.setFont(getFontByName(Font.PLAIN, 13));
         label.setForeground(ThemeManager.getTextSecondaryColor());
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         return label;
@@ -1898,7 +1937,7 @@ public class SettingsGUI extends JFrame {
         }
     }
 
-    private List<String> getAllFonts() {
+    private static List<String> getAllFonts() {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         String[] fontNames = ge.getAvailableFontFamilyNames();
         return Arrays.asList(fontNames);

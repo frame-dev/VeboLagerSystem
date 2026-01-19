@@ -63,22 +63,22 @@ public class NewOrderGUI extends JFrame {
 
         // Header with gradient
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        headerWrapper.setBackground(tm.getBackgroundColor());
+        headerWrapper.setBackground(ThemeManager.getBackgroundColor());
 
         GradientPanel header = new GradientPanel(
-                tm.getPrimaryColor(),
-                tm.getAccentColor()
+                ThemeManager.getPrimaryColor(),
+                ThemeManager.getAccentColor()
         );
         header.setPreferredSize(new Dimension(900, 80));
         header.setLayout(new GridBagLayout());
 
         JLabel iconLabel = new JLabel("📝");
         iconLabel.setFont(iconLabel.getFont().deriveFont(Font.BOLD, 36f));
-        iconLabel.setForeground(tm.getTextOnPrimaryColor());
+        iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
 
         JLabel title = new JLabel("  Neue Bestellung Erstellen");
         title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
-        title.setForeground(tm.getTextOnPrimaryColor());
+        title.setForeground(ThemeManager.getTextOnPrimaryColor());
 
         JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
         headerContent.setOpaque(false);
@@ -91,17 +91,17 @@ public class NewOrderGUI extends JFrame {
 
         // Main content with split pane
         JPanel mainContent = new JPanel(new BorderLayout(15, 15));
-        mainContent.setBackground(tm.getBackgroundColor());
+        mainContent.setBackground(ThemeManager.getBackgroundColor());
         mainContent.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         // Left panel - Form details
-        RoundedPanel leftCard = new RoundedPanel(tm.getCardBackgroundColor(), 16);
+        RoundedPanel leftCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
         leftCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         leftCard.setLayout(new BorderLayout(10, 10));
 
         JLabel formTitle = new JLabel("📋 Bestellinformationen");
         formTitle.setFont(formTitle.getFont().deriveFont(Font.BOLD, 17f));
-        formTitle.setForeground(tm.getTextPrimaryColor());
+        formTitle.setForeground(ThemeManager.getTextPrimaryColor());
         leftCard.add(formTitle, BorderLayout.NORTH);
 
         // Form panel
@@ -183,18 +183,18 @@ public class NewOrderGUI extends JFrame {
 
         JScrollPane formScroll = new JScrollPane(formPanel);
         formScroll.setBorder(null);
-        formScroll.setBackground(tm.getCardBackgroundColor());
-        formScroll.getViewport().setBackground(tm.getCardBackgroundColor());
+        formScroll.setBackground(ThemeManager.getCardBackgroundColor());
+        formScroll.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
         leftCard.add(formScroll, BorderLayout.CENTER);
 
         // Right panel - Order items
-        RoundedPanel rightCard = new RoundedPanel(tm.getCardBackgroundColor(), 16);
+        RoundedPanel rightCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
         rightCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         rightCard.setLayout(new BorderLayout(10, 10));
 
         JLabel tableTitle = new JLabel("🛒 Bestellte Artikel");
         tableTitle.setFont(tableTitle.getFont().deriveFont(Font.BOLD, 17f));
-        tableTitle.setForeground(tm.getTextPrimaryColor());
+        tableTitle.setForeground(ThemeManager.getTextPrimaryColor());
         rightCard.add(tableTitle, BorderLayout.NORTH);
 
         // Order table (show unit price and line total)
@@ -217,9 +217,9 @@ public class NewOrderGUI extends JFrame {
         applyOrderTableTheme(orderTable);
 
         JScrollPane orderScroll = new JScrollPane(orderTable);
-        orderScroll.setBorder(BorderFactory.createLineBorder(tm.getBorderColor(), 1));
-        orderScroll.setBackground(tm.getCardBackgroundColor());
-        orderScroll.getViewport().setBackground(tm.getCardBackgroundColor());
+        orderScroll.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
+        orderScroll.setBackground(ThemeManager.getCardBackgroundColor());
+        orderScroll.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
         rightCard.add(orderScroll, BorderLayout.CENTER);
 
         // Bottom panel with total and buttons
@@ -231,17 +231,17 @@ public class NewOrderGUI extends JFrame {
         totalPanel.setOpaque(false);
         totalPriceLabel = new JLabel("Totalpreis: 0.00 CHF");
         totalPriceLabel.setFont(totalPriceLabel.getFont().deriveFont(Font.BOLD, 16f));
-        totalPriceLabel.setForeground(tm.getSuccessColor());
+        totalPriceLabel.setForeground(ThemeManager.getSuccessColor());
         totalPanel.add(totalPriceLabel);
         bottomPanel.add(totalPanel, BorderLayout.WEST);
 
         JPanel actionButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionButtons.setOpaque(false);
 
-        JButton addArticlesBtn = createThemeButton("📦 Artikel hinzufügen", tm.getPrimaryColor());
+        JButton addArticlesBtn = createThemeButton("📦 Artikel hinzufügen", ThemeManager.getPrimaryColor());
         addArticlesBtn.addActionListener(e -> addArticlesFromList());
 
-        JButton exportPdfBtn = createThemeButton("📄 Export PDF", tm.getWarningColor());
+        JButton exportPdfBtn = createThemeButton("📄 Export PDF", ThemeManager.getWarningColor());
         exportPdfBtn.addActionListener(e -> {
             File file = chooseSaveFile();
             if (file != null) {
@@ -256,7 +256,7 @@ public class NewOrderGUI extends JFrame {
             }
         });
 
-        JButton createOrderBtn = createThemeButton("✓ Bestellen", tm.getSuccessColor());
+        JButton createOrderBtn = createThemeButton("✓ Bestellen", ThemeManager.getSuccessColor());
         createOrderBtn.addActionListener(e -> onCreateOrder());
 
         actionButtons.add(addArticlesBtn);
@@ -307,23 +307,23 @@ public class NewOrderGUI extends JFrame {
         ThemeManager tm = ThemeManager.getInstance();
         field.setFont(field.getFont().deriveFont(13f));
         field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(tm.getInputBorderColor(), 1),
+                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
-        field.setBackground(tm.getInputBackgroundColor());
-        field.setForeground(tm.getTextPrimaryColor());
-        field.setCaretColor(tm.getTextPrimaryColor());
+        field.setBackground(ThemeManager.getInputBackgroundColor());
+        field.setForeground(ThemeManager.getTextPrimaryColor());
+        field.setCaretColor(ThemeManager.getTextPrimaryColor());
     }
 
     private void styleComboBox(JComboBox<String> combo) {
         ThemeManager tm = ThemeManager.getInstance();
 
-        Color bg = tm.getInputBackgroundColor();
-        Color fg = tm.getTextPrimaryColor();
-        Color border = tm.getInputBorderColor();
-        Color selBg = tm.getSelectionBackgroundColor();
-        Color selFg = tm.getSelectionForegroundColor();
-        Color surface = tm.getSurfaceColor();
+        Color bg = ThemeManager.getInputBackgroundColor();
+        Color fg = ThemeManager.getTextPrimaryColor();
+        Color border = ThemeManager.getInputBorderColor();
+        Color selBg = ThemeManager.getSelectionBackgroundColor();
+        Color selFg = ThemeManager.getSelectionForegroundColor();
+        Color surface = ThemeManager.getSurfaceColor();
 
         combo.setBackground(bg);
         combo.setForeground(fg);
@@ -407,21 +407,19 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void applyOrderTableTheme(JTable table) {
-        ThemeManager tm = ThemeManager.getInstance();
-
         table.setRowHeight(28);
         table.setFont(table.getFont().deriveFont(13f));
         table.setShowGrid(true);
-        table.setGridColor(tm.getTableGridColor());
-        table.setBackground(tm.getCardBackgroundColor());
-        table.setForeground(tm.getTextPrimaryColor());
-        table.setSelectionBackground(tm.getSelectionBackgroundColor());
-        table.setSelectionForeground(tm.getSelectionForegroundColor());
+        table.setGridColor(ThemeManager.getTableGridColor());
+        table.setBackground(ThemeManager.getCardBackgroundColor());
+        table.setForeground(ThemeManager.getTextPrimaryColor());
+        table.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
+        table.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
         table.setFillsViewportHeight(true);
 
         JTableHeader header = table.getTableHeader();
-        header.setBackground(tm.getTableHeaderBackgroundColor());
-        header.setForeground(tm.getTableHeaderForegroundColor());
+        header.setBackground(ThemeManager.getTableHeaderBackgroundColor());
+        header.setForeground(ThemeManager.getTableHeaderForegroundColor());
         header.setFont(header.getFont().deriveFont(Font.BOLD, 13f));
         header.setReorderingAllowed(false);
 
@@ -431,11 +429,11 @@ public class NewOrderGUI extends JFrame {
                 Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
 
                 if (isSelected) {
-                    c.setBackground(tm.getSelectionBackgroundColor());
-                    c.setForeground(tm.getSelectionForegroundColor());
+                    c.setBackground(ThemeManager.getSelectionBackgroundColor());
+                    c.setForeground(ThemeManager.getSelectionForegroundColor());
                 } else {
-                    c.setBackground(row % 2 == 0 ? tm.getTableRowEvenColor() : tm.getTableRowOddColor());
-                    c.setForeground(tm.getTextPrimaryColor());
+                    c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+                    c.setForeground(ThemeManager.getTextPrimaryColor());
                 }
 
                 if (c instanceof JComponent jc) {
@@ -454,7 +452,7 @@ public class NewOrderGUI extends JFrame {
         ThemeManager tm = ThemeManager.getInstance();
         JLabel label = new JLabel(labelText);
         label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
-        label.setForeground(tm.getTextPrimaryColor());
+        label.setForeground(ThemeManager.getTextPrimaryColor());
         panel.add(label, gbc);
 
         gbc.gridy++;
@@ -1021,19 +1019,17 @@ public class NewOrderGUI extends JFrame {
     }
 
     private JButton createThemeButton(String text, Color baseBg) {
-        ThemeManager tm = ThemeManager.getInstance();
-
         JButton button = new JButton(text);
         button.setFocusPainted(false);
         button.setBorderPainted(true);
         button.setContentAreaFilled(true);
         button.setOpaque(true);
 
-        Color hoverBg = tm.getButtonHoverColor(baseBg);
-        Color pressedBg = tm.getButtonPressedColor(baseBg);
+        Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
+        Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
 
         button.setBackground(baseBg);
-        button.setForeground(tm.getTextOnPrimaryColor());
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(baseBg.darker(), 1),

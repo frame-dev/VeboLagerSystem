@@ -80,17 +80,17 @@ public class ArticleListGUI extends JFrame {
         titleSection.setOpaque(false);
 
         JLabel iconLabel = new JLabel("📋");
-        iconLabel.setFont(iconLabel.getFont().deriveFont(28f));
+        iconLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 28));
         titleSection.add(iconLabel);
 
         JLabel title = new JLabel("Ausgewählte Artikel");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
+        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 24));
         title.setForeground(Color.WHITE);
         titleSection.add(title);
 
         headerPanel.add(titleSection, BorderLayout.WEST);
 
-        countLabel.setFont(countLabel.getFont().deriveFont(Font.BOLD, 15f));
+        countLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 15));
         countLabel.setForeground(Color.WHITE);
         headerPanel.add(countLabel, BorderLayout.EAST);
 
@@ -117,12 +117,12 @@ public class ArticleListGUI extends JFrame {
         searchIconPanel.setOpaque(false);
         searchIconPanel.setPreferredSize(new Dimension(40, 40));
         JLabel searchIcon = new JLabel("🔍");
-        searchIcon.setFont(searchIcon.getFont().deriveFont(18f));
+        searchIcon.setFont(SettingsGUI.getFontByName(Font.PLAIN, 18));
         searchIconPanel.add(searchIcon);
         searchPanel.add(searchIconPanel, BorderLayout.WEST);
 
         // Search field with modern styling
-        searchField.setFont(searchField.getFont().deriveFont(15f));
+        searchField.setFont(SettingsGUI.getFontByName(Font.PLAIN, 15));
         searchField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 2),
             BorderFactory.createEmptyBorder(10, 12, 10, 12)
@@ -153,9 +153,9 @@ public class ArticleListGUI extends JFrame {
 
         searchPanel.add(searchField, BorderLayout.CENTER);
 
-        JButton clearSearch = createStyledButton("✕", new Color(220, 53, 69), Color.WHITE, 36, 36);
+        JButton clearSearch = createStyledButton("✕", new Color(220, 53, 69), 36, 36);
         clearSearch.setToolTipText("Suche löschen");
-        clearSearch.setFont(clearSearch.getFont().deriveFont(Font.BOLD, 16f));
+        clearSearch.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         searchPanel.add(clearSearch, BorderLayout.EAST);
 
         card.add(searchPanel, BorderLayout.NORTH);
@@ -176,16 +176,16 @@ public class ArticleListGUI extends JFrame {
         buttonPanel.setOpaque(false);
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
 
-        JButton editQtyBtn = createStyledButton("✏️ Menge ändern", new Color(52, 152, 219), Color.WHITE, 0, 0);
+        JButton editQtyBtn = createStyledButton("✏️ Menge ändern", new Color(52, 152, 219), 0, 0);
         editQtyBtn.setPreferredSize(new Dimension(160, 40));
 
-        JButton removeBtn = createStyledButton("🗑️ Entfernen", new Color(220, 53, 69), Color.WHITE, 0, 0);
+        JButton removeBtn = createStyledButton("🗑️ Entfernen", new Color(220, 53, 69), 0, 0);
         removeBtn.setPreferredSize(new Dimension(140, 40));
 
-        JButton clearAllBtn = createStyledButton("🧹 Alle löschen", new Color(243, 156, 18), Color.WHITE, 0, 0);
+        JButton clearAllBtn = createStyledButton("🧹 Alle löschen", new Color(243, 156, 18), 0, 0);
         clearAllBtn.setPreferredSize(new Dimension(140, 40));
 
-        JButton closeBtn = createStyledButton("Schließen", new Color(149, 165, 166), Color.WHITE, 0, 0);
+        JButton closeBtn = createStyledButton("Schließen", new Color(149, 165, 166), 0, 0);
         closeBtn.setPreferredSize(new Dimension(120, 40));
 
         buttonPanel.add(editQtyBtn);
@@ -426,11 +426,11 @@ public class ArticleListGUI extends JFrame {
         titleSection.setOpaque(false);
 
         JLabel iconLabel = new JLabel("📋");
-        iconLabel.setFont(iconLabel.getFont().deriveFont(28f));
+        iconLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 28));
         titleSection.add(iconLabel);
 
         JLabel title = new JLabel("Ausgewählte Artikel");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 24f));
+        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 24));
         title.setForeground(Color.WHITE);
         titleSection.add(title);
 
@@ -460,14 +460,14 @@ public class ArticleListGUI extends JFrame {
         searchIconPanel.setOpaque(false);
         searchIconPanel.setPreferredSize(new Dimension(40, 40));
         JLabel searchIcon = new JLabel("🔍");
-        searchIcon.setFont(searchIcon.getFont().deriveFont(18f));
+        searchIcon.setFont(SettingsGUI.getFontByName(Font.PLAIN, 18));
         searchIconPanel.add(searchIcon);
         searchPanel.add(searchIconPanel, BorderLayout.WEST);
         searchPanel.add(searchField, BorderLayout.CENTER);
 
-        JButton clearSearch = createStyledButton("✕", new Color(220, 53, 69), Color.WHITE, 36, 36);
+        JButton clearSearch = createStyledButton("✕", new Color(220, 53, 69), 36, 36);
         clearSearch.setToolTipText("Suche löschen");
-        clearSearch.setFont(clearSearch.getFont().deriveFont(Font.BOLD, 16f));
+        clearSearch.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         clearSearch.addActionListener(e -> {
             searchField.setText("");
             filterList();
@@ -491,19 +491,19 @@ public class ArticleListGUI extends JFrame {
         buttonPanel.setOpaque(false);
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
 
-        JButton editQtyBtn = createStyledButton("✏️ Menge ändern", new Color(52, 152, 219), Color.WHITE, 0, 0);
+        JButton editQtyBtn = createStyledButton("✏️ Menge ändern", new Color(52, 152, 219), 0, 0);
         editQtyBtn.setPreferredSize(new Dimension(160, 40));
         editQtyBtn.addActionListener(this::handleEditQuantity);
 
-        JButton removeBtn = createStyledButton("🗑️ Entfernen", new Color(220, 53, 69), Color.WHITE, 0, 0);
+        JButton removeBtn = createStyledButton("🗑️ Entfernen", new Color(220, 53, 69), 0, 0);
         removeBtn.setPreferredSize(new Dimension(140, 40));
         removeBtn.addActionListener(this::handleRemoveArticle);
 
-        JButton clearAllBtn = createStyledButton("🧹 Alle löschen", new Color(243, 156, 18), Color.WHITE, 0, 0);
+        JButton clearAllBtn = createStyledButton("🧹 Alle löschen", new Color(243, 156, 18), 0, 0);
         clearAllBtn.setPreferredSize(new Dimension(140, 40));
         clearAllBtn.addActionListener(this::handleClearAll);
 
-        JButton closeBtn = createStyledButton("Schließen", new Color(149, 165, 166), Color.WHITE, 0, 0);
+        JButton closeBtn = createStyledButton("Schließen", new Color(149, 165, 166), 0, 0);
         closeBtn.setPreferredSize(new Dimension(120, 40));
         closeBtn.addActionListener(e -> dispose());
 
@@ -576,11 +576,11 @@ public class ArticleListGUI extends JFrame {
     /**
      * Helper method to create styled buttons with consistent appearance
      */
-    private JButton createStyledButton(String text, Color bgColor, Color fgColor, int width, int height) {
+    private JButton createStyledButton(String text, Color bgColor, int width, int height) {
         JButton button = new JButton(text);
         button.setBackground(bgColor);
-        button.setForeground(fgColor);
-        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setForeground(Color.WHITE);
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setFocusPainted(false);
         button.setBorderPainted(false);
         button.setOpaque(true);
@@ -657,13 +657,13 @@ public class ArticleListGUI extends JFrame {
             infoPanel.setOpaque(false);
 
             JLabel nameLabel = new JLabel(article.getName());
-            nameLabel.setFont(nameLabel.getFont().deriveFont(Font.BOLD, 14f));
+            nameLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
             nameLabel.setForeground(isSelected ? Color.WHITE : ThemeManager.getTextPrimaryColor());
             nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
             JLabel detailLabel = new JLabel(String.format("📦 Nr: %s  •  Stock: %d",
                 article.getArticleNumber(), article.getStockQuantity()));
-            detailLabel.setFont(detailLabel.getFont().deriveFont(12f));
+            detailLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
             detailLabel.setForeground(isSelected ? Color.WHITE : ThemeManager.getTextSecondaryColor());
             detailLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -678,7 +678,7 @@ public class ArticleListGUI extends JFrame {
             badgePanel.setOpaque(false);
 
             JLabel qtyLabel = new JLabel("Qty: " + quantity);
-            qtyLabel.setFont(qtyLabel.getFont().deriveFont(Font.BOLD, 13f));
+            qtyLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
             qtyLabel.setForeground(isSelected ? Color.WHITE : ThemeManager.getTextPrimaryColor());
             qtyLabel.setOpaque(true);
             qtyLabel.setBackground(isSelected ? new Color(41, 128, 185) : ThemeManager.getInputBackgroundColor());

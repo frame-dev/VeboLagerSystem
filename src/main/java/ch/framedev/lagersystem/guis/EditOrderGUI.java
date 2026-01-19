@@ -60,11 +60,11 @@ public class EditOrderGUI extends JFrame {
         header.setLayout(new GridBagLayout());
 
         JLabel iconLabel = new JLabel("✏️");
-        iconLabel.setFont(iconLabel.getFont().deriveFont(Font.BOLD, 36f));
+        iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 36));
         iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
 
         JLabel title = new JLabel("  Bestellung Bearbeiten");
-        title.setFont(title.getFont().deriveFont(Font.BOLD, 26f));
+        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 26));
         title.setForeground(ThemeManager.getTextOnPrimaryColor());
 
         JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
@@ -87,7 +87,7 @@ public class EditOrderGUI extends JFrame {
         leftCard.setLayout(new BorderLayout(10, 10));
 
         JLabel formTitle = new JLabel("📋 Bestelldetails");
-        formTitle.setFont(formTitle.getFont().deriveFont(Font.BOLD, 17f));
+        formTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
         formTitle.setForeground(ThemeManager.getTextPrimaryColor());
         leftCard.add(formTitle, BorderLayout.NORTH);
 
@@ -147,7 +147,7 @@ public class EditOrderGUI extends JFrame {
         rightCard.setLayout(new BorderLayout(10, 10));
 
         JLabel tableTitle = new JLabel("📦 Bestellte Artikel");
-        tableTitle.setFont(tableTitle.getFont().deriveFont(Font.BOLD, 17f));
+        tableTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
         tableTitle.setForeground(ThemeManager.getTextPrimaryColor());
         rightCard.add(tableTitle, BorderLayout.NORTH);
 
@@ -183,7 +183,7 @@ public class EditOrderGUI extends JFrame {
         actionPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
         JLabel infoLabel = new JLabel("💡 Tipp: Doppelklick zum Bearbeiten der Menge");
-        infoLabel.setFont(infoLabel.getFont().deriveFont(Font.ITALIC, 11f));
+        infoLabel.setFont(SettingsGUI.getFontByName(Font.ITALIC, 11));
         infoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         actionPanel.add(infoLabel, BorderLayout.WEST);
 
@@ -224,7 +224,7 @@ public class EditOrderGUI extends JFrame {
 
     private void applyTableTheme(JTable table) {
         table.setRowHeight(28);
-        table.setFont(new Font("Arial", Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
+        table.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
         table.setShowGrid(true);
         table.setGridColor(ThemeManager.getTableGridColor());
         table.setBackground(ThemeManager.getCardBackgroundColor());
@@ -236,7 +236,7 @@ public class EditOrderGUI extends JFrame {
         JTableHeader th = table.getTableHeader();
         th.setBackground(ThemeManager.getTableHeaderBackgroundColor());
         th.setForeground(ThemeManager.getTableHeaderForegroundColor());
-        th.setFont(th.getFont().deriveFont(Font.BOLD, 13f));
+        th.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         th.setReorderingAllowed(false);
 
         // Alternating rows + proper selection + theme-safe colors
@@ -278,7 +278,7 @@ public class EditOrderGUI extends JFrame {
     }
 
     private void styleTextField(JTextField field) {
-        field.setFont(field.getFont().deriveFont(13f));
+        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)
@@ -290,7 +290,7 @@ public class EditOrderGUI extends JFrame {
 
     private void addStyledFormRow(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field) {
         JLabel label = new JLabel(labelText);
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 13f));
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         label.setForeground(ThemeManager.getTextPrimaryColor());
         panel.add(label, gbc);
 
@@ -423,7 +423,7 @@ public class EditOrderGUI extends JFrame {
 
         button.setBackground(baseBg);
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(baseBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 18, 10, 18)
