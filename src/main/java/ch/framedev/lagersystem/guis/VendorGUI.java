@@ -7,12 +7,6 @@ import ch.framedev.lagersystem.utils.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.event.PopupMenuEvent;
-import javax.swing.event.PopupMenuListener;
-import javax.swing.plaf.basic.BasicArrowButton;
-import javax.swing.plaf.basic.BasicComboBoxUI;
-import javax.swing.plaf.basic.ComboPopup;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
@@ -259,85 +253,6 @@ public class VendorGUI extends JFrame {
         });
     }
 
-    /**
-     * Proper ComboBox theming: arrow button + popup + editor.
-     * Use this for any JComboBox that looks wrong in your theme.
-     */
-    private void styleComboBox(JComboBox<String> combo) {
-        Color bg     = ThemeManager.getInputBackgroundColor();
-        Color fg     = ThemeManager.getTextPrimaryColor();
-        Color border = ThemeManager.getInputBorderColor();
-        Color selBg  = ThemeManager.getSelectionBackgroundColor();
-        Color selFg  = ThemeManager.getSelectionForegroundColor();
-
-        combo.setBackground(bg);
-        combo.setForeground(fg);
-        combo.setOpaque(true);
-        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        Border b = BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(border, 1),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        );
-        combo.setBorder(b);
-
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(
-                    JList<?> list, Object value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-
-                JLabel c = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                c.setOpaque(true);
-                c.setBackground(isSelected ? selBg : bg);
-                c.setForeground(isSelected ? selFg : fg);
-                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-                return c;
-            }
-        });
-
-        combo.setUI(new BasicComboBoxUI() {
-            @Override
-            protected JButton createArrowButton() {
-                JButton btn = new BasicArrowButton(SwingConstants.SOUTH);
-                btn.setBorder(BorderFactory.createEmptyBorder());
-                btn.setBackground(bg);
-                btn.setForeground(fg);
-                btn.setOpaque(true);
-                btn.setContentAreaFilled(true);
-                btn.setFocusPainted(false);
-                return btn;
-            }
-        });
-
-        if (combo.isEditable()) {
-            Component editorComp = combo.getEditor().getEditorComponent();
-            if (editorComp instanceof JTextField tf) {
-                tf.setBackground(bg);
-                tf.setForeground(fg);
-                tf.setCaretColor(fg);
-                tf.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-            }
-        }
-
-        combo.addPopupMenuListener(new PopupMenuListener() {
-            @Override public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
-                Object child = combo.getUI().getAccessibleChild(combo, 0);
-                if (child instanceof ComboPopup popup) {
-                    JList<?> list = popup.getList();
-                    list.setBackground(bg);
-                    list.setForeground(fg);
-                    list.setSelectionBackground(selBg);
-                    list.setSelectionForeground(selFg);
-                }
-            }
-            @Override public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {}
-            @Override public void popupMenuCanceled(PopupMenuEvent e) {}
-        });
-
-        combo.repaint();
-    }
-
     private void loadVendors() {
         VendorManager vm = VendorManager.getInstance();
         java.util.List<Vendor> vendors = vm.getVendors();
@@ -370,31 +285,7 @@ public class VendorGUI extends JFrame {
         ));
 
         // Header panel with gradient
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
-                Color color1 = ThemeManager.isDarkMode()
-                        ? new Color(30, 58, 95)
-                        : new Color(41, 128, 185);
-                Color color2 = ThemeManager.isDarkMode()
-                        ? new Color(44, 62, 80)
-                        : new Color(52, 152, 219);
-
-                GradientPaint gradient = new GradientPaint(
-                        0, 0, color1,
-                        getWidth(), 0, color2
-                );
-                g2d.setPaint(gradient);
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-                g2d.dispose();
-            }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+        JPanel headerPanel = getHeaderPanel();
 
         // Title with icon
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
@@ -483,7 +374,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.TRUCK + "  Name *"), gbc);
         gbc.gridy = row++;
         gbc.insets = new Insets(2, 8, 16, 8);
-        JTextField idField = createStyledTextField(30);
+        JTextField idField = createStyledTextField();
         contentCard.add(idField, gbc);
 
         // Contact person
@@ -492,7 +383,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.PERSON + "  Kontaktperson"), gbc);
         gbc.gridy = row++;
         gbc.insets = new Insets(2, 8, 16, 8);
-        JTextField contactField = createStyledTextField(30);
+        JTextField contactField = createStyledTextField();
         contentCard.add(contactField, gbc);
 
         // Phone
@@ -501,7 +392,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.PHONE + "  Telefon"), gbc);
         gbc.gridy = row++;
         gbc.insets = new Insets(2, 8, 16, 8);
-        JTextField phoneField = createStyledTextField(30);
+        JTextField phoneField = createStyledTextField();
         contentCard.add(phoneField, gbc);
 
         // Email
@@ -510,7 +401,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.MEMO + "  Email"), gbc);
         gbc.gridy = row++;
         gbc.insets = new Insets(2, 8, 16, 8);
-        JTextField emailField = createStyledTextField(30);
+        JTextField emailField = createStyledTextField();
         contentCard.add(emailField, gbc);
 
         // Address
@@ -519,7 +410,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.BUILDING + "  Adresse"), gbc);
         gbc.gridy = row++;
         gbc.insets = new Insets(2, 8, 16, 8);
-        JTextField addressField = createStyledTextField(30);
+        JTextField addressField = createStyledTextField();
         contentCard.add(addressField, gbc);
 
         // Articles
@@ -528,7 +419,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.PACKAGE + "  Gelieferte Artikel (kommagetrennt)"), gbc);
         gbc.gridy = row;
         gbc.insets = new Insets(2, 8, 8, 8);
-        JTextField articlesField = createStyledTextField(30);
+        JTextField articlesField = createStyledTextField();
         contentCard.add(articlesField, gbc);
 
         mainContainer.add(contentCard, BorderLayout.CENTER);
@@ -645,11 +536,40 @@ public class VendorGUI extends JFrame {
         return holder[0];
     }
 
+    private static JPanel getHeaderPanel() {
+        JPanel headerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+                Color color1 = ThemeManager.isDarkMode()
+                        ? new Color(30, 58, 95)
+                        : new Color(41, 128, 185);
+                Color color2 = ThemeManager.isDarkMode()
+                        ? new Color(44, 62, 80)
+                        : new Color(52, 152, 219);
+
+                GradientPaint gradient = new GradientPaint(
+                        0, 0, color1,
+                        getWidth(), 0, color2
+                );
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.dispose();
+            }
+        };
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+        return headerPanel;
+    }
+
     /**
      * Creates a styled text field for vendor dialogs with blue focus effect
      */
-    private JTextField createStyledTextField(int columns) {
-        JTextField field = new JTextField(columns);
+    private JTextField createStyledTextField() {
+        JTextField field = new JTextField(30);
         field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
@@ -706,31 +626,7 @@ public class VendorGUI extends JFrame {
         ));
 
         // Header panel with gradient
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
-                Color color1 = ThemeManager.isDarkMode()
-                        ? new Color(30, 58, 95)
-                        : new Color(41, 128, 185);
-                Color color2 = ThemeManager.isDarkMode()
-                        ? new Color(44, 62, 80)
-                        : new Color(52, 152, 219);
-
-                GradientPaint gradient = new GradientPaint(
-                        0, 0, color1,
-                        getWidth(), 0, color2
-                );
-                g2d.setPaint(gradient);
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-                g2d.dispose();
-            }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+        JPanel headerPanel = getHeaderPanel();
 
         // Title with icon
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
@@ -810,7 +706,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.TRUCK + "  Name"), gbc);
         gbc.gridy = row++;
         gbc.insets = new Insets(2, 8, 16, 8);
-        JTextField idField = createStyledTextField(30);
+        JTextField idField = createStyledTextField();
         idField.setText(existing[0] == null ? "" : existing[0].toString());
         contentCard.add(idField, gbc);
 
@@ -820,7 +716,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.PERSON + "  Kontaktperson"), gbc);
         gbc.gridy = row++;
         gbc.insets = new Insets(2, 8, 16, 8);
-        JTextField contactField = createStyledTextField(30);
+        JTextField contactField = createStyledTextField();
         contactField.setText(existing[1] == null ? "" : existing[1].toString());
         contentCard.add(contactField, gbc);
 
@@ -830,7 +726,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.PHONE + "  Telefon"), gbc);
         gbc.gridy = row++;
         gbc.insets = new Insets(2, 8, 16, 8);
-        JTextField phoneField = createStyledTextField(30);
+        JTextField phoneField = createStyledTextField();
         phoneField.setText(existing[2] == null ? "" : existing[2].toString());
         contentCard.add(phoneField, gbc);
 
@@ -840,7 +736,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.MEMO + "  Email"), gbc);
         gbc.gridy = row++;
         gbc.insets = new Insets(2, 8, 16, 8);
-        JTextField emailField = createStyledTextField(30);
+        JTextField emailField = createStyledTextField();
         emailField.setText(existing[3] == null ? "" : existing[3].toString());
         contentCard.add(emailField, gbc);
 
@@ -850,7 +746,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.BUILDING + "  Adresse"), gbc);
         gbc.gridy = row++;
         gbc.insets = new Insets(2, 8, 16, 8);
-        JTextField addressField = createStyledTextField(30);
+        JTextField addressField = createStyledTextField();
         addressField.setText(existing[4] == null ? "" : existing[4].toString());
         contentCard.add(addressField, gbc);
 
@@ -860,7 +756,7 @@ public class VendorGUI extends JFrame {
         contentCard.add(createLabel.apply(UnicodeSymbols.PACKAGE + "  Gelieferte Artikel (kommagetrennt)"), gbc);
         gbc.gridy = row;
         gbc.insets = new Insets(2, 8, 8, 8);
-        JTextField articlesField = createStyledTextField(30);
+        JTextField articlesField = createStyledTextField();
         articlesField.setText(existing[5] == null ? "" : existing[5].toString());
         contentCard.add(articlesField, gbc);
 

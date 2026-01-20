@@ -2,6 +2,7 @@ package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
 import java.awt.*;
@@ -181,7 +182,7 @@ public class MainGUI extends JFrame {
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         rightPanel.setOpaque(false);
 
-        JButton settingsButton = new JButton("⚙️ Einstellungen");
+        JButton settingsButton = new JButton(UnicodeSymbols.BETTER_GEAR + " Einstellungen");
         styleHeaderButton(settingsButton);
         settingsButton.addActionListener(e -> {
             SettingsGUI settingsGUI = new SettingsGUI();

@@ -19,6 +19,9 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicComboBoxUI;
+import javax.swing.plaf.basic.BasicComboPopup;
+import javax.swing.plaf.basic.ComboPopup;
 import javax.swing.table.*;
 import javax.swing.text.NumberFormatter;
 import java.awt.*;
@@ -100,11 +103,11 @@ public class ArticleGUI extends JFrame {
         headerPanel.setLayout(new GridBagLayout());
         headerPanel.setPreferredSize(new Dimension(760, 64));
 
-        JLabel title = new JLabel("Artikel Verwaltung");
+        /*JLabel title = new JLabel("Artikel Verwaltung");
         title.setFont(SettingsGUI.getFontByName(Font.BOLD, 24));
         title.setForeground(ThemeManager.getTextPrimaryColor());
         headerPanel.add(title);
-        headerWrapper.add(headerPanel);
+        headerWrapper.add(headerPanel);*/
 
         // =========================
         // Toolbar
@@ -3434,7 +3437,7 @@ public class ArticleGUI extends JFrame {
         categoryFilter.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         // Apply theme-aware styling
-        styleCategoryComboBox(categoryFilter);
+        styleComboBox(categoryFilter);
 
         // Assemble panel
         categoryPanel.add(categoryLabel);
@@ -3447,83 +3450,93 @@ public class ArticleGUI extends JFrame {
      * Applies consistent theme-aware styling to the category combobox
      * Handles background, foreground, editor, popup list styling, and hover effects
      */
-    private void styleCategoryComboBox(JComboBox<String> comboBox) {
-        // Get theme colors
+    private void styleComboBox(JComboBox<String> combo) {
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
         Color border = ThemeManager.getInputBorderColor();
-        Color focusBorder = ThemeManager.getInputFocusBorderColor();
         Color selBg = ThemeManager.getSelectionBackgroundColor();
         Color selFg = ThemeManager.getSelectionForegroundColor();
+        Color surface = ThemeManager.getSurfaceColor();
 
-        // Style the combobox itself
-        comboBox.setBackground(bg);
-        comboBox.setForeground(fg);
-        comboBox.setOpaque(true);
-        comboBox.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
-        comboBox.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(border, 1, true),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        combo.setBackground(bg);
+        combo.setForeground(fg);
+        combo.setOpaque(true);
+        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        combo.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(border, 1),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
         ));
 
-        // Style the editor component
-        comboBox.setEditable(true);
-        Component editorComp = comboBox.getEditor().getEditorComponent();
-        if (editorComp instanceof JTextField tf) {
-            tf.setBorder(null);
-            tf.setBackground(bg);
-            tf.setForeground(fg);
-            tf.setCaretColor(fg);
-            tf.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
-        }
-
-        // Style the popup list with custom renderer
-        comboBox.setRenderer(new DefaultListCellRenderer() {
+        combo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(
                     JList<?> list, Object value, int index,
                     boolean isSelected, boolean cellHasFocus) {
 
-                JLabel label = (JLabel) super.getListCellRendererComponent(
-                        list, value, index, isSelected, cellHasFocus);
+                JLabel c = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
 
-                // Apply font
-                label.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+                // enforce popup list colors
+                list.setBackground(bg);
+                list.setForeground(fg);
+                list.setSelectionBackground(selBg);
+                list.setSelectionForeground(selFg);
 
-                // Apply selection or normal colors
+                c.setOpaque(true);
+                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+
                 if (isSelected) {
-                    label.setBackground(selBg);
-                    label.setForeground(selFg);
+                    c.setBackground(selBg);
+                    c.setForeground(selFg);
                 } else {
-                    label.setBackground(bg);
-                    label.setForeground(fg);
+                    c.setBackground(bg);
+                    c.setForeground(fg);
                 }
-
-                // Add padding for better appearance
-                label.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-
-                return label;
+                return c;
             }
         });
 
-        // Add focus listener for border highlight
-        comboBox.addFocusListener(new FocusAdapter() {
+        // Theme arrow button + popup border (reliable across LAFs)
+        combo.setUI(new BasicComboBoxUI() {
             @Override
-            public void focusGained(FocusEvent e) {
-                comboBox.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(focusBorder, 2, true),
-                        BorderFactory.createEmptyBorder(5, 9, 5, 9)
-                ));
+            protected JButton createArrowButton() {
+                JButton b = new JButton(UnicodeSymbols.ARROW_DOWN);
+                b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+                b.setFocusPainted(false);
+                b.setContentAreaFilled(true);
+                b.setOpaque(true);
+                b.setBackground(bg);
+                b.setForeground(fg);
+                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                b.addMouseListener(new MouseAdapter() {
+                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(surface); }
+                    @Override public void mouseExited(MouseEvent e)  { b.setBackground(bg); }
+                });
+                return b;
             }
 
             @Override
-            public void focusLost(FocusEvent e) {
-                comboBox.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(border, 1, true),
-                        BorderFactory.createEmptyBorder(6, 10, 6, 10)
-                ));
+            protected ComboPopup createPopup() {
+                ComboPopup popup = super.createPopup();
+                if (popup instanceof BasicComboPopup basic) {
+                    basic.setBorder(BorderFactory.createLineBorder(border, 1));
+                    basic.getList().setBackground(bg);
+                    basic.getList().setForeground(fg);
+                    basic.getList().setSelectionBackground(selBg);
+                    basic.getList().setSelectionForeground(selFg);
+                }
+                return popup;
             }
         });
+
+        if (combo.isEditable()) {
+            Component editorComp = combo.getEditor().getEditorComponent();
+            if (editorComp instanceof JTextField tf) {
+                tf.setBackground(bg);
+                tf.setForeground(fg);
+                tf.setCaretColor(fg);
+                tf.setBorder(null);
+            }
+        }
     }
 
     /**
