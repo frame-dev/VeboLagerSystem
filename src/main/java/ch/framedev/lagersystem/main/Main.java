@@ -46,7 +46,7 @@ public class Main {
             printStartupInfo();
             initializeApplication();
 
-            if (getBooleanSetting("load-from-files")) {
+            if (Boolean.parseBoolean(settings.getProperty("load-from-files"))) {
                 // Import initial data
                 importInitialData();
                 // Initialize default user
@@ -94,43 +94,12 @@ public class Main {
     }
 
     /**
-     * Print system information (Java version, vendor, OS, memory, architecture)
+     * Print system information (Java version, vendor, OS)
      */
     private static void printSystemInfo() {
-        // Java Information
         System.out.println("Java Version: " + System.getProperty("java.version"));
         System.out.println("Java Vendor: " + System.getProperty("java.vendor"));
-        System.out.println("Java Home: " + System.getProperty("java.home"));
-        System.out.println("Java Runtime: " + System.getProperty("java.runtime.name") + " " +
-                          System.getProperty("java.runtime.version"));
-
-        // Operating System
         System.out.println("OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version"));
-        System.out.println("OS Architecture: " + System.getProperty("os.arch"));
-
-        // System Architecture
-        System.out.println("Available Processors: " + Runtime.getRuntime().availableProcessors());
-
-        // Memory Information
-        Runtime runtime = Runtime.getRuntime();
-        long maxMemory = runtime.maxMemory() / (1024 * 1024); // Convert to MB
-        long totalMemory = runtime.totalMemory() / (1024 * 1024);
-        long freeMemory = runtime.freeMemory() / (1024 * 1024);
-        long usedMemory = totalMemory - freeMemory;
-
-        System.out.println("Max Memory: " + maxMemory + " MB");
-        System.out.println("Total Memory: " + totalMemory + " MB");
-        System.out.println("Used Memory: " + usedMemory + " MB");
-        System.out.println("Free Memory: " + freeMemory + " MB");
-
-        // User and Directory Information
-        System.out.println("User Name: " + System.getProperty("user.name"));
-        System.out.println("User Home: " + System.getProperty("user.home"));
-        System.out.println("Working Directory: " + System.getProperty("user.dir"));
-        System.out.println("File Separator: '" + System.getProperty("file.separator") + "'");
-
-        // Application Data Directory
-        System.out.println("App Data Directory: " + getAppDataDir().getAbsolutePath());
     }
 
     /**
@@ -459,9 +428,9 @@ public class Main {
     private static SchedulerConfig loadSchedulerConfig() {
         return new SchedulerConfig(
                 getIntSetting("stock_check_interval", 30),
-                getBooleanSetting("enable_auto_stock_check"),
-                getBooleanSetting("enable_hourly_warnings"),
-                getBooleanSetting("enable_automatic_import_qrcode"),
+                getBooleanSetting("enable_auto_stock_check", true),
+                getBooleanSetting("enable_hourly_warnings", true),
+                getBooleanSetting("enable_automatic_import_qrcode", true),
                 getIntSetting("qrcode_import_interval", 10)
         );
     }
@@ -477,9 +446,9 @@ public class Main {
     /**
      * Get boolean setting with default value
      */
-    private static boolean getBooleanSetting(String key) {
+    private static boolean getBooleanSetting(String key, boolean defaultValue) {
         String value = settings.getProperty(key);
-        return value == null || Boolean.parseBoolean(value);
+        return value == null ? defaultValue : Boolean.parseBoolean(value);
     }
 
     /**

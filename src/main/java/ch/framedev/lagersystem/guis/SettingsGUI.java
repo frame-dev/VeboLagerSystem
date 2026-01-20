@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.*;
 import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -59,7 +60,7 @@ public class SettingsGUI extends JFrame {
         headerPanel.setPreferredSize(new Dimension(0, 90));
         headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
 
-        JLabel titleLabel = new JLabel("⚙️  Einstellungen");
+        JLabel titleLabel = new JLabel(UnicodeSymbols.BETTER_GEAR + "  Einstellungen");
         titleLabel.setFont(getFontByName(Font.BOLD, 24));
         titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
 
@@ -99,7 +100,7 @@ public class SettingsGUI extends JFrame {
         JScrollPane systemScroll = createScrollablePanel(systemPanel);
 
         // Stock Check Section
-        JPanel stockCheckSection = createSectionPanel("📦 Lagerbestandsprüfung",
+        JPanel stockCheckSection = createSectionPanel(UnicodeSymbols.PACKAGE + " Lagerbestandsprüfung",
                 "Automatische Überprüfung des Lagerbestands und Warnerstellung");
 
         enableAutoStockCheckCheckbox = new JCheckBox("Automatische Lagerbestandsprüfung aktivieren");
@@ -118,7 +119,7 @@ public class SettingsGUI extends JFrame {
         systemPanel.add(Box.createVerticalStrut(25));
 
         // === SECTION 2: Warnungen ===
-        JPanel warningSection = createSectionPanel("⚠️ Warnungsanzeige",
+        JPanel warningSection = createSectionPanel(UnicodeSymbols.WARNING + " Warnungsanzeige",
                 "Konfiguration der automatischen Warnanzeige");
 
         enableWarningDisplayCheckbox = new JCheckBox("Automatische Anzeige ungelesener Warnungen aktivieren");
@@ -142,7 +143,7 @@ public class SettingsGUI extends JFrame {
         systemPanel.add(Box.createVerticalStrut(25));
 
         // QR-Code Section
-        JPanel qrCodeOptionsPanel = createSectionPanel("📱 QR-Code Import",
+        JPanel qrCodeOptionsPanel = createSectionPanel(UnicodeSymbols.PHONE + " QR-Code Import",
                 "Automatischer Import von QR-Code Scans");
 
         automaticImportCheckBox = new JCheckBox("Automatisches Importieren von QR-Codes aktivieren");
@@ -163,7 +164,7 @@ public class SettingsGUI extends JFrame {
         systemPanel.add(Box.createVerticalStrut(25));
 
 
-        JPanel fontSettingsPanel = createSectionPanel("🔤 Schriftart Einstellungen",
+        JPanel fontSettingsPanel = createSectionPanel(UnicodeSymbols.ABC + " Schriftart Einstellungen",
                 "Passen Sie die Schriftart und -größe der Anwendung an");
 
         JLabel fontTableInfoLabel = new JLabel(
@@ -217,7 +218,7 @@ public class SettingsGUI extends JFrame {
         systemPanel.add(Box.createVerticalStrut(25));
 
         // Dark Mode / Theme Section
-        JPanel themeSection = createSectionPanel("🎨 Design & Darstellung",
+        JPanel themeSection = createSectionPanel(UnicodeSymbols.COLOR_PALETTE + " Design & Darstellung",
                 "Passen Sie das Erscheinungsbild der Anwendung an");
 
         darkModeCheckbox = new JCheckBox("Dark Mode aktivieren");
@@ -268,14 +269,14 @@ public class SettingsGUI extends JFrame {
         systemPanel.add(Box.createVerticalGlue());
 
         // Add system panel to tabbed pane
-        tabbedPane.addTab("🔧 System", systemScroll);
+        tabbedPane.addTab(UnicodeSymbols.WRENCH + " System", systemScroll);
 
         // === CATEGORY 2: Verbindung ===
         JPanel connectionPanel = createCategoryPanel();
         JScrollPane connectionScroll = createScrollablePanel(connectionPanel);
 
         // Server-Einstellungen
-        JPanel serverSection = createSectionPanel("🌐 Server-Verbindung",
+        JPanel serverSection = createSectionPanel(UnicodeSymbols.GLOBE + " Server-Verbindung",
                 "URL des QR-Code Scan-Servers");
 
         JPanel serverUrlPanel = new JPanel(new BorderLayout(0, 10));
@@ -309,13 +310,13 @@ public class SettingsGUI extends JFrame {
         connectionPanel.add(Box.createVerticalGlue());
 
         // Add connection panel to tabbed pane
-        tabbedPane.addTab("🌐 Verbindung", connectionScroll);
+        tabbedPane.addTab(UnicodeSymbols.GLOBE + " Verbindung", connectionScroll);
 
         // === CATEGORY 3: Datenbank ===
         JPanel databasePanel = createCategoryPanel();
         JScrollPane databaseScroll = createScrollablePanel(databasePanel);
         // Datenbank-Bereinigung Section
-        JPanel databaseSection = createSectionPanel("💾 Datenbank-Verwaltung",
+        JPanel databaseSection = createSectionPanel(UnicodeSymbols.FLOPPY + " Datenbank-Verwaltung",
                 "Datenbank bereinigen und Tabellen verwalten");
         JLabel databaseClearLabel = getDatabaseClearLabel();
 
@@ -324,7 +325,7 @@ public class SettingsGUI extends JFrame {
         databaseButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         databaseButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
 
-        JButton clearDatabaseButton = createStyledButton("🗑️ Datenbank Bereinigen", new Color(220, 53, 69));
+        JButton clearDatabaseButton = createStyledButton(UnicodeSymbols.TRASH + " Datenbank Bereinigen", new Color(220, 53, 69));
         clearDatabaseButton.addActionListener(e -> clearDatabase());
 
         databaseButtonPanel.add(clearDatabaseButton);
@@ -347,7 +348,7 @@ public class SettingsGUI extends JFrame {
         databaseSection.add(Box.createVerticalStrut(15));
         databaseSection.add(tableSelectionPanel);
 
-        JButton deleteSelectedTableButton = createStyledButton("🗑️ Ausgewählte Tabelle Löschen", new Color(230, 126, 34));
+        JButton deleteSelectedTableButton = createStyledButton(UnicodeSymbols.TRASH + " Ausgewählte Tabelle Löschen", new Color(230, 126, 34));
         deleteSelectedTableButton.addActionListener(e -> {
             String selectedTable = (String) tableComboBox.getSelectedItem();
             if (selectedTable == null || selectedTable.trim().isEmpty()) {
@@ -399,13 +400,13 @@ public class SettingsGUI extends JFrame {
         databasePanel.add(Box.createVerticalGlue());
 
         // Add database panel to tabbed pane
-        tabbedPane.addTab("💾 Datenbank", databaseScroll);
+        tabbedPane.addTab(UnicodeSymbols.FLOPPY + " Datenbank", databaseScroll);
 
         // === CATEGORY 4: Import & Export ===
         JPanel importExportPanel = createCategoryPanel();
         JScrollPane importExportScroll = createScrollablePanel(importExportPanel);
 
-        JPanel importExportSection = createSectionPanel("⬆️⬇️ Import & Export",
+        JPanel importExportSection = createSectionPanel(UnicodeSymbols.ARROW_UP + UnicodeSymbols.ARROW_DOWN + "️ Import & Export",
                 "Datenimport und -export Funktionen");
         importExportSection.add(Box.createVerticalStrut(15));
 
@@ -417,7 +418,7 @@ public class SettingsGUI extends JFrame {
                 "Stellen Sie sicher, dass die CSV-Dateien das richtige Format haben.</div></html>"));
         importExportSection.add(Box.createVerticalStrut(10));
 
-        JButton importButton = createStyledButton("⬆️ Datenbank Importieren", new Color(39, 174, 96));
+        JButton importButton = createStyledButton(UnicodeSymbols.ARROW_UP + " Datenbank Importieren", new Color(39, 174, 96));
         importButton.addActionListener(e -> importFromCsv());
         importExportSection.add(importButton);
         importExportSection.add(Box.createVerticalStrut(20));
@@ -429,7 +430,7 @@ public class SettingsGUI extends JFrame {
         importExportSection.add(createInfoLabel("<html><div style='width:650px;'>" +
                 "Exportieren Sie Ihre Datenbankinhalte in CSV-Dateien zur Sicherung oder Weiterverarbeitung.</div></html>"));
         importExportSection.add(Box.createVerticalStrut(10));
-        JButton exportButton = createStyledButton("⬇️ Datenbank Exportieren", new Color(52, 152, 219));
+        JButton exportButton = createStyledButton(UnicodeSymbols.ARROW_DOWN + " Datenbank Exportieren", new Color(52, 152, 219));
         exportButton.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(this,
                     "<html><b>Datenbank nach CSV exportieren?</b><br/><br/>" +
@@ -471,13 +472,13 @@ public class SettingsGUI extends JFrame {
         importExportPanel.add(Box.createVerticalGlue());
 
         // Add import/export panel to tabbed pane
-        tabbedPane.addTab("📤 Import/Export", importExportScroll);
+        tabbedPane.addTab(UnicodeSymbols.DOWNLOAD + " Import/Export", importExportScroll);
 
         // === CATEGORY 5: About ===
         JPanel aboutPanel = createCategoryPanel();
         JScrollPane aboutScroll = createScrollablePanel(aboutPanel);
 
-        JPanel aboutSection = createSectionPanel("ℹ️ Über VEBO Lagersystem",
+        JPanel aboutSection = createSectionPanel(UnicodeSymbols.INFO + " Über VEBO Lagersystem",
                 "Informationen über die Anwendung");
 
         // Application Info
@@ -568,7 +569,7 @@ public class SettingsGUI extends JFrame {
         developerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         developerPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
 
-        developerPanel.add(createStyledLabel("👨‍💻 Entwickler:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+        developerPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " Entwickler:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
         developerPanel.add(Box.createVerticalStrut(8));
         developerPanel.add(createStyledLabel("Darryl Huber", 13, Font.PLAIN, ThemeManager.getTextPrimaryColor()));
         developerPanel.add(Box.createVerticalStrut(5));
@@ -584,7 +585,7 @@ public class SettingsGUI extends JFrame {
         systemInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         systemInfoPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
 
-        systemInfoPanel.add(createStyledLabel("🖥️ System-Information:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+        systemInfoPanel.add(createStyledLabel(UnicodeSymbols.MONITOR + " System-Information:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
         systemInfoPanel.add(Box.createVerticalStrut(8));
         systemInfoPanel.add(createStyledLabel("Java Version: " + System.getProperty("java.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
         systemInfoPanel.add(Box.createVerticalStrut(5));
@@ -618,7 +619,7 @@ public class SettingsGUI extends JFrame {
         aboutPanel.add(Box.createVerticalGlue());
 
         // Add about panel to tabbed pane
-        tabbedPane.addTab("ℹ️ Über", aboutScroll);
+        tabbedPane.addTab(UnicodeSymbols.INFO + " Über", aboutScroll);
 
         // Add tabbed pane to content wrapper
         contentWrapper.add(tabbedPane, BorderLayout.CENTER);
@@ -633,7 +634,7 @@ public class SettingsGUI extends JFrame {
         JButton cancelButton = createStyledButton("Abbrechen", new Color(149, 165, 166));
         cancelButton.addActionListener(e -> dispose());
 
-        JButton saveButton = createStyledButton("💾 Speichern", new Color(46, 204, 113));
+        JButton saveButton = createStyledButton(UnicodeSymbols.FLOPPY + " Speichern", new Color(46, 204, 113));
         saveButton.addActionListener(e -> saveSettings());
 
         buttonPanel.add(cancelButton);
@@ -1222,7 +1223,7 @@ public class SettingsGUI extends JFrame {
     private void clearDatabase() {
         // First confirmation
         int firstConfirm = JOptionPane.showConfirmDialog(this,
-                "<html><b>⚠️ WARNUNG: Datenbank löschen</b><br/><br/>" +
+                "<html><b>⚠ WARNUNG: Datenbank löschen</b><br/><br/>" +
                         "Möchten Sie wirklich <b>ALLE DATEN</b> aus der Datenbank löschen?<br/><br/>" +
                         "Dies umfasst:<br/>" +
                         "• Alle Artikel<br/>" +
@@ -1516,8 +1517,8 @@ public class SettingsGUI extends JFrame {
 
             JOptionPane.showMessageDialog(null,
                     String.format("<html><b>Artikel-Import abgeschlossen</b><br/><br/>" +
-                            "✅ Importiert/Aktualisiert: %d<br/>" +
-                            (errors > 0 ? "❌ Fehler: %d<br/>" : "") +
+                            UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
+                            (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
                             "</html>", imported, errors),
                     "Import Ergebnis",
                     JOptionPane.INFORMATION_MESSAGE,
@@ -1605,8 +1606,8 @@ public class SettingsGUI extends JFrame {
 
             JOptionPane.showMessageDialog(null,
                     String.format("<html><b>Lieferanten-Import abgeschlossen</b><br/><br/>" +
-                            "✅ Importiert/Aktualisiert: %d<br/>" +
-                            (errors > 0 ? "❌ Fehler: %d<br/>" : "") +
+                            UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
+                            (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
                             "</html>", imported, errors),
                     "Import Ergebnis",
                     JOptionPane.INFORMATION_MESSAGE,
@@ -1674,8 +1675,8 @@ public class SettingsGUI extends JFrame {
 
             JOptionPane.showMessageDialog(null,
                     String.format("<html><b>Kunden-Import abgeschlossen</b><br/><br/>" +
-                            "✅ Importiert/Aktualisiert: %d<br/>" +
-                            (errors > 0 ? "❌ Fehler: %d<br/>" : "") +
+                            UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
+                            (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
                             "</html>", imported, errors),
                     "Import Ergebnis",
                     JOptionPane.INFORMATION_MESSAGE,

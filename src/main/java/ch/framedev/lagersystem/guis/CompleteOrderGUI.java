@@ -9,6 +9,7 @@ import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -60,7 +61,7 @@ public class CompleteOrderGUI extends JFrame {
         iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 32));
         iconLabel.setForeground(new Color(255, 255, 255, 180));
 
-        JLabel title = new JLabel("  Bestellung Abschließen");
+        JLabel title = new JLabel(UnicodeSymbols.CHECKMARK + " Bestellung Abschließen");
         title.setFont(SettingsGUI.getFontByName(Font.BOLD, 26));
         title.setForeground(ThemeManager.getHeaderForegroundColor());
 
@@ -88,7 +89,7 @@ public class CompleteOrderGUI extends JFrame {
         leftCard.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         leftCard.setLayout(new BorderLayout(8, 8));
 
-        JLabel listTitle = new JLabel("📋 Offene Bestellungen");
+        JLabel listTitle = new JLabel(UnicodeSymbols.CLIPBOARD + " Offene Bestellungen");
         listTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         listTitle.setForeground(text);
         leftCard.add(listTitle, BorderLayout.NORTH);
@@ -109,7 +110,7 @@ public class CompleteOrderGUI extends JFrame {
         rightCard.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         rightCard.setLayout(new BorderLayout(10, 10));
 
-        JLabel detailsTitle = new JLabel("📄 Bestelldetails");
+        JLabel detailsTitle = new JLabel(UnicodeSymbols.EMPTY_PAGE + " Bestelldetails");
         detailsTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         detailsTitle.setForeground(text);
         rightCard.add(detailsTitle, BorderLayout.NORTH);
@@ -123,7 +124,7 @@ public class CompleteOrderGUI extends JFrame {
                 BorderFactory.createEmptyBorder(15, 15, 15, 15)
         ));
 
-        statusIconLabel = new JLabel("ℹ️", SwingConstants.CENTER);
+        statusIconLabel = new JLabel(UnicodeSymbols.INFO, SwingConstants.CENTER);
         statusIconLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 48));
 
         JLabel placeholderText = new JLabel("<html><div style='text-align:center;'>" +
@@ -168,10 +169,10 @@ public class CompleteOrderGUI extends JFrame {
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 0));
         buttons.setOpaque(false);
 
-        refreshButton = createThemeButton("🔄 Aktualisieren", ThemeManager.getSecondaryColor());
-        completeButton = createThemeButton("✓ Abschließen", ThemeManager.getSuccessColor());
+        refreshButton = createThemeButton(UnicodeSymbols.UPDATE + " Aktualisieren", ThemeManager.getSecondaryColor());
+        completeButton = createThemeButton(UnicodeSymbols.CHECKMARK + " Abschließen", ThemeManager.getSuccessColor());
         completeButton.setEnabled(false);
-        closeButton = createThemeButton("✕ Schließen", ThemeManager.getDangerColor());
+        closeButton = createThemeButton(UnicodeSymbols.CLOSE + " Schließen", ThemeManager.getDangerColor());
 
         buttons.add(refreshButton);
         buttons.add(completeButton);
@@ -215,7 +216,7 @@ public class CompleteOrderGUI extends JFrame {
         detailsPanel.removeAll();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
 
-        statusIconLabel.setText("ℹ️");
+        statusIconLabel.setText(UnicodeSymbols.INFO);
         statusIconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel placeholderText = new JLabel("<html><div style='text-align:center;'>" +
@@ -260,7 +261,7 @@ public class CompleteOrderGUI extends JFrame {
         detailsPanel.add(sep, gbc);
 
         gbc.gridy++;
-        JLabel articlesTitle = new JLabel("📦 Bestellte Artikel:");
+        JLabel articlesTitle = new JLabel(UnicodeSymbols.PACKAGE + " Bestellte Artikel:");
         articlesTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         articlesTitle.setForeground(ThemeManager.getTextPrimaryColor());
         detailsPanel.add(articlesTitle, gbc);
@@ -664,18 +665,13 @@ public class CompleteOrderGUI extends JFrame {
         return s == null ? "" : s;
     }
 
-    private static class OrderListItem {
-        final Order order;
-
-        OrderListItem(Order order) {
-            this.order = order;
-        }
+    private record OrderListItem(Order order) {
 
         @Override
-        public String toString() {
-            return order.getOrderId() + " - " + order.getReceiverName();
+            public String toString() {
+                return order.getOrderId() + " - " + order.getReceiverName();
+            }
         }
-    }
 
     private static class OrderListCellRenderer extends JPanel implements ListCellRenderer<OrderListItem> {
         private final JLabel idLabel;
@@ -729,10 +725,10 @@ public class CompleteOrderGUI extends JFrame {
 
             Order order = value.order;
 
-            idLabel.setText("📋 " + safe(order.getOrderId()));
+            idLabel.setText(UnicodeSymbols.INFO + " " + safe(order.getOrderId()));
             nameLabel.setText("Empfänger: " + safe(order.getReceiverName()));
-            deptLabel.setText("🏢 " + safe(order.getDepartment()));
-            dateLabel.setText("📅 " + safe(order.getOrderDate()));
+            deptLabel.setText(UnicodeSymbols.DEPARTMENT + " " + safe(order.getDepartment()));
+            dateLabel.setText(UnicodeSymbols.CALENDAR + " " + safe(order.getOrderDate()));
 
             Color bg = ThemeManager.getCardBackgroundColor();
             Color fg = ThemeManager.getTextPrimaryColor();

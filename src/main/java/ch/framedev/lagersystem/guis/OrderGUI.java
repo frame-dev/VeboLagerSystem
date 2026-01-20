@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -68,11 +69,11 @@ public class OrderGUI extends JFrame {
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 12));
         toolbar.setBackground(ThemeManager.getBackgroundColor());
 
-        JButton newOrderButton = createRoundedButton("Neue Bestellung erstellen");
-        JButton editOrderButton = createRoundedButton("Bestellung bearbeiten");
-        JButton deleteOrderButton = createRoundedButton("Bestellung löschen");
-        JButton completeOrderButton = createRoundedButton("Bestellung abschließen");
-        JButton refreshButton = createRoundedButton("🔄 Aktualisieren");
+        JButton newOrderButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Neue Bestellung erstellen");
+        JButton editOrderButton = createRoundedButton(UnicodeSymbols.BETTER_EDIT + " Bestellung bearbeiten");
+        JButton deleteOrderButton = createRoundedButton(UnicodeSymbols.TRASH + " Bestellung löschen");
+        JButton completeOrderButton = createRoundedButton(UnicodeSymbols.CHECKMARK + " Bestellung abschließen");
+        JButton refreshButton = createRoundedButton(UnicodeSymbols.REFRESH + " Aktualisieren");
 
         JComboBox<String> filterComboBox = new JComboBox<>(new String[]{
                 "Alle Bestellungen", "Abgeschlossene Bestellungen", "Offene Bestellungen"
@@ -129,8 +130,8 @@ public class OrderGUI extends JFrame {
         JTextField searchField = new JTextField(28);
         styleTextField(searchField);
 
-        JButton searchBtn = createRoundedButton("Suchen");
-        JButton clearBtn = createRoundedButton("Leeren");
+        JButton searchBtn = createRoundedButton(UnicodeSymbols.SEARCH + " Suchen");
+        JButton clearBtn = createRoundedButton(UnicodeSymbols.CLEAR + " Leeren");
 
         searchPanel.add(searchLabel);
         searchPanel.add(searchField);
@@ -289,9 +290,9 @@ public class OrderGUI extends JFrame {
 
     private void setupTableInteractions() {
         JPopupMenu popup = new JPopupMenu();
-        JMenuItem edit = new JMenuItem("Bearbeiten");
-        JMenuItem del = new JMenuItem("Löschen");
-        JMenuItem complete = new JMenuItem("Abschließen");
+        JMenuItem edit = new JMenuItem(UnicodeSymbols.BETTER_EDIT + " Bearbeiten");
+        JMenuItem del = new JMenuItem(UnicodeSymbols.TRASH + " Löschen");
+        JMenuItem complete = new JMenuItem(UnicodeSymbols.CHECKMARK + " Abschließen");
         popup.add(edit);
         popup.add(del);
         popup.add(complete);
@@ -664,7 +665,7 @@ public class OrderGUI extends JFrame {
         combo.setUI(new BasicComboBoxUI() {
             @Override
             protected JButton createArrowButton() {
-                JButton b = new JButton("▾");
+                JButton b = new JButton(UnicodeSymbols.ARROW_DOWN);
                 b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
                 b.setFocusPainted(false);
                 b.setContentAreaFilled(true);
@@ -742,10 +743,10 @@ public class OrderGUI extends JFrame {
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
         btnPanel.setOpaque(false);
 
-        JButton exportBtn = createRoundedButton("PDF Exportieren");
+        JButton exportBtn = createRoundedButton(UnicodeSymbols.DOWNLOAD + " PDF Exportieren");
         exportBtn.addActionListener(ev -> createPDFExport(order));
 
-        JButton closeBtn = createRoundedButton("Schließen");
+        JButton closeBtn = createRoundedButton(UnicodeSymbols.CLOSE + " Schließen");
         closeBtn.addActionListener(ev -> detailsDialog.dispose());
 
         btnPanel.add(exportBtn);

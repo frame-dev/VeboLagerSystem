@@ -8,6 +8,7 @@ import ch.framedev.lagersystem.managers.WarningManager;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -53,7 +54,7 @@ public class ArticleGUI extends JFrame {
     private final JLabel countLabel;
 
     // Category management
-    private final JComboBox<String> categoryFilter;
+    private JComboBox<String> categoryFilter;
     private Map<String, CategoryRange> categories; // category name -> range
 
     // Inner class to hold category range data
@@ -111,73 +112,12 @@ public class ArticleGUI extends JFrame {
         JPanel toolbarWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 18));
         toolbarWrapper.setBackground(ThemeManager.getSurfaceColor());
 
-        // Category filter
-        JPanel categoryPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-        categoryPanel.setOpaque(false);
-
-        JLabel categoryLabel = new JLabel("📁 Kategorie:");
-        categoryLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 16));
-        categoryLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
-        categoryFilter = new JComboBox<>();
-        categoryFilter.addItem("Alle Kategorien");
-        if (categories != null) {
-            categories.keySet().stream().sorted().forEach(categoryFilter::addItem);
-        }
-        categoryFilter.setPreferredSize(new Dimension(200, 35));
-        categoryFilter.addActionListener(e -> filterByCategory());
-
-// Base colors
-        Color bg = ThemeManager.getInputBackgroundColor();
-        Color fg = ThemeManager.getTextPrimaryColor();
-        Color borderInput = ThemeManager.getInputBorderColor();
-        Color selBg = ThemeManager.getSelectionBackgroundColor();
-        Color selFg = ThemeManager.getSelectionForegroundColor();
-
-// Combo itself
-        categoryFilter.setBackground(bg);
-        categoryFilter.setForeground(fg);
-        categoryFilter.setOpaque(true);
-        categoryFilter.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(borderInput, 1),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
-
-// Editor (when editable or LAF uses one)
-        categoryFilter.setEditable(true);
-        Component editorComp = categoryFilter.getEditor().getEditorComponent();
-        if (editorComp instanceof JTextField tf) {
-            tf.setBorder(null);
-            tf.setBackground(bg);
-            tf.setForeground(fg);
-            tf.setCaretColor(fg);
-        }
-
-// Popup list (THIS is what most people forget)
-        categoryFilter.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(
-                    JList<?> list, Object value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-                JLabel c = (JLabel) super.getListCellRendererComponent(
-                        list, value, index, isSelected, cellHasFocus);
-                if (isSelected) {
-                    c.setBackground(selBg);
-                    c.setForeground(selFg);
-                } else {
-                    c.setBackground(bg);
-                    c.setForeground(fg);
-                }
-                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-                return c;
-            }
-        });
-        categoryPanel.add(categoryLabel);
-        categoryPanel.add(categoryFilter);
+        // Category filter section
+        JPanel categoryPanel = createCategoryFilterPanel();
         toolbarWrapper.add(categoryPanel);
 
         // Add Article button
-        JButton addArticleButton = createRoundedButton("Artikel hinzufügen");
+        JButton addArticleButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Artikel hinzufügen");
         addArticleButton.addActionListener(e -> {
             Object[] row = showAddArticleDialog();
             if (row != null) {
@@ -206,7 +146,7 @@ public class ArticleGUI extends JFrame {
         });
 
         // Edit Article button
-        JButton editArticleButton = createRoundedButton("Artikel bearbeiten");
+        JButton editArticleButton = createRoundedButton(UnicodeSymbols.BETTER_EDIT + " Artikel bearbeiten");
         editArticleButton.addActionListener(e -> {
             int selectedRow = articleTable.getSelectedRow();
             if (selectedRow == -1) {
@@ -262,17 +202,22 @@ public class ArticleGUI extends JFrame {
         });
 
         // Delete Article button
-        JButton deleteArticleButton = createRoundedButton("Artikel löschen");
+        JButton deleteArticleButton = createRoundedButton(UnicodeSymbols.TRASH + " Artikel löschen");
         deleteArticleButton.addActionListener(e -> deleteSelectedArticle());
 
         // Retrieve QR-Code Data button
-        JButton retrieveQrCodeDataButton = createRoundedButton("QR-Code Daten abrufen");
+        JButton retrieveQrCodeDataButton = createRoundedButton(UnicodeSymbols.PHONE + " QR-Code Daten abrufen");
         retrieveQrCodeDataButton.addActionListener(e -> showQRCodeDataDialog());
+
+        // Show Details button
+        JButton showDetailsButton = createRoundedButton(UnicodeSymbols.CHART + " Lager Details");
+        showDetailsButton.addActionListener(e -> showDetails());
 
         toolbarWrapper.add(addArticleButton);
         toolbarWrapper.add(editArticleButton);
         toolbarWrapper.add(deleteArticleButton);
         toolbarWrapper.add(retrieveQrCodeDataButton);
+        toolbarWrapper.add(showDetailsButton);
 
         // Top area: header + toolbar stacked
         JPanel topPanel = new JPanel(new BorderLayout());
@@ -333,8 +278,8 @@ public class ArticleGUI extends JFrame {
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
 
-        JButton searchBtn = new JButton("Suchen");
-        JButton clearBtn = new JButton("Leeren");
+        JButton searchBtn = new JButton(UnicodeSymbols.SEARCH + " Suchen");
+        JButton clearBtn = new JButton(UnicodeSymbols.BROOM + " Leeren");
 
 // base colors
         Color normalFg = ThemeManager.getTextPrimaryColor();
@@ -412,7 +357,7 @@ public class ArticleGUI extends JFrame {
         searchField.setForeground(ThemeManager.getTextPrimaryColor());
         searchField.setBackground(ThemeManager.getInputBackgroundColor());
 
-        JButton exportTableAsPdfBtn = createRoundedButton("Tabelle als PDF exportieren");
+        JButton exportTableAsPdfBtn = createRoundedButton(UnicodeSymbols.DOWNLOAD + " Tabelle als PDF exportieren");
         exportTableAsPdfBtn.addActionListener(e -> exportTableAsPDF());
         searchPanel.add(exportTableAsPdfBtn);
 
@@ -427,7 +372,7 @@ public class ArticleGUI extends JFrame {
         searchPanel.add(clearBtn);
 
         // Add warnings button to bottom panel
-        JButton showWarningsBottomBtn = new JButton("⚠️ Warnungen");
+        JButton showWarningsBottomBtn = new JButton(UnicodeSymbols.WARNING + " Warnungen");
         showWarningsBottomBtn.setFocusPainted(false);
         showWarningsBottomBtn.setBorderPainted(false);
         showWarningsBottomBtn.setContentAreaFilled(false);
@@ -498,13 +443,13 @@ public class ArticleGUI extends JFrame {
         headerPanel.setBackground(ThemeManager.getPrimaryColor());
         headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
 
-        JLabel titleLabel = new JLabel("✏️  Artikel Bearbeiten");
+        JLabel titleLabel = new JLabel(UnicodeSymbols.EDIT + "  Artikel Bearbeiten");
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
         // Styled close button
-        JButton closeBtn = new JButton("✕");
+        JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
         closeBtn.setForeground(ThemeManager.getTextOnPrimaryColor());
         closeBtn.setBackground(ThemeManager.getPrimaryColor());
         closeBtn.setBorderPainted(false);
@@ -585,7 +530,7 @@ public class ArticleGUI extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = row;
         gbc.gridwidth = 1;
-        JLabel nummerLabel = createLabel.apply("🔢  Artikelnummer *");
+        JLabel nummerLabel = createLabel.apply(UnicodeSymbols.NUMBER + " Artikelnummer *");
         contentCard.add(nummerLabel, gbc);
         row++;
         gbc.gridy = row;
@@ -598,7 +543,7 @@ public class ArticleGUI extends JFrame {
         gbc.insets = new Insets(6, 6, 6, 6);
         // Name with icon
         gbc.gridy = row;
-        JLabel nameLabel = createLabel.apply("📝  Name *");
+        JLabel nameLabel = createLabel.apply(UnicodeSymbols.PENCIL + " Name *");
         contentCard.add(nameLabel, gbc);
         row++;
         gbc.gridy = row;
@@ -611,7 +556,7 @@ public class ArticleGUI extends JFrame {
         gbc.insets = new Insets(6, 6, 6, 6);
         // Details with icon
         gbc.gridy = row;
-        JLabel detailsLabel = createLabel.apply("📋  Details");
+        JLabel detailsLabel = createLabel.apply(UnicodeSymbols.CLIPBOARD + " Details");
         contentCard.add(detailsLabel, gbc);
         row++;
         gbc.gridy = row;
@@ -641,8 +586,8 @@ public class ArticleGUI extends JFrame {
         gbc.insets = new Insets(12, 6, 6, 6);
         // Stock fields with improved layout
         gbc.gridy = row;
-        JLabel stockSectionLabel = createLabel.apply("📦  Lagerbestand");
-        stockSectionLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        JLabel stockSectionLabel = createLabel.apply(UnicodeSymbols.PACKAGE + " Lagerbestand");
+        stockSectionLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         contentCard.add(stockSectionLabel, gbc);
 
         row++;
@@ -725,7 +670,7 @@ public class ArticleGUI extends JFrame {
         gbc.insets = new Insets(12, 6, 6, 6);
         // Price section
         gbc.gridy = row;
-        JLabel priceSectionLabel = createLabel.apply("💰  Preise");
+        JLabel priceSectionLabel = createLabel.apply(UnicodeSymbols.MONEY + " Preise");
         priceSectionLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         contentCard.add(priceSectionLabel, gbc);
 
@@ -761,7 +706,7 @@ public class ArticleGUI extends JFrame {
         gbc.insets = new Insets(6, 6, 6, 6);
         // Lieferant with icon
         gbc.gridy = row;
-        JLabel lieferantLabel = createLabel.apply("🚚  Lieferant");
+        JLabel lieferantLabel = createLabel.apply(UnicodeSymbols.TRUCK + " Lieferant");
         contentCard.add(lieferantLabel, gbc);
         row++;
         gbc.gridy = row;
@@ -782,7 +727,7 @@ public class ArticleGUI extends JFrame {
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
         Color cancelBtnColor = ThemeManager.getErrorColor();
-        JButton cancelBtn = new JButton("✕  Abbrechen");
+        JButton cancelBtn = new JButton(UnicodeSymbols.CLOSE + "  Abbrechen");
         cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         cancelBtn.setForeground(Color.WHITE);
         cancelBtn.setBackground(cancelBtnColor);
@@ -807,7 +752,7 @@ public class ArticleGUI extends JFrame {
         });
 
         Color okBtnColor = ThemeManager.getSuccessColor();
-        JButton okBtn = new JButton("✓  Speichern");
+        JButton okBtn = new JButton(UnicodeSymbols.CHECK + "  Speichern");
         okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         okBtn.setForeground(Color.WHITE);
         okBtn.setBackground(okBtnColor);
@@ -993,11 +938,11 @@ public class ArticleGUI extends JFrame {
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
         titlePanel.setOpaque(false);
 
-        JLabel iconLabel = new JLabel("➕");
+        JLabel iconLabel = new JLabel(UnicodeSymbols.HEAVY_PLUS);
         iconLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 24));
         iconLabel.setForeground(Color.WHITE);
 
-        JLabel titleLabel = new JLabel("Neuen Artikel hinzufügen");
+        JLabel titleLabel = new JLabel(UnicodeSymbols.CHECKMARK + " Neuen Artikel hinzufügen");
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(Color.WHITE);
 
@@ -1048,7 +993,7 @@ public class ArticleGUI extends JFrame {
      * Creates the close button for the dialog header with modern styling
      */
     private JButton createDialogCloseButton(JDialog dialog, Object[][] resultHolder) {
-        JButton closeBtn = new JButton("✕");
+        JButton closeBtn = new JButton("X");
         closeBtn.setForeground(new Color(255, 255, 255, 200));
         closeBtn.setBackground(new Color(255, 255, 255, 0));
         closeBtn.setBorderPainted(false);
@@ -1122,7 +1067,7 @@ public class ArticleGUI extends JFrame {
         // Supplier field
         gbc.insets = new Insets(6, 6, 6, 6);
         gbc.gridy = row++;
-        contentCard.add(createDialogLabel("🚚  Lieferant"), gbc);
+        contentCard.add(createDialogLabel(UnicodeSymbols.TRUCK + " Lieferant"), gbc);
         gbc.gridy = row;
         gbc.insets = new Insets(2, 6, 6, 6);
         JTextField lieferantField = createDialogTextField();
@@ -1397,7 +1342,7 @@ public class ArticleGUI extends JFrame {
      * Creates the cancel button with modern styling and hover effects
      */
     private JButton createDialogCancelButton(JDialog dialog, Object[][] resultHolder) {
-        JButton cancelBtn = new JButton("Abbrechen");
+        JButton cancelBtn = new JButton(UnicodeSymbols.CLOSE + " Abbrechen");
         cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         cancelBtn.setForeground(ThemeManager.getTextPrimaryColor());
 
@@ -1439,7 +1384,7 @@ public class ArticleGUI extends JFrame {
      * Creates the OK button with modern blue styling and smooth hover effects
      */
     private JButton createDialogOkButton(JDialog dialog, Object[][] resultHolder, ArticleFormFields formFields) {
-        JButton okBtn = new JButton("➕ Hinzufügen");
+        JButton okBtn = new JButton(UnicodeSymbols.CHECKMARK + " Hinzufügen");
         okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         okBtn.setForeground(Color.WHITE);
 
@@ -1918,7 +1863,7 @@ public class ArticleGUI extends JFrame {
             doc.save(fileToSave);
 
             JOptionPane.showMessageDialog(this,
-                    "✅ PDF erfolgreich exportiert!\n\n" +
+                    UnicodeSymbols.CHECKMARK + " PDF erfolgreich exportiert!\n\n" +
                             "Datei: " + fileToSave.getName() + "\n" +
                             "Pfad: " + fileToSave.getParent() + "\n" +
                             "Artikel: " + numRows + "\n" +
@@ -1928,7 +1873,7 @@ public class ArticleGUI extends JFrame {
 
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
-                    "❌ Fehler beim PDF-Export:\n\n" + ex.getMessage() +
+                    UnicodeSymbols.ERROR + " Fehler beim PDF-Export:\n\n" + ex.getMessage() +
                             "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.",
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE,
@@ -2162,17 +2107,17 @@ public class ArticleGUI extends JFrame {
                 case LOW_STOCK:
                     headerColor = new Color(241, 196, 15); // Orange/Yellow
                     accentColor = new Color(243, 156, 18);
-                    icon = "⚠️";
+                    icon = UnicodeSymbols.WARNING;
                     break;
                 case ORDER_NEEDED:
                     headerColor = new Color(231, 76, 60); // Red
                     accentColor = new Color(192, 57, 43);
-                    icon = "🔴";
+                    icon = UnicodeSymbols.CIRCLE;
                     break;
                 default:
                     headerColor = new Color(52, 152, 219); // Blue
                     accentColor = new Color(41, 128, 185);
-                    icon = "ℹ️";
+                    icon = UnicodeSymbols.INFO;
                     break;
             }
 
@@ -2235,7 +2180,7 @@ public class ArticleGUI extends JFrame {
             // Date
             gbc.gridy++;
             gbc.insets = new Insets(0, 0, 20, 0);
-            JLabel dateLabel = new JLabel("📅 Datum: " + warning.getDate());
+            JLabel dateLabel = new JLabel(UnicodeSymbols.CALENDAR + " Datum: " + warning.getDate());
             dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
             dateLabel.setForeground(new Color(127, 140, 141));
             content.add(dateLabel, gbc);
@@ -2243,7 +2188,7 @@ public class ArticleGUI extends JFrame {
             // Status indicator
             gbc.gridy++;
             gbc.insets = new Insets(0, 0, 24, 0);
-            JLabel statusLabel = new JLabel(warning.isResolved() ? "✅ Gelöst" : "❌ Ungelöst");
+            JLabel statusLabel = new JLabel(warning.isResolved() ? UnicodeSymbols.CHECKMARK + " Gelöst" : UnicodeSymbols.ERROR + " Ungelöst");
             statusLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
             statusLabel.setForeground(warning.isResolved() ? new Color(39, 174, 96) : new Color(231, 76, 60));
             content.add(statusLabel, gbc);
@@ -2271,7 +2216,7 @@ public class ArticleGUI extends JFrame {
                 buttonPanel.add(resolveBtn);
             }
 
-            JButton okBtn = new JButton("Schließen");
+            JButton okBtn = new JButton(UnicodeSymbols.CLOSE + " Schließen");
             styleButton(okBtn, accentColor, Color.WHITE);
             okBtn.addActionListener(e -> dialog.dispose());
             buttonPanel.add(okBtn);
@@ -2422,8 +2367,8 @@ public class ArticleGUI extends JFrame {
 
     private JPopupMenu createTablePopup() {
         JPopupMenu popup = new JPopupMenu();
-        JMenuItem editItem = new JMenuItem("Bearbeiten");
-        JMenuItem deleteItem = new JMenuItem("Löschen");
+        JMenuItem editItem = new JMenuItem(UnicodeSymbols.BETTER_EDIT + " Bearbeiten");
+        JMenuItem deleteItem = new JMenuItem(UnicodeSymbols.TRASH + " Löschen");
 
         editItem.addActionListener(e -> {
             int sel = articleTable.getSelectedRow();
@@ -2454,24 +2399,28 @@ public class ArticleGUI extends JFrame {
         WarningManager warningManager = WarningManager.getInstance();
         List<Warning> warnings = warningManager.getAllWarnings();
 
-        // Create modern dialog
-        JDialog dialog = new JDialog(this, "Alle Warnungen", true);
+        // Create modern dialog with theme support
+        JDialog dialog = new JDialog(this, UnicodeSymbols.WARNING + " Alle Warnungen", true);
         dialog.setSize(900, 600);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout(10, 10));
+        dialog.getContentPane().setBackground(ThemeManager.getBackgroundColor());
 
-        // Header panel
+        // Header panel with theme colors
         JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(new Color(245, 247, 250));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+        headerPanel.setBackground(ThemeManager.getCardBackgroundColor());
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor()),
+                BorderFactory.createEmptyBorder(15, 20, 15, 20)
+        ));
 
-        JLabel titleLabel = new JLabel("⚠️ Warnungen Übersicht");
+        JLabel titleLabel = new JLabel(UnicodeSymbols.WARNING + " Warnungen Übersicht");
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-        titleLabel.setForeground(new Color(31, 45, 61));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         JLabel countLabel = new JLabel(warnings.size() + " Warnung(en)");
         countLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        countLabel.setForeground(new Color(100, 110, 120));
+        countLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
         headerPanel.add(titleLabel, BorderLayout.WEST);
         headerPanel.add(countLabel, BorderLayout.EAST);
@@ -2481,10 +2430,10 @@ public class ArticleGUI extends JFrame {
         // Main content with table
         if (warnings.isEmpty()) {
             JPanel emptyPanel = new JPanel(new GridBagLayout());
-            emptyPanel.setBackground(Color.WHITE);
-            JLabel emptyLabel = new JLabel("✓ Keine Warnungen vorhanden");
+            emptyPanel.setBackground(ThemeManager.getCardBackgroundColor());
+            JLabel emptyLabel = new JLabel(UnicodeSymbols.CHECKMARK + " Keine Warnungen vorhanden");
             emptyLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 16));
-            emptyLabel.setForeground(new Color(100, 180, 100));
+            emptyLabel.setForeground(ThemeManager.getSuccessColor());
             emptyPanel.add(emptyLabel);
             dialog.add(emptyPanel, BorderLayout.CENTER);
         } else {
@@ -2499,7 +2448,7 @@ public class ArticleGUI extends JFrame {
 
             // Populate table
             for (Warning warning : warnings) {
-                String status = warning.isResolved() ? "✓ Gelöst" : "⚠ Offen";
+                String status = warning.isResolved() ? UnicodeSymbols.CHECKMARK + " Gelöst" :UnicodeSymbols.WARNING +  " Offen";
                 String type = switch (warning.getType()) {
                     case LOW_STOCK -> "Niedriger Bestand";
                     case ORDER_NEEDED -> "Bestellung nötig";
@@ -2518,18 +2467,24 @@ public class ArticleGUI extends JFrame {
 
             JTable warningsTable = getWarningsTable(tableModel);
 
-            // Alternating row colors
+            // Alternating row colors with theme support
             warningsTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
                 @Override
                 public Component getTableCellRendererComponent(JTable table, Object value,
                                                                boolean isSelected, boolean hasFocus, int row, int column) {
                     Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                     if (!isSelected) {
+                        // Set background based on row index
+                        c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+
+                        // Set foreground based on status
                         if (value.toString().contains("Gelöst")) {
-                            setForeground(new Color(40, 150, 40));
+                            setForeground(ThemeManager.getSuccessColor());
                         } else {
-                            setForeground(new Color(200, 100, 0));
+                            setForeground(ThemeManager.getWarningForegroundColor());
                         }
+                    } else {
+                        setForeground(ThemeManager.getSelectionForegroundColor());
                     }
                     setHorizontalAlignment(SwingConstants.CENTER);
                     return c;
@@ -2543,27 +2498,29 @@ public class ArticleGUI extends JFrame {
             warningsTable.getColumnModel().getColumn(3).setPreferredWidth(300);
             warningsTable.getColumnModel().getColumn(4).setPreferredWidth(120);
 
-            // Header styling
+            // Header styling with theme support
             JTableHeader header = warningsTable.getTableHeader();
-            header.setBackground(new Color(62, 84, 98));
-            header.setForeground(Color.WHITE);
+            header.setBackground(ThemeManager.getTableHeaderBackgroundColor());
+            header.setForeground(ThemeManager.getTableHeaderForegroundColor());
             header.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
 
             JScrollPane scrollPane = new JScrollPane(warningsTable);
             scrollPane.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+            scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
+            scrollPane.setBackground(ThemeManager.getCardBackgroundColor());
 
             JPanel tablePanel = new JPanel(new BorderLayout());
-            tablePanel.setBackground(new Color(245, 247, 250));
+            tablePanel.setBackground(ThemeManager.getBackgroundColor());
             tablePanel.add(scrollPane, BorderLayout.CENTER);
 
             dialog.add(tablePanel, BorderLayout.CENTER);
 
-            // Action panel at bottom
+            // Action panel at bottom with theme support
             JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-            actionPanel.setBackground(new Color(245, 247, 250));
+            actionPanel.setBackground(ThemeManager.getBackgroundColor());
             actionPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
 
-            JButton viewDetailsBtn = new JButton("Details anzeigen");
+            JButton viewDetailsBtn = new JButton(UnicodeSymbols.INFO + " Details anzeigen");
             styleButton(viewDetailsBtn, new Color(65, 105, 225), Color.WHITE);
             viewDetailsBtn.addActionListener(e -> {
                 int selectedRow = warningsTable.getSelectedRow();
@@ -2591,7 +2548,7 @@ public class ArticleGUI extends JFrame {
                 }
             });
 
-            JButton resolveBtn = new JButton("Als gelöst markieren");
+            JButton resolveBtn = new JButton(UnicodeSymbols.CHECKMARK + " Als gelöst markieren");
             styleButton(resolveBtn, new Color(40, 180, 99), Color.WHITE);
             resolveBtn.addActionListener(e -> {
                 int selectedRow = warningsTable.getSelectedRow();
@@ -2613,7 +2570,7 @@ public class ArticleGUI extends JFrame {
                     return;
                 }
                 if (warningManager.resolveWarning(selectedWarning.getTitle())) {
-                    tableModel.setValueAt("✓ Gelöst", selectedRow, 0);
+                    tableModel.setValueAt(UnicodeSymbols.CHECKMARK + " Gelöst", selectedRow, 0);
                     JOptionPane.showMessageDialog(dialog,
                             "Warnung wurde als gelöst markiert.",
                             "Erfolg",
@@ -2622,7 +2579,7 @@ public class ArticleGUI extends JFrame {
                 }
             });
 
-            JButton deleteBtn = new JButton("Löschen");
+            JButton deleteBtn = new JButton(UnicodeSymbols.TRASH + " Löschen");
             styleButton(deleteBtn, new Color(231, 76, 60), Color.WHITE);
             deleteBtn.addActionListener(e -> {
                 int selectedRow = warningsTable.getSelectedRow();
@@ -2653,14 +2610,14 @@ public class ArticleGUI extends JFrame {
                 }
             });
 
-            JButton refreshBtn = new JButton("🔄 Aktualisieren");
+            JButton refreshBtn = new JButton(UnicodeSymbols.REFRESH + " Aktualisieren");
             styleButton(refreshBtn, new Color(237, 242, 247), new Color(20, 30, 40));
             refreshBtn.addActionListener(e -> {
                 dialog.dispose();
                 showAllWarnings();
             });
 
-            JButton closeBtn = new JButton("Schließen");
+            JButton closeBtn = new JButton(UnicodeSymbols.CLOSE + " Schließen");
             styleButton(closeBtn, new Color(149, 165, 166), Color.WHITE);
             closeBtn.addActionListener(e -> dialog.dispose());
 
@@ -2676,7 +2633,7 @@ public class ArticleGUI extends JFrame {
         // If no warnings, just show close button
         if (warnings.isEmpty()) {
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-            buttonPanel.setBackground(new Color(245, 247, 250));
+            buttonPanel.setBackground(ThemeManager.getBackgroundColor());
             JButton closeBtn = new JButton("Schließen");
             styleButton(closeBtn, new Color(149, 165, 166), Color.WHITE);
             closeBtn.addActionListener(e -> dialog.dispose());
@@ -2693,10 +2650,12 @@ public class ArticleGUI extends JFrame {
         warningsTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         warningsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         warningsTable.setShowGrid(true);
-        warningsTable.setGridColor(new Color(226, 230, 233));
+        warningsTable.setGridColor(ThemeManager.getTableGridColor());
         warningsTable.setIntercellSpacing(new Dimension(1, 1));
-        warningsTable.setSelectionBackground(new Color(100, 181, 246));
-        warningsTable.setSelectionForeground(Color.WHITE);
+        warningsTable.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
+        warningsTable.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
+        warningsTable.setBackground(ThemeManager.getCardBackgroundColor());
+        warningsTable.setForeground(ThemeManager.getTextPrimaryColor());
         return warningsTable;
     }
 
@@ -2829,7 +2788,7 @@ public class ArticleGUI extends JFrame {
         headerLeft.setLayout(new BoxLayout(headerLeft, BoxLayout.Y_AXIS));
         headerLeft.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("📱 QR-Code Daten von Server");
+        JLabel titleLabel = new JLabel(UnicodeSymbols.PHONE + " QR-Code Daten von Server");
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -2872,7 +2831,7 @@ public class ArticleGUI extends JFrame {
         mainPanel.add(infoPanel, BorderLayout.NORTH);
 
         // Table for displaying QR data with enhanced styling
-        String[] columnNames = {"🕐 Timestamp", "📦 Artikel", "📊 Menge", "🏷️ Typ", "👤 Eigenverbrauch", "🆔 ID"};
+        String[] columnNames = {UnicodeSymbols.CLOCK + " Timestamp", UnicodeSymbols.PACKAGE+ " Artikel", UnicodeSymbols.CHART + " Menge", UnicodeSymbols.TAG + " Typ", UnicodeSymbols.PERSON + " Eigenverbrauch", UnicodeSymbols.ID + " ID"};
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -2943,7 +2902,7 @@ public class ArticleGUI extends JFrame {
         JPanel statusArea = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         statusArea.setOpaque(false);
 
-        JLabel statusIcon = new JLabel("●");
+        JLabel statusIcon = new JLabel(UnicodeSymbols.YELLOW_CIRCLE);
         statusIcon.setFont(SettingsGUI.getFontByName(Font.PLAIN, 16));
         statusIcon.setForeground(new Color(100, 200, 100));
 
@@ -2959,17 +2918,17 @@ public class ArticleGUI extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttonPanel.setOpaque(false);
 
-        JButton refreshBtn = new JButton("🔄 Aktualisieren");
+        JButton refreshBtn = new JButton(UnicodeSymbols.REFRESH + " Aktualisieren");
         styleButton(refreshBtn, new Color(52, 152, 219), Color.WHITE);
 
-        JButton importBtn = new JButton("📥 Ausgewählte einlagern");
+        JButton importBtn = new JButton(UnicodeSymbols.DOWNLOAD + " Ausgewählte einlagern");
         styleButton(importBtn, new Color(46, 204, 113), Color.WHITE);
         importBtn.setEnabled(false);
 
-        JButton importAllBtn = new JButton("📥 Alle einlagern");
+        JButton importAllBtn = new JButton(UnicodeSymbols.DOWNLOAD + " Alle einlagern");
         styleButton(importAllBtn, new Color(241, 196, 15), new Color(50, 50, 50));
 
-        JButton addToArticleListBtn = new JButton("➕ Zur Bestellliste");
+        JButton addToArticleListBtn = new JButton(UnicodeSymbols.HEAVY_PLUS + " Zur Bestellliste");
         styleButton(addToArticleListBtn, new Color(155, 89, 182), Color.WHITE);
         addToArticleListBtn.addActionListener(e -> {
             int[] selectedRows = qrTable.getSelectedRows();
@@ -3011,7 +2970,7 @@ public class ArticleGUI extends JFrame {
             }
         });
 
-        JButton removeFromInventoryBtn = new JButton("🗑️ Aus Inventar");
+        JButton removeFromInventoryBtn = new JButton(UnicodeSymbols.TRASH + " Aus Inventar");
         styleButton(removeFromInventoryBtn, new Color(251, 163, 153), Color.WHITE);
         removeFromInventoryBtn.setEnabled(false);
         removeFromInventoryBtn.addActionListener(e -> {
@@ -3048,7 +3007,7 @@ public class ArticleGUI extends JFrame {
             }
         });
 
-        JButton closeBtn = new JButton("Schließen");
+        JButton closeBtn = new JButton(UnicodeSymbols.CLOSE + " Schließen");
         styleButton(closeBtn, new Color(149, 165, 166), Color.WHITE);
         closeBtn.setBackground(Color.RED);
         closeBtn.addActionListener(e -> dialog.dispose());
@@ -3076,7 +3035,7 @@ public class ArticleGUI extends JFrame {
                     List<Map<String, Object>> qrCodeDataList = get();
 
                     if (qrCodeDataList == null || qrCodeDataList.isEmpty()) {
-                        infoIcon.setText("⚠️");
+                        infoIcon.setText(UnicodeSymbols.WARNING);
                         infoLabel.setText("Keine QR-Code Daten vom Server erhalten");
                         infoPanel.setBackground(new Color(255, 245, 230));
                         infoPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -3100,7 +3059,7 @@ public class ArticleGUI extends JFrame {
                         tableModel.addRow(rowData);
                     }
 
-                    infoIcon.setText("✅");
+                    infoIcon.setText(UnicodeSymbols.CHECKMARK);
                     infoLabel.setText(qrCodeDataList.size() + " QR-Code Datensätze erfolgreich geladen");
                     infoPanel.setBackground(new Color(230, 255, 240));
                     infoPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -3112,7 +3071,7 @@ public class ArticleGUI extends JFrame {
                     importAllBtn.setEnabled(true);
 
                 } catch (Exception e) {
-                    infoIcon.setText("❌");
+                    infoIcon.setText(UnicodeSymbols.CLOSE);
                     infoLabel.setText("Fehler beim Laden: " + e.getMessage());
                     infoPanel.setBackground(new Color(255, 235, 238));
                     infoPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -3191,7 +3150,7 @@ public class ArticleGUI extends JFrame {
         // Action listeners with improved feedback
         refreshBtn.addActionListener(e -> {
             tableModel.setRowCount(0);
-            infoIcon.setText("ℹ️");
+            infoIcon.setText(UnicodeSymbols.INFO);
             infoLabel.setText("Lädt QR-Code Scan-Daten vom Server. Bitte warten...");
             infoPanel.setBackground(new Color(240, 248, 255));
             infoPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -3226,7 +3185,7 @@ public class ArticleGUI extends JFrame {
                                 rowData[5] = dataMap.getOrDefault("id", "N/A");
                                 tableModel.addRow(rowData);
                             }
-                            infoIcon.setText("✅");
+                            infoIcon.setText(UnicodeSymbols.CHECKMARK);
                             infoLabel.setText(qrCodeDataList.size() + " QR-Code Datensätze aktualisiert");
                             infoPanel.setBackground(new Color(230, 255, 240));
                             infoPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -3238,7 +3197,7 @@ public class ArticleGUI extends JFrame {
                             importAllBtn.setEnabled(true);
                         }
                     } catch (Exception ex) {
-                        infoIcon.setText("❌");
+                        infoIcon.setText(UnicodeSymbols.CLOSE);
                         infoLabel.setText("Fehler beim Aktualisieren: " + ex.getMessage());
                         infoPanel.setBackground(new Color(255, 235, 238));
                         statusIcon.setForeground(new Color(231, 76, 60));
@@ -3304,8 +3263,8 @@ public class ArticleGUI extends JFrame {
                 }
 
                 String message = String.format("<html><b>Import abgeschlossen</b><br/><br/>" +
-                                "✅ Erfolgreich: %d<br/>" +
-                                (errors > 0 ? "❌ Fehler: %d<br/>" : ""),
+                                UnicodeSymbols.CHECKMARK + " Erfolgreich: %d<br/>" +
+                                (errors > 0 ? UnicodeSymbols.CLOSE + " Fehler: %d<br/>" : ""),
                         imported, errors);
 
                 JOptionPane.showMessageDialog(dialog,
@@ -3402,9 +3361,9 @@ public class ArticleGUI extends JFrame {
                     protected void done() {
                         String message = String.format(
                                 "<html><b>Import abgeschlossen</b><br/><br/>" +
-                                        "✅ Erfolgreich: %d<br/>" +
-                                        (skipped > 0 ? "⏭️ Übersprungen: %d (bereits importiert)<br/>" : "") +
-                                        (errors > 0 ? "❌ Fehler: %d<br/>" : ""),
+                                        UnicodeSymbols.CHECKMARK + " Erfolgreich: %d<br/>" +
+                                        (skipped > 0 ? UnicodeSymbols.SKIP + "️ Übersprungen: %d (bereits importiert)<br/>" : "") +
+                                        (errors > 0 ? UnicodeSymbols.CLOSE + " Fehler: %d<br/>" : ""),
                                 imported, skipped, errors);
 
                         JOptionPane.showMessageDialog(dialog,
@@ -3445,4 +3404,655 @@ public class ArticleGUI extends JFrame {
         return new Article(artikelNr, name, details, 0, 0,
                 Double.parseDouble(buyPrice), Double.parseDouble(sellPrice), vendor);
     }
+
+    /**
+     * Creates a styled category filter panel with combobox
+     * Modern design with proper spacing, rounded borders, and theme support
+     */
+    private JPanel createCategoryFilterPanel() {
+        // Create rounded panel with card-like appearance
+        RoundedPanel categoryPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 8);
+        categoryPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 12, 8));
+        categoryPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        ));
+
+        // Create and style label with icon
+        JLabel categoryLabel = new JLabel(UnicodeSymbols.FOLDER + " Kategorie:");
+        categoryLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        categoryLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        // Initialize combobox with categories
+        categoryFilter = new JComboBox<>();
+        categoryFilter.addItem("Alle Kategorien");
+        if (categories != null) {
+            categories.keySet().stream().sorted().forEach(categoryFilter::addItem);
+        }
+        categoryFilter.setPreferredSize(new Dimension(220, 38));
+        categoryFilter.addActionListener(e -> filterByCategory());
+        categoryFilter.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Apply theme-aware styling
+        styleCategoryComboBox(categoryFilter);
+
+        // Assemble panel
+        categoryPanel.add(categoryLabel);
+        categoryPanel.add(categoryFilter);
+
+        return categoryPanel;
+    }
+
+    /**
+     * Applies consistent theme-aware styling to the category combobox
+     * Handles background, foreground, editor, popup list styling, and hover effects
+     */
+    private void styleCategoryComboBox(JComboBox<String> comboBox) {
+        // Get theme colors
+        Color bg = ThemeManager.getInputBackgroundColor();
+        Color fg = ThemeManager.getTextPrimaryColor();
+        Color border = ThemeManager.getInputBorderColor();
+        Color focusBorder = ThemeManager.getInputFocusBorderColor();
+        Color selBg = ThemeManager.getSelectionBackgroundColor();
+        Color selFg = ThemeManager.getSelectionForegroundColor();
+
+        // Style the combobox itself
+        comboBox.setBackground(bg);
+        comboBox.setForeground(fg);
+        comboBox.setOpaque(true);
+        comboBox.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+        comboBox.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(border, 1, true),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
+
+        // Style the editor component
+        comboBox.setEditable(true);
+        Component editorComp = comboBox.getEditor().getEditorComponent();
+        if (editorComp instanceof JTextField tf) {
+            tf.setBorder(null);
+            tf.setBackground(bg);
+            tf.setForeground(fg);
+            tf.setCaretColor(fg);
+            tf.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+        }
+
+        // Style the popup list with custom renderer
+        comboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+
+                JLabel label = (JLabel) super.getListCellRendererComponent(
+                        list, value, index, isSelected, cellHasFocus);
+
+                // Apply font
+                label.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+
+                // Apply selection or normal colors
+                if (isSelected) {
+                    label.setBackground(selBg);
+                    label.setForeground(selFg);
+                } else {
+                    label.setBackground(bg);
+                    label.setForeground(fg);
+                }
+
+                // Add padding for better appearance
+                label.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+
+                return label;
+            }
+        });
+
+        // Add focus listener for border highlight
+        comboBox.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                comboBox.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(focusBorder, 2, true),
+                        BorderFactory.createEmptyBorder(5, 9, 5, 9)
+                ));
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                comboBox.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(border, 1, true),
+                        BorderFactory.createEmptyBorder(6, 10, 6, 10)
+                ));
+            }
+        });
+    }
+
+    /**
+     * Display detailed stock statistics in a modern themed dialog
+     */
+    private void showDetails() {
+        JDialog dialog = new JDialog(this, UnicodeSymbols.PACKAGE + " Lager Details & Statistiken", true);
+        dialog.setUndecorated(true);
+        dialog.setSize(900, 750);
+        dialog.setLocationRelativeTo(this);
+
+        // Main container
+        JPanel mainContainer = new JPanel(new BorderLayout());
+        mainContainer.setBackground(ThemeManager.getBackgroundColor());
+        mainContainer.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 2),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ));
+
+        // Header panel with gradient
+        JPanel headerPanel = getStatsHeaderPanel(dialog);
+        mainContainer.add(headerPanel, BorderLayout.NORTH);
+
+        // Scrollable content panel with statistics
+        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
+        contentCard.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        contentCard.setLayout(new GridBagLayout());
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+
+        // Calculate all statistics
+        int totalArticles = articleTable.getRowCount();
+        int totalQuantity = calculateTotalQuantity();
+        double stockValue = calculateValueInStock();
+        double potentialRevenue = calculatePotentialRevenue();
+        double profitMargin = calculateProfitMargin();
+        int lowStockCount = countLowStockArticles();
+        int outOfStockCount = countOutOfStockArticles();
+        int categoriesCount = countCategories();
+        int vendorsCount = countVendors();
+        double avgArticleValue = calculateAverageArticleValue();
+        String mostValuable = getMostValuableArticle();
+        double stockHealth = calculateStockHealthPercentage();
+
+        // Create two-column layout for better organization
+        int row = 0;
+
+        // === SECTION 1: INVENTORY OVERVIEW ===
+        gbc.gridx = 0;
+        gbc.gridy = row++;
+        gbc.gridwidth = 2;
+        JLabel overviewLabel = new JLabel(UnicodeSymbols.CLIPBOARD + " Bestandsübersicht");
+        overviewLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
+        overviewLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        overviewLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        contentCard.add(overviewLabel, gbc);
+
+        gbc.gridwidth = 1;
+
+        // Total articles
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.PACKAGE + " Gesamtanzahl Artikel",
+                String.valueOf(totalArticles),
+                new Color(52, 152, 219)
+        ), gbc);
+
+        // Total quantity
+        gbc.gridx = 1;
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.CHART + " Gesamtmenge (Stück)",
+                String.format("%,d", totalQuantity),
+                new Color(52, 152, 219)
+        ), gbc);
+
+        row++;
+
+        // Categories
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.FOLDER + " Kategorien",
+                String.valueOf(categoriesCount),
+                new Color(155, 89, 182)
+        ), gbc);
+
+        // Vendors
+        gbc.gridx = 1;
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.TRUCK + " Lieferanten",
+                String.valueOf(vendorsCount),
+                new Color(155, 89, 182)
+        ), gbc);
+
+        row++;
+
+        // === SECTION 2: FINANCIAL OVERVIEW ===
+        gbc.gridx = 0;
+        gbc.gridy = row++;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(20, 8, 10, 8);
+        JLabel financialLabel = new JLabel(UnicodeSymbols.MONEY + " Finanzübersicht");
+        financialLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
+        financialLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        financialLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        contentCard.add(financialLabel, gbc);
+
+        gbc.gridwidth = 1;
+        gbc.insets = new Insets(8, 8, 8, 8);
+
+        // Stock value
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.MONEY + " Lagerwert (Einkauf)",
+                String.format("%.2f CHF", stockValue),
+                new Color(46, 204, 113)
+        ), gbc);
+
+        // Potential revenue
+        gbc.gridx = 1;
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.CHART_UP + " Potenzielle Einnahmen",
+                String.format("%.2f CHF", potentialRevenue),
+                new Color(52, 152, 219)
+        ), gbc);
+
+        row++;
+
+        // Profit margin
+        gbc.gridx = 0;
+        gbc.gridy = row++;
+        gbc.gridwidth = 2;
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.TRENDING_UP + " Gewinnspanne",
+                String.format("%.2f CHF", profitMargin),
+                new Color(241, 196, 15)
+        ), gbc);
+
+        gbc.gridwidth = 1;
+
+        // Average value per article
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.CALCULATOR + " Ø Wert pro Artikel",
+                String.format("%.2f CHF", avgArticleValue),
+                new Color(155, 89, 182)
+        ), gbc);
+
+        // Most valuable article (display truncated if too long)
+        gbc.gridx = 1;
+        String displayValue = mostValuable.length() > 20 ? mostValuable.substring(0, 17) + "..." : mostValuable;
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.STAR + " Wertvollster Artikel",
+                displayValue,
+                new Color(241, 196, 15)
+        ), gbc);
+
+        row++;
+
+        // === SECTION 3: STOCK HEALTH ===
+        gbc.gridx = 0;
+        gbc.gridy = row++;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(20, 8, 10, 8);
+        JLabel healthLabel = new JLabel(UnicodeSymbols.HEALTH + " Lagerstatus");
+        healthLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
+        healthLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        healthLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        contentCard.add(healthLabel, gbc);
+
+        gbc.gridwidth = 1;
+        gbc.insets = new Insets(8, 8, 8, 8);
+
+        // Low stock count
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        Color lowStockColor = lowStockCount > 0 ? new Color(231, 76, 60) : new Color(46, 204, 113);
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.WARNING + " Niedriger Bestand",
+                String.valueOf(lowStockCount),
+                lowStockColor
+        ), gbc);
+
+        // Out of stock count
+        gbc.gridx = 1;
+        Color outOfStockColor = outOfStockCount > 0 ? new Color(192, 57, 43) : new Color(46, 204, 113);
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.ALERT + " Nicht vorrätig",
+                String.valueOf(outOfStockCount),
+                outOfStockColor
+        ), gbc);
+
+        row++;
+
+        // Stock health percentage
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 2;
+        Color healthColor = stockHealth >= 80 ? new Color(46, 204, 113) :
+                           stockHealth >= 50 ? new Color(241, 196, 15) :
+                           new Color(231, 76, 60);
+        contentCard.add(createStatPanel(
+                UnicodeSymbols.HEALTH + " Lagergesundheit",
+                String.format("%.1f%%", stockHealth),
+                healthColor
+        ), gbc);
+
+        // Wrap content in scroll pane
+        JScrollPane scrollPane = new JScrollPane(contentCard);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        mainContainer.add(scrollPane, BorderLayout.CENTER);
+
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 16));
+        buttonPanel.setBackground(ThemeManager.getBackgroundColor());
+        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
+
+        Color okBtnColor = ThemeManager.getAccentColor();
+        JButton okBtn = new JButton(UnicodeSymbols.CHECK + " Schließen");
+        okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        okBtn.setForeground(Color.WHITE);
+        okBtn.setBackground(okBtnColor);
+        okBtn.setOpaque(true);
+        okBtn.setContentAreaFilled(true);
+        okBtn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(okBtnColor.darker(), 1, true),
+                BorderFactory.createEmptyBorder(12, 28, 12, 28)
+        ));
+        okBtn.setFocusPainted(false);
+        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        okBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                okBtn.setBackground(ThemeManager.getButtonHoverColor(okBtnColor));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                okBtn.setBackground(okBtnColor);
+            }
+        });
+        okBtn.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(okBtn);
+        mainContainer.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.getContentPane().add(mainContainer);
+        dialog.getRootPane().setDefaultButton(okBtn);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Create header panel for statistics dialog with gradient background
+     */
+    private static JPanel getStatsHeaderPanel(JDialog dialog) {
+        JPanel headerPanel = getPanel();
+
+        JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        titlePanel.setOpaque(false);
+
+        JLabel iconLabel = new JLabel(UnicodeSymbols.CHART);
+        iconLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 24));
+        iconLabel.setForeground(Color.WHITE);
+
+        JLabel titleLabel = new JLabel("Lager Statistiken");
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        titleLabel.setForeground(Color.WHITE);
+
+        titlePanel.add(iconLabel);
+        titlePanel.add(titleLabel);
+        headerPanel.add(titlePanel, BorderLayout.WEST);
+
+        JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
+        closeBtn.setForeground(new Color(255, 255, 255, 200));
+        closeBtn.setBackground(new Color(255, 255, 255, 0));
+        closeBtn.setBorderPainted(false);
+        closeBtn.setFocusPainted(false);
+        closeBtn.setContentAreaFilled(false);
+        closeBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        closeBtn.setPreferredSize(new Dimension(40, 40));
+        closeBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                closeBtn.setForeground(Color.WHITE);
+                closeBtn.setBackground(new Color(231, 76, 60, 100));
+                closeBtn.setContentAreaFilled(true);
+                closeBtn.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                closeBtn.setForeground(new Color(255, 255, 255, 200));
+                closeBtn.setBackground(new Color(255, 255, 255, 0));
+                closeBtn.setContentAreaFilled(false);
+                closeBtn.setBorder(null);
+            }
+        });
+        closeBtn.addActionListener(e -> dialog.dispose());
+        headerPanel.add(closeBtn, BorderLayout.EAST);
+        return headerPanel;
+    }
+
+    private static JPanel getPanel() {
+        JPanel headerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+                Color color1 = ThemeManager.isDarkMode()
+                        ? new Color(30, 58, 95)
+                        : new Color(41, 128, 185);
+                Color color2 = ThemeManager.isDarkMode()
+                        ? new Color(44, 62, 80)
+                        : new Color(52, 152, 219);
+
+                GradientPaint gradient = new GradientPaint(
+                        0, 0, color1,
+                        getWidth(), 0, color2
+                );
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.dispose();
+            }
+        };
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+        return headerPanel;
+    }
+
+    /**
+     * Create a styled statistic panel with icon, label, and value
+     */
+    private JPanel createStatPanel(String label, String value, Color accentColor) {
+        RoundedPanel panel = new RoundedPanel(ThemeManager.getSurfaceColor(), 12);
+        panel.setLayout(new BorderLayout(16, 0));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(accentColor.brighter(), 2),
+                BorderFactory.createEmptyBorder(20, 24, 20, 24)
+        ));
+
+        // Left side with label
+        JLabel labelComp = new JLabel(label);
+        labelComp.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
+        labelComp.setForeground(ThemeManager.getTextPrimaryColor());
+        panel.add(labelComp, BorderLayout.WEST);
+
+        // Right side with value
+        JLabel valueComp = new JLabel(value);
+        valueComp.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
+        valueComp.setForeground(accentColor);
+        valueComp.setHorizontalAlignment(SwingConstants.RIGHT);
+        panel.add(valueComp, BorderLayout.EAST);
+
+        return panel;
+    }
+
+    /**
+     * Calculate total value of stock based on purchase prices
+     */
+    private double calculateValueInStock() {
+        double totalValue = 0.0;
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        for (int i = 0; i < model.getRowCount(); i++) {
+            int lagerbestand = (int) model.getValueAt(i, 4); // Lagerbestand column
+            double einkaufspreis = (double) model.getValueAt(i, 7); // Einkaufspreis column
+            totalValue += lagerbestand * einkaufspreis;
+        }
+        return totalValue;
+    }
+
+    /**
+     * Calculate total potential revenue based on selling prices
+     */
+    private double calculatePotentialRevenue() {
+        double totalRevenue = 0.0;
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        for (int i = 0; i < model.getRowCount(); i++) {
+            int lagerbestand = (int) model.getValueAt(i, 4); // Lagerbestand column
+            double verkaufspreis = (double) model.getValueAt(i, 6); // Verkaufspreis column
+            totalRevenue += lagerbestand * verkaufspreis;
+        }
+        return totalRevenue;
+    }
+
+    /**
+     * Calculate total profit margin (potential revenue - stock value)
+     */
+    private double calculateProfitMargin() {
+        return calculatePotentialRevenue() - calculateValueInStock();
+    }
+
+    /**
+     * Count articles below minimum stock level
+     */
+    private int countLowStockArticles() {
+        int count = 0;
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        for (int i = 0; i < model.getRowCount(); i++) {
+            int lagerbestand = (int) model.getValueAt(i, 4);
+            int mindestbestand = (int) model.getValueAt(i, 5);
+            if (lagerbestand <= mindestbestand && mindestbestand > 0) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Count articles with zero stock
+     */
+    private int countOutOfStockArticles() {
+        int count = 0;
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        for (int i = 0; i < model.getRowCount(); i++) {
+            int lagerbestand = (int) model.getValueAt(i, 4);
+            if (lagerbestand == 0) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Calculate total quantity of all articles in stock
+     */
+    private int calculateTotalQuantity() {
+        int total = 0;
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        for (int i = 0; i < model.getRowCount(); i++) {
+            int lagerbestand = (int) model.getValueAt(i, 4);
+            total += lagerbestand;
+        }
+        return total;
+    }
+
+    /**
+     * Get count of unique categories in current view
+     */
+    private int countCategories() {
+        Set<String> categories = new HashSet<>();
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        for (int i = 0; i < model.getRowCount(); i++) {
+            String category = (String) model.getValueAt(i, 2);
+            if (category != null && !category.trim().isEmpty() && !category.equals("Unbekannt")) {
+                categories.add(category);
+            }
+        }
+        return categories.size();
+    }
+
+    /**
+     * Get count of unique vendors in current view
+     */
+    private int countVendors() {
+        Set<String> vendors = new HashSet<>();
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        for (int i = 0; i < model.getRowCount(); i++) {
+            String vendor = (String) model.getValueAt(i, 8);
+            if (vendor != null && !vendor.trim().isEmpty()) {
+                vendors.add(vendor);
+            }
+        }
+        return vendors.size();
+    }
+
+    /**
+     * Calculate average article value (stock value / total quantity)
+     */
+    private double calculateAverageArticleValue() {
+        int totalQty = calculateTotalQuantity();
+        if (totalQty == 0) return 0.0;
+        return calculateValueInStock() / totalQty;
+    }
+
+    /**
+     * Get the most valuable article by total stock value
+     */
+    private String getMostValuableArticle() {
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        double maxValue = 0.0;
+        String articleName = "N/A";
+
+        for (int i = 0; i < model.getRowCount(); i++) {
+            int lagerbestand = (int) model.getValueAt(i, 4);
+            double einkaufspreis = (double) model.getValueAt(i, 7);
+            double value = lagerbestand * einkaufspreis;
+
+            if (value > maxValue) {
+                maxValue = value;
+                articleName = (String) model.getValueAt(i, 1); // Name
+            }
+        }
+
+        return articleName;
+    }
+
+    /**
+     * Calculate inventory turnover rate (articles in stock vs minimum required)
+     */
+    private double calculateStockHealthPercentage() {
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        int articlesAboveMin = 0;
+        int articlesWithMinSet = 0;
+
+        for (int i = 0; i < model.getRowCount(); i++) {
+            int lagerbestand = (int) model.getValueAt(i, 4);
+            int mindestbestand = (int) model.getValueAt(i, 5);
+
+            if (mindestbestand > 0) {
+                articlesWithMinSet++;
+                if (lagerbestand > mindestbestand) {
+                    articlesAboveMin++;
+                }
+            }
+        }
+
+        if (articlesWithMinSet == 0) return 100.0;
+        return (articlesAboveMin * 100.0) / articlesWithMinSet;
+    }
 }
+

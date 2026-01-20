@@ -148,13 +148,13 @@ public class MainGUI extends JFrame {
      */
     private JPanel createHeaderTextPanel() {
         JLabel titleLabel = new JLabel("VEBO Lagersystem");
-        Font titleFont = SettingsGUI.getFontByName(Font.BOLD, 32);
+        Font titleFont = SettingsGUI.getFontByName(Font.BOLD, 42);
         titleLabel.setFont(titleFont);
         titleLabel.setForeground(ThemeManager.getHeaderForegroundColor());
         titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         JLabel subtitleLabel = new JLabel("Zentrale Verwaltung für Artikel, Bestellungen und Lieferanten");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
+        subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         // Slightly transparent white for better contrast on blue background
         Color subtitleColor = ThemeManager.isDarkMode()
             ? new Color(200, 220, 240)  // Light blue-ish for dark mode
@@ -189,7 +189,7 @@ public class MainGUI extends JFrame {
         });
 
         JLabel dateLabel = new JLabel(new SimpleDateFormat("dd. MMMM yyyy").format(new Date()));
-        dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        dateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         // Slightly transparent white for blue background
         Color dateColor = ThemeManager.isDarkMode()
             ? new Color(200, 220, 240, 180)  // Light blue-ish with transparency for dark mode
@@ -209,7 +209,7 @@ public class MainGUI extends JFrame {
         int fontSizeTab = getTabFontSize();
 
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
-        tabbedPane.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab));
+        tabbedPane.setFont(new Font("Arial", Font.BOLD, fontSizeTab));
         tabbedPane.setBackground(ThemeManager.getBackgroundColor());
         tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
 
@@ -286,7 +286,7 @@ public class MainGUI extends JFrame {
         footerPanel.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
 
         JLabel footerLabel = new JLabel("© 2026 VEBO Lagersystem | Entwickelt von Darryl Huber");
-        footerLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
+        footerLabel.setFont(new Font("Arial", Font.PLAIN, 11));
         footerLabel.setForeground(ThemeManager.getTextSecondaryColor());
         footerPanel.add(footerLabel);
 
@@ -301,7 +301,7 @@ public class MainGUI extends JFrame {
         Color hover = ThemeManager.getButtonHoverColor(base);
         Color pressed = ThemeManager.getButtonPressedColor(base);
 
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        button.setFont(new Font("Arial", Font.BOLD, 12));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setBackground(base);
         button.setOpaque(true);

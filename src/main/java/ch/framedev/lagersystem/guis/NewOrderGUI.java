@@ -8,6 +8,7 @@ import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -69,11 +70,11 @@ public class NewOrderGUI extends JFrame {
         header.setPreferredSize(new Dimension(900, 80));
         header.setLayout(new GridBagLayout());
 
-        JLabel iconLabel = new JLabel("📝");
+        JLabel iconLabel = new JLabel(UnicodeSymbols.BETTER_EDIT);
         iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 36));
         iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
 
-        JLabel title = new JLabel("  Neue Bestellung Erstellen");
+        JLabel title = new JLabel(UnicodeSymbols.HEAVY_PLUS + " Neue Bestellung Erstellen");
         title.setFont(SettingsGUI.getFontByName(Font.BOLD, 26));
         title.setForeground(ThemeManager.getTextOnPrimaryColor());
 
@@ -96,7 +97,7 @@ public class NewOrderGUI extends JFrame {
         leftCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         leftCard.setLayout(new BorderLayout(10, 10));
 
-        JLabel formTitle = new JLabel("📋 Bestellinformationen");
+        JLabel formTitle = new JLabel(UnicodeSymbols.CLIPBOARD + " Bestellinformationen");
         formTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
         formTitle.setForeground(ThemeManager.getTextPrimaryColor());
         leftCard.add(formTitle, BorderLayout.NORTH);
@@ -172,11 +173,11 @@ public class NewOrderGUI extends JFrame {
         }
 
         // Add form fields
-        addStyledFormRow(formPanel, r, "👤 Empfänger Name:", receiverNameCombobox);
-        addStyledFormRow(formPanel, r, "💳 Empfänger Konto Nr.:", receiverKontoField);
-        addStyledFormRow(formPanel, r, "👤 Absender Name:", senderNameCombobox);
-        addStyledFormRow(formPanel, r, "💳 Absender Konto Nr.:", senderKontoField);
-        addStyledFormRow(formPanel, r, "🏢 Abteilung:", departmentList);
+        addStyledFormRow(formPanel, r, UnicodeSymbols.PERSON + " Empfänger Name:", receiverNameCombobox);
+        addStyledFormRow(formPanel, r, UnicodeSymbols.CREDIT_CARD + " Empfänger Konto Nr.:", receiverKontoField);
+        addStyledFormRow(formPanel, r, UnicodeSymbols.PERSON + " Absender Name:", senderNameCombobox);
+        addStyledFormRow(formPanel, r, UnicodeSymbols.CREDIT_CARD + " Absender Konto Nr.:", senderKontoField);
+        addStyledFormRow(formPanel, r, UnicodeSymbols.DEPARTMENT + " Abteilung:", departmentList);
 
         JScrollPane formScroll = new JScrollPane(formPanel);
         formScroll.setBorder(null);
@@ -189,7 +190,7 @@ public class NewOrderGUI extends JFrame {
         rightCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         rightCard.setLayout(new BorderLayout(10, 10));
 
-        JLabel tableTitle = new JLabel("🛒 Bestellte Artikel");
+        JLabel tableTitle = new JLabel(UnicodeSymbols.SHOPPING_CART + " Bestellte Artikel");
         tableTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
         tableTitle.setForeground(ThemeManager.getTextPrimaryColor());
         rightCard.add(tableTitle, BorderLayout.NORTH);
@@ -235,10 +236,10 @@ public class NewOrderGUI extends JFrame {
         JPanel actionButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionButtons.setOpaque(false);
 
-        JButton addArticlesBtn = createThemeButton("📦 Artikel hinzufügen", ThemeManager.getPrimaryColor());
+        JButton addArticlesBtn = createThemeButton(UnicodeSymbols.PACKAGE + " Artikel hinzufügen", ThemeManager.getPrimaryColor());
         addArticlesBtn.addActionListener(e -> addArticlesFromList());
 
-        JButton exportPdfBtn = createThemeButton("📄 Export PDF", ThemeManager.getWarningColor());
+        JButton exportPdfBtn = createThemeButton(UnicodeSymbols.EMPTY_PAGE + " Export PDF", ThemeManager.getWarningColor());
         exportPdfBtn.addActionListener(e -> {
             File file = chooseSaveFile();
             if (file != null) {
@@ -253,7 +254,7 @@ public class NewOrderGUI extends JFrame {
             }
         });
 
-        JButton createOrderBtn = createThemeButton("✓ Bestellen", ThemeManager.getSuccessColor());
+        JButton createOrderBtn = createThemeButton(UnicodeSymbols.CHECKMARK + " Bestellen", ThemeManager.getSuccessColor());
         createOrderBtn.addActionListener(e -> onCreateOrder());
 
         actionButtons.add(addArticlesBtn);
@@ -360,7 +361,7 @@ public class NewOrderGUI extends JFrame {
         combo.setUI(new BasicComboBoxUI() {
             @Override
             protected JButton createArrowButton() {
-                JButton b = new JButton("▾");
+                JButton b = new JButton(UnicodeSymbols.ARROW_DOWN);
                 b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
                 b.setFocusPainted(false);
                 b.setContentAreaFilled(true);
@@ -906,7 +907,7 @@ public class NewOrderGUI extends JFrame {
         buttonPanel.setBackground(ThemeManager.getCardBackgroundColor());
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
-        JButton closeButton = createThemeButton("✓ Schließen", ThemeManager.getPrimaryColor());
+        JButton closeButton = createThemeButton(UnicodeSymbols.CHECKMARK + " Schließen", ThemeManager.getPrimaryColor());
         closeButton.addActionListener(e -> helpDialog.dispose());
         buttonPanel.add(closeButton);
 
