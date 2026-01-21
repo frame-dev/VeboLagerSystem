@@ -52,9 +52,13 @@ public class VendorGUI extends JFrame {
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 12));
         toolbar.setBackground(ThemeManager.getBackgroundColor());
         JButton addVendorButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Lieferant hinzufügen");
+        addVendorButton.setToolTipText("Neuen Lieferanten hinzufügen");
         JButton editVendorButton = createRoundedButton(UnicodeSymbols.BETTER_EDIT + " Lieferant bearbeiten");
+        editVendorButton.setToolTipText("Ausgewählten Lieferanten bearbeiten");
         JButton deleteVendorButton = createRoundedButton(UnicodeSymbols.TRASH + " Lieferant löschen");
+        deleteVendorButton.setToolTipText("Ausgewählten Lieferanten löschen");
         JButton refreshButton = createRoundedButton(UnicodeSymbols.REFRESH + " Aktualisieren");
+        refreshButton.setToolTipText("Lieferantenliste aktualisieren");
         toolbar.add(addVendorButton);
         toolbar.add(editVendorButton);
         toolbar.add(deleteVendorButton);
@@ -97,7 +101,9 @@ public class VendorGUI extends JFrame {
         styleTextField(searchField);
 
         JButton searchBtn = new JButton(UnicodeSymbols.SEARCH + " Suchen");
+        searchBtn.setToolTipText("Nach Lieferanten suchen");
         JButton clearBtn = new JButton(UnicodeSymbols.CLEAR + " Leeren");
+        clearBtn.setToolTipText("Suchfeld leeren");
         styleFlatActionButton(searchBtn);
         styleFlatActionButton(clearBtn);
 
@@ -305,6 +311,7 @@ public class VendorGUI extends JFrame {
 
         // Close button
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
+        closeBtn.setToolTipText("Fenster schliessen");
         closeBtn.setForeground(new Color(255, 255, 255, 200));
         closeBtn.setBackground(new Color(255, 255, 255, 0));
         closeBtn.setBorderPainted(false);
@@ -431,6 +438,7 @@ public class VendorGUI extends JFrame {
 
         JButton cancelBtn = new JButton("Abbrechen");
         cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        cancelBtn.setToolTipText("Abbrechen des Vorgangs");
         cancelBtn.setForeground(ThemeManager.getTextPrimaryColor());
         Color cancelBaseColor = ThemeManager.getSurfaceColor();
         Color cancelHoverColor = ThemeManager.isDarkMode()
@@ -457,6 +465,7 @@ public class VendorGUI extends JFrame {
         });
 
         JButton okBtn = new JButton(UnicodeSymbols.HEAVY_PLUS + " Hinzufügen");
+        okBtn.setToolTipText("Neuen Lieferanten hinzufügen");
         okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         okBtn.setForeground(Color.WHITE);
         Color okBaseColor = ThemeManager.isDarkMode()
@@ -646,6 +655,7 @@ public class VendorGUI extends JFrame {
 
         // Close button
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
+        closeBtn.setToolTipText("Fenster schliessen");
         closeBtn.setForeground(new Color(255, 255, 255, 200));
         closeBtn.setBackground(new Color(255, 255, 255, 0));
         closeBtn.setBorderPainted(false);
@@ -768,6 +778,7 @@ public class VendorGUI extends JFrame {
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
         JButton cancelBtn = new JButton("Abbrechen");
+        cancelBtn.setToolTipText("Abbrechen des Vorgangs");
         cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         cancelBtn.setForeground(ThemeManager.getTextPrimaryColor());
         Color cancelBaseColor = ThemeManager.getSurfaceColor();
@@ -795,6 +806,7 @@ public class VendorGUI extends JFrame {
         });
 
         JButton okBtn = new JButton(UnicodeSymbols.FLOPPY + " Speichern");
+        okBtn.setToolTipText("Änderungen speichern");
         okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         okBtn.setForeground(Color.WHITE);
         Color okBaseColor = ThemeManager.isDarkMode()
@@ -884,6 +896,9 @@ public class VendorGUI extends JFrame {
         JMenuItem del = new JMenuItem(UnicodeSymbols.TRASH + " Löschen");
         popup.add(edit);
         popup.add(del);
+
+        edit.setToolTipText("Ausgewählten Lieferanten bearbeiten");
+        del.setToolTipText("Ausgewählten Lieferanten löschen");
 
         edit.addActionListener(e -> {
             int sel = vendorTable.getSelectedRow();

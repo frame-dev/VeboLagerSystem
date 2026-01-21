@@ -170,9 +170,12 @@ public class CompleteOrderGUI extends JFrame {
         buttons.setOpaque(false);
 
         refreshButton = createThemeButton(UnicodeSymbols.UPDATE + " Aktualisieren", ThemeManager.getSecondaryColor());
+        refreshButton.setToolTipText("Aktualisiert die Liste der offenen Bestellungen");
         completeButton = createThemeButton(UnicodeSymbols.CHECKMARK + " Abschließen", ThemeManager.getSuccessColor());
+        completeButton.setToolTipText("Schließt die ausgewählte Bestellung ab");
         completeButton.setEnabled(false);
         closeButton = createThemeButton(UnicodeSymbols.CLOSE + " Schließen", ThemeManager.getDangerColor());
+        closeButton.setToolTipText("Schließt dieses Fenster");
 
         buttons.add(refreshButton);
         buttons.add(completeButton);

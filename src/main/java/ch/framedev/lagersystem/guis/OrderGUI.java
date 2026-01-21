@@ -70,9 +70,13 @@ public class OrderGUI extends JFrame {
         toolbar.setBackground(ThemeManager.getBackgroundColor());
 
         JButton newOrderButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Neue Bestellung erstellen");
+        newOrderButton.setToolTipText("Erstellt eine neue Bestellung");
         JButton editOrderButton = createRoundedButton(UnicodeSymbols.BETTER_EDIT + " Bestellung bearbeiten");
+        editOrderButton.setToolTipText("Bearbeitet die ausgewählte Bestellung");
         JButton deleteOrderButton = createRoundedButton(UnicodeSymbols.TRASH + " Bestellung löschen");
+        deleteOrderButton.setToolTipText("Löscht die ausgewählte Bestellung");
         JButton completeOrderButton = createRoundedButton(UnicodeSymbols.CHECKMARK + " Bestellung abschließen");
+        completeOrderButton.setToolTipText("Markiert die ausgewählte Bestellung als abgeschlossen");
         JButton refreshButton = createRoundedButton(UnicodeSymbols.REFRESH + " Aktualisieren");
 
         JComboBox<String> filterComboBox = new JComboBox<>(new String[]{
@@ -131,7 +135,9 @@ public class OrderGUI extends JFrame {
         styleTextField(searchField);
 
         JButton searchBtn = createRoundedButton(UnicodeSymbols.SEARCH + " Suchen");
+        searchBtn.setToolTipText("Suche bestellen");
         JButton clearBtn = createRoundedButton(UnicodeSymbols.CLEAR + " Leeren");
+        clearBtn.setToolTipText("Suchfeld leeren");
 
         searchPanel.add(searchLabel);
         searchPanel.add(searchField);
@@ -291,8 +297,11 @@ public class OrderGUI extends JFrame {
     private void setupTableInteractions() {
         JPopupMenu popup = new JPopupMenu();
         JMenuItem edit = new JMenuItem(UnicodeSymbols.BETTER_EDIT + " Bearbeiten");
+        edit.setToolTipText("Bearbeitet die ausgewählte Bestellung");
         JMenuItem del = new JMenuItem(UnicodeSymbols.TRASH + " Löschen");
+        del.setToolTipText("Löscht die ausgewählte Bestellung");
         JMenuItem complete = new JMenuItem(UnicodeSymbols.CHECKMARK + " Abschließen");
+        complete.setToolTipText("Markiert die ausgewählte Bestellung als abgeschlossen");
         popup.add(edit);
         popup.add(del);
         popup.add(complete);
@@ -744,9 +753,11 @@ public class OrderGUI extends JFrame {
         btnPanel.setOpaque(false);
 
         JButton exportBtn = createRoundedButton(UnicodeSymbols.DOWNLOAD + " PDF Exportieren");
+        exportBtn.setToolTipText("Exportiert die Bestelldetails als PDF-Datei");
         exportBtn.addActionListener(ev -> createPDFExport(order));
 
         JButton closeBtn = createRoundedButton(UnicodeSymbols.CLOSE + " Schließen");
+        closeBtn.setToolTipText("Schließt das Fenster");
         closeBtn.addActionListener(ev -> detailsDialog.dispose());
 
         btnPanel.add(exportBtn);

@@ -490,6 +490,8 @@ public class ThemeManager {
             UIManager.put("FileView.fileIcon", null);
             UIManager.put("FileView.floppyDriveIcon", null);
             UIManager.put("FileView.hardDriveIcon", null);
+
+            UIManager.put("ToolTip.font", new Font("Arial", Font.BOLD, 16));
         }
     }
 

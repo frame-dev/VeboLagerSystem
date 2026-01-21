@@ -45,28 +45,50 @@ public class SettingsGUI extends JFrame {
 
     public SettingsGUI() {
         setTitle("Einstellungen");
-        setSize(1100, 800);
+        setSize(1200, 850);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+
+        // Set window icon if available
+        if (Main.iconSmall != null) {
+            setIconImage(Main.iconSmall.getImage());
+        }
 
         // Background color
         JPanel mainContainer = new JPanel(new BorderLayout());
         mainContainer.setBackground(ThemeManager.getBackgroundColor());
 
-        // Header Panel
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(ThemeManager.getPrimaryColor());
-        headerPanel.setPreferredSize(new Dimension(0, 90));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        // Header Panel with enhanced gradient effect
+        JPanel headerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (g instanceof Graphics2D g2d) {
+                    g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                    Color color1 = ThemeManager.getPrimaryColor();
+                    Color color2 = new Color(
+                            Math.max(0, color1.getRed() - 10),
+                            Math.max(0, color1.getGreen() - 10),
+                            Math.max(0, color1.getBlue() - 10)
+                    );
+                    GradientPaint gradient = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
+                    g2d.setPaint(gradient);
+                    g2d.fillRect(0, 0, getWidth(), getHeight());
+                }
+            }
+        };
+        headerPanel.setOpaque(false);
+        headerPanel.setPreferredSize(new Dimension(0, 100));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(25, 35, 25, 35));
 
         JLabel titleLabel = new JLabel(UnicodeSymbols.BETTER_GEAR + "  Einstellungen");
-        titleLabel.setFont(getFontByName(Font.BOLD, 24));
+        titleLabel.setFont(getFontByName(Font.BOLD, 28));
         titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
 
-        JLabel subtitleLabel = new JLabel("Konfiguration für das Lagersystem");
-        subtitleLabel.setFont(getFontByName(Font.PLAIN, 13));
-        subtitleLabel.setForeground(ThemeManager.getTextOnPrimaryColor().brighter());
+        JLabel subtitleLabel = new JLabel("Konfiguration und Verwaltung des Lagersystems");
+        subtitleLabel.setFont(getFontByName(Font.PLAIN, 14));
+        subtitleLabel.setForeground(new Color(255, 255, 255, 200));
 
         JPanel headerTextPanel = new JPanel();
         headerTextPanel.setLayout(new BoxLayout(headerTextPanel, BoxLayout.Y_AXIS));
@@ -596,6 +618,71 @@ public class SettingsGUI extends JFrame {
         aboutSection.add(Box.createVerticalStrut(15));
         aboutSection.add(systemInfoPanel);
 
+        // Update Manager Section
+        JPanel updatePanel = new JPanel();
+        updatePanel.setLayout(new BoxLayout(updatePanel, BoxLayout.Y_AXIS));
+        updatePanel.setOpaque(false);
+        updatePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        updatePanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
+
+        updatePanel.add(createStyledLabel(UnicodeSymbols.DOWNLOAD + " Update-Verwaltung:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+        updatePanel.add(Box.createVerticalStrut(12));
+
+        // Create update button rows with better layout
+        JPanel updateRow1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        updateRow1.setOpaque(false);
+        updateRow1.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
+        updateRow1.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton checkStableUpdateBtn = createStyledButton("Stable-Updates", new Color(52, 152, 219));
+        checkStableUpdateBtn.setToolTipText("Prüft auf neue stabile Versionen");
+        checkStableUpdateBtn.addActionListener(e -> checkForUpdates("stable"));
+        checkStableUpdateBtn.setPreferredSize(new Dimension(180, 40));
+
+        JButton checkBetaUpdateBtn = createStyledButton("Beta-Updates", new Color(243, 156, 18));
+        checkBetaUpdateBtn.setToolTipText("Prüft auf neue Beta-Versionen");
+        checkBetaUpdateBtn.addActionListener(e -> checkForUpdates("beta"));
+        checkBetaUpdateBtn.setPreferredSize(new Dimension(180, 40));
+
+        updateRow1.add(checkStableUpdateBtn);
+        updateRow1.add(checkBetaUpdateBtn);
+
+        updatePanel.add(updateRow1);
+        updatePanel.add(Box.createVerticalStrut(8));
+
+        JPanel updateRow2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        updateRow2.setOpaque(false);
+        updateRow2.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
+        updateRow2.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton checkAlphaUpdateBtn = createStyledButton("Alpha-Updates", new Color(231, 76, 60));
+        checkAlphaUpdateBtn.setToolTipText("Prüft auf neue Alpha-Versionen (experimentell)");
+        checkAlphaUpdateBtn.addActionListener(e -> checkForUpdates("alpha"));
+        checkAlphaUpdateBtn.setPreferredSize(new Dimension(180, 40));
+
+        JButton checkTestingUpdateBtn = createStyledButton("Testing-Updates", new Color(155, 89, 182));
+        checkTestingUpdateBtn.setToolTipText("Prüft auf neue Testing-Versionen (Entwicklung)");
+        checkTestingUpdateBtn.addActionListener(e -> checkForUpdates("testing"));
+        checkTestingUpdateBtn.setPreferredSize(new Dimension(180, 40));
+
+        updateRow2.add(checkAlphaUpdateBtn);
+        updateRow2.add(checkTestingUpdateBtn);
+
+        updatePanel.add(updateRow2);
+        updatePanel.add(Box.createVerticalStrut(12));
+
+        // Add info text about version
+        JLabel versionInfoLabel = new JLabel("<html><div style='padding: 8px; background: " + toHexColor(ThemeManager.getInputBackgroundColor()) + "; border-radius: 6px;'>" +
+                "<b>Aktuelle Version:</b> " + Main.VERSION + "<br/>" +
+                "<span style='font-size: 11px; color: #666;'>Kanal: " + UpdateManager.detectChannel(Main.VERSION) + "</span>" +
+                "</div></html>");
+        versionInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
+        versionInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        updatePanel.add(versionInfoLabel);
+
+        aboutSection.add(Box.createVerticalStrut(15));
+        aboutSection.add(updatePanel);
+
         // Copyright
         JPanel copyrightPanel = new JPanel();
         copyrightPanel.setLayout(new BoxLayout(copyrightPanel, BoxLayout.Y_AXIS));
@@ -626,12 +713,12 @@ public class SettingsGUI extends JFrame {
 
         mainContainer.add(contentWrapper, BorderLayout.CENTER);
 
-        // Button Panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 15));
+        // Button Panel with enhanced styling
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 18, 18));
         buttonPanel.setBackground(ThemeManager.getCardBackgroundColor());
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
-        JButton cancelButton = createStyledButton("Abbrechen", new Color(149, 165, 166));
+        JButton cancelButton = createStyledButton(UnicodeSymbols.CLOSE + " Abbrechen", new Color(155, 89, 182));
         cancelButton.addActionListener(e -> dispose());
 
         JButton saveButton = createStyledButton(UnicodeSymbols.FLOPPY + " Speichern", new Color(46, 204, 113));
@@ -710,28 +797,27 @@ public class SettingsGUI extends JFrame {
      * Creates a modern styled section panel with card-like appearance
      */
     private JPanel createSectionPanel(String title, String description) {
-        // Use RoundedPanel for proper card appearance with better shadow
         RoundedPanel section = getRoundedPanel();
 
-        // Header panel with icon/emoji and title
+        // Header panel with better visual hierarchy
         JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         headerPanel.setOpaque(false);
         headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(getFontByName(Font.BOLD, 18));
+        titleLabel.setFont(getFontByName(Font.BOLD, 20));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         headerPanel.add(titleLabel);
 
         // Description with better formatting
-        JLabel descLabel = new JLabel("<html><div style='line-height: 1.7; color: #6c757d;'>" +
+        JLabel descLabel = new JLabel("<html><div style='line-height: 1.8; color: #6c757d; font-weight: 300;'>" +
                 description + "</div></html>");
         descLabel.setFont(getFontByName(Font.PLAIN, 13));
         descLabel.setForeground(ThemeManager.getTextSecondaryColor());
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        descLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
+        descLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
 
         // Add a subtle separator line
         JSeparator separator = new JSeparator(JSeparator.HORIZONTAL);
@@ -740,33 +826,33 @@ public class SettingsGUI extends JFrame {
         separator.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         section.add(headerPanel);
-        section.add(Box.createVerticalStrut(10));
+        section.add(Box.createVerticalStrut(12));
         section.add(descLabel);
-        section.add(Box.createVerticalStrut(18));
+        section.add(Box.createVerticalStrut(20));
         section.add(separator);
-        section.add(Box.createVerticalStrut(6));
+        section.add(Box.createVerticalStrut(8));
 
         return section;
     }
 
     private static RoundedPanel getRoundedPanel() {
-        RoundedPanel section = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
+        RoundedPanel section = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
         section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
 
-        // Enhanced shadow effect with proper border
+        // Enhanced shadow and border with depth effect
         section.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createCompoundBorder(
-                        // Outer shadow
-                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                        // Shadow padding
-                        BorderFactory.createEmptyBorder(2, 2, 4, 2)
+                        BorderFactory.createLineBorder(
+                                new Color(0, 0, 0, 10), 3),
+                        BorderFactory.createEmptyBorder(1, 1, 3, 1)
                 ),
-                // Inner content padding
-                BorderFactory.createEmptyBorder(24, 28, 24, 28)
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                        BorderFactory.createEmptyBorder(28, 32, 28, 32)
+                )
         ));
 
-        // Proper size constraints - remove fixed preferred size
-        section.setMaximumSize(new Dimension(Integer.MAX_VALUE, 500));
+        section.setMaximumSize(new Dimension(Integer.MAX_VALUE, 520));
         section.setAlignmentX(Component.LEFT_ALIGNMENT);
         return section;
     }
@@ -775,14 +861,14 @@ public class SettingsGUI extends JFrame {
      * Styles a checkbox with modern appearance and enhanced click area
      */
     private void styleCheckbox(JCheckBox checkbox) {
-        checkbox.setFont(getFontByName(Font.PLAIN, 13));
+        checkbox.setFont(getFontByName(Font.PLAIN, 14));
         checkbox.setForeground(ThemeManager.getTextPrimaryColor());
         checkbox.setOpaque(false);
         checkbox.setFocusPainted(false);
         checkbox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         checkbox.setAlignmentX(Component.LEFT_ALIGNMENT);
-        checkbox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        checkbox.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        checkbox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        checkbox.setBorder(BorderFactory.createEmptyBorder(8, 2, 8, 0));
 
         // Add hover effect for better UX
         checkbox.addMouseListener(new MouseAdapter() {
@@ -810,13 +896,13 @@ public class SettingsGUI extends JFrame {
         JComponent editor = spinner.getEditor();
         if (editor instanceof JSpinner.DefaultEditor) {
             JTextField textField = ((JSpinner.DefaultEditor) editor).getTextField();
-            textField.setFont(getFontByName(Font.PLAIN, 13));
+            textField.setFont(getFontByName(Font.PLAIN, 14));
             textField.setBackground(ThemeManager.getInputBackgroundColor());
             textField.setForeground(ThemeManager.getTextPrimaryColor());
             textField.setCaretColor(ThemeManager.getTextPrimaryColor());
             textField.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                    BorderFactory.createEmptyBorder(8, 12, 8, 12)
+                    BorderFactory.createEmptyBorder(10, 14, 10, 14)
             ));
 
             // Add focus listener for better UX
@@ -825,7 +911,7 @@ public class SettingsGUI extends JFrame {
                 public void focusGained(java.awt.event.FocusEvent e) {
                     textField.setBorder(BorderFactory.createCompoundBorder(
                             BorderFactory.createLineBorder(ThemeManager.getPrimaryColor(), 2, true),
-                            BorderFactory.createEmptyBorder(7, 11, 7, 11)
+                            BorderFactory.createEmptyBorder(9, 13, 9, 13)
                     ));
                 }
 
@@ -833,13 +919,12 @@ public class SettingsGUI extends JFrame {
                 public void focusLost(java.awt.event.FocusEvent e) {
                     textField.setBorder(BorderFactory.createCompoundBorder(
                             BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                            BorderFactory.createEmptyBorder(8, 12, 8, 12)
+                            BorderFactory.createEmptyBorder(10, 14, 10, 14)
                     ));
                 }
             });
         }
 
-        // Style the spinner itself
         spinner.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true));
         spinner.setBackground(ThemeManager.getInputBackgroundColor());
     }
@@ -849,12 +934,12 @@ public class SettingsGUI extends JFrame {
      */
     private JButton createStyledButton(String text, Color originalBg) {
         JButton button = new JButton(text);
-        button.setFont(getFontByName(Font.BOLD, 13));
+        button.setFont(getFontByName(Font.BOLD, 14));
         button.setForeground(Color.WHITE);
         button.setBackground(originalBg);
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(originalBg.darker(), 1, true),
-                BorderFactory.createEmptyBorder(12, 24, 12, 24)
+                BorderFactory.createEmptyBorder(14, 28, 14, 28)
         ));
         button.setFocusPainted(false);
         button.setOpaque(true);
@@ -865,19 +950,19 @@ public class SettingsGUI extends JFrame {
         // Set consistent height
         button.setPreferredSize(new Dimension(
                 button.getPreferredSize().width,
-                44
+                48
         ));
 
         // Enhanced hover effect with smooth color transitions
         Color hoverBg = new Color(
-                Math.max(0, originalBg.getRed() - 20),
-                Math.max(0, originalBg.getGreen() - 20),
-                Math.max(0, originalBg.getBlue() - 20)
+                Math.max(0, originalBg.getRed() - 25),
+                Math.max(0, originalBg.getGreen() - 25),
+                Math.max(0, originalBg.getBlue() - 25)
         );
         Color pressedBg = new Color(
-                Math.max(0, originalBg.getRed() - 40),
-                Math.max(0, originalBg.getGreen() - 40),
-                Math.max(0, originalBg.getBlue() - 40)
+                Math.max(0, originalBg.getRed() - 50),
+                Math.max(0, originalBg.getGreen() - 50),
+                Math.max(0, originalBg.getBlue() - 50)
         );
 
         button.addMouseListener(new MouseAdapter() {
@@ -886,7 +971,7 @@ public class SettingsGUI extends JFrame {
                 button.setBackground(hoverBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(hoverBg.darker(), 2, true),
-                        BorderFactory.createEmptyBorder(11, 23, 11, 23)
+                        BorderFactory.createEmptyBorder(13, 27, 13, 27)
                 ));
             }
 
@@ -895,7 +980,7 @@ public class SettingsGUI extends JFrame {
                 button.setBackground(originalBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(originalBg.darker(), 1, true),
-                        BorderFactory.createEmptyBorder(12, 24, 12, 24)
+                        BorderFactory.createEmptyBorder(14, 28, 14, 28)
                 ));
             }
 
@@ -1136,6 +1221,220 @@ public class SettingsGUI extends JFrame {
         } catch (Exception e) {
             System.err.println("[SettingsGUI] Fehler beim Anwenden der Einstellungen: " + e.getMessage());
             logger.error("Fehler beim Anwenden der Einstellungen", e);
+        }
+    }
+
+    /**
+     * Checks for updates based on the selected release channel (stable, beta, alpha, testing)
+     * Shows a dialog with update information and download link if available
+     */
+    private void checkForUpdates(String channel) {
+        try {
+            UpdateManager updateManager = UpdateManager.getInstance();
+
+            // Convert string to ReleaseChannel enum
+            UpdateManager.ReleaseChannel releaseChannel = switch (channel.toLowerCase()) {
+                case "beta" -> UpdateManager.ReleaseChannel.BETA;
+                case "alpha" -> UpdateManager.ReleaseChannel.ALPHA;
+                case "testing" -> UpdateManager.ReleaseChannel.TESTING;
+                default -> UpdateManager.ReleaseChannel.STABLE;
+            };
+
+            String channelDisplay = switch (channel.toLowerCase()) {
+                case "beta" -> "Beta";
+                case "alpha" -> "Alpha";
+                case "testing" -> "Testing";
+                default -> "Stable";
+            };
+
+            // Create NON-MODAL progress dialog
+            JDialog progressDialog = new JDialog(this, "Nach Updates suchen...", false);
+            progressDialog.setLayout(new BorderLayout());
+            progressDialog.setSize(400, 150);
+            progressDialog.setLocationRelativeTo(this);
+            progressDialog.setUndecorated(true);
+            progressDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+
+            JPanel progressPanel = new JPanel(new BorderLayout(10, 10));
+            progressPanel.setBackground(ThemeManager.getCardBackgroundColor());
+            progressPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 2),
+                BorderFactory.createEmptyBorder(20, 20, 20, 20)
+            ));
+
+            JLabel progressLabel = new JLabel("<html><center>Prüfe auf " + channelDisplay + "-Updates...<br/>Bitte warten...</center></html>");
+            progressLabel.setFont(getFontByName(Font.PLAIN, 14));
+            progressLabel.setForeground(ThemeManager.getTextPrimaryColor());
+            progressLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+            progressPanel.add(progressLabel, BorderLayout.CENTER);
+            progressDialog.add(progressPanel);
+
+            // Check for updates in background
+            SwingWorker<String, Void> worker = new SwingWorker<>() {
+                @Override
+                protected String doInBackground() {
+                    return updateManager.getLatestVersion(releaseChannel);
+                }
+
+                @Override
+                protected void done() {
+                    // Close progress dialog first
+                    SwingUtilities.invokeLater(() -> {
+                        progressDialog.setVisible(false);
+                        progressDialog.dispose();
+                    });
+
+                    try {
+                        String latestVersion = get();
+                        // Show result dialog after a small delay to ensure progress dialog is closed
+                        SwingUtilities.invokeLater(() -> handleUpdateResult(latestVersion, channel));
+                    } catch (Exception e) {
+                        logger.error("Fehler beim Prüfen auf Updates: {}", e.getMessage(), e);
+                        SwingUtilities.invokeLater(() -> showUpdateError(e.getMessage()));
+                    }
+                }
+            };
+
+            // Start worker and show dialog
+            worker.execute();
+            progressDialog.setVisible(true);
+
+        } catch (Exception e) {
+            logger.error("Fehler beim Starten der Update-Prüfung: {}", e.getMessage(), e);
+            showUpdateError(e.getMessage());
+        }
+    }
+
+    /**
+     * Handles the update check result and displays appropriate dialog
+     */
+    private void handleUpdateResult(String latestVersion, String channel) {
+        if (latestVersion == null) {
+            JOptionPane.showMessageDialog(this,
+                "<html><b>Keine Update-Informationen verfügbar</b><br/><br/>" +
+                "Die Update-Informationen konnten nicht abgerufen werden.<br/>" +
+                "Bitte überprüfen Sie Ihre Internetverbindung.</html>",
+                "Update-Prüfung",
+                JOptionPane.WARNING_MESSAGE,
+                Main.iconSmall);
+            return;
+        }
+
+        String currentVersion = Main.VERSION;
+        UpdateManager updateManager = UpdateManager.getInstance();
+
+        if (updateManager.isUpdateAvailable(currentVersion)) {
+            showUpdateAvailableDialog(latestVersion, currentVersion, channel);
+        } else {
+            showNoUpdateDialog(currentVersion, channel);
+        }
+    }
+
+    /**
+     * Shows dialog when an update is available
+     */
+    private void showUpdateAvailableDialog(String latestVersion, String currentVersion, String channel) {
+        String channelDisplay = switch (channel.toLowerCase()) {
+            case "beta" -> " (Beta)";
+            case "alpha" -> " (Alpha)";
+            case "testing" -> " (Testing)";
+            default -> "";
+        };
+
+        String downloadUrl = getDownloadUrl(channel);
+
+        Object[] options = {"Download-Seite öffnen", "Später"};
+        int result = JOptionPane.showOptionDialog(this,
+            "<html><b>" + UnicodeSymbols.DOWNLOAD + " Update verfügbar!</b><br/><br/>" +
+            "Eine neue Version ist verfügbar:<br/><br/>" +
+            "Aktuelle Version: <b>" + currentVersion + "</b><br/>" +
+            "Neue Version: <b>" + latestVersion + channelDisplay + "</b><br/><br/>" +
+            "Möchten Sie die Download-Seite öffnen?</html>",
+            "Update verfügbar",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.INFORMATION_MESSAGE,
+            Main.iconSmall,
+            options,
+            options[0]);
+
+        if (result == 0) { // Download-Seite öffnen
+            openDownloadPage(downloadUrl);
+        }
+    }
+
+    /**
+     * Shows dialog when no update is available
+     */
+    private void showNoUpdateDialog(String currentVersion, String channel) {
+        String channelDisplay = switch (channel.toLowerCase()) {
+            case "beta" -> " (Beta)";
+            case "alpha" -> " (Alpha)";
+            case "testing" -> " (Testing)";
+            default -> "";
+        };
+
+        JOptionPane.showMessageDialog(this,
+            "<html><b>" + UnicodeSymbols.CHECKMARK + " Keine Updates verfügbar</b><br/><br/>" +
+            "Sie verwenden bereits die neueste Version" + channelDisplay + ":<br/>" +
+            "<b>Version " + currentVersion + "</b></html>",
+            "Update-Prüfung",
+            JOptionPane.INFORMATION_MESSAGE,
+            Main.iconSmall);
+    }
+
+    /**
+     * Shows error dialog when update check fails
+     */
+    private void showUpdateError(String errorMessage) {
+        JOptionPane.showMessageDialog(this,
+            "<html><b>" + UnicodeSymbols.WARNING + " Fehler bei Update-Prüfung</b><br/><br/>" +
+            "Die Update-Prüfung ist fehlgeschlagen:<br/>" +
+            errorMessage + "</html>",
+            "Fehler",
+            JOptionPane.ERROR_MESSAGE,
+            Main.iconSmall);
+    }
+
+    /**
+     * Gets the download URL based on the release channel
+     */
+    private String getDownloadUrl(String channel) {
+        return switch (channel.toLowerCase()) {
+            case "beta" -> "https://github.com/frame-dev/VeboLagerSystem/releases?q=beta";
+            case "alpha" -> "https://github.com/frame-dev/VeboLagerSystem/releases?q=alpha";
+            case "testing" -> "https://github.com/frame-dev/VeboLagerSystem/releases?q=testing";
+            default -> "https://github.com/frame-dev/VeboLagerSystem/releases/latest";
+        };
+    }
+
+    /**
+     * Opens the download page in the default browser
+     */
+    private void openDownloadPage(String url) {
+        try {
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(new java.net.URI(url));
+                logger.info("Download-Seite geöffnet: {}", url);
+            } else {
+                // Fallback: show URL in dialog
+                JOptionPane.showMessageDialog(this,
+                    "<html><b>Download-Link:</b><br/><br/>" +
+                    "<a href='" + url + "'>" + url + "</a><br/><br/>" +
+                    "Bitte kopieren Sie den Link und öffnen Sie ihn in Ihrem Browser.</html>",
+                    "Download-Link",
+                    JOptionPane.INFORMATION_MESSAGE,
+                    Main.iconSmall);
+            }
+        } catch (Exception e) {
+            logger.error("Fehler beim Öffnen der Download-Seite: {}", e.getMessage(), e);
+            JOptionPane.showMessageDialog(this,
+                "<html><b>Fehler beim Öffnen des Browsers</b><br/><br/>" +
+                "Bitte öffnen Sie den folgenden Link manuell:<br/>" +
+                url + "</html>",
+                "Fehler",
+                JOptionPane.ERROR_MESSAGE,
+                Main.iconSmall);
         }
     }
 
@@ -1397,7 +1696,7 @@ public class SettingsGUI extends JFrame {
     }
 
     /**
-     * Rounded panel for modern card design
+     * Rounded panel for modern card design with enhanced shadow
      */
     private static class RoundedPanel extends JPanel {
         private final Color backgroundColor;
@@ -1413,8 +1712,16 @@ public class SettingsGUI extends JFrame {
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+            // Draw subtle shadow
+            g2.setColor(new Color(0, 0, 0, 15));
+            g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, radius, radius);
+
+            // Draw main card
             g2.setColor(backgroundColor);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
+            g2.fillRoundRect(0, 0, getWidth() - 2, getHeight() - 2, radius, radius);
+
             g2.dispose();
             super.paintComponent(g);
         }
@@ -1942,6 +2249,13 @@ public class SettingsGUI extends JFrame {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
         String[] fontNames = ge.getAvailableFontFamilyNames();
         return Arrays.asList(fontNames);
+    }
+
+    /**
+     * Convert Color to hex string format for HTML
+     */
+    private static String toHexColor(Color color) {
+        return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
     }
 
 }

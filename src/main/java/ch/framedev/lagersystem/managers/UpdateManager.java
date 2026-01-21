@@ -1,6 +1,7 @@
 package ch.framedev.lagersystem.managers;
 
 import ch.framedev.lagersystem.main.Main;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -14,26 +15,64 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
+/**
+ * Manages application updates by checking GitHub releases.
+ * Features:
+ * - Checks for new versions from GitHub releases
+ * - Compares version strings intelligently
+ * - Supports authenticated requests for higher rate limits
+ * - Provides JAR download URLs
+ * - Thread-safe singleton pattern
+ */
 @SuppressWarnings("unused")
 public class UpdateManager {
 
     private static final Logger logger = LogManager.getLogger(UpdateManager.class);
-    private static final String GITHUB_URL = "https://api.github.com/repos/frame-dev/VeboLagerSystem/releases/latest";
+    private static final String GITHUB_API_BASE = "https://api.github.com/repos/frame-dev/VeboLagerSystem";
+    private static final String GITHUB_RELEASES_URL = GITHUB_API_BASE + "/releases/latest";
+    private static final String GITHUB_ALL_RELEASES_URL = GITHUB_API_BASE + "/releases";
+    private static final int CONNECT_TIMEOUT = 10000; // 10 seconds
+    private static final int READ_TIMEOUT = 10000; // 10 seconds
 
-    private static UpdateManager instance;
+    private static volatile UpdateManager instance;
+    private static final Object lock = new Object();
+
     private String personalToken;
+    private String cachedLatestVersion;
+    private long lastCheckTime = 0;
+    private static final long CACHE_DURATION = TimeUnit.MINUTES.toMillis(5); // Cache for 5 minutes
+
+    /**
+     * Enum representing different release channels/branches
+     */
+    public enum ReleaseChannel {
+        STABLE,     // Production releases (e.g., v1.0.0)
+        BETA,       // Beta releases (e.g., v1.0.0-beta.1)
+        ALPHA,      // Alpha releases (e.g., v1.0.0-alpha.1)
+        TESTING     // Testing/development versions (e.g., 0.1-TESTING)
+    }
 
     private UpdateManager() {
+        // Load token from settings if available
         String githubToken = Main.settings.getProperty("github-token");
         if (githubToken != null && !githubToken.isEmpty()) {
             setPersonalToken(githubToken);
+            logger.debug("GitHub token loaded from settings");
         }
     }
 
+    /**
+     * Thread-safe singleton instance retrieval
+     */
     public static UpdateManager getInstance() {
         if (instance == null) {
-            instance = new UpdateManager();
+            synchronized (lock) {
+                if (instance == null) {
+                    instance = new UpdateManager();
+                }
+            }
         }
         return instance;
     }
@@ -51,10 +90,47 @@ public class UpdateManager {
         }
     }
 
+    /**
+     * Gets the latest version from GitHub releases.
+     * Uses caching to avoid excessive API calls (5-minute cache).
+     *
+     * @return Latest version string (e.g., "v1.0.0") or null if unable to fetch
+     */
     public String getLatestVersion() {
+        return getLatestVersion(ReleaseChannel.STABLE);
+    }
+
+    /**
+     * Gets the latest version for a specific release channel.
+     * Uses caching to avoid excessive API calls (5-minute cache).
+     *
+     * @param channel The release channel to check (STABLE, BETA, or ALPHA)
+     * @return Latest version string for the channel (e.g., "v1.0.0", "v1.0.0-beta.1") or null if unable to fetch
+     */
+    public String getLatestVersion(ReleaseChannel channel) {
+        // For stable releases, use the /releases/latest endpoint (cached)
+        if (channel == ReleaseChannel.STABLE) {
+            return getLatestStableVersion();
+        }
+
+        // For beta/alpha, fetch all releases and find the latest matching one
+        return getLatestVersionForChannel(channel);
+    }
+
+    /**
+     * Gets the latest stable version (cached).
+     */
+    private String getLatestStableVersion() {
+        // Check cache first
+        long currentTime = System.currentTimeMillis();
+        if (cachedLatestVersion != null && (currentTime - lastCheckTime) < CACHE_DURATION) {
+            logger.debug("Returning cached version: {}", cachedLatestVersion);
+            return cachedLatestVersion;
+        }
+
         try {
             // Create HTTP connection to GitHub API
-            URL url = URI.create(GITHUB_URL).toURL();
+            URL url = URI.create(GITHUB_RELEASES_URL).toURL();
             HttpURLConnection connection = getHttpURLConnection(url);
 
             // Check response code
@@ -63,53 +139,129 @@ public class UpdateManager {
                 String errorMessage = readErrorResponse(connection);
                 if (responseCode == 404) {
                     logger.warn("GitHub API 404 Not Found: Repository '{}' not found or has no releases. Response: {}",
-                            GITHUB_URL, errorMessage);
+                            GITHUB_RELEASES_URL, errorMessage);
+                } else if (responseCode == 403) {
+                    logger.warn("GitHub API rate limit exceeded (HTTP 403). Consider adding a personal token.");
                 } else {
                     logger.error("GitHub API error: HTTP {} - {}", responseCode, errorMessage);
                 }
-                return null;
+                connection.disconnect();
+                return cachedLatestVersion; // Return cached version if available
             }
 
             // Read response
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8)
-            );
-
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            reader.close();
+            String responseBody = readResponse(connection);
             connection.disconnect();
 
             // Parse JSON response
-            JsonElement jsonElement = JsonParser.parseString(response.toString());
+            JsonElement jsonElement = JsonParser.parseString(responseBody);
             JsonObject jsonObject = jsonElement.getAsJsonObject();
 
             // Extract version tag (e.g., "v1.2.3")
             if (jsonObject.has("tag_name")) {
                 String version = jsonObject.get("tag_name").getAsString();
-                logger.info("Latest version from GitHub: {}", version);
+                logger.info("Latest stable version from GitHub: {}", version);
+
+                // Update cache
+                cachedLatestVersion = version;
+                lastCheckTime = currentTime;
+
                 return version;
             }
 
             logger.warn("No tag_name found in GitHub response");
-            return null;
+            return cachedLatestVersion;
 
         } catch (Exception e) {
             logger.error("Error fetching latest version from GitHub: {}", e.getMessage(), e);
+            return cachedLatestVersion; // Return cached version on error
+        }
+    }
+
+    /**
+     * Gets the latest version for beta, alpha, or testing channel from all releases.
+     */
+    private String getLatestVersionForChannel(ReleaseChannel channel) {
+        try {
+            URL url = URI.create(GITHUB_ALL_RELEASES_URL).toURL();
+            HttpURLConnection connection = getHttpURLConnection(url);
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 200) {
+                logger.warn("Failed to get all releases: HTTP {}", responseCode);
+                connection.disconnect();
+                return null;
+            }
+
+            String responseBody = readResponse(connection);
+            connection.disconnect();
+
+            JsonArray releasesArray = JsonParser.parseString(responseBody).getAsJsonArray();
+
+            // Find the latest version matching the channel
+            String channelPrefix;
+            switch (channel) {
+                case BETA:
+                    channelPrefix = "beta";
+                    break;
+                case ALPHA:
+                    channelPrefix = "alpha";
+                    break;
+                case TESTING:
+                    channelPrefix = "testing";
+                    break;
+                default:
+                    logger.warn("Unsupported channel for this method: {}", channel);
+                    return null;
+            }
+
+            for (JsonElement element : releasesArray) {
+                JsonObject release = element.getAsJsonObject();
+                if (release.has("tag_name")) {
+                    String tag = release.get("tag_name").getAsString().toLowerCase();
+
+                    // Check if this release matches the channel
+                    if (tag.contains(channelPrefix)) {
+                        logger.info("Latest {} version from GitHub: {}", channel, release.get("tag_name").getAsString());
+                        return release.get("tag_name").getAsString();
+                    }
+                }
+            }
+
+            logger.info("No {} releases found", channel);
+            return null;
+
+        } catch (Exception e) {
+            logger.error("Error fetching {} version: {}", channel, e.getMessage(), e);
             return null;
         }
     }
 
+    /**
+     * Reads the response body from an HTTP connection.
+     */
+    private String readResponse(HttpURLConnection connection) throws IOException {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+            StringBuilder response = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                response.append(line);
+            }
+            return response.toString();
+        }
+    }
+
+    /**
+     * Creates and configures an HTTP connection for GitHub API requests.
+     */
     private HttpURLConnection getHttpURLConnection(URL url) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
         // Configure the request
         connection.setRequestMethod("GET");
-        connection.setConnectTimeout(5000);
-        connection.setReadTimeout(5000);
+        connection.setConnectTimeout(CONNECT_TIMEOUT);
+        connection.setReadTimeout(READ_TIMEOUT);
         connection.setRequestProperty("Accept", "application/vnd.github+json");
         connection.setRequestProperty("User-Agent", "VeboLagerSystem");
 
@@ -125,16 +277,13 @@ public class UpdateManager {
      * This is useful for getting error messages from GitHub API.
      */
     private String readErrorResponse(HttpURLConnection connection) {
-        try {
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(connection.getErrorStream(), StandardCharsets.UTF_8)
-            );
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(connection.getErrorStream(), StandardCharsets.UTF_8))) {
             StringBuilder response = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
                 response.append(line);
             }
-            reader.close();
             return response.toString();
         } catch (Exception e) {
             return "Could not read error response";
@@ -147,17 +296,8 @@ public class UpdateManager {
      */
     public boolean verifyRepository() {
         try {
-            URL url = URI.create("https://api.github.com/repos/frame-dev/VeboLagerSystem").toURL();
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(5000);
-            connection.setReadTimeout(5000);
-            connection.setRequestProperty("User-Agent", "VeboLagerSystem");
-
-            if (personalToken != null && !personalToken.isEmpty()) {
-                connection.setRequestProperty("Authorization", "token " + personalToken);
-            }
+            URL url = URI.create(GITHUB_API_BASE).toURL();
+            HttpURLConnection connection = getHttpURLConnection(url);
 
             int responseCode = connection.getResponseCode();
             connection.disconnect();
@@ -176,7 +316,129 @@ public class UpdateManager {
     }
 
     /**
+     * Clears the cached version information.
+     * Forces the next call to getLatestVersion() to fetch fresh data from GitHub.
+     */
+    public void clearCache() {
+        cachedLatestVersion = null;
+        lastCheckTime = 0;
+        logger.debug("Version cache cleared");
+    }
+
+    /**
+     * Gets the release notes for the latest version.
+     *
+     * @return Release notes as a string, or null if unable to fetch
+     */
+    public String getLatestReleaseNotes() {
+        try {
+            URL url = URI.create(GITHUB_RELEASES_URL).toURL();
+            HttpURLConnection connection = getHttpURLConnection(url);
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 200) {
+                logger.warn("Failed to get release notes: HTTP {}", responseCode);
+                connection.disconnect();
+                return null;
+            }
+
+            String responseBody = readResponse(connection);
+            connection.disconnect();
+
+            JsonObject jsonObject = JsonParser.parseString(responseBody).getAsJsonObject();
+
+            if (jsonObject.has("body")) {
+                String notes = jsonObject.get("body").getAsString();
+                logger.debug("Release notes retrieved successfully");
+                return notes;
+            }
+
+            logger.warn("No release notes found");
+            return null;
+
+        } catch (Exception e) {
+            logger.error("Error fetching release notes: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Gets detailed information about the latest release.
+     *
+     * @return ReleaseInfo object with version, notes, and download URL, or null if unable to fetch
+     */
+    public ReleaseInfo getLatestReleaseInfo() {
+        try {
+            URL url = URI.create(GITHUB_RELEASES_URL).toURL();
+            HttpURLConnection connection = getHttpURLConnection(url);
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode != 200) {
+                logger.warn("Failed to get release info: HTTP {}", responseCode);
+                connection.disconnect();
+                return null;
+            }
+
+            String responseBody = readResponse(connection);
+            connection.disconnect();
+
+            JsonObject jsonObject = JsonParser.parseString(responseBody).getAsJsonObject();
+
+            String version = jsonObject.has("tag_name") ? jsonObject.get("tag_name").getAsString() : null;
+            String notes = jsonObject.has("body") ? jsonObject.get("body").getAsString() : null;
+            String downloadUrl = null;
+
+            if (jsonObject.has("assets")) {
+                JsonArray assetsArray = jsonObject.getAsJsonArray("assets");
+                if (!assetsArray.isEmpty()) {
+                    JsonObject firstAsset = assetsArray.get(0).getAsJsonObject();
+                    downloadUrl = firstAsset.get("browser_download_url").getAsString();
+                }
+            }
+
+            if (version != null) {
+                logger.debug("Release info retrieved: version={}, hasNotes={}, hasDownload={}",
+                        version, notes != null, downloadUrl != null);
+                return new ReleaseInfo(version, notes, downloadUrl);
+            }
+
+            return null;
+
+        } catch (Exception e) {
+            logger.error("Error fetching release info: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+         * Container class for release information.
+         */
+        public record ReleaseInfo(String version, String releaseNotes, String downloadUrl) {
+
+        public boolean hasDownloadUrl() {
+                return downloadUrl != null && !downloadUrl.isEmpty();
+            }
+
+            @Override
+            public String toString() {
+                return String.format("ReleaseInfo{version='%s', hasNotes=%s, hasDownload=%s}",
+                        version, releaseNotes != null, hasDownloadUrl());
+            }
+        }
+
+    /**
      * Checks if a newer version is available compared to the current version.
+     * Uses Main.VERSION as the current version.
+     *
+     * @return true if a newer version is available, false otherwise
+     */
+    public boolean isUpdateAvailable() {
+        return isUpdateAvailable(Main.VERSION);
+    }
+
+    /**
+     * Checks if a newer version is available compared to the specified version.
+     *
      * @param currentVersion The current application version (e.g., "0.1-TESTING" or "v1.0.0")
      * @return true if a newer version is available, false otherwise
      */
@@ -188,20 +450,24 @@ public class UpdateManager {
             return false;
         }
 
-        // Remove 'v' prefix if present for comparison
-        String current = currentVersion.toLowerCase().replaceAll("^v", "");
-        String latest = latestVersion.toLowerCase().replaceAll("^v", "");
+        // Normalize versions for comparison - remove all 'v' or 'V' characters
+        String current = normalizeVersion(currentVersion);
+        String latest = normalizeVersion(latestVersion);
 
         try {
             int comparison = compareVersions(current, latest);
             boolean updateAvailable = comparison < 0;
 
             if (updateAvailable) {
-                logger.info("Update available! Current: {}, Latest: {}", currentVersion, latestVersion);
+                logger.info("Update available! Current: {} (normalized: {}), Latest: {} (normalized: {}), comparison: {}",
+                        currentVersion, current, latestVersion, latest, comparison);
+            } else if (comparison == 0) {
+                logger.debug("Application is up to date. Current: {}, Latest: {} (versions are equal)",
+                        currentVersion, latestVersion);
             } else {
-                logger.debug("Application is up to date. Current: {}, Latest: {}", currentVersion, latestVersion);
+                logger.debug("Current version is newer than latest release. Current: {}, Latest: {} (comparison: {})",
+                        currentVersion, latestVersion, comparison);
             }
-
             return updateAvailable;
         } catch (Exception e) {
             logger.warn("Could not compare versions: {} vs {}", currentVersion, latestVersion, e);
@@ -210,34 +476,229 @@ public class UpdateManager {
     }
 
     /**
+     * Normalizes a version string by removing all 'v' or 'V' characters and converting to lowercase.
+     *
+     * @param version Version string to normalize
+     * @return Normalized version string
+     */
+    private String normalizeVersion(String version) {
+        if (version == null) {
+            return "";
+        }
+        return version.toLowerCase().replaceAll("[vV]", "");
+    }
+
+    /**
+     * Detects the release channel from a version string.
+     *
+     * @param version Version string (e.g., "v1.0.0", "v1.0.0-beta.1", "0.2-TESTING")
+     * @return Detected ReleaseChannel
+     */
+    public static ReleaseChannel detectChannel(String version) {
+        if (version == null) {
+            return ReleaseChannel.STABLE;
+        }
+
+        String lower = version.toLowerCase();
+
+        if (lower.contains("alpha")) {
+            return ReleaseChannel.ALPHA;
+        } else if (lower.contains("beta")) {
+            return ReleaseChannel.BETA;
+        } else if (lower.contains("testing")) {
+            return ReleaseChannel.TESTING;
+        } else {
+            return ReleaseChannel.STABLE;
+        }
+    }
+
+    /**
+     * Checks for updates in all channels and returns the best available update.
+     *
+     * @return ChannelUpdateResult with information about all available updates
+     */
+    public ChannelUpdateResult checkAllChannels() {
+        String currentVersion = Main.VERSION;
+        ReleaseChannel currentChannel = detectChannel(currentVersion);
+
+        String stableVersion = getLatestVersion(ReleaseChannel.STABLE);
+        String betaVersion = getLatestVersion(ReleaseChannel.BETA);
+        String alphaVersion = getLatestVersion(ReleaseChannel.ALPHA);
+        String testingVersion = getLatestVersion(ReleaseChannel.TESTING);
+
+        return new ChannelUpdateResult(
+                currentVersion,
+                currentChannel,
+                stableVersion,
+                betaVersion,
+                alphaVersion,
+                testingVersion
+        );
+    }
+
+    /**
+         * Result of checking all release channels
+         */
+        public record ChannelUpdateResult(String currentVersion, ReleaseChannel currentChannel, String stableVersion,
+                                          String betaVersion, String alphaVersion, String testingVersion) {
+
+        public boolean hasStableUpdate() {
+                return stableVersion != null && isNewer(currentVersion, stableVersion);
+            }
+
+            public boolean hasBetaUpdate() {
+                return betaVersion != null && isNewer(currentVersion, betaVersion);
+            }
+
+            public boolean hasAlphaUpdate() {
+                return alphaVersion != null && isNewer(currentVersion, alphaVersion);
+            }
+
+            public boolean hasTestingUpdate() {
+                return testingVersion != null && isNewer(currentVersion, testingVersion);
+            }
+
+            private boolean isNewer(String current, String latest) {
+                try {
+                    UpdateManager manager = UpdateManager.getInstance();
+                    String c = manager.normalizeVersion(current);
+                    String l = manager.normalizeVersion(latest);
+
+                    return manager.compareVersions(c, l) < 0;
+                } catch (Exception e) {
+                    return false;
+                }
+            }
+
+            @Override
+            public String toString() {
+                return String.format("ChannelUpdateResult{current='%s' (%s), stable='%s', beta='%s', alpha='%s', testing='%s'}",
+                        currentVersion, currentChannel, stableVersion, betaVersion, alphaVersion, testingVersion);
+            }
+        }
+
+    /**
+     * Gets a detailed comparison between the current version and the latest version.
+     *
+     * @return A VersionComparisonResult with details, or null if unable to fetch latest version
+     */
+    public VersionComparisonResult compareWithLatest() {
+        String currentVersion = Main.VERSION;
+        String latestVersion = getLatestVersion();
+
+        if (latestVersion == null) {
+            return null;
+        }
+
+        String current = normalizeVersion(currentVersion);
+        String latest = normalizeVersion(latestVersion);
+
+        int comparison = compareVersions(current, latest);
+
+        return new VersionComparisonResult(
+                currentVersion,
+                latestVersion,
+                comparison < 0,  // isUpdateAvailable
+                comparison == 0, // isCurrent
+                comparison > 0   // isNewer
+        );
+    }
+
+    /**
+         * Result of version comparison
+         */
+        public record VersionComparisonResult(String currentVersion, String latestVersion, boolean updateAvailable,
+                                              boolean isCurrent, boolean isNewer) {
+
+        @Override
+            public String toString() {
+                String status;
+                if (updateAvailable) {
+                    status = "Update available";
+                } else if (isCurrent) {
+                    status = "Up to date";
+                } else {
+                    status = "Development version";
+                }
+                return String.format("VersionComparison{current='%s', latest='%s', status='%s'}",
+                        currentVersion, latestVersion, status);
+            }
+        }
+
+
+    /**
      * Compares two version strings.
      * Returns: negative if v1 < v2, 0 if equal, positive if v1 > v2
+     *
+     * Examples:
+     * - "0.2-testing" vs "0.2" -> -1 (testing is older)
+     * - "0.2" vs "1.0" -> -1 (0.2 is older)
+     * - "1.0" vs "1.0" -> 0 (equal)
      */
     private int compareVersions(String v1, String v2) {
+        logger.debug("Comparing versions: '{}' vs '{}'", v1, v2);
+
         String[] parts1 = v1.split("[.-]");
         String[] parts2 = v2.split("[.-]");
+
+        logger.debug("Version 1 parts: {}", java.util.Arrays.toString(parts1));
+        logger.debug("Version 2 parts: {}", java.util.Arrays.toString(parts2));
 
         for (int i = 0; i < Math.max(parts1.length, parts2.length); i++) {
             int num1 = (i < parts1.length) ? parseVersionPart(parts1[i]) : 0;
             int num2 = (i < parts2.length) ? parseVersionPart(parts2[i]) : 0;
 
+            logger.debug("Comparing part {}: {} ({}) vs {} ({})",
+                         i,
+                         (i < parts1.length ? parts1[i] : "missing"), num1,
+                         (i < parts2.length ? parts2[i] : "missing"), num2);
+
             if (num1 != num2) {
-                return Integer.compare(num1, num2);
+                int result = Integer.compare(num1, num2);
+                logger.debug("Versions differ at position {}: result = {}", i, result);
+                return result;
             }
         }
 
+        logger.debug("Versions are equal");
         return 0;
     }
 
     /**
-     * Parse a version part to integer, handling both numbers and text
+     * Parse a version part to integer, handling both numbers and text.
+     * For text parts like "TESTING", "SNAPSHOT", etc., we treat them as pre-release versions
+     * by assigning them a negative value, so they're always considered older than numeric versions.
+     *
+     * Examples:
+     * - "2" -> 2
+     * - "testing" -> -1
+     * - "beta" -> -1
+     * - "alpha" -> -1
+     * - "rc" -> -1
      */
     private int parseVersionPart(String part) {
         try {
-            return Integer.parseInt(part);
+            int result = Integer.parseInt(part);
+            logger.debug("Parsed '{}' as numeric: {}", part, result);
+            return result;
         } catch (NumberFormatException e) {
-            // For text parts like "TESTING", assign a high number
-            return part.hashCode() % 1000;
+            String lowerPart = part.toLowerCase();
+
+            // For known pre-release identifiers, treat as pre-release (negative value)
+            // This ensures "0.2-TESTING" < "0.2" < "1.0"
+            if (lowerPart.equals("testing") ||
+                lowerPart.equals("snapshot") ||
+                lowerPart.equals("alpha") ||
+                lowerPart.equals("beta") ||
+                lowerPart.equals("rc")) {
+                logger.debug("Parsed '{}' as pre-release: -1", part);
+                return -1;
+            }
+
+            // For other text, use a small positive hash
+            int hash = Math.abs(part.hashCode() % 100);
+            logger.debug("Parsed '{}' as hash: {}", part, hash);
+            return hash;
         }
     }
 
@@ -250,35 +711,27 @@ public class UpdateManager {
     public String getLatestReleaseJarUrl() {
         try {
             // Create HTTP connection to GitHub API
-            URL url = URI.create(GITHUB_URL).toURL();
+            URL url = URI.create(GITHUB_RELEASES_URL).toURL();
             HttpURLConnection connection = getHttpURLConnection(url);
 
             // Check response code
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
                 logger.warn("Failed to get release info: HTTP {}", responseCode);
+                connection.disconnect();
                 return null;
             }
 
-            // Read response
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8)
-            );
-
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                response.append(line);
-            }
-            reader.close();
+            // Read response using helper method
+            String responseBody = readResponse(connection);
             connection.disconnect();
 
             // Parse JSON response
-            JsonObject jsonObject = JsonParser.parseString(response.toString()).getAsJsonObject();
+            JsonObject jsonObject = JsonParser.parseString(responseBody).getAsJsonObject();
 
             // Check if assets array exists and has files
             if (jsonObject.has("assets")) {
-                var assetsArray = jsonObject.getAsJsonArray("assets");
+                JsonArray assetsArray = jsonObject.getAsJsonArray("assets");
                 if (!assetsArray.isEmpty()) {
                     // Get the first asset (usually the JAR file)
                     JsonObject firstAsset = assetsArray.get(0).getAsJsonObject();
@@ -296,5 +749,38 @@ public class UpdateManager {
             logger.error("Error getting JAR download URL: {}", e.getMessage(), e);
             return null;
         }
+    }
+
+    /**
+     * Test method to verify version comparison logic.
+     * Logs comparison results for debugging purposes.
+     *
+     * @param v1 First version string
+     * @param v2 Second version string
+     * @return Comparison result (negative if v1 < v2, 0 if equal, positive if v1 > v2)
+     */
+    public int testVersionComparison(String v1, String v2) {
+        logger.info("=== Testing Version Comparison ===");
+        logger.info("Input: '{}' vs '{}'", v1, v2);
+
+        String n1 = normalizeVersion(v1);
+        String n2 = normalizeVersion(v2);
+        logger.info("Normalized: '{}' vs '{}'", n1, n2);
+
+        int result = compareVersions(n1, n2);
+        logger.info("Result: {}", result);
+
+        String interpretation;
+        if (result < 0) {
+            interpretation = String.format("'%s' is OLDER than '%s'", v1, v2);
+        } else if (result > 0) {
+            interpretation = String.format("'%s' is NEWER than '%s'", v1, v2);
+        } else {
+            interpretation = String.format("'%s' EQUALS '%s'", v1, v2);
+        }
+        logger.info(interpretation);
+        logger.info("=================================");
+
+        return result;
     }
 }

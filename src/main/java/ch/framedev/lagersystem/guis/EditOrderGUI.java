@@ -191,9 +191,11 @@ public class EditOrderGUI extends JFrame {
         buttonPanel.setOpaque(false);
 
         JButton cancelButton = createThemeButton(UnicodeSymbols.CLOSE + " Abbrechen", ThemeManager.getDangerColor());
+        cancelButton.setToolTipText("Abbrechen und ohne Änderungen schließen");
         cancelButton.addActionListener(e -> dispose());
 
         JButton saveButton = createThemeButton(UnicodeSymbols.FLOPPY + " Speichern", ThemeManager.getSuccessColor());
+        saveButton.setToolTipText("Änderungen speichern");
         saveButton.addActionListener(e -> saveChanges());
 
         buttonPanel.add(cancelButton);

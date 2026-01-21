@@ -178,15 +178,19 @@ public class ArticleListGUI extends JFrame {
 
         JButton editQtyBtn = createStyledButton("✏️ Menge ändern", new Color(52, 152, 219), 0, 0);
         editQtyBtn.setPreferredSize(new Dimension(160, 40));
+        editQtyBtn.setToolTipText("Menge des ausgewählten Artikels ändern");
 
         JButton removeBtn = createStyledButton("🗑️ Entfernen", new Color(220, 53, 69), 0, 0);
         removeBtn.setPreferredSize(new Dimension(140, 40));
+        removeBtn.setToolTipText("Ausgewählten Artikel entfernen");
 
         JButton clearAllBtn = createStyledButton("🧹 Alle löschen", new Color(243, 156, 18), 0, 0);
         clearAllBtn.setPreferredSize(new Dimension(140, 40));
+        clearSearch.setToolTipText("Alle Artikel aus der Liste entfernen");
 
         JButton closeBtn = createStyledButton("Schließen", new Color(149, 165, 166), 0, 0);
         closeBtn.setPreferredSize(new Dimension(120, 40));
+        closeBtn.setToolTipText("Fenster schließen");
 
         buttonPanel.add(editQtyBtn);
         buttonPanel.add(removeBtn);
@@ -493,18 +497,22 @@ public class ArticleListGUI extends JFrame {
 
         JButton editQtyBtn = createStyledButton("✏️ Menge ändern", new Color(52, 152, 219), 0, 0);
         editQtyBtn.setPreferredSize(new Dimension(160, 40));
+        editQtyBtn.setToolTipText("Bearbeite die Menge des ausgewählten Artikels");
         editQtyBtn.addActionListener(this::handleEditQuantity);
 
         JButton removeBtn = createStyledButton("🗑️ Entfernen", new Color(220, 53, 69), 0, 0);
         removeBtn.setPreferredSize(new Dimension(140, 40));
+        removeBtn.setToolTipText("Entferne den ausgewählten Artikel");
         removeBtn.addActionListener(this::handleRemoveArticle);
 
         JButton clearAllBtn = createStyledButton("🧹 Alle löschen", new Color(243, 156, 18), 0, 0);
         clearAllBtn.setPreferredSize(new Dimension(140, 40));
+        clearSearch.setToolTipText("Entferne alle Artikel aus der Liste");
         clearAllBtn.addActionListener(this::handleClearAll);
 
         JButton closeBtn = createStyledButton("Schließen", new Color(149, 165, 166), 0, 0);
         closeBtn.setPreferredSize(new Dimension(120, 40));
+        closeBtn.setToolTipText("Schließe das Fenster");
         closeBtn.addActionListener(e -> dispose());
 
         buttonPanel.add(editQtyBtn);

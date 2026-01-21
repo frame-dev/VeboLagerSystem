@@ -238,8 +238,10 @@ public class NewOrderGUI extends JFrame {
 
         JButton addArticlesBtn = createThemeButton(UnicodeSymbols.PACKAGE + " Artikel hinzufügen", ThemeManager.getPrimaryColor());
         addArticlesBtn.addActionListener(e -> addArticlesFromList());
+        addArticlesBtn.setToolTipText("Fügt Artikel aus der Artikelliste zur Bestellung hinzu.");
 
         JButton exportPdfBtn = createThemeButton(UnicodeSymbols.EMPTY_PAGE + " Export PDF", ThemeManager.getWarningColor());
+        exportPdfBtn.setToolTipText("Exportiert die Bestellung als PDF-Datei.");
         exportPdfBtn.addActionListener(e -> {
             File file = chooseSaveFile();
             if (file != null) {
@@ -255,6 +257,7 @@ public class NewOrderGUI extends JFrame {
         });
 
         JButton createOrderBtn = createThemeButton(UnicodeSymbols.CHECKMARK + " Bestellen", ThemeManager.getSuccessColor());
+        createOrderBtn.setToolTipText("Erstellt die Bestellung und speichert sie im System.");
         createOrderBtn.addActionListener(e -> onCreateOrder());
 
         actionButtons.add(addArticlesBtn);
@@ -909,6 +912,7 @@ public class NewOrderGUI extends JFrame {
 
         JButton closeButton = createThemeButton(UnicodeSymbols.CHECKMARK + " Schließen", ThemeManager.getPrimaryColor());
         closeButton.addActionListener(e -> helpDialog.dispose());
+        closeButton.setToolTipText("Schliesst das Fenster");
         buttonPanel.add(closeButton);
 
         // Add components to dialog

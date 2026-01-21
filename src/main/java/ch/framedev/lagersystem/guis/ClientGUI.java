@@ -70,9 +70,13 @@ public class ClientGUI extends JFrame {
         styleComboBox(filterDepartmentCombobox);
 
         JButton addClientButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Kunde hinzufügen");
+        addClientButton.setToolTipText("Einen neuen Kunden zur Datenbank hinzufügen");
         JButton editClientButton = createRoundedButton(UnicodeSymbols.BETTER_EDIT + " Kunde bearbeiten");
+        editClientButton.setToolTipText("Den ausgewählten Kunden bearbeiten");
         JButton deleteClientButton = createRoundedButton(UnicodeSymbols.TRASH + " Kunde löschen");
+        deleteClientButton.setToolTipText("Den ausgewählten Kunden löschen");
         JButton refreshButton = createRoundedButton(UnicodeSymbols.UPDATE + " Aktualisieren");
+        refreshButton.setToolTipText("Die Kundenliste aktualisieren");
 
         toolbar.add(filterLabel);
         toolbar.add(filterDepartmentCombobox);
@@ -124,7 +128,9 @@ public class ClientGUI extends JFrame {
         styleSearchField(searchField);
 
         JButton searchBtn = new JButton(UnicodeSymbols.SEARCH + " Suchen");
+        searchBtn.setToolTipText("Suche nach Kunden basierend auf dem Suchbegriff");
         JButton clearBtn = new JButton(UnicodeSymbols.CLEAR + " Leeren");
+        clearBtn.setToolTipText("Suchfeld leeren und Filter zurücksetzen");
         styleFlatActionButton(searchBtn);
         styleFlatActionButton(clearBtn);
 
@@ -336,6 +342,7 @@ public class ClientGUI extends JFrame {
         // Modern close button with hover effect
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
         closeBtn.setForeground(new Color(255, 255, 255, 200));
+        closeBtn.setToolTipText("Schließt das Fenster");
         closeBtn.setBackground(new Color(255, 255, 255, 0));
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
@@ -476,6 +483,7 @@ public class ClientGUI extends JFrame {
         // Cancel button with hover
         Color cancelColor = ThemeManager.getErrorColor();
         JButton cancelBtn = new JButton(UnicodeSymbols.CLOSE + " Abbrechen");
+        cancelBtn.setToolTipText("Das Hinzufügen des neuen Kunden abbrechen");
         cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         cancelBtn.setForeground(Color.WHITE);
         cancelBtn.setBackground(cancelColor);
@@ -509,6 +517,7 @@ public class ClientGUI extends JFrame {
                 : new Color(52, 152, 219);
 
         JButton okBtn = new JButton(UnicodeSymbols.CHECKMARK + " Hinzufügen");
+        okBtn.setToolTipText("Den neuen Kunden zur Datenbank hinzufügen");
         okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         okBtn.setForeground(Color.WHITE);
         okBtn.setBackground(okColor);
@@ -813,6 +822,7 @@ public class ClientGUI extends JFrame {
         // Cancel button with hover effect
         Color cancelColor = ThemeManager.getErrorColor();
         JButton cancelBtn = new JButton(UnicodeSymbols.CLOSE + "  Abbrechen");
+        cancelBtn.setToolTipText("Das Bearbeiten des Kunden abbrechen");
         cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         cancelBtn.setForeground(Color.WHITE);
         cancelBtn.setBackground(cancelColor);
@@ -844,6 +854,7 @@ public class ClientGUI extends JFrame {
         // OK button with hover effect
         Color okColor = ThemeManager.getSuccessColor();
         JButton okBtn = new JButton(UnicodeSymbols.FLOPPY + "  Speichern");
+        okBtn.setToolTipText("Die Änderungen am Kunden speichern");
         okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         okBtn.setForeground(Color.WHITE);
         okBtn.setBackground(okColor);

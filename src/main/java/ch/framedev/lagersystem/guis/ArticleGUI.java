@@ -121,6 +121,7 @@ public class ArticleGUI extends JFrame {
 
         // Add Article button
         JButton addArticleButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Artikel hinzufügen");
+        addArticleButton.setToolTipText("Erstellt einen neuen Artikel im Lager");
         addArticleButton.addActionListener(e -> {
             Object[] row = showAddArticleDialog();
             if (row != null) {
@@ -150,6 +151,7 @@ public class ArticleGUI extends JFrame {
 
         // Edit Article button
         JButton editArticleButton = createRoundedButton(UnicodeSymbols.BETTER_EDIT + " Artikel bearbeiten");
+        editArticleButton.setToolTipText("Bearbeitet den ausgewählten Artikel");
         editArticleButton.addActionListener(e -> {
             int selectedRow = articleTable.getSelectedRow();
             if (selectedRow == -1) {
@@ -206,14 +208,17 @@ public class ArticleGUI extends JFrame {
 
         // Delete Article button
         JButton deleteArticleButton = createRoundedButton(UnicodeSymbols.TRASH + " Artikel löschen");
+        deleteArticleButton.setToolTipText("Löscht den ausgewählten Artikel aus dem Lager");
         deleteArticleButton.addActionListener(e -> deleteSelectedArticle());
 
         // Retrieve QR-Code Data button
         JButton retrieveQrCodeDataButton = createRoundedButton(UnicodeSymbols.PHONE + " QR-Code Daten abrufen");
+        retrieveQrCodeDataButton.setToolTipText("Ruft Artikeldaten über einen QR-Code ab");
         retrieveQrCodeDataButton.addActionListener(e -> showQRCodeDataDialog());
 
         // Show Details button
         JButton showDetailsButton = createRoundedButton(UnicodeSymbols.CHART + " Lager Details");
+        showDetailsButton.setToolTipText("Zeigt detaillierte Lagerinformationen an");
         showDetailsButton.addActionListener(e -> showDetails());
 
         toolbarWrapper.add(addArticleButton);
@@ -282,7 +287,9 @@ public class ArticleGUI extends JFrame {
         ));
 
         JButton searchBtn = new JButton(UnicodeSymbols.SEARCH + " Suchen");
+        searchBtn.setToolTipText("Sucht nach Artikeln basierend auf dem eingegebenen Text");
         JButton clearBtn = new JButton(UnicodeSymbols.BROOM + " Leeren");
+        clearBtn.setToolTipText("Löscht die Suchfilter und zeigt alle Artikel an");
 
 // base colors
         Color normalFg = ThemeManager.getTextPrimaryColor();
@@ -376,6 +383,7 @@ public class ArticleGUI extends JFrame {
 
         // Add warnings button to bottom panel
         JButton showWarningsBottomBtn = new JButton(UnicodeSymbols.WARNING + " Warnungen");
+        showWarningsBottomBtn.setToolTipText("Zeigt alle Lagerwarnungen an");
         showWarningsBottomBtn.setFocusPainted(false);
         showWarningsBottomBtn.setBorderPainted(false);
         showWarningsBottomBtn.setContentAreaFilled(false);
@@ -453,6 +461,7 @@ public class ArticleGUI extends JFrame {
 
         // Styled close button
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
+        closeBtn.setToolTipText("Schließen");
         closeBtn.setForeground(ThemeManager.getTextOnPrimaryColor());
         closeBtn.setBackground(ThemeManager.getPrimaryColor());
         closeBtn.setBorderPainted(false);
@@ -731,6 +740,7 @@ public class ArticleGUI extends JFrame {
 
         Color cancelBtnColor = ThemeManager.getErrorColor();
         JButton cancelBtn = new JButton(UnicodeSymbols.CLOSE + "  Abbrechen");
+        cancelBtn.setToolTipText("Abbrechen und Änderungen verwerfen");
         cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         cancelBtn.setForeground(Color.WHITE);
         cancelBtn.setBackground(cancelBtnColor);
@@ -756,6 +766,7 @@ public class ArticleGUI extends JFrame {
 
         Color okBtnColor = ThemeManager.getSuccessColor();
         JButton okBtn = new JButton(UnicodeSymbols.CHECK + "  Speichern");
+        okBtn.setToolTipText("Änderungen speichern");
         okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         okBtn.setForeground(Color.WHITE);
         okBtn.setBackground(okBtnColor);
@@ -2220,6 +2231,7 @@ public class ArticleGUI extends JFrame {
             }
 
             JButton okBtn = new JButton(UnicodeSymbols.CLOSE + " Schließen");
+            okBtn.setToolTipText("Schließt dieses Fenster");
             styleButton(okBtn, accentColor, Color.WHITE);
             okBtn.addActionListener(e -> dialog.dispose());
             buttonPanel.add(okBtn);
@@ -2524,6 +2536,7 @@ public class ArticleGUI extends JFrame {
             actionPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
 
             JButton viewDetailsBtn = new JButton(UnicodeSymbols.INFO + " Details anzeigen");
+            viewDetailsBtn.setToolTipText("Zeigt die Details der ausgewählten Warnung an");
             styleButton(viewDetailsBtn, new Color(65, 105, 225), Color.WHITE);
             viewDetailsBtn.addActionListener(e -> {
                 int selectedRow = warningsTable.getSelectedRow();
@@ -2552,6 +2565,7 @@ public class ArticleGUI extends JFrame {
             });
 
             JButton resolveBtn = new JButton(UnicodeSymbols.CHECKMARK + " Als gelöst markieren");
+            resolveBtn.setToolTipText("Markiert die ausgewählte Warnung als gelöst");
             styleButton(resolveBtn, new Color(40, 180, 99), Color.WHITE);
             resolveBtn.addActionListener(e -> {
                 int selectedRow = warningsTable.getSelectedRow();
@@ -2583,6 +2597,7 @@ public class ArticleGUI extends JFrame {
             });
 
             JButton deleteBtn = new JButton(UnicodeSymbols.TRASH + " Löschen");
+            deleteBtn.setToolTipText("Löscht die ausgewählte Warnung");
             styleButton(deleteBtn, new Color(231, 76, 60), Color.WHITE);
             deleteBtn.addActionListener(e -> {
                 int selectedRow = warningsTable.getSelectedRow();
@@ -2614,6 +2629,7 @@ public class ArticleGUI extends JFrame {
             });
 
             JButton refreshBtn = new JButton(UnicodeSymbols.REFRESH + " Aktualisieren");
+            refreshBtn.setToolTipText("Aktualisiert die Warnungsliste");
             styleButton(refreshBtn, new Color(237, 242, 247), new Color(20, 30, 40));
             refreshBtn.addActionListener(e -> {
                 dialog.dispose();
@@ -2621,6 +2637,7 @@ public class ArticleGUI extends JFrame {
             });
 
             JButton closeBtn = new JButton(UnicodeSymbols.CLOSE + " Schließen");
+            closeBtn.setToolTipText("Schließt dieses Fenster");
             styleButton(closeBtn, new Color(149, 165, 166), Color.WHITE);
             closeBtn.addActionListener(e -> dialog.dispose());
 
@@ -2638,6 +2655,7 @@ public class ArticleGUI extends JFrame {
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
             buttonPanel.setBackground(ThemeManager.getBackgroundColor());
             JButton closeBtn = new JButton("Schließen");
+            closeBtn.setToolTipText("Schließt dieses Fenster");
             styleButton(closeBtn, new Color(149, 165, 166), Color.WHITE);
             closeBtn.addActionListener(e -> dialog.dispose());
             buttonPanel.add(closeBtn);
@@ -2923,15 +2941,19 @@ public class ArticleGUI extends JFrame {
 
         JButton refreshBtn = new JButton(UnicodeSymbols.REFRESH + " Aktualisieren");
         styleButton(refreshBtn, new Color(52, 152, 219), Color.WHITE);
+        refreshBtn.setToolTipText("Lädt die QR-Code Daten erneut vom Server");
 
         JButton importBtn = new JButton(UnicodeSymbols.DOWNLOAD + " Ausgewählte einlagern");
         styleButton(importBtn, new Color(46, 204, 113), Color.WHITE);
         importBtn.setEnabled(false);
+        importBtn.setToolTipText("Lagert die ausgewählten QR-Codes ein");
 
         JButton importAllBtn = new JButton(UnicodeSymbols.DOWNLOAD + " Alle einlagern");
         styleButton(importAllBtn, new Color(241, 196, 15), new Color(50, 50, 50));
+        importAllBtn.setToolTipText("Lagert alle angezeigten QR-Codes ein");
 
         JButton addToArticleListBtn = new JButton(UnicodeSymbols.HEAVY_PLUS + " Zur Bestellliste");
+        addToArticleListBtn.setToolTipText("Fügt die ausgewählten Artikel der Bestellliste hinzu");
         styleButton(addToArticleListBtn, new Color(155, 89, 182), Color.WHITE);
         addToArticleListBtn.addActionListener(e -> {
             int[] selectedRows = qrTable.getSelectedRows();
@@ -2974,6 +2996,7 @@ public class ArticleGUI extends JFrame {
         });
 
         JButton removeFromInventoryBtn = new JButton(UnicodeSymbols.TRASH + " Aus Inventar");
+        removeFromInventoryBtn.setToolTipText("Entfernt den ausgewählten Artikel aus dem Inventar");
         styleButton(removeFromInventoryBtn, new Color(251, 163, 153), Color.WHITE);
         removeFromInventoryBtn.setEnabled(false);
         removeFromInventoryBtn.addActionListener(e -> {
@@ -3011,6 +3034,7 @@ public class ArticleGUI extends JFrame {
         });
 
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE + " Schließen");
+        closeBtn.setToolTipText("Schließt dieses Fenster");
         styleButton(closeBtn, new Color(149, 165, 166), Color.WHITE);
         closeBtn.setBackground(Color.RED);
         closeBtn.addActionListener(e -> dialog.dispose());
@@ -3764,6 +3788,7 @@ public class ArticleGUI extends JFrame {
 
         Color okBtnColor = ThemeManager.getAccentColor();
         JButton okBtn = new JButton(UnicodeSymbols.CHECK + " Schließen");
+        okBtn.setToolTipText("Schliesst dieses Fenster");
         okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         okBtn.setForeground(Color.WHITE);
         okBtn.setBackground(okBtnColor);
@@ -3818,6 +3843,7 @@ public class ArticleGUI extends JFrame {
         headerPanel.add(titlePanel, BorderLayout.WEST);
 
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
+        closeBtn.setToolTipText("Schliesst dieses Fenster");
         closeBtn.setForeground(new Color(255, 255, 255, 200));
         closeBtn.setBackground(new Color(255, 255, 255, 0));
         closeBtn.setBorderPainted(false);

@@ -6,6 +6,8 @@ import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -130,8 +132,11 @@ public class MainGUI extends JFrame {
     private JPanel createHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(ThemeManager.getHeaderBackgroundColor());
-        headerPanel.setPreferredSize(new Dimension(0, 100));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 40, 15, 40));
+        headerPanel.setPreferredSize(new Dimension(0, 130));
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 3, 0, ThemeManager.getBorderColor()),
+                BorderFactory.createEmptyBorder(25, 50, 25, 50)
+        ));
 
         // Left side: Title and subtitle
         JPanel headerTextPanel = createHeaderTextPanel();
@@ -149,17 +154,16 @@ public class MainGUI extends JFrame {
      */
     private JPanel createHeaderTextPanel() {
         JLabel titleLabel = new JLabel("VEBO Lagersystem");
-        Font titleFont = SettingsGUI.getFontByName(Font.BOLD, 42);
+        Font titleFont = SettingsGUI.getFontByName(Font.BOLD, 48);
         titleLabel.setFont(titleFont);
         titleLabel.setForeground(ThemeManager.getHeaderForegroundColor());
         titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         JLabel subtitleLabel = new JLabel("Zentrale Verwaltung für Artikel, Bestellungen und Lieferanten");
-        subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        // Slightly transparent white for better contrast on blue background
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         Color subtitleColor = ThemeManager.isDarkMode()
-            ? new Color(200, 220, 240)  // Light blue-ish for dark mode
-            : new Color(255, 255, 255, 200);  // Transparent white for light mode
+            ? new Color(200, 220, 240)
+            : new Color(255, 255, 255, 220);
         subtitleLabel.setForeground(subtitleColor);
         subtitleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
@@ -169,7 +173,7 @@ public class MainGUI extends JFrame {
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         headerTextPanel.add(titleLabel);
-        headerTextPanel.add(Box.createRigidArea(new Dimension(0, 2)));
+        headerTextPanel.add(Box.createVerticalStrut(6));
         headerTextPanel.add(subtitleLabel);
 
         return headerTextPanel;
@@ -179,7 +183,7 @@ public class MainGUI extends JFrame {
      * Creates the right side of the header with settings button and date
      */
     private JPanel createHeaderRightPanel() {
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 0));
         rightPanel.setOpaque(false);
 
         JButton settingsButton = new JButton(UnicodeSymbols.BETTER_GEAR + " Einstellungen");
@@ -189,13 +193,13 @@ public class MainGUI extends JFrame {
             settingsGUI.display();
         });
 
-        JLabel dateLabel = new JLabel(new SimpleDateFormat("dd. MMMM yyyy").format(new Date()));
-        dateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        // Slightly transparent white for blue background
+        JLabel dateLabel = new JLabel(new SimpleDateFormat("EEEE, dd. MMMM yyyy").format(new Date()));
+        dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         Color dateColor = ThemeManager.isDarkMode()
-            ? new Color(200, 220, 240, 180)  // Light blue-ish with transparency for dark mode
-            : new Color(255, 255, 255, 180);  // Transparent white for light mode
+            ? new Color(200, 220, 240, 200)
+            : new Color(255, 255, 255, 200);
         dateLabel.setForeground(dateColor);
+        dateLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
         rightPanel.add(settingsButton);
         rightPanel.add(dateLabel);
@@ -210,15 +214,17 @@ public class MainGUI extends JFrame {
         int fontSizeTab = getTabFontSize();
 
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
-        tabbedPane.setFont(new Font("Arial", Font.BOLD, fontSizeTab));
+        tabbedPane.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab));
         tabbedPane.setBackground(ThemeManager.getBackgroundColor());
         tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
+        tabbedPane.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         // Add tabs
         addTabs();
 
-        // Apply theme-safe tab backgrounds
+        // Apply theme-safe tab backgrounds and styling
         applyTabBackgrounds();
+        applyTabStyling();
 
         // Setup lazy loading
         setupLazyLoading();
@@ -245,10 +251,10 @@ public class MainGUI extends JFrame {
      * Adds all tabs to the tabbed pane
      */
     private void addTabs() {
-        tabbedPane.addTab("  📦 Artikel  ", null, articleWrapper, "Artikelverwaltung");
-        tabbedPane.addTab("  🚚 Lieferanten  ", null, vendorWrapper, "Lieferantenverwaltung");
-        tabbedPane.addTab("  📋 Bestellungen  ", null, orderWrapper, "Bestellungsverwaltung");
-        tabbedPane.addTab("  👥 Kunden  ", null, clientWrapper, "Kundenverwaltung");
+        tabbedPane.addTab("   " + UnicodeSymbols.PACKAGE + " Artikel   ", null, articleWrapper, "Artikelverwaltung");
+        tabbedPane.addTab("   " + UnicodeSymbols.TRUCK + " Lieferanten   ", null, vendorWrapper, "Lieferantenverwaltung");
+        tabbedPane.addTab("   " + UnicodeSymbols.CLIPBOARD + " Bestellungen   ", null, orderWrapper, "Bestellungsverwaltung");
+        tabbedPane.addTab("   " + UnicodeSymbols.PEOPLE + " Kunden   ", null, clientWrapper, "Kundenverwaltung");
     }
 
     /**
@@ -262,6 +268,20 @@ public class MainGUI extends JFrame {
         for (int i = 0; i < tabbedPane.getTabCount(); i++) {
             tabbedPane.setBackgroundAt(i, tabTint);
         }
+    }
+
+    /**
+     * Applies modern styling to tab UI (padding, borders, shadows)
+     */
+    private void applyTabStyling() {
+        // Set component background for better visual separation
+        tabbedPane.setOpaque(true);
+
+        // Style the tab area with subtle borders
+        tabbedPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ));
     }
 
     /**
@@ -284,10 +304,13 @@ public class MainGUI extends JFrame {
     private JPanel createFooterPanel() {
         JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         footerPanel.setBackground(ThemeManager.getBackgroundColor());
-        footerPanel.setBorder(BorderFactory.createEmptyBorder(8, 0, 8, 0));
+        footerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
+                BorderFactory.createEmptyBorder(12, 0, 12, 0)
+        ));
 
-        JLabel footerLabel = new JLabel("© 2026 VEBO Lagersystem | Entwickelt von Darryl Huber");
-        footerLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+        JLabel footerLabel = new JLabel("© 2026 VEBO Lagersystem | Entwickelt von Darryl Huber | Version " + Main.VERSION);
+        footerLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
         footerLabel.setForeground(ThemeManager.getTextSecondaryColor());
         footerPanel.add(footerLabel);
 
@@ -302,7 +325,7 @@ public class MainGUI extends JFrame {
         Color hover = ThemeManager.getButtonHoverColor(base);
         Color pressed = ThemeManager.getButtonPressedColor(base);
 
-        button.setFont(new Font("Arial", Font.BOLD, 12));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setBackground(base);
         button.setOpaque(true);
@@ -312,27 +335,35 @@ public class MainGUI extends JFrame {
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(base.darker(), 1),
-                BorderFactory.createEmptyBorder(8, 16, 8, 16)
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)
         ));
 
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
+        button.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
+            public void mouseEntered(MouseEvent evt) {
                 button.setBackground(hover);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(hover.darker(), 2),
+                        BorderFactory.createEmptyBorder(9, 19, 9, 19)
+                ));
             }
 
             @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
+            public void mouseExited(MouseEvent evt) {
                 button.setBackground(base);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(base.darker(), 1),
+                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
+                ));
             }
 
             @Override
-            public void mousePressed(java.awt.event.MouseEvent evt) {
+            public void mousePressed(MouseEvent evt) {
                 button.setBackground(pressed);
             }
 
             @Override
-            public void mouseReleased(java.awt.event.MouseEvent evt) {
+            public void mouseReleased(MouseEvent evt) {
                 button.setBackground(button.contains(evt.getPoint()) ? hover : base);
             }
         });
