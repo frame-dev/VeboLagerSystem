@@ -8,6 +8,8 @@ import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * ArticleManager with intelligent caching for improved performance.
@@ -39,6 +41,10 @@ public class ArticleManager {
     private volatile List<Article> allArticlesCache;
     private volatile long allArticlesCacheTime;
     private static final long CACHE_EXPIRY_MS = 60000; // 1 minute
+
+    private final ReentrantReadWriteLock allArticlesLock = new ReentrantReadWriteLock();
+    // Fast membership lookup for article numbers (avoid linear scans)
+    private final Set<String> articleNumberIndex = ConcurrentHashMap.newKeySet();
 
     private ArticleManager() {
         databaseManager = Main.databaseManager;
@@ -89,11 +95,24 @@ public class ArticleManager {
      */
     private void invalidateArticleCache(String articleNumber) {
         articleCache.remove(articleNumber);
+        articleNumberIndex.remove(articleNumber);
         // Also need to remove from name cache if present
         nameCache.entrySet().removeIf(entry ->
             entry.getValue().getArticleNumber().equals(articleNumber));
-        // Invalidate all articles cache
-        allArticlesCache = null;
+        invalidateAllArticlesList();
+    }
+
+    /**
+     * Invalidate only the all-articles list cache.
+     */
+    private void invalidateAllArticlesList() {
+        allArticlesLock.writeLock().lock();
+        try {
+            allArticlesCache = null;
+            allArticlesCacheTime = 0;
+        } finally {
+            allArticlesLock.writeLock().unlock();
+        }
     }
 
     /**
@@ -102,7 +121,8 @@ public class ArticleManager {
     private void invalidateAllCaches() {
         articleCache.clear();
         nameCache.clear();
-        allArticlesCache = null;
+        articleNumberIndex.clear();
+        invalidateAllArticlesList();
         logger.debug("All article caches invalidated");
     }
 
@@ -113,6 +133,7 @@ public class ArticleManager {
         if (article != null) {
             articleCache.put(article.getArticleNumber(), article);
             nameCache.put(article.getName(), article);
+            articleNumberIndex.add(article.getArticleNumber());
         }
     }
 
@@ -120,8 +141,13 @@ public class ArticleManager {
      * Check if all articles cache is still valid
      */
     private boolean isAllArticlesCacheValid() {
-        return allArticlesCache != null &&
-               (System.currentTimeMillis() - allArticlesCacheTime) < CACHE_EXPIRY_MS;
+        allArticlesLock.readLock().lock();
+        try {
+            return allArticlesCache != null &&
+                   (System.currentTimeMillis() - allArticlesCacheTime) < CACHE_EXPIRY_MS;
+        } finally {
+            allArticlesLock.readLock().unlock();
+        }
     }
 
     /**
@@ -133,15 +159,36 @@ public class ArticleManager {
         stats.put("nameCacheSize", nameCache.size());
         stats.put("allArticlesCached", allArticlesCache != null);
         stats.put("maxCacheSize", MAX_CACHE_SIZE);
+        stats.put("articleNumberIndexSize", articleNumberIndex.size());
         return stats;
     }
 
     public boolean existsArticle(String articleNumber) {
-        String sql = "SELECT * FROM articles WHERE articleNumber = '" + articleNumber + "';";
-        try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
-            return resultSet.next();
+        // Fast-path: cache check
+        if (articleCache.containsKey(articleNumber) || articleNumberIndex.contains(articleNumber)) {
+            return true;
+        }
+        if (isAllArticlesCacheValid()) {
+            allArticlesLock.readLock().lock();
+            try {
+                if (allArticlesCache != null) {
+                    return allArticlesCache.stream()
+                            .anyMatch(a -> a.getArticleNumber().equals(articleNumber));
+                }
+            } finally {
+                allArticlesLock.readLock().unlock();
+            }
+        }
+
+        String sql = "SELECT 1 FROM articles WHERE articleNumber = ? LIMIT 1;";
+        try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber})) {
+            boolean exists = resultSet.next();
+            if (exists) {
+                articleNumberIndex.add(articleNumber);
+            }
+            return exists;
         } catch (Exception e) {
-            logger.error("Error while checking if vendor with name '{}'", articleNumber, e);
+            logger.error("Error while checking if article with number '{}' exists", articleNumber, e);
             return false;
         }
     }
@@ -169,9 +216,8 @@ public class ArticleManager {
                 article.getPurchasePrice(), article.getVendorName()});
 
         if (success) {
-            // Add to cache and invalidate all articles cache
             cacheArticle(article);
-            allArticlesCache = null;
+            invalidateAllArticlesList();
             logger.debug("Article {} added to cache", article.getArticleNumber());
         }
 
@@ -201,7 +247,6 @@ public class ArticleManager {
                 article.getPurchasePrice(), article.getVendorName(), article.getArticleNumber()});
 
         if (success) {
-            // Update cache with new data
             invalidateArticleCache(article.getArticleNumber());
             cacheArticle(article);
             logger.debug("Article {} updated in cache", article.getArticleNumber());
@@ -218,7 +263,6 @@ public class ArticleManager {
         boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{articleNumber});
 
         if (success) {
-            // Remove from cache
             invalidateArticleCache(articleNumber);
             logger.debug("Article {} removed from cache", articleNumber);
         }
@@ -234,15 +278,13 @@ public class ArticleManager {
     }
 
     public Article getArticleByNumber(String articleNumber) {
-        // Check cache first
         Article cached = articleCache.get(articleNumber);
         if (cached != null) {
             logger.debug("Article {} retrieved from cache", articleNumber);
             return cached;
         }
 
-        // Not in cache, query database
-        String sql = "SELECT * FROM articles WHERE articleNumber = ?;";
+        String sql = "SELECT * FROM articles WHERE articleNumber = ? LIMIT 1;";
         try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber})) {
             if (resultSet.next()) {
                 Article article = new Article(
@@ -255,7 +297,6 @@ public class ArticleManager {
                         resultSet.getDouble("purchasePrice"),
                         resultSet.getString("vendorName")
                 );
-                // Add to cache for future use
                 cacheArticle(article);
                 return article;
             } else {
@@ -268,15 +309,13 @@ public class ArticleManager {
     }
 
     public Article getArticleByName(String name) {
-        // Check name cache first
         Article cached = nameCache.get(name);
         if (cached != null) {
             logger.debug("Article '{}' retrieved from name cache", name);
             return cached;
         }
 
-        // Not in cache, query database
-        String sql = "SELECT * FROM articles WHERE name = ?;";
+        String sql = "SELECT * FROM articles WHERE name = ? LIMIT 1;";
         try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{name})) {
             if (resultSet.next()) {
                 Article article = new Article(
@@ -289,7 +328,6 @@ public class ArticleManager {
                         resultSet.getDouble("purchasePrice"),
                         resultSet.getString("vendorName")
                 );
-                // Add to cache for future use
                 cacheArticle(article);
                 return article;
             } else {
@@ -302,13 +340,18 @@ public class ArticleManager {
     }
 
     public List<Article> getAllArticles() {
-        // Check if cached list is still valid (not older than 1 minute)
         if (isAllArticlesCacheValid()) {
-            logger.debug("All articles retrieved from cache");
-            return new ArrayList<>(allArticlesCache); // Return copy to prevent modification
+            allArticlesLock.readLock().lock();
+            try {
+                if (allArticlesCache != null) {
+                    logger.debug("All articles retrieved from cache");
+                    return new ArrayList<>(allArticlesCache);
+                }
+            } finally {
+                allArticlesLock.readLock().unlock();
+            }
         }
 
-        // Cache expired or not present, query database
         String sql = "SELECT * FROM articles;";
         try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
             List<Article> articles = new ArrayList<>();
@@ -324,16 +367,23 @@ public class ArticleManager {
                         resultSet.getString("vendorName")
                 );
                 articles.add(article);
-                // Also add to individual caches
                 cacheArticle(article);
             }
 
-            // Cache the result
-            allArticlesCache = articles;
-            allArticlesCacheTime = System.currentTimeMillis();
-            logger.debug("All articles cached ({} articles)", articles.size());
+            allArticlesLock.writeLock().lock();
+            try {
+                allArticlesCache = articles;
+                allArticlesCacheTime = System.currentTimeMillis();
+                logger.debug("All articles cached ({} articles)", articles.size());
+            } finally {
+                allArticlesLock.writeLock().unlock();
+            }
 
-            return new ArrayList<>(articles); // Return copy
+            // Ensure the index is synchronized with the freshly loaded data
+            articleNumberIndex.clear();
+            articles.forEach(a -> articleNumberIndex.add(a.getArticleNumber()));
+
+            return new ArrayList<>(articles);
         } catch (Exception e) {
             logger.error("Error while getting all articles", e);
             return null;

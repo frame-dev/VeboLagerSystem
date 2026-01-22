@@ -20,12 +20,14 @@ public class ArticleListGUI extends JFrame {
 
     private static Map<Article, Integer> articlesAndQuantity = new HashMap<>();
     private final DefaultListModel<ArticleDisplay> listModel = new DefaultListModel<>();
+    private final List<ArticleDisplay> displayCache = new ArrayList<>();
     private JList<ArticleDisplay> articleJList;
     private final JTextField searchField;
     private final JLabel countLabel;
+    private final javax.swing.Timer searchDebounce;
 
     // Helper class to track article and quantity together
-    private record ArticleDisplay(Article article, int quantity) {
+    private record ArticleDisplay(Article article, int quantity, String searchableText) {
         @Override
         public String toString() {
             try {
@@ -47,6 +49,8 @@ public class ArticleListGUI extends JFrame {
         // Initialize fields first
         searchField = new JTextField();
         countLabel = new JLabel("", SwingConstants.RIGHT);
+        searchDebounce = new javax.swing.Timer(180, e -> filterList());
+        searchDebounce.setRepeats(false);
 
         ThemeManager tm = ThemeManager.getInstance();
 
@@ -186,7 +190,7 @@ public class ArticleListGUI extends JFrame {
 
         JButton clearAllBtn = createStyledButton("🧹 Alle löschen", new Color(243, 156, 18), 0, 0);
         clearAllBtn.setPreferredSize(new Dimension(140, 40));
-        clearSearch.setToolTipText("Alle Artikel aus der Liste entfernen");
+        clearAllBtn.setToolTipText("Alle Artikel aus der Liste entfernen");
 
         JButton closeBtn = createStyledButton("Schließen", new Color(149, 165, 166), 0, 0);
         closeBtn.setPreferredSize(new Dimension(120, 40));
@@ -205,17 +209,17 @@ public class ArticleListGUI extends JFrame {
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                filterList();
+                searchDebounce.restart();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                filterList();
+                searchDebounce.restart();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                filterList();
+                searchDebounce.restart();
             }
         });
         clearSearch.addActionListener(e -> {
@@ -322,17 +326,17 @@ public class ArticleListGUI extends JFrame {
 
     private void filterList() {
         String q = searchField.getText().trim().toLowerCase();
-        List<Map.Entry<Article, Integer>> filtered;
-        if (q.isEmpty()) {
-            filtered = new ArrayList<>(articlesAndQuantity.entrySet());
-        } else {
-            filtered = articlesAndQuantity.entrySet().stream()
-                    .filter(entry -> displayFor(entry.getKey()).toLowerCase().contains(q))
-                    .collect(Collectors.toList());
+        if (displayCache.isEmpty() && !articlesAndQuantity.isEmpty()) {
+            refreshArticleList();
         }
+
+        List<ArticleDisplay> filtered = displayCache.stream()
+                .filter(display -> q.isEmpty() || display.searchableText().contains(q))
+                .toList();
+
         listModel.clear();
-        for (Map.Entry<Article, Integer> entry : filtered) {
-            listModel.addElement(new ArticleDisplay(entry.getKey(), entry.getValue()));
+        for (ArticleDisplay display : filtered) {
+            listModel.addElement(display);
         }
         countLabel.setText(listModel.getSize() + " item(s)");
     }
@@ -347,11 +351,32 @@ public class ArticleListGUI extends JFrame {
     }
 
     public void refreshArticleList() {
-        listModel.clear();
+        displayCache.clear();
         for (Map.Entry<Article, Integer> entry : articlesAndQuantity.entrySet()) {
-            listModel.addElement(new ArticleDisplay(entry.getKey(), entry.getValue()));
+            displayCache.add(createDisplay(entry.getKey(), entry.getValue()));
+        }
+        listModel.clear();
+        for (ArticleDisplay display : displayCache) {
+            listModel.addElement(display);
         }
         countLabel.setText(listModel.getSize() + " item(s)");
+    }
+
+    private ArticleDisplay createDisplay(Article article, int quantity) {
+        String name = safe(article::getName);
+        String number = safe(article::getArticleNumber);
+        String details = safe(article::getDetails);
+        String searchable = (name + " " + number + " " + details + " qty:" + quantity).toLowerCase();
+        return new ArticleDisplay(article, quantity, searchable);
+    }
+
+    private String safe(java.util.function.Supplier<String> supplier) {
+        try {
+            String value = supplier.get();
+            return value == null ? "" : value;
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     public static void setArticles(Map<Article, Integer> articleMap) {
@@ -507,7 +532,7 @@ public class ArticleListGUI extends JFrame {
 
         JButton clearAllBtn = createStyledButton("🧹 Alle löschen", new Color(243, 156, 18), 0, 0);
         clearAllBtn.setPreferredSize(new Dimension(140, 40));
-        clearSearch.setToolTipText("Entferne alle Artikel aus der Liste");
+        clearAllBtn.setToolTipText("Alle Artikel aus der Liste entfernen");
         clearAllBtn.addActionListener(this::handleClearAll);
 
         JButton closeBtn = createStyledButton("Schließen", new Color(149, 165, 166), 0, 0);
@@ -642,7 +667,7 @@ public class ArticleListGUI extends JFrame {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index,
                                                      boolean isSelected, boolean cellHasFocus) {
-            if (!(value instanceof ArticleDisplay(Article article, int quantity))) {
+            if (!(value instanceof ArticleDisplay(Article article, int quantity, String searchableText))) {
                 return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
             }
 

@@ -1247,13 +1247,14 @@ public class SettingsGUI extends JFrame {
                 default -> "Stable";
             };
 
-            // Create NON-MODAL progress dialog
-            JDialog progressDialog = new JDialog(this, "Nach Updates suchen...", false);
+            // Create MODAL progress dialog
+            JDialog progressDialog = new JDialog(this, "Nach Updates suchen...", true);
             progressDialog.setLayout(new BorderLayout());
             progressDialog.setSize(400, 150);
             progressDialog.setLocationRelativeTo(this);
             progressDialog.setUndecorated(true);
             progressDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+            progressDialog.setResizable(false);
 
             JPanel progressPanel = new JPanel(new BorderLayout(10, 10));
             progressPanel.setBackground(ThemeManager.getCardBackgroundColor());
@@ -1279,25 +1280,23 @@ public class SettingsGUI extends JFrame {
 
                 @Override
                 protected void done() {
-                    // Close progress dialog first
-                    SwingUtilities.invokeLater(() -> {
-                        progressDialog.setVisible(false);
-                        progressDialog.dispose();
-                    });
-
                     try {
                         String latestVersion = get();
-                        // Show result dialog after a small delay to ensure progress dialog is closed
-                        SwingUtilities.invokeLater(() -> handleUpdateResult(latestVersion, channel));
+                        handleUpdateResult(latestVersion, channel);
                     } catch (Exception e) {
                         logger.error("Fehler beim Prüfen auf Updates: {}", e.getMessage(), e);
-                        SwingUtilities.invokeLater(() -> showUpdateError(e.getMessage()));
+                        showUpdateError(e.getMessage());
+                    } finally {
+                        // Always close the progress dialog
+                        progressDialog.setVisible(false);
+                        progressDialog.dispose();
                     }
                 }
             };
 
-            // Start worker and show dialog
+            // Start worker
             worker.execute();
+            // Show modal dialog - this will block until disposed
             progressDialog.setVisible(true);
 
         } catch (Exception e) {

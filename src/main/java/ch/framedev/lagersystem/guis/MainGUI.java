@@ -130,12 +130,18 @@ public class MainGUI extends JFrame {
      * Creates the header panel with title, subtitle, settings button, and date
      */
     private JPanel createHeaderPanel() {
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(ThemeManager.getHeaderBackgroundColor());
-        headerPanel.setPreferredSize(new Dimension(0, 130));
+        // Create gradient background panel
+        GradientPanel headerPanel = new GradientPanel(
+            ThemeManager.getHeaderBackgroundColor(),
+            ThemeManager.isDarkMode()
+                ? new Color(35, 47, 62)  // Darker gradient for dark mode
+                : new Color(41, 128, 185) // Lighter blue gradient for light mode
+        );
+        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setPreferredSize(new Dimension(0, 149));
         headerPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 3, 0, ThemeManager.getBorderColor()),
-                BorderFactory.createEmptyBorder(25, 50, 25, 50)
+                BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 0, 0, 30)),
+                BorderFactory.createEmptyBorder(30, 60, 30, 60)
         ));
 
         // Left side: Title and subtitle
@@ -153,28 +159,48 @@ public class MainGUI extends JFrame {
      * Creates the left side of the header with title and subtitle
      */
     private JPanel createHeaderTextPanel() {
-        JLabel titleLabel = new JLabel("VEBO Lagersystem");
-        Font titleFont = SettingsGUI.getFontByName(Font.BOLD, 48);
-        titleLabel.setFont(titleFont);
-        titleLabel.setForeground(ThemeManager.getHeaderForegroundColor());
-        titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
-
-        JLabel subtitleLabel = new JLabel("Zentrale Verwaltung für Artikel, Bestellungen und Lieferanten");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        Color subtitleColor = ThemeManager.isDarkMode()
-            ? new Color(200, 220, 240)
-            : new Color(255, 255, 255, 220);
-        subtitleLabel.setForeground(subtitleColor);
-        subtitleLabel.setHorizontalAlignment(SwingConstants.LEFT);
-
         JPanel headerTextPanel = new JPanel();
         headerTextPanel.setLayout(new BoxLayout(headerTextPanel, BoxLayout.Y_AXIS));
         headerTextPanel.setOpaque(false);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerTextPanel.add(titleLabel);
-        headerTextPanel.add(Box.createVerticalStrut(6));
-        headerTextPanel.add(subtitleLabel);
+
+        // Add icon + title in horizontal layout
+        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        titleRow.setOpaque(false);
+
+        JLabel iconLabel = new JLabel(UnicodeSymbols.PACKAGE);
+        iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 42));
+        iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
+        titleRow.add(iconLabel);
+
+        JLabel titleLabel = new JLabel("VEBO Lagersystem");
+        Font titleFont = SettingsGUI.getFontByName(Font.BOLD, 52);
+        titleLabel.setFont(titleFont);
+        titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
+        titleRow.add(titleLabel);
+
+        titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerTextPanel.add(titleRow);
+
+        headerTextPanel.add(Box.createVerticalStrut(10));
+
+        // Subtitle aligned with the "V" in "VEBO" (after icon)
+        JLabel subtitleLabel = new JLabel("Zentrale Verwaltung für Artikel, Bestellungen und Lieferanten");
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 15));
+        Color subtitleColor = ThemeManager.isDarkMode()
+            ? new Color(220, 230, 240, 230)
+            : new Color(255, 255, 255, 240);
+        subtitleLabel.setForeground(subtitleColor);
+
+        // Create wrapper with FlowLayout matching the title row
+        JPanel subtitleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        subtitleRow.setOpaque(false);
+        subtitleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Add invisible spacer matching icon width (approximately 42px + 10px gap = 52px)
+        subtitleRow.add(Box.createHorizontalStrut(52));
+        subtitleRow.add(subtitleLabel);
+
+        headerTextPanel.add(subtitleRow);
 
         return headerTextPanel;
     }
@@ -183,25 +209,29 @@ public class MainGUI extends JFrame {
      * Creates the right side of the header with settings button and date
      */
     private JPanel createHeaderRightPanel() {
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 0));
+        JPanel rightPanel = new JPanel();
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         rightPanel.setOpaque(false);
 
         JButton settingsButton = new JButton(UnicodeSymbols.BETTER_GEAR + " Einstellungen");
         styleHeaderButton(settingsButton);
+        settingsButton.setToolTipText("Einstellungen des Programms öffnen");
         settingsButton.addActionListener(e -> {
             SettingsGUI settingsGUI = new SettingsGUI();
             settingsGUI.display();
         });
+        settingsButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
         JLabel dateLabel = new JLabel(new SimpleDateFormat("EEEE, dd. MMMM yyyy").format(new Date()));
-        dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+        dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         Color dateColor = ThemeManager.isDarkMode()
-            ? new Color(200, 220, 240, 200)
-            : new Color(255, 255, 255, 200);
+            ? new Color(220, 230, 240, 220)
+            : new Color(255, 255, 255, 220);
         dateLabel.setForeground(dateColor);
-        dateLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        dateLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
         rightPanel.add(settingsButton);
+        rightPanel.add(Box.createVerticalStrut(10));
         rightPanel.add(dateLabel);
 
         return rightPanel;
@@ -213,11 +243,53 @@ public class MainGUI extends JFrame {
     private void initializeTabbedPane() {
         int fontSizeTab = getTabFontSize();
 
-        tabbedPane = new JTabbedPane(JTabbedPane.TOP);
-        tabbedPane.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab));
+        tabbedPane = new JTabbedPane(JTabbedPane.TOP) {
+            @Override
+            public void updateUI() {
+                UIManager.put("TabbedPane.tabAreaBackground", ThemeManager.getBackgroundColor());
+                UIManager.put("TabbedPane.selected", ThemeManager.getAccentColor());
+                UIManager.put("TabbedPane.focus", ThemeManager.getAccentColor().darker());
+                UIManager.put("TabbedPane.borderHightlightColor", ThemeManager.getBorderColor()); // note: typo in key, see below
+                UIManager.put("TabbedPane.lightHighlight", ThemeManager.getBorderColor().brighter());
+                UIManager.put("TabbedPane.shadow", ThemeManager.getBorderColor().darker());
+                UIManager.put("TabbedPane.darkShadow", ThemeManager.getBorderColor().darker().darker());
+
+                // This affects height, but only if the current LAF/UI delegate honors it
+                UIManager.put("TabbedPane.tabInsets", new Insets(25, 25, 25, 25));
+
+                super.updateUI();
+
+                // Force layout recalc
+                revalidate();
+                repaint();
+                this.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 8));
+            }
+        };
+        tabbedPane.setUI(new javax.swing.plaf.basic.BasicTabbedPaneUI() {
+
+            @Override
+            protected int calculateTabHeight(int tabPlacement, int tabIndex, int fontHeight) {
+                // your desired tab height
+                return 100;
+            }
+        });
+
+        // Trigger UI update
+        tabbedPane.updateUI();
+
+        // Use larger font for bigger tabs
+        //tabbedPane.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 2));
         tabbedPane.setBackground(ThemeManager.getBackgroundColor());
         tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
-        tabbedPane.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        // Enhanced padding and border for modern look with bigger tabs
+        tabbedPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createEmptyBorder(20, 30, 20, 30),
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                        BorderFactory.createEmptyBorder(8, 8, 8, 8)
+                )
+        ));
 
         // Add tabs
         addTabs();
@@ -251,22 +323,35 @@ public class MainGUI extends JFrame {
      * Adds all tabs to the tabbed pane
      */
     private void addTabs() {
-        tabbedPane.addTab("   " + UnicodeSymbols.PACKAGE + " Artikel   ", null, articleWrapper, "Artikelverwaltung");
-        tabbedPane.addTab("   " + UnicodeSymbols.TRUCK + " Lieferanten   ", null, vendorWrapper, "Lieferantenverwaltung");
-        tabbedPane.addTab("   " + UnicodeSymbols.CLIPBOARD + " Bestellungen   ", null, orderWrapper, "Bestellungsverwaltung");
-        tabbedPane.addTab("   " + UnicodeSymbols.PEOPLE + " Kunden   ", null, clientWrapper, "Kundenverwaltung");
+        // Add extra spacing for bigger, more prominent tabs
+        tabbedPane.addTab("<html>     " + UnicodeSymbols.PACKAGE + "  Artikel     </html>", null, articleWrapper, "Artikelverwaltung");
+        tabbedPane.addTab("<html>     " + UnicodeSymbols.TRUCK + "  Lieferanten     </html>", null, vendorWrapper, "Lieferantenverwaltung");
+        tabbedPane.addTab("<html>     " + UnicodeSymbols.CLIPBOARD + "  Bestellungen     </html>", null, orderWrapper, "Bestellungsverwaltung");
+        tabbedPane.addTab("<html>     " + UnicodeSymbols.PEOPLE + "  Kunden     </html>", null, clientWrapper, "Kundenverwaltung");
     }
 
     /**
      * Applies theme-safe subtle backgrounds to tabs
      */
     private void applyTabBackgrounds() {
-        Color tabTint = ThemeManager.isDarkMode()
-                ? new Color(255, 255, 255, 16)
-                : new Color(0, 0, 0, 12);
+        // More visible and attractive tab backgrounds with better contrast
+        Color unselectedBg = ThemeManager.isDarkMode()
+                ? new Color(45, 52, 64)  // Darker slate for dark mode (more contrast)
+                : new Color(220, 225, 235); // Light gray-blue for light mode
 
+        Color selectedBg = ThemeManager.isDarkMode()
+                ? new Color(70, 82, 100)  // Brighter slate for selected tab in dark mode (more contrast)
+                : new Color(255, 255, 255); // Pure white for selected tab in light mode
+
+        // Set initial background colors
         for (int i = 0; i < tabbedPane.getTabCount(); i++) {
-            tabbedPane.setBackgroundAt(i, tabTint);
+            if (i == tabbedPane.getSelectedIndex()) {
+                tabbedPane.setBackgroundAt(i, selectedBg);
+                tabbedPane.setForegroundAt(i, ThemeManager.getTextPrimaryColor());
+            } else {
+                tabbedPane.setBackgroundAt(i, unselectedBg);
+                tabbedPane.setForegroundAt(i, ThemeManager.getTextSecondaryColor());
+            }
         }
     }
 
@@ -277,10 +362,15 @@ public class MainGUI extends JFrame {
         // Set component background for better visual separation
         tabbedPane.setOpaque(true);
 
-        // Style the tab area with subtle borders
+        // Enhanced border with rounded appearance
         tabbedPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                        BorderFactory.createEmptyBorder(2, 2, 2, 2)
+                ),
+                BorderFactory.createLineBorder(ThemeManager.isDarkMode()
+                        ? new Color(60, 68, 82)
+                        : new Color(220, 225, 232), 1)
         ));
     }
 
@@ -288,8 +378,30 @@ public class MainGUI extends JFrame {
      * Sets up lazy loading for tabs
      */
     private void setupLazyLoading() {
+        // Define colors for tab backgrounds
+        Color unselectedBg = ThemeManager.isDarkMode()
+                ? new Color(45, 52, 64)
+                : new Color(220, 225, 235);
+
+        Color selectedBg = ThemeManager.isDarkMode()
+                ? new Color(70, 82, 100)
+                : new Color(255, 255, 255);
+
         tabbedPane.addChangeListener(e -> {
             int idx = tabbedPane.getSelectedIndex();
+
+            // Update tab backgrounds when switching
+            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                if (i == idx) {
+                    tabbedPane.setBackgroundAt(i, selectedBg);
+                    tabbedPane.setForegroundAt(i, ThemeManager.getTextPrimaryColor());
+                } else {
+                    tabbedPane.setBackgroundAt(i, unselectedBg);
+                    tabbedPane.setForegroundAt(i, ThemeManager.getTextSecondaryColor());
+                }
+            }
+
+            // Lazy load content
             JPanel wrapper = (JPanel) tabbedPane.getComponentAt(idx);
             if (wrapper.getClientProperty("loaded") == null) {
                 loadTabContent(idx, wrapper);
@@ -371,5 +483,30 @@ public class MainGUI extends JFrame {
 
     public void display() {
         setVisible(true);
+    }
+
+    /**
+     * Gradient panel for modern header design
+     */
+    private static class GradientPanel extends JPanel {
+        private final Color color1;
+        private final Color color2;
+
+        GradientPanel(Color color1, Color color2) {
+            this.color1 = color1;
+            this.color2 = color2;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            GradientPaint gp = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
+            g2.setPaint(gp);
+            g2.fillRect(0, 0, getWidth(), getHeight());
+            g2.dispose();
+            super.paintComponent(g);
+        }
     }
 }

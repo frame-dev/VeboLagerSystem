@@ -4,6 +4,7 @@ import ch.framedev.lagersystem.main.Main;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,12 @@ public class ClientManager {
     private static ClientManager instance;
     private final DatabaseManager databaseManager;
 
+    // Simple caches for fast lookups
+    private static final long CACHE_EXPIRY_MS = 60_000; // 1 minute
+    private final Map<String, String> departmentCache = Collections.synchronizedMap(new HashMap<>());
+    private volatile List<Map<String, String>> allClientsCache;
+    private volatile long allClientsCacheTime;
+
     private ClientManager() {
         databaseManager = Main.databaseManager;
         createTable();
@@ -21,7 +28,7 @@ public class ClientManager {
 
     private void createTable() {
         String sql = "CREATE TABLE IF NOT EXISTS clients (" +
-                "firstLastName TEXT," +
+                "firstLastName TEXT PRIMARY KEY," +
                 "department TEXT" +
                 ");";
         databaseManager.executeUpdate(sql);
@@ -34,16 +41,34 @@ public class ClientManager {
         return instance;
     }
 
+    private void invalidateCaches(String firstLastName) {
+        if (firstLastName != null) {
+            departmentCache.remove(firstLastName);
+        }
+        allClientsCache = null;
+    }
+
     public boolean insertClient(String firstLastName, String department) {
-        String sql = "INSERT INTO clients (firstLastName, department) " +
-                "VALUES (?, ?);";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName, department});
+        String sql = "INSERT INTO clients (firstLastName, department) VALUES (?, ?);";
+        boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName, department});
+        if (success) {
+            departmentCache.put(firstLastName, department);
+            allClientsCache = null;
+        }
+        return success;
     }
 
     public boolean existsClient(String firstLastName) {
-        String sql = "SELECT * FROM clients WHERE firstLastName = '" + firstLastName + "';";
-        try (var resultSet = databaseManager.executeQuery(sql)) {
-            return resultSet.next();
+        if (departmentCache.containsKey(firstLastName)) {
+            return true;
+        }
+        String sql = "SELECT 1 FROM clients WHERE firstLastName = ? LIMIT 1;";
+        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{firstLastName})) {
+            boolean exists = resultSet.next();
+            if (exists) {
+                departmentCache.put(firstLastName, resultSet.getString(1));
+            }
+            return exists;
         } catch (Exception e) {
             return false;
         }
@@ -54,7 +79,12 @@ public class ClientManager {
             return false;
         }
         String sql = "UPDATE clients SET department = ? WHERE firstLastName = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{newDepartment, firstLastName});
+        boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{newDepartment, firstLastName});
+        if (success) {
+            departmentCache.put(firstLastName, newDepartment);
+            allClientsCache = null;
+        }
+        return success;
     }
 
     public boolean deleteClient(String firstLastName) {
@@ -62,33 +92,49 @@ public class ClientManager {
             return false;
         }
         String sql = "DELETE FROM clients WHERE firstLastName = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName});
+        boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName});
+        if (success) {
+            invalidateCaches(firstLastName);
+        }
+        return success;
     }
 
     public String getDepartmentByName(String firstLastName) {
+        if (departmentCache.containsKey(firstLastName)) {
+            return departmentCache.get(firstLastName);
+        }
         String sql = "SELECT department FROM clients WHERE firstLastName = ?;";
-        try(ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{firstLastName})) {
-            if(resultSet.next()) {
-                return resultSet.getString("department");
+        try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{firstLastName})) {
+            if (resultSet.next()) {
+                String dept = resultSet.getString("department");
+                departmentCache.put(firstLastName, dept);
+                return dept;
             }
-        } catch (Exception e) {
-            // Handle exception if needed
+        } catch (Exception ignored) {
         }
         return null;
     }
 
     public List<Map<String, String>> getAllClients() {
-        String sql = "SELECT * FROM clients;";
+        if (allClientsCache != null && System.currentTimeMillis() - allClientsCacheTime < CACHE_EXPIRY_MS) {
+            return new ArrayList<>(allClientsCache);
+        }
+
+        String sql = "SELECT firstLastName, department FROM clients;";
         List<Map<String, String>> clients = new ArrayList<>();
         try (var resultSet = databaseManager.executeQuery(sql)) {
             while (resultSet.next()) {
                 Map<String, String> client = new HashMap<>();
-                client.put("firstLastName", resultSet.getString("firstLastName"));
-                client.put("department", resultSet.getString("department"));
+                String name = resultSet.getString("firstLastName");
+                String dept = resultSet.getString("department");
+                client.put("firstLastName", name);
+                client.put("department", dept);
                 clients.add(client);
+                departmentCache.put(name, dept);
             }
-        } catch (Exception e) {
-            // Handle exception if needed
+            allClientsCache = clients;
+            allClientsCacheTime = System.currentTimeMillis();
+        } catch (Exception ignored) {
         }
         return clients;
     }

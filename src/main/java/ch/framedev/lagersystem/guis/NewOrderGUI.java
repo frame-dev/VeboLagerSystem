@@ -34,7 +34,6 @@ import java.util.*;
  * Modern new order GUI with improved visual design and user experience.
  * Features: Split panel layout, gradient header, styled components, and PDF export (PDFBox).
  */
-@SuppressWarnings("SwitchStatementWithTooFewBranches")
 public class NewOrderGUI extends JFrame {
 
     private final DefaultTableModel orderTableModel;
@@ -48,10 +47,19 @@ public class NewOrderGUI extends JFrame {
     private final JTextField senderKontoField;
 
     private final JComboBox<String> departmentList;
+    private final JLabel summaryReceiverValue;
+    private final JLabel summaryDepartmentValue;
+    private final JLabel summaryItemsValue;
+    private final JLabel summaryTotalValue;
 
     public NewOrderGUI() {
         ThemeManager tm = ThemeManager.getInstance();
         tm.registerWindow(this);
+
+        summaryReceiverValue = createSummaryValueLabel("—");
+        summaryDepartmentValue = createSummaryValueLabel("—");
+        summaryItemsValue = createSummaryValueLabel("Keine Artikel");
+        summaryTotalValue = createSummaryValueLabel("0.00 CHF");
 
         setTitle("Neue Bestellung erstellen");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -131,6 +139,7 @@ public class NewOrderGUI extends JFrame {
             if (department != null && !department.trim().isEmpty()) {
                 departmentList.setSelectedItem(department);
             }
+            updateSummaryBar();
         });
 
         // Receiver / Sender form
@@ -153,6 +162,7 @@ public class NewOrderGUI extends JFrame {
                     receiverKontoField.setText(dept.get("kontoNumber").toString());
                 }
             }
+            updateSummaryBar();
         });
 
         // When user types in the editable combobox editor
@@ -204,10 +214,10 @@ public class NewOrderGUI extends JFrame {
 
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                return switch (columnIndex) {
-                    case 1 -> Integer.class;
-                    default -> String.class;
-                };
+                if (columnIndex == 1) {
+                    return Integer.class;
+                }
+                return String.class;
             }
         };
 
@@ -267,6 +277,8 @@ public class NewOrderGUI extends JFrame {
 
         rightCard.add(bottomPanel, BorderLayout.SOUTH);
 
+        mainContent.add(createSummaryBar(), BorderLayout.NORTH);
+
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftCard, rightCard);
         splitPane.setDividerLocation(450);
         splitPane.setDividerSize(4);
@@ -280,6 +292,7 @@ public class NewOrderGUI extends JFrame {
 
         setMinimumSize(new Dimension(900, 600));
         setLocationRelativeTo(null);
+        updateSummaryBar();
     }
 
     private void fillSenderNameCombobox() {
@@ -563,6 +576,57 @@ public class NewOrderGUI extends JFrame {
             total += safePrice(e.getKey()) * e.getValue();
         }
         totalPriceLabel.setText(String.format("Totalpreis: %.2f CHF", total));
+        updateSummaryBar();
+    }
+
+    private JPanel createSummaryBar() {
+        RoundedPanel bar = new RoundedPanel(ThemeManager.getSurfaceColor(), 14);
+        bar.setLayout(new GridLayout(1, 4, 12, 0));
+        bar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 14, 10, 14)
+        ));
+        bar.add(createSummaryChip(UnicodeSymbols.PERSON + " Empfänger", summaryReceiverValue));
+        bar.add(createSummaryChip(UnicodeSymbols.DEPARTMENT + " Abteilung", summaryDepartmentValue));
+        bar.add(createSummaryChip(UnicodeSymbols.PACKAGE + " Artikel", summaryItemsValue));
+        bar.add(createSummaryChip(UnicodeSymbols.CREDIT_CARD + " Total", summaryTotalValue));
+        return bar;
+    }
+
+    private JPanel createSummaryChip(String title, JLabel valueLabel) {
+        RoundedPanel chip = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
+        chip.setLayout(new BorderLayout(0, 4));
+        chip.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        titleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+        chip.add(titleLabel, BorderLayout.NORTH);
+        chip.add(valueLabel, BorderLayout.CENTER);
+        return chip;
+    }
+
+    private JLabel createSummaryValueLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        return label;
+    }
+
+    private void updateSummaryBar() {
+        summaryReceiverValue.setText(valueOrDash((String) receiverNameCombobox.getSelectedItem()));
+        summaryDepartmentValue.setText(valueOrDash((String) departmentList.getSelectedItem()));
+        summaryItemsValue.setText(orderArticles.isEmpty() ? "Keine Artikel" : orderArticles.size() + " Artikel");
+        summaryTotalValue.setText(totalPriceLabel.getText().replace("Totalpreis: ", ""));
+    }
+
+    private String valueOrDash(String text) {
+        if (text == null) return "—";
+        String trimmed = text.trim();
+        return trimmed.isEmpty() ? "—" : trimmed;
     }
 
     private void onCreateOrder() {
@@ -1123,3 +1187,4 @@ public class NewOrderGUI extends JFrame {
         }
     }
 }
+

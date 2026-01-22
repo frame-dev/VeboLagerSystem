@@ -38,7 +38,7 @@ public class Main {
     public static ImageIcon icon;
     public static ImageIcon iconSmall;
 
-    public static final String VERSION = "0.2-TESTING";
+    public static final String VERSION = "0.3-TESTING";
 
     public static void main(String[] args) {
         try {

@@ -492,6 +492,9 @@ public class ThemeManager {
             UIManager.put("FileView.hardDriveIcon", null);
 
             UIManager.put("ToolTip.font", new Font("Arial", Font.BOLD, 16));
+            UIManager.put("TabbedPane.tabInsets", new Insets(30, 25, 18, 30));
+            UIManager.put("TabbedPane.selectedTabPadInsets", new Insets(2, 2, 2, 2));
+            UIManager.put("TabbedPane.tabAreaInsets", new Insets(4, 4, 0, 4));
         }
     }
 
