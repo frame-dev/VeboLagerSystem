@@ -54,7 +54,6 @@ public class QRCodeUtils {
             // Encode data for URL safety
             String encodedData;
             try {
-                // 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
                 encodedData = URLEncoder.encode(data, StandardCharsets.UTF_8);
             } catch (Exception ex) {
                 logger.error("Error encoding QR data for article: {}", article.getArticleNumber(), ex);
