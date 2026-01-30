@@ -41,3 +41,5 @@ build/
 scans.jsonl
 /target/
 /logs/application.log
+/Docs
+ignored.txt
