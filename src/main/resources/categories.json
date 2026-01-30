@@ -1,58 +1,58 @@
 [
   {
     "category": "1.1 Allgemein",
-    "fromTo": "1101 - 1116"
+    "fromTo": "1101 - 1199"
   },
   {
     "category": "1.2 Handschuhe / Überziehschuhe",
-    "fromTo": "1201 - 1217"
+    "fromTo": "1201 - 1299"
   },
   {
     "category": "1.3 Hautschutz",
-    "fromTo": "1301"
+    "fromTo": "1301 - 1399"
   },
   {
     "category": "2.1 Abfallsäcke",
-    "fromTo": "2101 - 2109"
+    "fromTo": "2101 - 2199"
   },
   {
     "category": "2.2 Besen, Bürsten und Pinsel",
-    "fromTo": "2201 - 2223"
+    "fromTo": "2201 - 2299"
   },
   {
     "category": "2.3 Lappen, Tücher und Schwämme",
-    "fromTo": "2301 - 2320"
+    "fromTo": "2301 - 2399"
   },
   {
     "category": "2.4 Abfüllflaschen alle leer",
-    "fromTo": "2401 - 2412"
+    "fromTo": "2401 - 2499"
   },
   {
     "category": "3.1 Geschirrreiniger",
-    "fromTo": "3101 - 3108"
+    "fromTo": "3101 - 3199"
   },
   {
     "category": "3.2 Reinigungsmittel",
-    "fromTo": "3201 - 3220"
+    "fromTo": "3201 - 3299"
   },
   {
     "category": "3.3 Seife",
-    "fromTo": "3301 - 3305"
+    "fromTo": "3301 - 3399"
   },
   {
     "category": "4.1 Küche/Kantine",
-    "fromTo": "4101 - 4119"
+    "fromTo": "4101 - 4199"
   },
   {
     "category": "4.2 Haushalt divers",
-    "fromTo": "4201 - 4229"
+    "fromTo": "4201 - 4299"
   },
   {
     "category": "4.3 Verpackungsmaterial",
-    "fromTo": "3301 - 4318"
+    "fromTo": "3301 - 4399"
   },
   {
     "category": "5.1 Divers",
-    "fromTo": "5101 - 5132"
+    "fromTo": "5101 - 5199"
   }
 ]

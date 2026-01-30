@@ -1,6 +1,9 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.managers.ArticleManager;
+import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.utils.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
@@ -9,8 +12,10 @@ import javax.swing.plaf.basic.BasicTabbedPaneUI;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Modern Main Dashboard for VEBO Lagersystem with Tabbed Interface
@@ -317,6 +322,7 @@ public class MainGUI extends JFrame {
         // Load first tab immediately
         loadTabContent(0, articleWrapper);
         articleWrapper.putClientProperty("loaded", Boolean.TRUE);
+        setJMenuBar(createMenuBar());
     }
 
     /**
@@ -498,6 +504,119 @@ public class MainGUI extends JFrame {
 
     public void display() {
         setVisible(true);
+    }
+
+    private JMenuBar createMenuBar() {
+        JMenuBar menuBar = new JMenuBar();
+        JMenu toolsMenu = new JMenu("Werkzeuge");
+        JMenuItem qrCodesGeneratorMenuItem = new JMenuItem("QR-Codes generieren");
+        qrCodesGeneratorMenuItem.addActionListener(e -> generateQrCodesForArticles());
+        JMenuItem qrCodesSelectedMenuItem = new JMenuItem("QR-Codes fuer Auswahl");
+        qrCodesSelectedMenuItem.addActionListener(e -> generateQrCodesForSelectedArticles());
+        toolsMenu.add(qrCodesGeneratorMenuItem);
+        toolsMenu.add(qrCodesSelectedMenuItem);
+        menuBar.add(toolsMenu);
+        return menuBar;
+    }
+
+    private void generateQrCodesForArticles() {
+        List<Article> articles = ArticleManager.getInstance().getAllArticles();
+        if (articles == null || articles.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Keine Artikel vorhanden.",
+                    "QR-Codes generieren",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+        generateQrCodesForList(articles, "QR-Codes fuer alle Artikel generieren?");
+    }
+
+    private void generateQrCodesForSelectedArticles() {
+        if (articleGUI == null) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Bitte zuerst den Artikel-Tab oeffnen und eine Auswahl treffen.",
+                    "Keine Auswahl",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+        List<Article> selectedArticles = articleGUI.getSelectedArticles();
+        if (selectedArticles.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Bitte waehlen Sie mindestens einen Artikel aus.",
+                    "Keine Auswahl",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+        generateQrCodesForList(selectedArticles, "QR-Codes fuer " + selectedArticles.size() + " ausgewählte Artikel generieren?");
+    }
+
+    private void generateQrCodesForList(List<Article> articles, String promptText) {
+        File outputDir = new File(Main.getAppDataDir(), "qr_codes");
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                promptText + "\nSpeicherort: " + outputDir.getAbsolutePath(),
+                "QR-Codes generieren",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.INFORMATION_MESSAGE
+        );
+        if (result != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        JDialog progressDialog = new JDialog(this, "QR-Codes generieren", true);
+        progressDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+        progressDialog.setLayout(new BorderLayout());
+        JLabel label = new JLabel("Bitte warten, QR-Codes werden erstellt...");
+        label.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        progressDialog.add(label, BorderLayout.CENTER);
+        progressDialog.pack();
+        progressDialog.setLocationRelativeTo(this);
+
+        SwingWorker<List<File>, Void> worker = new SwingWorker<>() {
+            @Override
+            protected List<File> doInBackground() {
+                return QRCodeUtils.createQrCodes(articles);
+            }
+
+            @Override
+            protected void done() {
+                progressDialog.dispose();
+                try {
+                    List<File> files = get();
+                    if (files == null || files.isEmpty()) {
+                        JOptionPane.showMessageDialog(
+                                MainGUI.this,
+                                "Es konnten keine QR-Codes erstellt werden.",
+                                "QR-Codes generieren",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return;
+                    }
+                    JOptionPane.showMessageDialog(
+                            MainGUI.this,
+                            "QR-Codes wurden erstellt.\nAnzahl: " + files.size() + "\nOrdner: " + outputDir.getAbsolutePath(),
+                            "QR-Codes generieren",
+                            JOptionPane.INFORMATION_MESSAGE
+                    );
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(
+                            MainGUI.this,
+                            "Fehler beim Erstellen der QR-Codes: " + ex.getMessage(),
+                            "QR-Codes generieren",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
+            }
+        };
+
+        worker.execute();
+        progressDialog.setVisible(true);
     }
 
     /**

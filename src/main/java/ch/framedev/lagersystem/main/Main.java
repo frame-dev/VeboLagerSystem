@@ -49,7 +49,6 @@ public class Main {
 
             // Check for updates
             checkForUpdates();
-            QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
 
         } catch (Exception e) {
             logger.error("Fehler beim Starten der Anwendung: {}", e.getMessage(), e);
@@ -118,6 +117,15 @@ public class Main {
             settings.setProperty("first-time", "true");
             int result = JOptionPane.showConfirmDialog(null, "Willkommen zum VEBO Lagersystem!\nMöchten Sie die anfänglichen Daten jetzt importieren?", "Erster Start", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, iconSmall);
             if(result == JOptionPane.YES_OPTION) {
+                int resultQr = JOptionPane.showConfirmDialog(null, "QR-Codes Erstellen?", "QR-Codes", JOptionPane.YES_NO_OPTION);
+                if(resultQr == JOptionPane.YES_OPTION) {
+                    logger.info("QR-Codes werden erstellt...");
+                    List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
+                    for (File qrCodeFile : qrCodeFiles) {
+                        logger.info("QR-Code erstellt: {}", qrCodeFile.getAbsolutePath());
+                    }
+                    logger.info("QR-Codes erstellt.");
+                }
                 settings.setProperty("load-from-files", "true");
             } else {
                 settings.setProperty("load-from-files", "false");

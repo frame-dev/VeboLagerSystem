@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import static ch.framedev.lagersystem.main.Main.databaseManager;
 
@@ -51,6 +52,38 @@ public class SettingsGUI extends JFrame {
     private final JTextField serverUrlField;
     private final JComboBox<String> themeComboBox;
     private static JComboBox<String> fontComboBox;
+    private final JTextField settingsSearchField = new JTextField(24);
+    private final List<JComponent> searchableSections = new ArrayList<>();
+    private final JLabel previewTitleLabel = new JLabel("Vorschau");
+    private final JLabel previewBodyLabel = new JLabel("Schrift und Farben werden hier angezeigt.");
+    private final JTable previewTable = new JTable(
+            new Object[][]{
+                    {"A-100", "Beispielartikel", 12, 5},
+                    {"B-200", "Musterteil", 4, 2}
+            },
+            new Object[]{"Artikel", "Name", "Lager", "Min"}
+    );
+    private final JButton previewButton = new JButton("Beispiel Button");
+    private JPanel previewCardPanel;
+    private JPanel previewTextPanel;
+    private JScrollPane previewTableScroll;
+    private final JSlider tableFontSlider = new JSlider(10, 44, 16);
+    private final JSlider tabFontSlider = new JSlider(10, 40, 15);
+    private final JLabel tableFontSample = new JLabel("Tabellenschrift Vorschau");
+    private final JLabel tabFontSample = new JLabel("Tab-Schrift Vorschau");
+    private final JLabel fontSample = new JLabel("Schriftart Vorschau");
+
+    private static final int DEFAULT_STOCK_CHECK_INTERVAL = 30;
+    private static final int DEFAULT_WARNING_INTERVAL = 1;
+    private static final int DEFAULT_QR_IMPORT_INTERVAL = 10;
+    private static final int DEFAULT_TABLE_FONT_SIZE = 16;
+    private static final int DEFAULT_TAB_FONT_SIZE = 15;
+    private static final boolean DEFAULT_ENABLE_AUTO_STOCK_CHECK = true;
+    private static final boolean DEFAULT_ENABLE_WARNINGS = true;
+    private static final boolean DEFAULT_ENABLE_QR_IMPORT = true;
+    private static final boolean DEFAULT_DARK_MODE = false;
+    private static final String DEFAULT_FONT_STYLE = "Arial";
+    private static final String DEFAULT_SERVER_URL = "http://localhost/scan/list.php";
 
     public static int TABLE_FONT_SIZE = 16;
 
@@ -128,6 +161,24 @@ public class SettingsGUI extends JFrame {
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
 
+        JPanel searchPanel = new JPanel(new BorderLayout(12, 0));
+        searchPanel.setOpaque(false);
+        JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Einstellungen durchsuchen:");
+        searchLabel.setFont(getFontByName(Font.BOLD, 13));
+        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        settingsSearchField.setToolTipText("Suche nach Einstellungen...");
+        settingsSearchField.setFont(getFontByName(Font.PLAIN, 13));
+        settingsSearchField.setBackground(ThemeManager.getInputBackgroundColor());
+        settingsSearchField.setForeground(ThemeManager.getTextPrimaryColor());
+        settingsSearchField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        settingsSearchField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        searchPanel.add(searchLabel, BorderLayout.WEST);
+        searchPanel.add(settingsSearchField, BorderLayout.CENTER);
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 16, 0));
+
         // === CATEGORY 1: System & Automatisierung ===
         JPanel systemPanel = createCategoryPanel();
         JScrollPane systemScroll = createScrollablePanel(systemPanel);
@@ -135,6 +186,7 @@ public class SettingsGUI extends JFrame {
         // Stock Check Section
         JPanel stockCheckSection = createSectionPanel(UnicodeSymbols.PACKAGE + " Lagerbestandsprüfung",
                 "Automatische Überprüfung des Lagerbestands und Warnerstellung");
+        addSectionResetButton(stockCheckSection, this::resetStockCheckDefaults);
 
         enableAutoStockCheckCheckbox = new JCheckBox("Automatische Lagerbestandsprüfung aktivieren");
         styleCheckbox(enableAutoStockCheckCheckbox);
@@ -154,6 +206,7 @@ public class SettingsGUI extends JFrame {
         // === SECTION 2: Warnungen ===
         JPanel warningSection = createSectionPanel(UnicodeSymbols.WARNING + " Warnungsanzeige",
                 "Konfiguration der automatischen Warnanzeige");
+        addSectionResetButton(warningSection, this::resetWarningDefaults);
 
         enableWarningDisplayCheckbox = new JCheckBox("Automatische Anzeige ungelesener Warnungen aktivieren");
         styleCheckbox(enableWarningDisplayCheckbox);
@@ -178,6 +231,7 @@ public class SettingsGUI extends JFrame {
         // QR-Code Section
         JPanel qrCodeOptionsPanel = createSectionPanel(UnicodeSymbols.PHONE + " QR-Code Import",
                 "Automatischer Import von QR-Code Scans");
+        addSectionResetButton(qrCodeOptionsPanel, this::resetQrCodeDefaults);
 
         automaticImportCheckBox = new JCheckBox("Automatisches Importieren von QR-Codes aktivieren");
         styleCheckbox(automaticImportCheckBox);
@@ -197,38 +251,13 @@ public class SettingsGUI extends JFrame {
         systemPanel.add(Box.createVerticalStrut(25));
 
 
-        JPanel fontSettingsPanel = createSectionPanel(UnicodeSymbols.ABC + " Schriftart Einstellungen",
-                "Passen Sie die Schriftart und -größe der Anwendung an");
+        // === CATEGORY 1b: Darstellung ===
+        JPanel appearancePanel = createCategoryPanel();
+        JScrollPane appearanceScroll = createScrollablePanel(appearancePanel);
 
-        JLabel fontTableInfoLabel = new JLabel(
-                "<html><p style='font-size: 12px;'>Diese Einstellung wird verwendet um die Schriftgrösse in den Tabellen zu ändern!</p>"
-        );
-        fontTableInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
-        fontTableInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        fontTableInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fontSettingsPanel.add(Box.createVerticalStrut(18));
-        fontSettingsPanel.add(fontTableInfoLabel);
-        fontSettingsPanel.add(Box.createVerticalStrut(10));
-
-        fontSizeTableSpinner = new JSpinner(new SpinnerNumberModel(16, 10, 44, 1));
-        JPanel fontSizePanel = createLabeledSpinnerPanel("Tabellen-Schriftgröße:", fontSizeTableSpinner, "px", 4);
-
-        fontSettingsPanel.add(fontSizePanel);
-        fontSettingsPanel.add(Box.createVerticalStrut(15));
-
-        JLabel fontTabInfoLabel = new JLabel(
-                "<html><p style='font-size: 12px;'>Diese Einstellung wird verwendet um die Schriftgrösse in den Tabs zu ändern!</p></html>"
-        );
-        fontTabInfoLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        fontTabInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        fontTabInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fontSettingsPanel.add(Box.createVerticalStrut(18));
-        fontSettingsPanel.add(fontTabInfoLabel);
-        fontSettingsPanel.add(Box.createVerticalStrut(10));
-
-        fontSizeTabSpinner = new JSpinner(new SpinnerNumberModel(15, 10, 40, 1));
-        JPanel fontTabSizePanel = createLabeledSpinnerPanel("Tabs-Schriftgröße:", fontSizeTabSpinner, "px", 4);
-        fontSettingsPanel.add(fontTabSizePanel);
+        JPanel fontSettingsPanel = createSectionPanel(UnicodeSymbols.ABC + " Schriftart",
+                "Schriftart fuer die Anwendung festlegen");
+        addSectionResetButton(fontSettingsPanel, this::resetFontDefaults);
 
         JLabel fontInfoLabel = new JLabel(
                 "<html><p style='font-size: 12px;'>Diese Einstellung wird verwendet um die Schriftart zu ändern!</p></html>"
@@ -236,23 +265,51 @@ public class SettingsGUI extends JFrame {
         fontInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
         fontInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         fontInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fontSettingsPanel.add(Box.createVerticalStrut(15));
+        fontSettingsPanel.add(Box.createVerticalStrut(12));
         fontSettingsPanel.add(fontInfoLabel);
         fontSettingsPanel.add(Box.createVerticalStrut(10));
 
         fontComboBox = new JComboBox<>();
         getAllFonts().forEach(fontComboBox::addItem);
         styleComboBox(fontComboBox);
+        fontComboBox.addActionListener(e -> updatePreview());
         JPanel fontSelectionPanel = createLabeledComboBoxPanel("Schriftart auswählen:", fontComboBox);
         fontSettingsPanel.add(fontSelectionPanel);
 
-        systemPanel.add(fontSettingsPanel);
+        fontSample.setFont(getFontByName(Font.PLAIN, 16));
+        fontSample.setForeground(ThemeManager.getTextPrimaryColor());
+        fontSample.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fontSettingsPanel.add(Box.createVerticalStrut(12));
+        fontSettingsPanel.add(fontSample);
 
-        systemPanel.add(Box.createVerticalStrut(25));
+        JPanel tableSettingsPanel = createSectionPanel(UnicodeSymbols.CLIPBOARD + " Tabellen & Tabs",
+                "Schriftgroesse fuer Tabellen und Tabs anpassen");
+        addSectionResetButton(tableSettingsPanel, this::resetTableDefaults);
+
+        fontSizeTableSpinner = new JSpinner(new SpinnerNumberModel(16, 10, 44, 1));
+        JPanel fontSizePanel = createLabeledSpinnerPanel("Tabellen-Schriftgröße:", fontSizeTableSpinner, "px", 4);
+        tableSettingsPanel.add(Box.createVerticalStrut(12));
+        tableSettingsPanel.add(fontSizePanel);
+        tableSettingsPanel.add(Box.createVerticalStrut(8));
+        configureSlider(tableFontSlider, fontSizeTableSpinner, tableFontSample);
+        tableSettingsPanel.add(tableFontSlider);
+        tableSettingsPanel.add(Box.createVerticalStrut(6));
+        tableSettingsPanel.add(tableFontSample);
+
+        fontSizeTabSpinner = new JSpinner(new SpinnerNumberModel(15, 10, 40, 1));
+        JPanel fontTabSizePanel = createLabeledSpinnerPanel("Tabs-Schriftgröße:", fontSizeTabSpinner, "px", 4);
+        tableSettingsPanel.add(Box.createVerticalStrut(12));
+        tableSettingsPanel.add(fontTabSizePanel);
+        tableSettingsPanel.add(Box.createVerticalStrut(8));
+        configureSlider(tabFontSlider, fontSizeTabSpinner, tabFontSample);
+        tableSettingsPanel.add(tabFontSlider);
+        tableSettingsPanel.add(Box.createVerticalStrut(6));
+        tableSettingsPanel.add(tabFontSample);
 
         // Dark Mode / Theme Section
         JPanel themeSection = createSectionPanel(UnicodeSymbols.COLOR_PALETTE + " Design & Darstellung",
                 "Passen Sie das Erscheinungsbild der Anwendung an");
+        addSectionResetButton(themeSection, this::resetThemeDefaults);
 
         darkModeCheckbox = new JCheckBox("Dark Mode aktivieren");
         styleCheckbox(darkModeCheckbox);
@@ -276,11 +333,13 @@ public class SettingsGUI extends JFrame {
             if (isDark) {
                 themeComboBox.setSelectedItem("Dark");
             }
+            updatePreview();
         });
 
         themeComboBox.addActionListener(e -> {
             String selected = (String) themeComboBox.getSelectedItem();
             darkModeCheckbox.setSelected("Dark".equals(selected));
+            updatePreview();
         });
 
 
@@ -297,7 +356,22 @@ public class SettingsGUI extends JFrame {
         themeInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         themeSection.add(themeInfoLabel);
 
-        systemPanel.add(themeSection);
+        JPanel previewSection = createSectionPanel(UnicodeSymbols.BULB + " Live Vorschau",
+                "Vorschau auf Schrift und Farben basierend auf Ihren Einstellungen");
+        previewSection.add(Box.createVerticalStrut(12));
+        previewSection.add(createPreviewPanel());
+
+        appearancePanel.add(fontSettingsPanel);
+        appearancePanel.add(Box.createVerticalStrut(25));
+        appearancePanel.add(tableSettingsPanel);
+        appearancePanel.add(Box.createVerticalStrut(25));
+        appearancePanel.add(themeSection);
+        appearancePanel.add(Box.createVerticalStrut(25));
+        appearancePanel.add(previewSection);
+        appearancePanel.add(Box.createVerticalGlue());
+
+        // Add appearance panel to tabbed pane
+        tabbedPane.addTab(UnicodeSymbols.COLOR_PALETTE + " Darstellung", appearanceScroll);
 
         systemPanel.add(Box.createVerticalGlue());
         systemPanel.add(Box.createVerticalStrut(25));
@@ -357,6 +431,7 @@ public class SettingsGUI extends JFrame {
         // Server-Einstellungen
         JPanel serverSection = createSectionPanel(UnicodeSymbols.GLOBE + " Server-Verbindung",
                 "URL des QR-Code Scan-Servers");
+        addSectionResetButton(serverSection, this::resetServerDefaults);
 
         JPanel serverUrlPanel = new JPanel(new BorderLayout(0, 10));
         serverUrlPanel.setOpaque(false);
@@ -548,6 +623,19 @@ public class SettingsGUI extends JFrame {
         importExportSection.add(exportButton);
 
         importExportPanel.add(importExportSection);
+        importExportPanel.add(Box.createVerticalStrut(25));
+
+        JPanel settingsProfileSection = createSectionPanel(UnicodeSymbols.FLOPPY + " Einstellungen Profil",
+                "Importieren oder exportieren Sie Ihre Einstellungen als Profil-Datei");
+        settingsProfileSection.add(Box.createVerticalStrut(15));
+        JButton exportSettingsButton = createStyledButton(UnicodeSymbols.DOWNLOAD + " Einstellungen exportieren", new Color(52, 152, 219));
+        exportSettingsButton.addActionListener(e -> exportSettingsProfile());
+        JButton importSettingsButton = createStyledButton(UnicodeSymbols.UPLOAD + " Einstellungen importieren", new Color(39, 174, 96));
+        importSettingsButton.addActionListener(e -> importSettingsProfile());
+        settingsProfileSection.add(exportSettingsButton);
+        settingsProfileSection.add(Box.createVerticalStrut(10));
+        settingsProfileSection.add(importSettingsButton);
+        importExportPanel.add(settingsProfileSection);
         importExportPanel.add(Box.createVerticalGlue());
 
         // Add import/export panel to tabbed pane
@@ -765,7 +853,8 @@ public class SettingsGUI extends JFrame {
         // Add about panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.INFO + " Über", aboutScroll);
 
-        // Add tabbed pane to content wrapper
+        // Add search + tabs to content wrapper
+        contentWrapper.add(searchPanel, BorderLayout.NORTH);
         contentWrapper.add(tabbedPane, BorderLayout.CENTER);
 
         mainContainer.add(contentWrapper, BorderLayout.CENTER);
@@ -775,18 +864,39 @@ public class SettingsGUI extends JFrame {
         buttonPanel.setBackground(ThemeManager.getCardBackgroundColor());
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
+        JButton resetAllButton = createStyledButton(UnicodeSymbols.REFRESH + " Alles zuruecksetzen", new Color(231, 76, 60));
+        resetAllButton.addActionListener(e -> resetAllDefaults());
+
         JButton cancelButton = createStyledButton(UnicodeSymbols.CLOSE + " Abbrechen", new Color(155, 89, 182));
         cancelButton.addActionListener(e -> dispose());
 
         JButton saveButton = createStyledButton(UnicodeSymbols.FLOPPY + " Speichern", new Color(46, 204, 113));
         saveButton.addActionListener(e -> saveSettings());
 
+        buttonPanel.add(resetAllButton);
         buttonPanel.add(cancelButton);
         buttonPanel.add(saveButton);
 
         mainContainer.add(buttonPanel, BorderLayout.SOUTH);
 
         add(mainContainer);
+
+        settingsSearchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                applySearchFilter();
+            }
+
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                applySearchFilter();
+            }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                applySearchFilter();
+            }
+        });
 
         // Load current settings
         loadSettings();
@@ -963,18 +1073,27 @@ public class SettingsGUI extends JFrame {
      */
     private JPanel createSectionPanel(String title, String description) {
         RoundedPanel section = getRoundedPanel();
+        section.putClientProperty("searchText", (title + " " + description).toLowerCase());
+        searchableSections.add(section);
 
         // Header panel with better visual hierarchy
-        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
         headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
+        JPanel headerLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        headerLeft.setOpaque(false);
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(getFontByName(Font.BOLD, 20));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        headerLeft.add(titleLabel);
+        headerPanel.add(headerLeft, BorderLayout.WEST);
 
-        headerPanel.add(titleLabel);
+        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        headerActions.setOpaque(false);
+        headerPanel.add(headerActions, BorderLayout.EAST);
+        section.putClientProperty("headerActions", headerActions);
 
         // Description with better formatting
         JLabel descLabel = new JLabel("<html><div style='line-height: 1.8; color: #6c757d; font-weight: 300;'>" +
@@ -1020,6 +1139,152 @@ public class SettingsGUI extends JFrame {
         section.setMaximumSize(new Dimension(Integer.MAX_VALUE, 520));
         section.setAlignmentX(Component.LEFT_ALIGNMENT);
         return section;
+    }
+
+    private void addSectionResetButton(JPanel section, Runnable action) {
+        Object actions = section.getClientProperty("headerActions");
+        if (actions instanceof JPanel panel) {
+            JButton resetButton = createHeaderActionButton("Zuruecksetzen");
+            resetButton.addActionListener(e -> action.run());
+            panel.add(resetButton);
+        }
+    }
+
+    private JButton createHeaderActionButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(getFontByName(Font.PLAIN, 12));
+        button.setForeground(ThemeManager.getTextPrimaryColor());
+        button.setBackground(ThemeManager.getSurfaceColor());
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private JPanel createPreviewPanel() {
+        RoundedPanel previewCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
+        previewCardPanel = previewCard;
+        previewCard.setLayout(new BorderLayout(12, 12));
+        previewCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)
+        ));
+
+        JPanel textPanel = new JPanel();
+        previewTextPanel = textPanel;
+        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+        textPanel.setOpaque(true);
+        previewTitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        previewBodyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        textPanel.add(previewTitleLabel);
+        textPanel.add(Box.createVerticalStrut(6));
+        textPanel.add(previewBodyLabel);
+        textPanel.add(Box.createVerticalStrut(10));
+        previewButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        textPanel.add(previewButton);
+
+        previewTable.setRowHeight(22);
+        previewTable.setEnabled(false);
+        JScrollPane tableScroll = new JScrollPane(previewTable);
+        previewTableScroll = tableScroll;
+        tableScroll.setPreferredSize(new Dimension(320, 90));
+        tableScroll.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
+        tableScroll.getViewport().setOpaque(true);
+
+        previewCard.add(textPanel, BorderLayout.WEST);
+        previewCard.add(tableScroll, BorderLayout.EAST);
+
+        updatePreview();
+        return previewCard;
+    }
+
+    private void updatePreview() {
+        boolean darkMode = darkModeCheckbox != null && darkModeCheckbox.isSelected();
+        Color background = darkMode ? ThemeManager.Dark.BACKGROUND : ThemeManager.Light.BACKGROUND;
+        Color card = darkMode ? ThemeManager.Dark.CARD_BACKGROUND : ThemeManager.Light.CARD_BACKGROUND;
+        Color text = darkMode ? ThemeManager.Dark.TEXT_PRIMARY : ThemeManager.Light.TEXT_PRIMARY;
+        Color secondary = darkMode ? ThemeManager.Dark.TEXT_SECONDARY : ThemeManager.Light.TEXT_SECONDARY;
+        Color border = darkMode ? ThemeManager.Dark.BORDER : ThemeManager.Light.BORDER;
+
+        String fontName = fontComboBox == null ? "Arial" : (String) fontComboBox.getSelectedItem();
+        int tableSize = fontSizeTableSpinner == null ? 16 : (Integer) fontSizeTableSpinner.getValue();
+        int tabSize = fontSizeTabSpinner == null ? 15 : (Integer) fontSizeTabSpinner.getValue();
+
+        previewTitleLabel.setFont(new Font(fontName, Font.BOLD, 16));
+        previewTitleLabel.setForeground(text);
+        previewBodyLabel.setFont(new Font(fontName, Font.PLAIN, 13));
+        previewBodyLabel.setForeground(secondary);
+        previewButton.setFont(new Font(fontName, Font.BOLD, 12));
+        previewButton.setBackground(darkMode ? ThemeManager.Dark.BUTTON_BG : ThemeManager.Light.BUTTON_BG);
+        previewButton.setForeground(Color.WHITE);
+
+        previewTable.setFont(new Font(fontName, Font.PLAIN, Math.max(11, tableSize - 2)));
+        previewTable.setForeground(text);
+        previewTable.setBackground(card);
+        previewTable.getTableHeader().setFont(new Font(fontName, Font.BOLD, Math.max(10, tableSize - 3)));
+        previewTable.getTableHeader().setBackground(darkMode ? ThemeManager.Dark.TABLE_HEADER_BG : ThemeManager.Light.TABLE_HEADER_BG);
+        previewTable.getTableHeader().setForeground(darkMode ? ThemeManager.Dark.TABLE_HEADER_FG : ThemeManager.Light.TABLE_HEADER_FG);
+
+        tableFontSample.setFont(new Font(fontName, Font.PLAIN, tableSize));
+        tabFontSample.setFont(new Font(fontName, Font.PLAIN, tabSize));
+        fontSample.setFont(new Font(fontName, Font.PLAIN, 16));
+        tableFontSample.setForeground(text);
+        tabFontSample.setForeground(text);
+        fontSample.setForeground(text);
+
+        if (previewCardPanel != null) {
+            previewCardPanel.setBackground(card);
+        }
+        if (previewTextPanel != null) {
+            previewTextPanel.setBackground(card);
+        }
+        if (previewTableScroll != null) {
+            previewTableScroll.getViewport().setBackground(card);
+            previewTableScroll.setBackground(card);
+            previewTableScroll.setBorder(BorderFactory.createLineBorder(border, 1));
+        }
+        previewTable.setGridColor(border);
+    }
+
+    private void configureSlider(JSlider slider, JSpinner spinner, JLabel sampleLabel) {
+        slider.setPaintTicks(true);
+        slider.setMajorTickSpacing(5);
+        slider.setMinorTickSpacing(1);
+        slider.setOpaque(false);
+        slider.addChangeListener(e -> {
+            int value = slider.getValue();
+            if (!valueEqualsSpinner(value, spinner)) {
+                spinner.setValue(value);
+            }
+            sampleLabel.setText(sampleLabel.getText());
+            updatePreview();
+        });
+        spinner.addChangeListener(e -> {
+            int value = (Integer) spinner.getValue();
+            if (slider.getValue() != value) {
+                slider.setValue(value);
+            }
+            updatePreview();
+        });
+    }
+
+    private boolean valueEqualsSpinner(int value, JSpinner spinner) {
+        Object spinnerValue = spinner.getValue();
+        return spinnerValue instanceof Integer && (Integer) spinnerValue == value;
+    }
+
+    private void applySearchFilter() {
+        String query = settingsSearchField.getText() == null ? "" : settingsSearchField.getText().trim().toLowerCase();
+        for (JComponent section : searchableSections) {
+            Object searchText = section.getClientProperty("searchText");
+            boolean visible = query.isEmpty() || (searchText instanceof String text && text.contains(query));
+            section.setVisible(visible);
+        }
+        revalidate();
+        repaint();
     }
 
     /**
@@ -1213,20 +1478,24 @@ public class SettingsGUI extends JFrame {
                 boolean darkMode = Boolean.parseBoolean(darkModeStr);
                 darkModeCheckbox.setSelected(darkMode);
                 themeComboBox.setSelectedItem(darkMode ? "Dark" : "Light");
+                themeComboBox.setEnabled(!darkMode);
 
                 // Load font size setting (default 14)
                 String fontSizeStr = Main.settings.getProperty("table_font_size");
                 int fontSize = (fontSizeStr != null) ? Integer.parseInt(fontSizeStr) : 16;
                 fontSizeTableSpinner.setValue(fontSize);
+                tableFontSlider.setValue(fontSize);
 
                 String fontSizeTabStr = Main.settings.getProperty("table_font_size_tab");
                 int fontSizeTab = (fontSizeTabStr != null) ? Integer.parseInt(fontSizeTabStr) : 15;
                 fontSizeTabSpinner.setValue(fontSizeTab);
+                tabFontSlider.setValue(fontSizeTab);
 
                 String fontStyle = Main.settings.getProperty("font_style");
                 if(fontStyle != null) {
                     fontComboBox.setSelectedItem(fontStyle);
                 }
+                updatePreview();
 
                 System.out.println("[SettingsGUI] Einstellungen geladen");
             }
@@ -1308,6 +1577,148 @@ public class SettingsGUI extends JFrame {
                     JOptionPane.ERROR_MESSAGE,
                     Main.iconSmall);
             Main.logUtils.addLog("Fehler beim Speichern der Einstellungen: " + e.getMessage());
+        }
+    }
+
+    private void resetStockCheckDefaults() {
+        enableAutoStockCheckCheckbox.setSelected(DEFAULT_ENABLE_AUTO_STOCK_CHECK);
+        stockCheckIntervalSpinner.setValue(DEFAULT_STOCK_CHECK_INTERVAL);
+    }
+
+    private void resetWarningDefaults() {
+        enableWarningDisplayCheckbox.setSelected(DEFAULT_ENABLE_WARNINGS);
+        warningDisplayIntervalSpinner.setValue(DEFAULT_WARNING_INTERVAL);
+    }
+
+    private void resetQrCodeDefaults() {
+        automaticImportCheckBox.setSelected(DEFAULT_ENABLE_QR_IMPORT);
+        qrCodeImportIntervalSpinner.setValue(DEFAULT_QR_IMPORT_INTERVAL);
+    }
+
+    private void resetFontDefaults() {
+        fontComboBox.setSelectedItem(DEFAULT_FONT_STYLE);
+        updatePreview();
+    }
+
+    private void resetTableDefaults() {
+        fontSizeTableSpinner.setValue(DEFAULT_TABLE_FONT_SIZE);
+        fontSizeTabSpinner.setValue(DEFAULT_TAB_FONT_SIZE);
+        updatePreview();
+    }
+
+    private void resetThemeDefaults() {
+        darkModeCheckbox.setSelected(DEFAULT_DARK_MODE);
+        themeComboBox.setSelectedItem(DEFAULT_DARK_MODE ? "Dark" : "Light");
+        themeComboBox.setEnabled(!DEFAULT_DARK_MODE);
+        updatePreview();
+    }
+
+    private void resetServerDefaults() {
+        serverUrlField.setText(DEFAULT_SERVER_URL);
+    }
+
+    private void resetAllDefaults() {
+        resetStockCheckDefaults();
+        resetWarningDefaults();
+        resetQrCodeDefaults();
+        resetFontDefaults();
+        resetTableDefaults();
+        resetThemeDefaults();
+        resetServerDefaults();
+    }
+
+    private void exportSettingsProfile() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Einstellungen exportieren");
+        fileChooser.setSelectedFile(new File("vebo_settings.properties"));
+        int choice = fileChooser.showSaveDialog(this);
+        if (choice != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File file = fileChooser.getSelectedFile();
+        try (FileOutputStream out = new FileOutputStream(file)) {
+            Properties props = collectSettingsProperties();
+            props.store(out, "VEBO Lagersystem Einstellungen");
+            JOptionPane.showMessageDialog(this,
+                    "Einstellungen exportiert:\n" + file.getAbsolutePath(),
+                    "Export erfolgreich",
+                    JOptionPane.INFORMATION_MESSAGE,
+                    Main.iconSmall);
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim Export: " + ex.getMessage(),
+                    "Export fehlgeschlagen",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+        }
+    }
+
+    private void importSettingsProfile() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Einstellungen importieren");
+        int choice = fileChooser.showOpenDialog(this);
+        if (choice != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File file = fileChooser.getSelectedFile();
+        try (FileInputStream in = new FileInputStream(file)) {
+            Properties props = new Properties();
+            props.load(in);
+            applySettingsProperties(props);
+            JOptionPane.showMessageDialog(this,
+                    "Einstellungen importiert.\nBitte speichern, um sie zu uebernehmen.",
+                    "Import erfolgreich",
+                    JOptionPane.INFORMATION_MESSAGE,
+                    Main.iconSmall);
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim Import: " + ex.getMessage(),
+                    "Import fehlgeschlagen",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+        }
+    }
+
+    private Properties collectSettingsProperties() {
+        Properties props = new Properties();
+        props.setProperty("stock_check_interval", String.valueOf(stockCheckIntervalSpinner.getValue()));
+        props.setProperty("enable_hourly_warnings", String.valueOf(enableWarningDisplayCheckbox.isSelected()));
+        props.setProperty("warning_display_interval", String.valueOf(warningDisplayIntervalSpinner.getValue()));
+        props.setProperty("enable_auto_stock_check", String.valueOf(enableAutoStockCheckCheckbox.isSelected()));
+        props.setProperty("server_url", serverUrlField.getText().trim());
+        props.setProperty("enable_automatic_import_qrcode", String.valueOf(automaticImportCheckBox.isSelected()));
+        props.setProperty("qrcode_import_interval", String.valueOf(qrCodeImportIntervalSpinner.getValue()));
+        props.setProperty("dark_mode", String.valueOf(darkModeCheckbox.isSelected()));
+        props.setProperty("table_font_size", String.valueOf(fontSizeTableSpinner.getValue()));
+        props.setProperty("table_font_size_tab", String.valueOf(fontSizeTabSpinner.getValue()));
+        Object fontStyle = fontComboBox.getSelectedItem();
+        props.setProperty("font_style", fontStyle == null ? DEFAULT_FONT_STYLE : fontStyle.toString());
+        return props;
+    }
+
+    private void applySettingsProperties(Properties props) {
+        stockCheckIntervalSpinner.setValue(parseIntProperty(props, "stock_check_interval", DEFAULT_STOCK_CHECK_INTERVAL));
+        enableWarningDisplayCheckbox.setSelected(Boolean.parseBoolean(props.getProperty("enable_hourly_warnings", String.valueOf(DEFAULT_ENABLE_WARNINGS))));
+        warningDisplayIntervalSpinner.setValue(parseIntProperty(props, "warning_display_interval", DEFAULT_WARNING_INTERVAL));
+        enableAutoStockCheckCheckbox.setSelected(Boolean.parseBoolean(props.getProperty("enable_auto_stock_check", String.valueOf(DEFAULT_ENABLE_AUTO_STOCK_CHECK))));
+        serverUrlField.setText(props.getProperty("server_url", DEFAULT_SERVER_URL));
+        automaticImportCheckBox.setSelected(Boolean.parseBoolean(props.getProperty("enable_automatic_import_qrcode", String.valueOf(DEFAULT_ENABLE_QR_IMPORT))));
+        qrCodeImportIntervalSpinner.setValue(parseIntProperty(props, "qrcode_import_interval", DEFAULT_QR_IMPORT_INTERVAL));
+        boolean darkMode = Boolean.parseBoolean(props.getProperty("dark_mode", String.valueOf(DEFAULT_DARK_MODE)));
+        darkModeCheckbox.setSelected(darkMode);
+        themeComboBox.setSelectedItem(darkMode ? "Dark" : "Light");
+        themeComboBox.setEnabled(!darkMode);
+        fontSizeTableSpinner.setValue(parseIntProperty(props, "table_font_size", DEFAULT_TABLE_FONT_SIZE));
+        fontSizeTabSpinner.setValue(parseIntProperty(props, "table_font_size_tab", DEFAULT_TAB_FONT_SIZE));
+        fontComboBox.setSelectedItem(props.getProperty("font_style", DEFAULT_FONT_STYLE));
+        updatePreview();
+    }
+
+    private int parseIntProperty(Properties props, String key, int fallback) {
+        try {
+            return Integer.parseInt(props.getProperty(key, String.valueOf(fallback)));
+        } catch (NumberFormatException ex) {
+            return fallback;
         }
     }
 

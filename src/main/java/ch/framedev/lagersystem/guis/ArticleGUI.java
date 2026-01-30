@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.WarningManager;
 import ch.framedev.lagersystem.utils.ImportUtils;
+import ch.framedev.lagersystem.utils.QRCodeGenerator;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.utils.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -17,8 +18,14 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.plaf.basic.ComboPopup;
@@ -31,6 +38,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.net.URLEncoder;
+import java.awt.image.BufferedImage;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -55,6 +65,12 @@ public class ArticleGUI extends JFrame {
     // base column widths - added category column between Name and Details
     private final int[] baseColumnWidths = new int[]{150, 200, 150, 290, 110, 110, 150, 150, 200};
     private final JLabel countLabel;
+    private boolean isUpdatingTable = false;
+    private JTextField vendorFilterField;
+    private JTextField stockMinField;
+    private JTextField stockMaxField;
+    private JTextField priceMinField;
+    private JTextField priceMaxField;
 
     // Category management
     private JComboBox<String> categoryFilter;
@@ -112,12 +128,24 @@ public class ArticleGUI extends JFrame {
         // =========================
         // Toolbar
         // =========================
-        JPanel toolbarWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 18));
-        toolbarWrapper.setBackground(ThemeManager.getSurfaceColor());
+        RoundedPanel toolbarCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
+        toolbarCard.setLayout(new BorderLayout());
+        toolbarCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 12, 8, 12)
+        ));
+
+        JPanel toolbarWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 10));
+        toolbarWrapper.setOpaque(false);
 
         // Category filter section
         JPanel categoryPanel = createCategoryFilterPanel();
-        toolbarWrapper.add(categoryPanel);
+        JPanel filterGroup = createToolbarGroup();
+        filterGroup.add(categoryPanel);
+
+        JPanel advancedFilterPanel = createAdvancedFilterPanel();
+        filterGroup.add(advancedFilterPanel);
+        toolbarWrapper.add(filterGroup);
 
         // Add Article button
         JButton addArticleButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Artikel hinzufügen");
@@ -211,6 +239,28 @@ public class ArticleGUI extends JFrame {
         deleteArticleButton.setToolTipText("Löscht den ausgewählten Artikel aus dem Lager");
         deleteArticleButton.addActionListener(e -> deleteSelectedArticle());
 
+        // Generate QR-Codes for selected articles
+        JButton generateQrCodesButton = createRoundedButton(UnicodeSymbols.PACKAGE + " QR-Codes erstellen");
+        generateQrCodesButton.setToolTipText("Erstellt QR-Codes für die ausgewählten Artikel");
+        generateQrCodesButton.addActionListener(e -> generateQrCodesForSelectedArticles());
+
+        // QR preview + PDF export
+        JButton qrPreviewPdfButton = createRoundedButton(UnicodeSymbols.CLIPBOARD + " QR-Code Vorschau/PDF");
+        qrPreviewPdfButton.setToolTipText("Zeigt eine Vorschau und exportiert QR-Codes als PDF");
+        qrPreviewPdfButton.addActionListener(e -> showQrCodePreviewDialog());
+
+        JButton bulkDeleteButton = createRoundedButton(UnicodeSymbols.TRASH + " Mehrfach löschen");
+        bulkDeleteButton.setToolTipText("Löscht alle ausgewählten Artikel");
+        bulkDeleteButton.addActionListener(e -> deleteSelectedArticles());
+
+        JButton bulkAdjustStockButton = createRoundedButton(UnicodeSymbols.PACKAGE + " Bestand anpassen");
+        bulkAdjustStockButton.setToolTipText("Passt den Lagerbestand für alle ausgewählten Artikel an");
+        bulkAdjustStockButton.addActionListener(e -> adjustStockForSelectedArticles());
+
+        JButton bulkExportButton = createRoundedButton(UnicodeSymbols.DOWNLOAD + " Auswahl exportieren");
+        bulkExportButton.setToolTipText("Exportiert die ausgewählten Artikel");
+        bulkExportButton.addActionListener(e -> exportSelectedArticles());
+
         // Retrieve QR-Code Data button
         JButton retrieveQrCodeDataButton = createRoundedButton(UnicodeSymbols.PHONE + " QR-Code Daten abrufen");
         retrieveQrCodeDataButton.setToolTipText("Ruft Artikeldaten über einen QR-Code ab");
@@ -221,17 +271,50 @@ public class ArticleGUI extends JFrame {
         showDetailsButton.setToolTipText("Zeigt detaillierte Lagerinformationen an");
         showDetailsButton.addActionListener(e -> showDetails());
 
-        toolbarWrapper.add(addArticleButton);
-        toolbarWrapper.add(editArticleButton);
-        toolbarWrapper.add(deleteArticleButton);
-        toolbarWrapper.add(retrieveQrCodeDataButton);
-        toolbarWrapper.add(showDetailsButton);
+        JPanel actionGroup = createToolbarGroup();
+        actionGroup.add(addArticleButton);
+        actionGroup.add(editArticleButton);
+        actionGroup.add(deleteArticleButton);
+
+        JPanel bulkGroup = createToolbarGroup();
+        bulkGroup.add(bulkDeleteButton);
+        bulkGroup.add(bulkAdjustStockButton);
+        bulkGroup.add(bulkExportButton);
+
+        JPanel qrGroup = createToolbarGroup();
+        qrGroup.add(generateQrCodesButton);
+        qrGroup.add(qrPreviewPdfButton);
+        qrGroup.add(retrieveQrCodeDataButton);
+
+        JPanel infoGroup = createToolbarGroup();
+        infoGroup.add(showDetailsButton);
+
+        toolbarWrapper.add(createToolbarDivider());
+        toolbarWrapper.add(actionGroup);
+        toolbarWrapper.add(createToolbarDivider());
+        toolbarWrapper.add(bulkGroup);
+        toolbarWrapper.add(createToolbarDivider());
+        toolbarWrapper.add(qrGroup);
+        toolbarWrapper.add(createToolbarDivider());
+        toolbarWrapper.add(infoGroup);
+
+        toolbarCard.add(toolbarWrapper, BorderLayout.CENTER);
+
+        JScrollPane toolbarScrollPane = new JScrollPane(
+                toolbarCard,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
+        );
+        toolbarScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        toolbarScrollPane.setOpaque(false);
+        toolbarScrollPane.getViewport().setOpaque(false);
+        toolbarScrollPane.getHorizontalScrollBar().setUnitIncrement(16);
 
         // Top area: header + toolbar stacked
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setBackground(ThemeManager.getBackgroundColor());
         topPanel.add(headerWrapper, BorderLayout.NORTH);
-        topPanel.add(toolbarWrapper, BorderLayout.SOUTH);
+        topPanel.add(toolbarScrollPane, BorderLayout.SOUTH);
         add(topPanel, BorderLayout.NORTH);
 
         // =========================
@@ -1556,12 +1639,13 @@ public class ArticleGUI extends JFrame {
 
         // Set model
         articleTable.setModel(model);
+        registerInlineEditListener(model);
 
         // Visual tweaks
         articleTable.setRowHeight(26);
         articleTable.setAutoCreateRowSorter(true);
         articleTable.getTableHeader().setReorderingAllowed(false);
-        articleTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        articleTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         // Let JTable resize all columns proportionally to fill the viewport when the window resizes
         articleTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
@@ -1627,6 +1711,25 @@ public class ArticleGUI extends JFrame {
         header.setBackground(ThemeManager.getTableHeaderBackground());
         header.setForeground(ThemeManager.getTableHeaderForeground());
         header.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
+
+        NumberFormatter intFormatter = new NumberFormatter(NumberFormat.getIntegerInstance());
+        intFormatter.setAllowsInvalid(false);
+        intFormatter.setMinimum(0);
+        JFormattedTextField intField = new JFormattedTextField(intFormatter);
+        intField.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+        DefaultCellEditor intEditor = new DefaultCellEditor(intField);
+
+        NumberFormatter doubleFormatter = new NumberFormatter(NumberFormat.getNumberInstance());
+        doubleFormatter.setAllowsInvalid(false);
+        doubleFormatter.setMinimum(0.0);
+        JFormattedTextField doubleField = new JFormattedTextField(doubleFormatter);
+        doubleField.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+        DefaultCellEditor doubleEditor = new DefaultCellEditor(doubleField);
+
+        tcm.getColumn(4).setCellEditor(intEditor);
+        tcm.getColumn(5).setCellEditor(intEditor);
+        tcm.getColumn(6).setCellEditor(doubleEditor);
+        tcm.getColumn(7).setCellEditor(doubleEditor);
     }
 
     /**
@@ -1908,7 +2011,7 @@ public class ArticleGUI extends JFrame {
 
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // non-editable table (editing done via dialogs)
+                return column != 0 && column != 2; // allow inline edit except article number and category
             }
         };
 
@@ -2039,6 +2142,7 @@ public class ArticleGUI extends JFrame {
         java.util.List<Article> articles = articleManager.getAllArticles();
         if (articles == null) return;
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        isUpdatingTable = true;
         model.setRowCount(0);
         for (Article a : articles) {
             String category = getCategoryForArticle(a.getArticleNumber());
@@ -2054,6 +2158,7 @@ public class ArticleGUI extends JFrame {
                     a.getVendorName()
             });
         }
+        isUpdatingTable = false;
         updateCountLabel();
     }
 
@@ -2061,6 +2166,123 @@ public class ArticleGUI extends JFrame {
         if (countLabel != null) {
             countLabel.setText("Anzahl Artikel: " + articleTable.getRowCount());
         }
+    }
+
+    private void registerInlineEditListener(DefaultTableModel model) {
+        model.addTableModelListener(new TableModelListener() {
+            @Override
+            public void tableChanged(TableModelEvent e) {
+                if (isUpdatingTable || e.getType() != TableModelEvent.UPDATE) {
+                    return;
+                }
+                int row = e.getFirstRow();
+                int column = e.getColumn();
+                if (row < 0 || column < 0) {
+                    return;
+                }
+                handleInlineEdit(row);
+            }
+        });
+    }
+
+    private void handleInlineEdit(int modelRow) {
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        String articleNumber = String.valueOf(model.getValueAt(modelRow, 0));
+        String name = String.valueOf(model.getValueAt(modelRow, 1)).trim();
+        String details = String.valueOf(model.getValueAt(modelRow, 3));
+        Integer stockQuantity = parseInteger(model.getValueAt(modelRow, 4));
+        Integer minStock = parseInteger(model.getValueAt(modelRow, 5));
+        Double sellPrice = parseDouble(model.getValueAt(modelRow, 6));
+        Double purchasePrice = parseDouble(model.getValueAt(modelRow, 7));
+        String vendor = String.valueOf(model.getValueAt(modelRow, 8)).trim();
+
+        if (name.isEmpty()) {
+            showInlineEditError("Name darf nicht leer sein.", articleNumber, modelRow);
+            return;
+        }
+        if (stockQuantity == null || stockQuantity < 0) {
+            showInlineEditError("Lagerbestand muss eine Zahl >= 0 sein.", articleNumber, modelRow);
+            return;
+        }
+        if (minStock == null || minStock < 0) {
+            showInlineEditError("Mindestbestand muss eine Zahl >= 0 sein.", articleNumber, modelRow);
+            return;
+        }
+        if (sellPrice == null || sellPrice < 0) {
+            showInlineEditError("Verkaufspreis muss eine Zahl >= 0 sein.", articleNumber, modelRow);
+            return;
+        }
+        if (purchasePrice == null || purchasePrice < 0) {
+            showInlineEditError("Einkaufspreis muss eine Zahl >= 0 sein.", articleNumber, modelRow);
+            return;
+        }
+
+        Article article = new Article(
+                articleNumber,
+                name,
+                details,
+                stockQuantity,
+                minStock,
+                sellPrice,
+                purchasePrice,
+                vendor
+        );
+
+        if (!ArticleManager.getInstance().updateArticle(article)) {
+            showInlineEditError("Fehler beim Speichern der Aenderung.", articleNumber, modelRow);
+        }
+    }
+
+    private void showInlineEditError(String message, String articleNumber, int modelRow) {
+        JOptionPane.showMessageDialog(this, message, "Ungültige Eingabe", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+        reloadRowFromDb(articleNumber, modelRow);
+    }
+
+    private void reloadRowFromDb(String articleNumber, int modelRow) {
+        Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+        if (article == null) {
+            return;
+        }
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        isUpdatingTable = true;
+        model.setValueAt(article.getArticleNumber(), modelRow, 0);
+        model.setValueAt(article.getName(), modelRow, 1);
+        model.setValueAt(getCategoryForArticle(article.getArticleNumber()), modelRow, 2);
+        model.setValueAt(article.getDetails(), modelRow, 3);
+        model.setValueAt(article.getStockQuantity(), modelRow, 4);
+        model.setValueAt(article.getMinStockLevel(), modelRow, 5);
+        model.setValueAt(article.getSellPrice(), modelRow, 6);
+        model.setValueAt(article.getPurchasePrice(), modelRow, 7);
+        model.setValueAt(article.getVendorName(), modelRow, 8);
+        isUpdatingTable = false;
+    }
+
+    private Integer parseInteger(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String str) {
+            try {
+                return Integer.parseInt(str.trim());
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private Double parseDouble(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value instanceof String str) {
+            try {
+                return Double.parseDouble(str.trim());
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private void deleteSelectedArticle() {
@@ -2089,6 +2311,678 @@ public class ArticleGUI extends JFrame {
         } else {
             JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Artikels aus der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
         }
+    }
+
+    private void deleteSelectedArticles() {
+        int[] selectedRows = articleTable.getSelectedRows();
+        if (selectedRows == null || selectedRows.length == 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Bitte wählen Sie mindestens einen Artikel aus.",
+                    "Keine Auswahl",
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Moechten Sie " + selectedRows.length + " Artikel wirklich loeschen?",
+                "Artikel loeschen",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE,
+                Main.iconSmall);
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        List<Integer> modelRows = new ArrayList<>();
+        for (int selectedRow : selectedRows) {
+            modelRows.add(articleTable.convertRowIndexToModel(selectedRow));
+        }
+        modelRows.sort(Comparator.reverseOrder());
+
+        ArticleManager articleManager = ArticleManager.getInstance();
+        isUpdatingTable = true;
+        for (int modelRow : modelRows) {
+            String artikelnummer = String.valueOf(model.getValueAt(modelRow, 0));
+            if (articleManager.deleteArticleByNumber(artikelnummer)) {
+                model.removeRow(modelRow);
+            }
+        }
+        isUpdatingTable = false;
+        updateCountLabel();
+    }
+
+    private void adjustStockForSelectedArticles() {
+        List<Article> selected = getSelectedArticles();
+        if (selected.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Bitte wählen Sie mindestens einen Artikel aus.",
+                    "Keine Auswahl",
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+            return;
+        }
+
+        String input = JOptionPane.showInputDialog(this,
+                "Bestandsaenderung eingeben (z.B. 5 oder -3):",
+                "Bestand anpassen",
+                JOptionPane.QUESTION_MESSAGE);
+        if (input == null) {
+            return;
+        }
+        Integer delta = parseInteger(input.trim());
+        if (delta == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Bitte eine gueltige Ganzzahl eingeben.",
+                    "Ungueltige Eingabe",
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+            return;
+        }
+
+        boolean hasNegative = false;
+        for (Article article : selected) {
+            if (article.getStockQuantity() + delta < 0) {
+                hasNegative = true;
+                break;
+            }
+        }
+        if (hasNegative) {
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "Einige Artikel wuerden negativ werden.\nBestand fuer diese Artikel auf 0 setzen?",
+                    "Bestand anpassen",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+        }
+
+        ArticleManager articleManager = ArticleManager.getInstance();
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        isUpdatingTable = true;
+        for (int selectedRow : articleTable.getSelectedRows()) {
+            int modelRow = articleTable.convertRowIndexToModel(selectedRow);
+            String artikelnummer = String.valueOf(model.getValueAt(modelRow, 0));
+            Article article = articleManager.getArticleByNumber(artikelnummer);
+            if (article == null) {
+                continue;
+            }
+            int newStock = Math.max(0, article.getStockQuantity() + delta);
+            Article updated = new Article(
+                    article.getArticleNumber(),
+                    article.getName(),
+                    article.getDetails(),
+                    newStock,
+                    article.getMinStockLevel(),
+                    article.getSellPrice(),
+                    article.getPurchasePrice(),
+                    article.getVendorName()
+            );
+            if (articleManager.updateArticle(updated)) {
+                model.setValueAt(newStock, modelRow, 4);
+            }
+        }
+        isUpdatingTable = false;
+    }
+
+    private void exportSelectedArticles() {
+        List<Article> selected = getSelectedArticles();
+        if (selected.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Bitte wählen Sie mindestens einen Artikel aus.",
+                    "Keine Auswahl",
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+            return;
+        }
+
+        Object[] options = {"CSV", "PDF", "Abbrechen"};
+        int choice = JOptionPane.showOptionDialog(this,
+                "Auswahl exportieren als:",
+                "Export",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                Main.iconSmall,
+                options,
+                options[0]);
+        if (choice == 0) {
+            exportArticlesToCsv(selected);
+        } else if (choice == 1) {
+            exportArticlesToPdf(selected);
+        }
+    }
+
+    private void exportArticlesToCsv(List<Article> articles) {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("CSV Speichern");
+        fileChooser.setSelectedFile(new File("Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".csv"));
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File fileToSave = fileChooser.getSelectedFile();
+        if (!fileToSave.getName().toLowerCase().endsWith(".csv")) {
+            fileToSave = new File(fileToSave.getAbsolutePath() + ".csv");
+        }
+
+        try (var writer = Files.newBufferedWriter(fileToSave.toPath(), StandardCharsets.UTF_8)) {
+            writer.write("Artikelnummer,Name,Details,Lagerbestand,Mindestbestand,Verkaufspreis,Einkaufspreis,Lieferant");
+            writer.write(System.lineSeparator());
+            for (Article article : articles) {
+                writer.write(escapeCsv(article.getArticleNumber()));
+                writer.write(",");
+                writer.write(escapeCsv(article.getName()));
+                writer.write(",");
+                writer.write(escapeCsv(article.getDetails()));
+                writer.write(",");
+                writer.write(String.valueOf(article.getStockQuantity()));
+                writer.write(",");
+                writer.write(String.valueOf(article.getMinStockLevel()));
+                writer.write(",");
+                writer.write(String.valueOf(article.getSellPrice()));
+                writer.write(",");
+                writer.write(String.valueOf(article.getPurchasePrice()));
+                writer.write(",");
+                writer.write(escapeCsv(article.getVendorName()));
+                writer.write(System.lineSeparator());
+            }
+            JOptionPane.showMessageDialog(this,
+                    "CSV erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
+                    "Export",
+                    JOptionPane.INFORMATION_MESSAGE,
+                    Main.iconSmall);
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim CSV-Export: " + ex.getMessage(),
+                    "Export",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+        }
+    }
+
+    private void exportArticlesToPdf(List<Article> articles) {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("PDF Speichern");
+        fileChooser.setSelectedFile(new File("Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File fileToSave = fileChooser.getSelectedFile();
+        if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
+            fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
+        }
+
+        try (PDDocument doc = new PDDocument()) {
+            PDFont regularFont;
+            File arial = new File("/Library/Fonts/Arial.ttf");
+            if (arial.exists()) {
+                regularFont = PDType0Font.load(doc, arial);
+            } else {
+                try {
+                    Class<?> c = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
+                    Object helv = c.getField("HELVETICA").get(null);
+                    regularFont = (PDFont) helv;
+                } catch (Exception e) {
+                    throw new IOException("Keine verwendbaren Schriftarten gefunden");
+                }
+            }
+
+            PDRectangle pageSize = PDRectangle.A4;
+            float margin = 40f;
+            float fontSize = 10f;
+            float lineHeight = 14f;
+            float yStart = pageSize.getHeight() - margin;
+            float maxWidth = pageSize.getWidth() - 2 * margin;
+
+            PDPage page = new PDPage(pageSize);
+            doc.addPage(page);
+            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
+            contentStream.setFont(regularFont, fontSize);
+
+            float y = yStart;
+            for (Article article : articles) {
+                String line = article.getArticleNumber() + " | " + article.getName() + " | Lager: " +
+                        article.getStockQuantity() + " | Min: " + article.getMinStockLevel() +
+                        " | VK: " + article.getSellPrice() + " | EK: " + article.getPurchasePrice() +
+                        " | Lieferant: " + article.getVendorName();
+                List<String> wrapped = wrapLine(line, regularFont, fontSize, maxWidth);
+                for (String part : wrapped) {
+                    if (y - lineHeight < margin) {
+                        contentStream.close();
+                        page = new PDPage(pageSize);
+                        doc.addPage(page);
+                        contentStream = new PDPageContentStream(doc, page);
+                        contentStream.setFont(regularFont, fontSize);
+                        y = yStart;
+                    }
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(margin, y);
+                    contentStream.showText(part);
+                    contentStream.endText();
+                    y -= lineHeight;
+                }
+            }
+
+            contentStream.close();
+            doc.save(fileToSave);
+
+            JOptionPane.showMessageDialog(this,
+                    "PDF erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
+                    "Export",
+                    JOptionPane.INFORMATION_MESSAGE,
+                    Main.iconSmall);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim PDF-Export: " + ex.getMessage(),
+                    "Export",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+        }
+    }
+
+    private List<String> wrapLine(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
+        List<String> lines = new ArrayList<>();
+        if (text == null) {
+            return lines;
+        }
+        String[] words = text.split("\\s+");
+        StringBuilder current = new StringBuilder();
+        for (String word : words) {
+            String candidate = current.length() == 0 ? word : current + " " + word;
+            float width = font.getStringWidth(candidate) / 1000f * fontSize;
+            if (width > maxWidth && current.length() > 0) {
+                lines.add(current.toString());
+                current = new StringBuilder(word);
+            } else {
+                current = new StringBuilder(candidate);
+            }
+        }
+        if (current.length() > 0) {
+            lines.add(current.toString());
+        }
+        return lines;
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) {
+            return "";
+        }
+        String escaped = value.replace("\"", "\"\"");
+        if (escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n")) {
+            return "\"" + escaped + "\"";
+        }
+        return escaped;
+    }
+
+    public List<Article> getSelectedArticles() {
+        int[] selectedRows = articleTable.getSelectedRows();
+        if (selectedRows == null || selectedRows.length == 0) {
+            return Collections.emptyList();
+        }
+
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        List<Article> selectedArticles = new ArrayList<>();
+        for (int selectedRow : selectedRows) {
+            int modelRow = articleTable.convertRowIndexToModel(selectedRow);
+            Object articleNumber = model.getValueAt(modelRow, 0);
+            Object name = model.getValueAt(modelRow, 1);
+            Object details = model.getValueAt(modelRow, 3);
+            Object stockQuantity = model.getValueAt(modelRow, 4);
+            Object minStockLevel = model.getValueAt(modelRow, 5);
+            Object sellPrice = model.getValueAt(modelRow, 6);
+            Object purchasePrice = model.getValueAt(modelRow, 7);
+            Object vendorName = model.getValueAt(modelRow, 8);
+
+            Article article = new Article(
+                    String.valueOf(articleNumber),
+                    String.valueOf(name),
+                    String.valueOf(details),
+                    toInt(stockQuantity),
+                    toInt(minStockLevel),
+                    toDouble(sellPrice),
+                    toDouble(purchasePrice),
+                    String.valueOf(vendorName)
+            );
+            selectedArticles.add(article);
+        }
+        return selectedArticles;
+    }
+
+    private static int toInt(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String str) {
+            try {
+                return Integer.parseInt(str.trim());
+            } catch (NumberFormatException ignored) {
+                return 0;
+            }
+        }
+        return 0;
+    }
+
+    private static double toDouble(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value instanceof String str) {
+            try {
+                return Double.parseDouble(str.trim());
+            } catch (NumberFormatException ignored) {
+                return 0.0;
+            }
+        }
+        return 0.0;
+    }
+
+    private void generateQrCodesForSelectedArticles() {
+        List<Article> selectedArticles = getSelectedArticles();
+        if (selectedArticles.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Bitte wählen Sie mindestens einen Artikel aus.",
+                    "Keine Auswahl",
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+            return;
+        }
+
+        File outputDir = new File(Main.getAppDataDir(), "qr_codes");
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                "QR-Codes fuer " + selectedArticles.size() + " ausgewählte Artikel generieren?\nSpeicherort: " + outputDir.getAbsolutePath(),
+                "QR-Codes generieren",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.INFORMATION_MESSAGE
+        );
+        if (result != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        JDialog progressDialog = new JDialog(this, "QR-Codes generieren", true);
+        progressDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+        progressDialog.setLayout(new BorderLayout());
+        JLabel label = new JLabel("Bitte warten, QR-Codes werden erstellt...");
+        label.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        progressDialog.add(label, BorderLayout.CENTER);
+        progressDialog.pack();
+        progressDialog.setLocationRelativeTo(this);
+
+        SwingWorker<List<File>, Void> worker = new SwingWorker<>() {
+            @Override
+            protected List<File> doInBackground() {
+                return QRCodeUtils.createQrCodes(selectedArticles);
+            }
+
+            @Override
+            protected void done() {
+                progressDialog.dispose();
+                try {
+                    List<File> files = get();
+                    if (files == null || files.isEmpty()) {
+                        JOptionPane.showMessageDialog(
+                                ArticleGUI.this,
+                                "Es konnten keine QR-Codes erstellt werden.",
+                                "QR-Codes generieren",
+                                JOptionPane.WARNING_MESSAGE,
+                                Main.iconSmall
+                        );
+                        return;
+                    }
+                    JOptionPane.showMessageDialog(
+                            ArticleGUI.this,
+                            "QR-Codes wurden erstellt.\nAnzahl: " + files.size() + "\nOrdner: " + outputDir.getAbsolutePath(),
+                            "QR-Codes generieren",
+                            JOptionPane.INFORMATION_MESSAGE,
+                            Main.iconSmall
+                    );
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(
+                            ArticleGUI.this,
+                            "Fehler beim Erstellen der QR-Codes: " + ex.getMessage(),
+                            "QR-Codes generieren",
+                            JOptionPane.ERROR_MESSAGE,
+                            Main.iconSmall
+                    );
+                }
+            }
+        };
+
+        worker.execute();
+        progressDialog.setVisible(true);
+    }
+
+    private void showQrCodePreviewDialog() {
+        List<Article> selectedArticles = getSelectedArticles();
+        if (selectedArticles.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Bitte wählen Sie mindestens einen Artikel aus.",
+                    "Keine Auswahl",
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+            return;
+        }
+
+        JDialog dialog = new JDialog(this, "QR-Code Vorschau", true);
+        dialog.setLayout(new BorderLayout());
+
+        JPanel topPanel = new JPanel(new BorderLayout(10, 10));
+        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JLabel infoLabel = new JLabel("Vorschau für " + selectedArticles.size() + " Artikel wird geladen...");
+        topPanel.add(infoLabel, BorderLayout.WEST);
+
+        JButton exportPdfButton = new JButton("Als PDF exportieren");
+        exportPdfButton.setEnabled(false);
+        topPanel.add(exportPdfButton, BorderLayout.EAST);
+
+        dialog.add(topPanel, BorderLayout.NORTH);
+
+        JPanel gridPanel = new JPanel(new GridLayout(0, 3, 16, 16));
+        gridPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        gridPanel.setBackground(ThemeManager.getBackgroundColor());
+        JScrollPane scrollPane = new JScrollPane(gridPanel);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        dialog.add(scrollPane, BorderLayout.CENTER);
+
+        List<QrPreviewItem> previewItems = new ArrayList<>();
+
+        SwingWorker<List<QrPreviewItem>, Void> worker = new SwingWorker<>() {
+            @Override
+            protected List<QrPreviewItem> doInBackground() {
+                List<QrPreviewItem> items = new ArrayList<>();
+                for (Article article : selectedArticles) {
+                    try {
+                        String url = buildQrCodeUrl(article);
+                        BufferedImage image = QRCodeGenerator.generateQRCodeBufferedImage(url, 220, 220);
+                        items.add(new QrPreviewItem(article, image));
+                    } catch (Exception ex) {
+                        // skip broken entries but continue the batch
+                    }
+                }
+                return items;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    List<QrPreviewItem> items = get();
+                    previewItems.addAll(items);
+                    gridPanel.removeAll();
+
+                    for (QrPreviewItem item : items) {
+                        JPanel cell = new JPanel(new BorderLayout());
+                        cell.setBorder(BorderFactory.createLineBorder(new Color(220, 225, 232), 1));
+                        cell.setBackground(ThemeManager.getCardBackgroundColor());
+
+                        Image scaled = item.image().getScaledInstance(160, 160, Image.SCALE_SMOOTH);
+                        JLabel imageLabel = new JLabel(new ImageIcon(scaled));
+                        imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                        imageLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 6, 10));
+                        cell.add(imageLabel, BorderLayout.CENTER);
+
+                        String labelText = item.article().getArticleNumber() + " - " + item.article().getName();
+                        JLabel textLabel = new JLabel(labelText);
+                        textLabel.setBorder(BorderFactory.createEmptyBorder(0, 8, 8, 8));
+                        textLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+                        cell.add(textLabel, BorderLayout.SOUTH);
+
+                        gridPanel.add(cell);
+                    }
+
+                    infoLabel.setText("Vorschau geladen: " + items.size() + " QR-Codes");
+                    exportPdfButton.setEnabled(!items.isEmpty());
+                    gridPanel.revalidate();
+                    gridPanel.repaint();
+                } catch (Exception ex) {
+                    infoLabel.setText("Fehler beim Laden der Vorschau: " + ex.getMessage());
+                }
+            }
+        };
+
+        exportPdfButton.addActionListener(e -> exportQrCodesToPdf(previewItems));
+
+        worker.execute();
+
+        dialog.setSize(900, 600);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    private record QrPreviewItem(Article article, BufferedImage image) {
+    }
+
+    private String buildQrCodeUrl(Article article) {
+        String data = article.getQrCodeData();
+        String encodedData = URLEncoder.encode(data, StandardCharsets.UTF_8);
+        return "https://framedev.ch/vebo/scan.php?data=" + encodedData;
+    }
+
+    private void exportQrCodesToPdf(List<QrPreviewItem> items) {
+        if (items == null || items.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Keine QR-Codes zum Export vorhanden.",
+                    "QR-Codes exportieren",
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("PDF Speichern");
+        fileChooser.setSelectedFile(new File("QR_Codes_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
+
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File fileToSave = fileChooser.getSelectedFile();
+        if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
+            fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
+        }
+
+        try (PDDocument doc = new PDDocument()) {
+            PDFont regularFont;
+            File arial = new File("/Library/Fonts/Arial.ttf");
+            if (arial.exists()) {
+                regularFont = PDType0Font.load(doc, arial);
+            } else {
+                try {
+                    Class<?> c = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
+                    Object helv = c.getField("HELVETICA").get(null);
+                    regularFont = (PDFont) helv;
+                } catch (Exception e) {
+                    throw new IOException("Keine verwendbaren Schriftarten gefunden");
+                }
+            }
+
+            PDRectangle pageSize = PDRectangle.A4;
+            float margin = 30f;
+            float pageWidth = pageSize.getWidth();
+            float pageHeight = pageSize.getHeight();
+            int columns = 3;
+            float cellWidth = (pageWidth - (2 * margin)) / columns;
+            float cellHeight = cellWidth + 40;
+            float imageSize = cellWidth - 20;
+            float fontSize = 9f;
+
+            PDPage page = new PDPage(pageSize);
+            doc.addPage(page);
+            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
+
+            float startY = pageHeight - margin;
+            int col = 0;
+            int row = 0;
+
+            for (QrPreviewItem item : items) {
+                float x = margin + (col * cellWidth);
+                float yTop = startY - (row * cellHeight);
+
+                if (yTop - cellHeight < margin) {
+                    contentStream.close();
+                    page = new PDPage(pageSize);
+                    doc.addPage(page);
+                    contentStream = new PDPageContentStream(doc, page);
+                    col = 0;
+                    row = 0;
+                    x = margin;
+                    yTop = startY;
+                }
+
+                PDImageXObject image = LosslessFactory.createFromImage(doc, item.image());
+                float imageX = x + (cellWidth - imageSize) / 2f;
+                float imageY = yTop - imageSize;
+                contentStream.drawImage(image, imageX, imageY, imageSize, imageSize);
+
+                String labelText = item.article().getArticleNumber() + " - " + item.article().getName();
+                labelText = trimTextToWidth(labelText, regularFont, fontSize, cellWidth - 12);
+                contentStream.beginText();
+                contentStream.setFont(regularFont, fontSize);
+                contentStream.newLineAtOffset(x + 6, imageY - 14);
+                contentStream.showText(labelText);
+                contentStream.endText();
+
+                col++;
+                if (col >= columns) {
+                    col = 0;
+                    row++;
+                }
+            }
+
+            contentStream.close();
+            doc.save(fileToSave);
+
+            JOptionPane.showMessageDialog(this,
+                    "PDF erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
+                    "QR-Codes exportieren",
+                    JOptionPane.INFORMATION_MESSAGE,
+                    Main.iconSmall);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim PDF-Export: " + ex.getMessage(),
+                    "QR-Codes exportieren",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+        }
+    }
+
+    private static String trimTextToWidth(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
+        String trimmed = text;
+        float textWidth = font.getStringWidth(trimmed) / 1000f * fontSize;
+        if (textWidth <= maxWidth) {
+            return trimmed;
+        }
+        while (trimmed.length() > 2 && textWidth > maxWidth) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+            textWidth = font.getStringWidth(trimmed + "..") / 1000f * fontSize;
+        }
+        return trimmed + "..";
     }
 
     /**
@@ -2785,26 +3679,133 @@ public class ArticleGUI extends JFrame {
      * Filter table by selected category
      */
     private void filterByCategory() {
-        String selectedCategory = (String) categoryFilter.getSelectedItem();
+        applyAdvancedFilters();
+    }
 
-        if (selectedCategory == null || selectedCategory.equals("Alle Kategorien")) {
-            // Show all articles
-            if (articleTable.getRowSorter() instanceof TableRowSorter) {
-                ((TableRowSorter<?>) articleTable.getRowSorter()).setRowFilter(null);
+    private void applyAdvancedFilters() {
+        String selectedCategory = categoryFilter == null ? null : (String) categoryFilter.getSelectedItem();
+        String vendorQuery = vendorFilterField == null ? "" : vendorFilterField.getText().trim().toLowerCase();
+        Integer stockMin = parseIntegerFilter(stockMinField);
+        Integer stockMax = parseIntegerFilter(stockMaxField);
+        Double priceMin = parseDoubleFilter(priceMinField);
+        Double priceMax = parseDoubleFilter(priceMaxField);
+
+        @SuppressWarnings("unchecked")
+        TableRowSorter<DefaultTableModel> sorter = (TableRowSorter<DefaultTableModel>) articleTable.getRowSorter();
+        if (sorter == null) {
+            sorter = new TableRowSorter<>((DefaultTableModel) articleTable.getModel());
+            articleTable.setRowSorter(sorter);
+        }
+
+        String categoryFilterValue = selectedCategory == null ? "Alle Kategorien" : selectedCategory;
+
+        RowFilter<DefaultTableModel, Integer> rowFilter = new RowFilter<>() {
+            @Override
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                if (!"Alle Kategorien".equals(categoryFilterValue)) {
+                    String categoryValue = entry.getStringValue(2);
+                    if (!categoryFilterValue.equals(categoryValue)) {
+                        return false;
+                    }
+                }
+
+                if (!vendorQuery.isEmpty()) {
+                    String vendorValue = entry.getStringValue(8).toLowerCase();
+                    if (!vendorValue.contains(vendorQuery)) {
+                        return false;
+                    }
+                }
+
+                if (stockMin != null || stockMax != null) {
+                    Integer stockValue = parseIntegerFilter(entry.getValue(4));
+                    if (stockValue == null) {
+                        return false;
+                    }
+                    if (stockMin != null && stockValue < stockMin) {
+                        return false;
+                    }
+                    if (stockMax != null && stockValue > stockMax) {
+                        return false;
+                    }
+                }
+
+                if (priceMin != null || priceMax != null) {
+                    Double priceValue = parseDoubleFilter(entry.getValue(6));
+                    if (priceValue == null) {
+                        return false;
+                    }
+                    if (priceMin != null && priceValue < priceMin) {
+                        return false;
+                    }
+                    if (priceMax != null && priceValue > priceMax) {
+                        return false;
+                    }
+                }
+
+                return true;
             }
-        } else {
-            // Filter by category (column index 2)
-            if (articleTable.getRowSorter() instanceof TableRowSorter) {
-                @SuppressWarnings("unchecked")
-                TableRowSorter<DefaultTableModel> sorter = (TableRowSorter<DefaultTableModel>) articleTable.getRowSorter();
-                sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(selectedCategory), 2));
-            } else {
-                TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) articleTable.getModel());
-                articleTable.setRowSorter(sorter);
-                sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(selectedCategory), 2));
+        };
+
+        sorter.setRowFilter(rowFilter);
+        updateCountLabel();
+    }
+
+    private Integer parseIntegerFilter(JTextField field) {
+        if (field == null) {
+            return null;
+        }
+        String text = field.getText();
+        if (text == null || text.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(text.trim());
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private Integer parseIntegerFilter(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String str) {
+            try {
+                return Integer.parseInt(str.trim());
+            } catch (NumberFormatException ignored) {
+                return null;
             }
         }
-        updateCountLabel();
+        return null;
+    }
+
+    private Double parseDoubleFilter(JTextField field) {
+        if (field == null) {
+            return null;
+        }
+        String text = field.getText();
+        if (text == null || text.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(text.trim());
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private Double parseDoubleFilter(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value instanceof String str) {
+            try {
+                return Double.parseDouble(str.trim());
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
     }
 
     /**
@@ -3604,7 +4605,7 @@ public class ArticleGUI extends JFrame {
             categories.keySet().stream().sorted().forEach(categoryFilter::addItem);
         }
         categoryFilter.setPreferredSize(new Dimension(220, 38));
-        categoryFilter.addActionListener(e -> filterByCategory());
+        categoryFilter.addActionListener(e -> applyAdvancedFilters());
         categoryFilter.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         // Apply theme-aware styling
@@ -3615,6 +4616,104 @@ public class ArticleGUI extends JFrame {
         categoryPanel.add(categoryFilter);
 
         return categoryPanel;
+    }
+
+    private JPanel createToolbarGroup() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        panel.setOpaque(false);
+        return panel;
+    }
+
+    private JComponent createToolbarDivider() {
+        JLabel divider = new JLabel("\u2022");
+        divider.setForeground(ThemeManager.getTextSecondaryColor());
+        divider.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
+        return divider;
+    }
+
+    private JPanel createAdvancedFilterPanel() {
+        RoundedPanel filterPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 8);
+        filterPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 12, 8));
+        filterPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        ));
+
+        JLabel vendorLabel = new JLabel(UnicodeSymbols.TRUCK + " Lieferant:");
+        vendorLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        vendorLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        vendorFilterField = new JTextField(10);
+        vendorFilterField.setToolTipText("Lieferant enthaelt...");
+        styleFilterField(vendorFilterField);
+
+        JLabel stockLabel = new JLabel(UnicodeSymbols.PACKAGE + " Lager:");
+        stockLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        stockLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        stockMinField = new JTextField(4);
+        stockMinField.setToolTipText("Min");
+        styleFilterField(stockMinField);
+        stockMaxField = new JTextField(4);
+        stockMaxField.setToolTipText("Max");
+        styleFilterField(stockMaxField);
+
+        JLabel priceLabel = new JLabel(UnicodeSymbols.MONEY + " Preis:");
+        priceLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        priceLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        priceMinField = new JTextField(5);
+        priceMinField.setToolTipText("Min");
+        styleFilterField(priceMinField);
+        priceMaxField = new JTextField(5);
+        priceMaxField.setToolTipText("Max");
+        styleFilterField(priceMaxField);
+
+        filterPanel.add(vendorLabel);
+        filterPanel.add(vendorFilterField);
+        filterPanel.add(stockLabel);
+        filterPanel.add(stockMinField);
+        filterPanel.add(new JLabel("-"));
+        filterPanel.add(stockMaxField);
+        filterPanel.add(priceLabel);
+        filterPanel.add(priceMinField);
+        filterPanel.add(new JLabel("-"));
+        filterPanel.add(priceMaxField);
+
+        addFilterListener(vendorFilterField);
+        addFilterListener(stockMinField);
+        addFilterListener(stockMaxField);
+        addFilterListener(priceMinField);
+        addFilterListener(priceMaxField);
+
+        return filterPanel;
+    }
+
+    private void styleFilterField(JTextField field) {
+        field.setBackground(ThemeManager.getInputBackgroundColor());
+        field.setForeground(ThemeManager.getTextPrimaryColor());
+        field.setCaretColor(ThemeManager.getTextPrimaryColor());
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
+                BorderFactory.createEmptyBorder(4, 6, 4, 6)
+        ));
+        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+    }
+
+    private void addFilterListener(JTextField field) {
+        field.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                applyAdvancedFilters();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                applyAdvancedFilters();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                applyAdvancedFilters();
+            }
+        });
     }
 
     /**
@@ -4248,4 +5347,3 @@ public class ArticleGUI extends JFrame {
         return (articlesAboveMin * 100.0) / articlesWithMinSet;
     }
 }
-
