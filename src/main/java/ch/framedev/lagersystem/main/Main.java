@@ -6,10 +6,7 @@ import ch.framedev.lagersystem.guis.ArticleListGUI;
 import ch.framedev.lagersystem.guis.MainGUI;
 import ch.framedev.lagersystem.guis.SettingsGUI;
 import ch.framedev.lagersystem.managers.*;
-import ch.framedev.lagersystem.utils.ImportUtils;
-import ch.framedev.lagersystem.utils.LogUtils;
-import ch.framedev.lagersystem.utils.ThemeManager;
-import ch.framedev.lagersystem.utils.UserDataDir;
+import ch.framedev.lagersystem.utils.*;
 import ch.framedev.simplejavautils.Settings;
 import ch.framedev.simplejavautils.SimpleJavaUtils;
 import org.apache.logging.log4j.LogManager;
@@ -26,6 +23,7 @@ import java.util.Map;
 /**
  * Main entry point for VEBO Lagersystem application.
  * Handles initialization, data import, and GUI startup.
+ * @author FrameDev
  */
 public class Main {
 
@@ -46,24 +44,15 @@ public class Main {
             printStartupInfo();
             initializeApplication();
 
-            if (Boolean.parseBoolean(settings.getProperty("load-from-files"))) {
-                // Import initial data
-                importInitialData();
-                // Initialize default user
-                initializeDefaultUser();
-                logger.info("Initial data import completed.");
-            } else {
-                logger.info("Initial data import skipped as per settings.");
-            }
-
             // Launch GUI
             launchGUI();
 
             // Check for updates
             checkForUpdates();
+            QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
 
         } catch (Exception e) {
-            System.err.println("Kritischer Fehler beim Starten der Anwendung: " + e.getMessage());
+            logger.error("Fehler beim Starten der Anwendung: {}", e.getMessage(), e);
             logUtils.addLog("Kritischer Fehler: " + e.getMessage());
             logUtils.addLog("Stack trace: " + getStackTraceAsString(e));
             System.exit(1);
@@ -120,11 +109,30 @@ public class Main {
      * Initialize application settings and database
      */
     private static void initializeApplication() {
+        initializeDatabase();
         loadApplicationIcons();
         loadSettings();
         initializeTheme();
         ensureAppDataDirectory();
-        initializeDatabase();
+        if (settings.getProperty("first-time") == null || settings.getProperty("first-time").equalsIgnoreCase("fasle")) {
+            settings.setProperty("first-time", "true");
+            int result = JOptionPane.showConfirmDialog(null, "Willkommen zum VEBO Lagersystem!\nMöchten Sie die anfänglichen Daten jetzt importieren?", "Erster Start", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, iconSmall);
+            if(result == JOptionPane.YES_OPTION) {
+                settings.setProperty("load-from-files", "true");
+            } else {
+                settings.setProperty("load-from-files", "false");
+            }
+            settings.save();
+            if (Boolean.parseBoolean(settings.getProperty("load-from-files"))) {
+                // Import initial data
+                importInitialData();
+                // Initialize default user
+                initializeDefaultUser();
+                logger.info("Initial data import completed.");
+            } else {
+                logger.info("Initial data import skipped as per settings.");
+            }
+        }
     }
 
     /**
@@ -152,6 +160,7 @@ public class Main {
             Image scaledImage = originalIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
             return new ImageIcon(scaledImage);
         } catch (Exception e) {
+            logger.error("Fehler beim Laden des Icons: {}", e.getMessage(), e);
             throw new MalformedURLException("Failed to load resource: " + resourceName);
         }
     }
@@ -428,9 +437,9 @@ public class Main {
     private static SchedulerConfig loadSchedulerConfig() {
         return new SchedulerConfig(
                 getIntSetting("stock_check_interval", 30),
-                getBooleanSetting("enable_auto_stock_check", true),
-                getBooleanSetting("enable_hourly_warnings", true),
-                getBooleanSetting("enable_automatic_import_qrcode", true),
+                getBooleanSetting("enable_auto_stock_check"),
+                getBooleanSetting("enable_hourly_warnings"),
+                getBooleanSetting("enable_automatic_import_qrcode"),
                 getIntSetting("qrcode_import_interval", 10)
         );
     }
@@ -446,9 +455,9 @@ public class Main {
     /**
      * Get boolean setting with default value
      */
-    private static boolean getBooleanSetting(String key, boolean defaultValue) {
+    private static boolean getBooleanSetting(String key) {
         String value = settings.getProperty(key);
-        return value == null ? defaultValue : Boolean.parseBoolean(value);
+        return value == null || Boolean.parseBoolean(value);
     }
 
     /**
@@ -490,7 +499,7 @@ public class Main {
         try {
             return UserDataDir.getAppPath("VeboLagerSystem").toFile();
         } catch (Exception e) {
-            System.err.println("Konnte Anwendungsdatenverzeichnis nicht ermitteln, verwende aktuelles Verzeichnis.");
+            logger.error("Could not get VeboLagerSystem directory.", e);
             logUtils.addLog("Fehler beim Ermitteln des App-Datenverzeichnisses: " + e.getMessage());
             return new File(".");
         }
@@ -531,7 +540,7 @@ public class Main {
                 System.err.println("Konnte Einstellungsdatei nicht erstellen: " + settingsFile.getAbsolutePath());
             }
         } catch (Exception e) {
-            System.err.println("Fehler beim Erstellen der Einstellungsdatei: " + e.getMessage());
+            logger.error("Fehler beim Erstellen der Einstellungsdatei: {}", e.getMessage(), e);
             logUtils.addLog("Fehler beim Erstellen der Einstellungsdatei: " + e.getMessage());
         }
     }
@@ -735,9 +744,10 @@ public class Main {
             logger.error("Failed to open browser: {}", e.getMessage(), e);
             JOptionPane.showMessageDialog(
                 null,
-                "Fehler beim Öffnen des Browsers.\n" +
-                "Bitte besuchen Sie manuell:\n" +
-                "https://github.com/frame-dev/VeboLagerSystem/releases",
+                    """
+                            Fehler beim Öffnen des Browsers.
+                            Bitte besuchen Sie manuell:
+                            https://github.com/frame-dev/VeboLagerSystem/releases""",
                 "Fehler",
                 JOptionPane.ERROR_MESSAGE,
                 iconSmall
@@ -749,7 +759,7 @@ public class Main {
      * Handle update check error
      */
     private static void handleUpdateCheckError(Exception e) {
-        System.out.println("⚠️  Konnte nicht auf Updates prüfen: " + e.getMessage());
+        logger.error("Failed to check for updates: {}", e.getMessage(), e);
         logUtils.addLog("Fehler beim Prüfen auf Updates: " + e.getMessage());
     }
 

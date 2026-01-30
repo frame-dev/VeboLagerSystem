@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.function.Supplier;
 
 @SuppressWarnings("unused")
 public class ArticleListGUI extends JFrame {
@@ -370,7 +370,7 @@ public class ArticleListGUI extends JFrame {
         return new ArticleDisplay(article, quantity, searchable);
     }
 
-    private String safe(java.util.function.Supplier<String> supplier) {
+    private String safe(Supplier<String> supplier) {
         try {
             String value = supplier.get();
             return value == null ? "" : value;
@@ -553,7 +553,7 @@ public class ArticleListGUI extends JFrame {
     /**
      * Handle edit quantity action
      */
-    private void handleEditQuantity(java.awt.event.ActionEvent e) {
+    private void handleEditQuantity(ActionEvent e) {
         int sel = articleJList.getSelectedIndex();
         if (sel == -1) {
             JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
@@ -584,7 +584,7 @@ public class ArticleListGUI extends JFrame {
     /**
      * Handle remove article action
      */
-    private void handleRemoveArticle(java.awt.event.ActionEvent e) {
+    private void handleRemoveArticle(ActionEvent e) {
         int sel = articleJList.getSelectedIndex();
         if (sel == -1) return;
         ArticleDisplay selected = listModel.getElementAt(sel);
@@ -595,7 +595,7 @@ public class ArticleListGUI extends JFrame {
     /**
      * Handle clear all action
      */
-    private void handleClearAll(java.awt.event.ActionEvent e) {
+    private void handleClearAll(ActionEvent e) {
         if (JOptionPane.showConfirmDialog(this, "Alle Artikel entfernen?", "Bestätigen", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, Main.iconSmall) == JOptionPane.YES_OPTION) {
             articlesAndQuantity.clear();
             refreshArticleList();
@@ -671,18 +671,7 @@ public class ArticleListGUI extends JFrame {
                 return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
             }
 
-            JPanel panel = new JPanel(new BorderLayout(12, 0));
-            panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor().brighter()),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)
-            ));
-            panel.setPreferredSize(new Dimension(list.getWidth() - 10, 72));
-
-            if (isSelected) {
-                panel.setBackground(new Color(52, 152, 219));
-            } else {
-                panel.setBackground(index % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
-            }
+            JPanel panel = getPanel(list, index, isSelected);
 
             // Left side: Article info with better structure
             JPanel infoPanel = new JPanel();
@@ -726,6 +715,22 @@ public class ArticleListGUI extends JFrame {
 
             return panel;
         }
+    }
+
+    private static JPanel getPanel(JList<?> list, int index, boolean isSelected) {
+        JPanel panel = new JPanel(new BorderLayout(12, 0));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor().brighter()),
+            BorderFactory.createEmptyBorder(12, 14, 12, 14)
+        ));
+        panel.setPreferredSize(new Dimension(list.getWidth() - 10, 72));
+
+        if (isSelected) {
+            panel.setBackground(new Color(52, 152, 219));
+        } else {
+            panel.setBackground(index % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+        }
+        return panel;
     }
 
     // Rounded panel for modern UI

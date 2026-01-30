@@ -18,7 +18,7 @@ public class LogUtils {
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
     public LogUtils() {
-        this.LOG_FILE = new File(Main.getAppDataDir(), "vebo_lager_system.log");
+        this.LOG_FILE = new File(Main.getAppDataDir() + "/logs", "vebo_lager_system.log");
         initializeLogFile();
     }
 
@@ -45,9 +45,12 @@ public class LogUtils {
     }
 
     public synchronized void addLog(String logEntry) {
-        String timestampedEntry = "[" + dateFormat.format(new Date()) + "] " + logEntry;
+        String timestampedEntry = "[" + dateFormat.format(new Date()) + "] >> " + logEntry;
         writeLogToFile(timestampedEntry);
         LOGGER.log(Level.INFO, logEntry);
+        ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager.getInstance();
+        if(!logManager.createLog(ch.framedev.lagersystem.managers.LogManager.LogLevel.INFO, logEntry))
+            LOGGER.log(Level.ERROR, "LogManager could not create log");
     }
 
     private void writeLogToFile(String logEntry) {

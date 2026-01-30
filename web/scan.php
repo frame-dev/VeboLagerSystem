@@ -421,12 +421,14 @@ if (isset($_GET['quantity'])) {
         <input type="radio" id="sell" name="type" value="sell" checked>
         <label for="buy">Lagern</label>
         <input type="radio" id="buy" name="type" value="buy">
+        <label for="order">Bestellen</label>
+        <input type="radio" id="order" name="type" value="order">
         <br><br>
         <button type="submit">Absenden</button>
     </form>
 
     <div class="nav-links">
-        <a href="index.php">🏠 Start</a>
+        <a href="start.php">🏠 Start</a>
     </div>
 
     <script>

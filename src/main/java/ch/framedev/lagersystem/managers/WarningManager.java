@@ -56,7 +56,7 @@ public class WarningManager {
     public boolean insertWarning(Warning warning) {
         String sql = "INSERT INTO warnings (title, message, type, date, isResolved, isDisplayed) " +
                 "VALUES (?, ?, ?, ?, ?, ?);";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
                 warning.getTitle(),
                 warning.getMessage(),
                 warning.getType().name(),
@@ -64,6 +64,12 @@ public class WarningManager {
                 warning.isResolved() ? "true" : "false",
                 warning.isDisplayed() ? "true" : "false"
         });
+        if (result) {
+            Main.logUtils.addLog("Inserted new warning with title '" + warning.getTitle() + "'");
+        } else {
+            Main.logUtils.addLog("Could not insert new warning with title '" + warning.getTitle() + "'");
+        }
+        return result;
     }
 
     public boolean hasWarning(String title) {
@@ -89,7 +95,13 @@ public class WarningManager {
 
     public boolean resolveWarning(String title) {
         String sql = "UPDATE warnings SET isResolved = 'true' WHERE title = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{title});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title});
+        if(result) {
+            Main.logUtils.addLog("Resolved warning with title '" + title + "'");
+        } else {
+            Main.logUtils.addLog("Could not resolve warning with title '" + title + "'");
+        }
+        return result;
     }
 
     /**
@@ -101,7 +113,7 @@ public class WarningManager {
     public boolean updateWarning(Warning warning) {
         String sql = "UPDATE warnings SET message = ?, type = ?, date = ?, isResolved = ?, isDisplayed = ? " +
                 "WHERE title = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
                 warning.getMessage(),
                 warning.getType().name(),
                 warning.getDate(),
@@ -109,11 +121,23 @@ public class WarningManager {
                 warning.isDisplayed() ? "true" : "false",
                 warning.getTitle()
         });
+        if (result) {
+            Main.logUtils.addLog("Updated warning with title '" + warning.getTitle() + "'");
+        } else {
+            Main.logUtils.addLog("Could not update warning with title '" + warning.getTitle() + "'");
+        }
+        return result;
     }
 
     public boolean deleteWarning(String title) {
         String sql = "DELETE FROM warnings WHERE title = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{title});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title});
+        if (result) {
+            Main.logUtils.addLog("Deleted warning with title '" + title + "'");
+        } else {
+            Main.logUtils.addLog("Could not delete warning with title '" + title + "'");
+        }
+        return result;
     }
 
     public Warning getWarning(String title) {
@@ -163,6 +187,7 @@ public class WarningManager {
             }
         } catch (Exception e) {
             System.err.println("[WarningManager] Fehler beim Laden aller Warnungen: " + e.getMessage());
+            Main.logUtils.addLog("Fehler beim Laden aller Warnungen");
             e.printStackTrace();
         }
         return warnings;

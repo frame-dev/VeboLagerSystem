@@ -6,6 +6,8 @@ import ch.framedev.lagersystem.guis.MainGUI;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -24,6 +26,8 @@ import java.util.concurrent.TimeUnit;
  * - Effiziente Datenbankabfragen
  */
 public class SchedulerManager {
+
+    private final Logger logger = LogManager.getLogger(SchedulerManager.class);
 
     private static volatile SchedulerManager instance;
     private static final Object lock = new Object();
@@ -74,8 +78,7 @@ public class SchedulerManager {
                 period,
                 unit
         );
-        System.out.printf("[SchedulerManager] Lagerbestandsprüfung gestartet (Intervall: %d %s)%n",
-                period, unit.toString().toLowerCase());
+        logger.info("Lagerbestandsprüfung gestartet (Intervall: {} {}", period, unit.toString().toLowerCase());
     }
 
     /**
@@ -94,7 +97,7 @@ public class SchedulerManager {
                 interval, // Wiederholen nach Intervall
                 TimeUnit.HOURS
         );
-        System.out.printf("[SchedulerManager] Warnanzeige gestartet (Intervall: %d Stunde(n))%n", interval);
+        logger.info("Warnanzeige gestartet (Intervall: {} Stunde(n))", interval);
     }
 
     /**
@@ -110,8 +113,7 @@ public class SchedulerManager {
                 interval, // Wiederholen nach Intervall
                 unit
         );
-        System.out.printf("[SchedulerManager] Warnanzeige gestartet (Intervall: %d %s)%n",
-                interval, unit.toString().toLowerCase());
+        logger.info("Warnanzeige gestartet (Intervall: {} {})", interval, unit.toString().toLowerCase());
     }
 
     public void startAutoImportQrCodes(long interval, TimeUnit unit) {
@@ -121,8 +123,7 @@ public class SchedulerManager {
                 interval,
                 unit
         );
-        System.out.printf("[SchedulerManager] Automatischer QR-Code Import gestartet (Intervall: %d %s)%n",
-                interval, unit.toString().toLowerCase());
+        logger.info("Automatischer QR-Code Import gestartet (Intervall: {} {})", interval, unit.toString().toLowerCase());
     }
 
     /**
@@ -136,7 +137,7 @@ public class SchedulerManager {
             List<Article> articles = articleManager.getAllArticles();
 
             if (articles == null || articles.isEmpty()) {
-                System.out.println("[SchedulerManager] Keine Artikel zum Überprüfen vorhanden");
+                logger.info("Keine Artikel zum Überprüfen vorhanden");
                 return;
             }
 
@@ -178,8 +179,8 @@ public class SchedulerManager {
                         if (warningManager.insertWarning(warning)) {
                             warningsCreated++;
                         } else {
-                            System.err.println("[SchedulerManager] Fehler beim Speichern der kritischen Warnung für Artikel " +
-                                    article.getArticleNumber());
+                            logger.error("Fehler beim Speichern der kritischen Warnung für Artikel {}", article.getArticleNumber());
+                            Main.logUtils.addLog("Fehler beim Speichern der kritischen Warnung für Artikel " + article.getArticleNumber());
                         }
                     }
                 }
@@ -207,8 +208,8 @@ public class SchedulerManager {
                         if (warningManager.insertWarning(warning)) {
                             warningsCreated++;
                         } else {
-                            System.err.println("[SchedulerManager] Fehler beim Speichern der Warnung für Artikel " +
-                                    article.getArticleNumber());
+                            logger.error("Fehler beim Speichern der Warnung für Artikel {}", article.getArticleNumber());
+                            Main.logUtils.addLog("Fehler beim Speichern der Warnung für Artikel " + article.getArticleNumber());
                         }
                     } else {
                         // Bestehende Warnung aktualisieren (falls Bestand sich geändert hat)
@@ -219,15 +220,14 @@ public class SchedulerManager {
 
             // Log der Ergebnisse
             if (warningsCreated > 0 || warningsUpdated > 0) {
-                System.out.printf("[SchedulerManager] Lagerbestandsprüfung abgeschlossen: " +
-                                "%d neue Warnung(en), %d aktualisiert%n",
+                logger.info("Lagerbestandsprüfung abgeschlossen: {} neue Warnung(en), {} aktualisiert",
                         warningsCreated, warningsUpdated);
             } else {
-                System.out.println("[SchedulerManager] Lagerbestandsprüfung abgeschlossen: Keine kritischen Bestände");
+                logger.info("Lagerbestandsprüfung abgeschlossen: Keine neuen Warnungen");
             }
         } catch (Exception e) {
-            System.err.println("[SchedulerManager] Fehler bei der Lagerbestandsprüfung: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Fehler bei der Lagerbestandsprüfung: {}", e.getMessage(), e);
+            Main.logUtils.addLog("Fehler bei der Lagerbestandsüberprüfung: " + e.getMessage());
         }
     }
 
@@ -241,7 +241,7 @@ public class SchedulerManager {
                 if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
                     executor.shutdownNow();
                 }
-                System.out.println("[SchedulerManager] Scheduler ordnungsgemäß beendet");
+                logger.info("Scheduler ordnungsgemäß beendet");
 
                 // Recreate executor for restart capability
                 this.executor = Executors.newScheduledThreadPool(1);
@@ -255,15 +255,6 @@ public class SchedulerManager {
     }
 
     /**
-     * Manuelle einmalige Überprüfung (kann mit GUI-Anzeige verwendet werden).
-     * Diese Methode kann aufgerufen werden, wenn der Benutzer manuell nach Warnungen sucht.
-     */
-    public void runManualCheck() {
-        System.out.println("[SchedulerManager] Starte manuelle Lagerbestandsprüfung...");
-        checkLowStock();
-    }
-
-    /**
      * Zeigt alle noch nicht angezeigten Warnungen an.
      * Diese Methode wird jede Stunde vom Scheduler aufgerufen.
      */
@@ -272,7 +263,7 @@ public class SchedulerManager {
             List<Warning> allWarnings = warningManager.getAllWarnings();
 
             if (allWarnings == null || allWarnings.isEmpty()) {
-                System.out.println("[SchedulerManager] Keine Warnungen vorhanden");
+                logger.error("Keine Warnungen vorhanden");
                 return;
             }
 
@@ -282,12 +273,11 @@ public class SchedulerManager {
                     .toList();
 
             if (pendingWarnings.isEmpty()) {
-                System.out.println("[SchedulerManager] Keine neuen Warnungen zum Anzeigen");
+                logger.error("Keine Warnungen vorhanden");
                 return;
             }
 
-            System.out.printf("[SchedulerManager] Zeige %d unangezeigte Warnung(en) an%n",
-                    pendingWarnings.size());
+            logger.info("Zeige {} unangezeigte Warnung(en) an", pendingWarnings.size());
 
             // Zeige Warnungen nacheinander an (nur wenn GUI verfügbar ist)
             for (Warning warning : pendingWarnings) {
@@ -298,8 +288,8 @@ public class SchedulerManager {
             }
 
         } catch (Exception e) {
-            System.err.println("[SchedulerManager] Fehler beim Anzeigen von Warnungen: " + e.getMessage());
-            e.printStackTrace();
+            logger.info("Fehler beim Anzeigen von Warnungen: {}", e.getMessage(), e);
+            Main.logUtils.addLog("Fehler beim Anzeigen von Warnungen: " + e.getMessage());
         }
     }
 
@@ -317,10 +307,11 @@ public class SchedulerManager {
                 int quantity = (int) data.get("quantity");
                 String id = data.get("id").toString();
                 if(!ImportUtils.getImportedQrCodes().contains(id)) {
-                    if (!articleManager.addToStock(articleNumber, quantity))
-                        System.err.println("[SchedulerManager] Fehler beim automatischen Importieren des QR-Codes für Artikel " + articleNumber);
-                    else {
-                        System.out.println("[SchedulerManager] Erfolgreich automatisch " + quantity + " Einheiten zu Artikel " + articleNumber + " hinzugefügt.");
+                    if (!articleManager.addToStock(articleNumber, quantity)) {
+                        logger.error("Fehler beim automatischen Importieren des QR-Codes für Artikel {}", articleNumber);
+                        Main.logUtils.addLog("Fehler beim automatischen Importieren des QR-Codes für Artikel " + articleNumber);
+                    } else {
+                        logger.info("Erfolgreich automatisch {} Einheiten zu Artikel {} hinzugefügt.", quantity, articleNumber);
                         ImportUtils.addQrCodeImport(id);
                     }
                 }

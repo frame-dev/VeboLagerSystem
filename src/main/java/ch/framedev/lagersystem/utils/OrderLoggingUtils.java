@@ -6,10 +6,13 @@ import ch.framedev.lagersystem.main.Main;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 public class OrderLoggingUtils {
 
@@ -54,6 +57,19 @@ public class OrderLoggingUtils {
         } catch (Exception e) {
             logger.error("Fehler beim Schreiben des Log-Eintrags in die Datei: {}", logFile.getAbsolutePath(), e);
             Main.logUtils.addLog("[ORDER LOG|ERROR] Fehler beim Schreiben des Log-Eintrags in die Datei: " + logFile.getAbsolutePath());
+        }
+    }
+
+    public List<String> getAllLogs() {
+        if(!logFile.exists()) {
+            return List.of();
+        }
+        try(BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
+            return reader.lines().toList();
+        } catch (Exception ex) {
+            logger.error("Fehler beim Lesen der Log-Datei: {}", logFile.getAbsolutePath(), ex);
+            Main.logUtils.addLog("[ORDER LOG|ERROR] Fehler beim Lesen der Log-Datei: " + logFile.getAbsolutePath());
+            return List.of();
         }
     }
 }

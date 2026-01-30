@@ -15,6 +15,8 @@ import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.Arrays;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -51,7 +53,7 @@ public class VendorGUI extends JFrame {
         toolbar.setBackground(ThemeManager.getBackgroundColor());
         JButton addVendorButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Lieferant hinzufügen");
         addVendorButton.setToolTipText("Neuen Lieferanten hinzufügen");
-        JButton editVendorButton = createRoundedButton(UnicodeSymbols.BETTER_EDIT + " Lieferant bearbeiten");
+        JButton editVendorButton = createRoundedButton(UnicodeSymbols.CODE + " Lieferant bearbeiten");
         editVendorButton.setToolTipText("Ausgewählten Lieferanten bearbeiten");
         JButton deleteVendorButton = createRoundedButton(UnicodeSymbols.TRASH + " Lieferant löschen");
         deleteVendorButton.setToolTipText("Ausgewählten Lieferanten löschen");
@@ -121,7 +123,7 @@ public class VendorGUI extends JFrame {
         addVendorButton.addActionListener(e -> {
             Object[] row = showAddVendorDialog();
             if (row != null) {
-                Vendor v = new Vendor((String) row[0], (String) row[1], (String) row[2], (String) row[3], (String) row[4]);
+                Vendor v = new Vendor((String) row[0], (String) row[1], (String) row[2], (String) row[3], (String) row[4], (double) row[6]);
                 v.setSuppliedArticles(java.util.Arrays.asList(((String) row[5]).split("\\s*,\\s*")));
                 if (VendorManager.getInstance().insertVendor(v)) {
                     loadVendors(); // Refresh table
@@ -145,8 +147,8 @@ public class VendorGUI extends JFrame {
             Object[] existing = ((DefaultTableModel) vendorTable.getModel()).getDataVector().elementAt(modelRow).toArray();
             Object[] updated = showUpdateVendorDialog(existing);
             if (updated != null) {
-                Vendor v = new Vendor((String) updated[0], (String) updated[1], (String) updated[2], (String) updated[3], (String) updated[4]);
-                v.setSuppliedArticles(java.util.Arrays.asList(((String) updated[5]).split("\\s*,\\s*")));
+                Vendor v = new Vendor((String) updated[0], (String) updated[1], (String) updated[2], (String) updated[3], (String) updated[4], (double) updated[6]);
+                v.setSuppliedArticles(Arrays.asList(((String) updated[5]).split("\\s*,\\s*")));
                 if (VendorManager.getInstance().updateVendor(v)) {
                     loadVendors(); // Refresh table
                     JOptionPane.showMessageDialog(this, "Lieferant erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
@@ -269,7 +271,8 @@ public class VendorGUI extends JFrame {
                     v.getPhoneNumber(),
                     v.getEmail(),
                     v.getAddress(),
-                    String.join(",", v.getSuppliedArticles())
+                    String.join(",", v.getSuppliedArticles()),
+                    v.getMinOrderValue()
             });
         }
     }
@@ -356,7 +359,7 @@ public class VendorGUI extends JFrame {
         gbc.gridx = 0;
 
         // Helper for creating labels
-        java.util.function.Function<String, JLabel> createLabel = text -> {
+        Function<String, JLabel> createLabel = text -> {
             JLabel label = new JLabel(text);
             label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
             if (text.contains("*")) {
@@ -426,6 +429,16 @@ public class VendorGUI extends JFrame {
         gbc.insets = new Insets(2, 8, 8, 8);
         JTextField articlesField = createStyledTextField();
         contentCard.add(articlesField, gbc);
+
+        // Min Order Value
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.gridy = ++row;
+        contentCard.add(createLabel.apply(UnicodeSymbols.MONEY + "  Mindestbestellwert"), gbc);
+        gbc.gridy = ++row;
+        gbc.insets = new Insets(2, 8, 16, 8);
+        JTextField minOrderField = createStyledTextField();
+        minOrderField.setText("0.0");
+        contentCard.add(minOrderField, gbc);
 
         mainContainer.add(contentCard, BorderLayout.CENTER);
 
@@ -525,6 +538,11 @@ public class VendorGUI extends JFrame {
             String email = emailField.getText().trim();
             String addr = addressField.getText().trim();
             String arts = articlesField.getText().trim();
+            double minOrder = 0.0;
+            try {
+                minOrder = Double.parseDouble(minOrderField.getText().trim());
+            } catch (NumberFormatException ignored) {
+            }
 
             if (id.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler",
@@ -532,7 +550,7 @@ public class VendorGUI extends JFrame {
                 return;
             }
 
-            holder[0] = new Object[]{id, contact, phone, email, addr, arts};
+            holder[0] = new Object[]{id, contact, phone, email, addr, arts, minOrder};
             dialog.dispose();
         });
 
@@ -700,7 +718,7 @@ public class VendorGUI extends JFrame {
         gbc.gridx = 0;
 
         // Helper for creating labels
-        java.util.function.Function<String, JLabel> createLabel = text -> {
+        Function<String, JLabel> createLabel = text -> {
             JLabel label = new JLabel(text);
             label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
             label.setForeground(ThemeManager.getTextPrimaryColor());
@@ -767,6 +785,16 @@ public class VendorGUI extends JFrame {
         JTextField articlesField = createStyledTextField();
         articlesField.setText(existing[5] == null ? "" : existing[5].toString());
         contentCard.add(articlesField, gbc);
+
+        // Min Order Value
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.gridy = ++row;
+        contentCard.add(createLabel.apply(UnicodeSymbols.MONEY + "  Mindestbestellwert"), gbc);
+        gbc.gridy = ++row;
+        gbc.insets = new Insets(2, 8, 16, 8);
+        JTextField minOrderField = createStyledTextField();
+        minOrderField.setText(existing.length > 6 && existing[6] != null ? existing[6].toString() : "0.0");
+        contentCard.add(minOrderField, gbc);
 
         mainContainer.add(contentCard, BorderLayout.CENTER);
 
@@ -866,6 +894,11 @@ public class VendorGUI extends JFrame {
             String email = emailField.getText().trim();
             String addr = addressField.getText().trim();
             String arts = articlesField.getText().trim();
+            double minOrder = 0.0;
+            try {
+                minOrder = Double.parseDouble(minOrderField.getText().trim());
+            } catch (NumberFormatException ignored) {
+            }
 
             if (id.isEmpty()) {
                 JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler",
@@ -873,7 +906,7 @@ public class VendorGUI extends JFrame {
                 return;
             }
 
-            holder[0] = new Object[]{id, contact, phone, email, addr, arts};
+            holder[0] = new Object[]{id, contact, phone, email, addr, arts, minOrder};
             dialog.dispose();
         });
 
@@ -890,7 +923,7 @@ public class VendorGUI extends JFrame {
      */
     private void setupTableInteractions() {
         JPopupMenu popup = new JPopupMenu();
-        JMenuItem edit = new JMenuItem(UnicodeSymbols.BETTER_EDIT + " Bearbeiten");
+        JMenuItem edit = new JMenuItem(UnicodeSymbols.CODE + " Bearbeiten");
         JMenuItem del = new JMenuItem(UnicodeSymbols.TRASH + " Löschen");
         popup.add(edit);
         popup.add(del);
@@ -966,7 +999,16 @@ public class VendorGUI extends JFrame {
 
     private void initializeVendorTable() {
         // Column names must match the row data order used in loadVendors()
-        String[] cols = new String[]{"Name", "Kontakt", "Telefon", "Email", "Adresse", "Gelieferte Artikel"};
+        // Add Unicode symbols to the column headers
+        String[] cols = new String[]{
+            UnicodeSymbols.TRUCK + " Name",
+            UnicodeSymbols.PERSON + " Kontakt",
+            UnicodeSymbols.PHONE + " Telefon",
+            UnicodeSymbols.EMAIL + " Email",
+            UnicodeSymbols.ADDRESS + " Adresse",
+            UnicodeSymbols.PACKAGE + " Gelieferte Artikel",
+            UnicodeSymbols.MONEY + " Mindestbestellwert"
+        };
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override public Class<?> getColumnClass(int columnIndex) { return String.class; }
             @Override public boolean isCellEditable(int row, int column) { return false; }
@@ -1137,3 +1179,4 @@ public class VendorGUI extends JFrame {
         }
     }
 }
+

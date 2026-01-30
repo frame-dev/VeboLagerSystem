@@ -189,19 +189,21 @@ public class ArticleManager {
             return exists;
         } catch (Exception e) {
             logger.error("Error while checking if article with number '{}' exists", articleNumber, e);
+            Main.logUtils.addLog("Error while checking if article with number " + articleNumber + " exists");
             return false;
         }
     }
 
     public boolean insertArticle(Article article) {
         if (existsArticle(article.getArticleNumber())) {
+            Main.logUtils.addLog("Article with the number " + article.getArticleNumber() + " already exists!");
             return false;
         }
         String sql = "INSERT INTO articles (articleNumber, name, details, stockQuantity, minStockLevel, sellPrice, purchasePrice, vendorName) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
         VendorManager vendorManager = VendorManager.getInstance();
         if (!vendorManager.existsVendor(article.getVendorName())) {
-            Vendor vendor = new Vendor(article.getVendorName(), "", "", "", "", new ArrayList<>());
+            Vendor vendor = new Vendor(article.getVendorName(), "", "", "", "", new ArrayList<>(), 0.0);
             vendor.getSuppliedArticles().add(article.getArticleNumber());
             vendorManager.insertVendor(vendor);
         } else {
@@ -219,6 +221,9 @@ public class ArticleManager {
             cacheArticle(article);
             invalidateAllArticlesList();
             logger.debug("Article {} added to cache", article.getArticleNumber());
+            Main.logUtils.addLog("Article with number '" + article.getArticleNumber() + "' inserted");
+        } else {
+            Main.logUtils.addLog("Error while inserting article with number: " + article.getArticleNumber());
         }
 
         return success;
@@ -232,7 +237,7 @@ public class ArticleManager {
                 "WHERE articleNumber = ?;";
         VendorManager vendorManager = VendorManager.getInstance();
         if (!vendorManager.existsVendor(article.getVendorName())) {
-            Vendor vendor = new Vendor(article.getVendorName(), "", "", "", "", new ArrayList<>());
+            Vendor vendor = new Vendor(article.getVendorName(), "", "", "", "", new ArrayList<>(), 0.0);
             vendor.getSuppliedArticles().add(article.getArticleNumber());
             vendorManager.insertVendor(vendor);
         } else {
@@ -250,6 +255,9 @@ public class ArticleManager {
             invalidateArticleCache(article.getArticleNumber());
             cacheArticle(article);
             logger.debug("Article {} updated in cache", article.getArticleNumber());
+            Main.logUtils.addLog("Article with number '" + article.getArticleNumber() + "' updated");
+        } else {
+            Main.logUtils.addLog("Error while updating article with number: " + article.getArticleNumber());
         }
 
         return success;
@@ -265,6 +273,9 @@ public class ArticleManager {
         if (success) {
             invalidateArticleCache(articleNumber);
             logger.debug("Article {} removed from cache", articleNumber);
+            Main.logUtils.addLog("Article with number '" + articleNumber + "' deleted");
+        } else {
+            Main.logUtils.addLog("Error while deleting article with number: " + articleNumber);
         }
 
         return success;
@@ -304,6 +315,7 @@ public class ArticleManager {
             }
         } catch (Exception e) {
             logger.error("Error while getting article with number '{}'", articleNumber, e);
+            Main.logUtils.addLog("Error while getting article with number '" + articleNumber + "'");
             return null;
         }
     }
@@ -335,6 +347,7 @@ public class ArticleManager {
             }
         } catch (Exception e) {
             logger.error("Error while getting article with name '{}'", name, e);
+            Main.logUtils.addLog("Error while getting article with name '" + name + "'");
             return null;
         }
     }
@@ -386,6 +399,7 @@ public class ArticleManager {
             return new ArrayList<>(articles);
         } catch (Exception e) {
             logger.error("Error while getting all articles", e);
+            Main.logUtils.addLog("Error while getting all articles");
             return null;
         }
     }

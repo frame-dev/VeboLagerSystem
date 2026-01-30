@@ -15,6 +15,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -70,7 +72,7 @@ public class ClientGUI extends JFrame {
 
         JButton addClientButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Kunde hinzufügen");
         addClientButton.setToolTipText("Einen neuen Kunden zur Datenbank hinzufügen");
-        JButton editClientButton = createRoundedButton(UnicodeSymbols.BETTER_EDIT + " Kunde bearbeiten");
+        JButton editClientButton = createRoundedButton(UnicodeSymbols.CODE + " Kunde bearbeiten");
         editClientButton.setToolTipText("Den ausgewählten Kunden bearbeiten");
         JButton deleteClientButton = createRoundedButton(UnicodeSymbols.TRASH + " Kunde löschen");
         deleteClientButton.setToolTipText("Den ausgewählten Kunden löschen");
@@ -296,31 +298,7 @@ public class ClientGUI extends JFrame {
         ));
 
         // Modern gradient header
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
-                Color color1 = ThemeManager.isDarkMode()
-                        ? new Color(30, 58, 95)
-                        : new Color(41, 128, 185);
-                Color color2 = ThemeManager.isDarkMode()
-                        ? new Color(44, 62, 80)
-                        : new Color(52, 152, 219);
-
-                GradientPaint gradient = new GradientPaint(
-                        0, 0, color1,
-                        getWidth(), 0, color2
-                );
-                g2d.setPaint(gradient);
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-                g2d.dispose();
-            }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+        JPanel headerPanel = getHeaderPanel();
 
         // Icon and title panel
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
@@ -388,7 +366,7 @@ public class ClientGUI extends JFrame {
         gbc.weightx = 1.0;
 
         // Label creation with blue accent for required fields
-        java.util.function.Function<String, JLabel> createLabel = text -> {
+        Function<String, JLabel> createLabel = text -> {
             JLabel label = new JLabel(text);
             label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
 
@@ -407,7 +385,7 @@ public class ClientGUI extends JFrame {
         };
 
         // Text field styling with blue focus effect
-        java.util.function.Consumer<JTextField> styleTextField = field -> {
+        Consumer<JTextField> styleTextField = field -> {
             Color normalBorder = ThemeManager.getInputBorderColor();
             Color focusBorder = ThemeManager.isDarkMode()
                     ? new Color(100, 170, 255)
@@ -595,6 +573,35 @@ public class ClientGUI extends JFrame {
         return holder[0];
     }
 
+    private static JPanel getHeaderPanel() {
+        JPanel headerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+                Color color1 = ThemeManager.isDarkMode()
+                        ? new Color(30, 58, 95)
+                        : new Color(41, 128, 185);
+                Color color2 = ThemeManager.isDarkMode()
+                        ? new Color(44, 62, 80)
+                        : new Color(52, 152, 219);
+
+                GradientPaint gradient = new GradientPaint(
+                        0, 0, color1,
+                        getWidth(), 0, color2
+                );
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.dispose();
+            }
+        };
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+        return headerPanel;
+    }
+
     private Object[] showUpdateClientDialog(Object[] existing) {
         final Object[][] holder = new Object[1][];
 
@@ -636,7 +643,7 @@ public class ClientGUI extends JFrame {
 
         gbc.gridy = row++;
         gbc.insets = new Insets(4, 8, 20, 8);
-        JTextField nameField = createStyledTextField(existing[0] == null ? "" : existing[0].toString(), 30);
+        JTextField nameField = createStyledTextField(existing[0] == null ? "" : existing[0].toString());
         contentCard.add(nameField, gbc);
 
         // Department field with enhanced styling
@@ -685,29 +692,7 @@ public class ClientGUI extends JFrame {
      * Create modern header panel for update client dialog with gradient effect
      */
     private JPanel createModernHeaderPanel(JDialog dialog, Object[][] holder) {
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
-                Color color1 = ThemeManager.getAccentColor();
-                Color color2 = ThemeManager.isDarkMode()
-                        ? ThemeManager.getButtonHoverColor(color1)
-                        : color1.brighter();
-
-                GradientPaint gradient = new GradientPaint(
-                        0, 0, color1,
-                        getWidth(), 0, color2
-                );
-                g2d.setPaint(gradient);
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-                g2d.dispose();
-            }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+        JPanel headerPanel = getPanel();
 
         // Title section with icon
         JPanel titleSection = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
@@ -761,6 +746,33 @@ public class ClientGUI extends JFrame {
         return headerPanel;
     }
 
+    private static JPanel getPanel() {
+        JPanel headerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+                Color color1 = ThemeManager.getAccentColor();
+                Color color2 = ThemeManager.isDarkMode()
+                        ? ThemeManager.getButtonHoverColor(color1)
+                        : color1.brighter();
+
+                GradientPaint gradient = new GradientPaint(
+                        0, 0, color1,
+                        getWidth(), 0, color2
+                );
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.dispose();
+            }
+        };
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+        return headerPanel;
+    }
+
     /**
      * Create styled label for dialog forms
      */
@@ -774,8 +786,8 @@ public class ClientGUI extends JFrame {
     /**
      * Create styled text field for dialog forms with focus effects
      */
-    private JTextField createStyledTextField(String initialValue, int columns) {
-        JTextField field = new JTextField(initialValue, columns);
+    private JTextField createStyledTextField(String initialValue) {
+        JTextField field = new JTextField(initialValue, 30);
         field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
@@ -1017,7 +1029,10 @@ public class ClientGUI extends JFrame {
     }
 
     private void initializeClientTable() {
-        DefaultTableModel model = new DefaultTableModel(new String[]{"Name", "Abteilung"}, 0) {
+        DefaultTableModel model = new DefaultTableModel(new String[]{
+                UnicodeSymbols.PERSON + " Name",
+                UnicodeSymbols.DEPARTMENT + " Abteilung"
+        }, 0) {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 return String.class;
@@ -1345,3 +1360,4 @@ public class ClientGUI extends JFrame {
         }
     }
 }
+

@@ -23,6 +23,8 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
@@ -78,7 +80,7 @@ public class NewOrderGUI extends JFrame {
         header.setPreferredSize(new Dimension(900, 80));
         header.setLayout(new GridBagLayout());
 
-        JLabel iconLabel = new JLabel(UnicodeSymbols.BETTER_EDIT);
+        JLabel iconLabel = new JLabel(UnicodeSymbols.CODE);
         iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 36));
         iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
 
@@ -168,9 +170,9 @@ public class NewOrderGUI extends JFrame {
         // When user types in the editable combobox editor
         Component editor = departmentList.getEditor().getEditorComponent();
         if (editor instanceof JTextField tf) {
-            tf.addKeyListener(new java.awt.event.KeyAdapter() {
+            tf.addKeyListener(new KeyAdapter() {
                 @Override
-                public void keyReleased(java.awt.event.KeyEvent e) {
+                public void keyReleased(KeyEvent e) {
                     String typedDept = departmentList.getEditor().getItem().toString().trim();
                     if (!typedDept.isEmpty()) {
                         Map<String, Object> dept = DepartmentManager.getInstance().getDepartment(typedDept);
@@ -250,7 +252,7 @@ public class NewOrderGUI extends JFrame {
         addArticlesBtn.addActionListener(e -> addArticlesFromList());
         addArticlesBtn.setToolTipText("Fügt Artikel aus der Artikelliste zur Bestellung hinzu.");
 
-        JButton exportPdfBtn = createThemeButton(UnicodeSymbols.EMPTY_PAGE + " Export PDF", ThemeManager.getWarningColor());
+        JButton exportPdfBtn = createThemeButton(UnicodeSymbols.FILE + " Export PDF", ThemeManager.getWarningColor());
         exportPdfBtn.setToolTipText("Exportiert die Bestellung als PDF-Datei.");
         exportPdfBtn.addActionListener(e -> {
             File file = chooseSaveFile();

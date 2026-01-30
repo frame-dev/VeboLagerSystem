@@ -5,6 +5,7 @@ import ch.framedev.lagersystem.utils.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicTabbedPaneUI;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -23,12 +24,16 @@ public class MainGUI extends JFrame {
     private VendorGUI vendorGUI;
     private OrderGUI orderGUI;
     private ClientGUI clientGUI;
+    private SupplierOrderGUI supplierOrderGUI;
+    private LogsGUI logsGUI;
 
     // Tab wrappers
     private final JPanel articleWrapper = createTabWrapper();
     private final JPanel vendorWrapper  = createTabWrapper();
     private final JPanel orderWrapper   = createTabWrapper();
     private final JPanel clientWrapper  = createTabWrapper();
+    private final JPanel supplierOrderWrapper = createTabWrapper();
+    private final JPanel logsWrapper = createTabWrapper();
 
     public MainGUI() {
         ThemeManager.getInstance().registerWindow(this);
@@ -101,6 +106,14 @@ public class MainGUI extends JFrame {
             case 3 -> {
                 if (clientGUI == null) clientGUI = new ClientGUI();
                 yield clientGUI;
+            }
+            case 4 -> {
+                if( supplierOrderGUI == null) supplierOrderGUI = new SupplierOrderGUI();
+                yield supplierOrderGUI;
+            }
+            case 5 -> {
+                if (logsGUI == null) logsGUI = new LogsGUI();
+                yield logsGUI;
             }
             default -> null;
         };
@@ -265,7 +278,7 @@ public class MainGUI extends JFrame {
                 this.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 8));
             }
         };
-        tabbedPane.setUI(new javax.swing.plaf.basic.BasicTabbedPaneUI() {
+        tabbedPane.setUI(new BasicTabbedPaneUI() {
 
             @Override
             protected int calculateTabHeight(int tabPlacement, int tabIndex, int fontHeight) {
@@ -328,6 +341,8 @@ public class MainGUI extends JFrame {
         tabbedPane.addTab("<html>     " + UnicodeSymbols.TRUCK + "  Lieferanten     </html>", null, vendorWrapper, "Lieferantenverwaltung");
         tabbedPane.addTab("<html>     " + UnicodeSymbols.CLIPBOARD + "  Bestellungen     </html>", null, orderWrapper, "Bestellungsverwaltung");
         tabbedPane.addTab("<html>     " + UnicodeSymbols.PEOPLE + "  Kunden     </html>", null, clientWrapper, "Kundenverwaltung");
+        tabbedPane.addTab("<html>     " + UnicodeSymbols.TRUCK + UnicodeSymbols.PACKAGE + "  Lieferantenbestellungen     </html>", null, supplierOrderWrapper, "Lieferantenbestellungen verwalten");
+        tabbedPane.addTab("<html>     " + UnicodeSymbols.CLIPBOARD + " Protokolle     </html>", null, logsWrapper, "Systemprotokolle anzeigen");
     }
 
     /**

@@ -12,14 +12,25 @@ public class Vendor {
     private String email;
     private String address;
     private List<String> suppliedArticles;
+    private double minOrderValue;
 
-    public Vendor(String name, String contactPerson, String phoneNumber, String email, String address, List<String> suppliedArticles) {
+    public Vendor(String name, String contactPerson, String phoneNumber, String email, String address, List<String> suppliedArticles, double minOrderValue) {
         this.name = name;
         this.contactPerson = contactPerson;
         this.phoneNumber = phoneNumber;
         this.email = email;
         this.address = address;
         this.suppliedArticles = suppliedArticles;
+        this.minOrderValue = minOrderValue;
+    }
+
+    public Vendor(String name, String contactPerson, String phoneNumber, String email, String address, double minOrderValue) {
+        this.name = name;
+        this.contactPerson = contactPerson;
+        this.phoneNumber = phoneNumber;
+        this.email = email;
+        this.address = address;
+        this.minOrderValue = minOrderValue;
     }
 
     public Vendor(String name, String contactPerson, String phoneNumber, String email, String address) {
@@ -77,5 +88,13 @@ public class Vendor {
 
     public List<String> getSuppliedArticles() {
         return suppliedArticles;
+    }
+
+    public double getMinOrderValue() {
+        return minOrderValue;
+    }
+
+    public void setMinOrderValue(double minOrderValue) {
+        this.minOrderValue = minOrderValue;
     }
 }

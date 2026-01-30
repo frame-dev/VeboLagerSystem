@@ -52,6 +52,7 @@ public class OrderManager {
             return resultSet.next();
         } catch (Exception e) {
             logger.error("Error while checking if order with id '{}'", orderId, e);
+            Main.logUtils.addLog("Error while checking if order with id '" + orderId + "'");
             return false;
         }
     }
@@ -68,7 +69,7 @@ public class OrderManager {
         }
         String sql = "INSERT INTO orders (orderId, orderedArticles, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber, department, status) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
                 order.getOrderId(),
                 articlesBuilder.toString(),
                 order.getReceiverName(),
@@ -79,10 +80,19 @@ public class OrderManager {
                 order.getDepartment(),
                 order.getStatus()
         });
+        if(result) {
+            Main.logUtils.addLog("Order with id '" + order.getOrderId() + "' inserted");
+            return true;
+        } else {
+            logger.error("Error while inserting order with id '{}'", order.getOrderId());
+            Main.logUtils.addLog("Error while inserting order with id '" + order.getOrderId() + "'");
+            return false;
+        }
     }
 
     public boolean updateOrder(Order order) {
         if (!existsOrder(order.getOrderId())) {
+            Main.logUtils.addLog("Order with id '" + order.getOrderId() + "' does not exist");
             return false;
         }
         StringBuilder articlesBuilder = new StringBuilder();
@@ -93,7 +103,7 @@ public class OrderManager {
         }
         String sql = "UPDATE orders SET orderedArticles = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?, status = ?" +
                 "WHERE orderId = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{
+        boolean result =  databaseManager.executePreparedUpdate(sql, new Object[]{
                 articlesBuilder.toString(),
                 order.getReceiverName(),
                 order.getReceiverKontoNumber(),
@@ -104,6 +114,14 @@ public class OrderManager {
                 order.getStatus(),
                 order.getOrderId()
         });
+        if(result) {
+            Main.logUtils.addLog("Order with id '" + order.getOrderId() + "' updated");
+            return true;
+        } else {
+            logger.error("Error while updating order with id '{}'", order.getOrderId());
+            Main.logUtils.addLog("Error while updating order with id '" + order.getOrderId() + "'");
+            return false;
+        }
     }
 
     public boolean deleteOrder(String orderId) {
@@ -111,7 +129,14 @@ public class OrderManager {
             return false;
         }
         String sql = "DELETE FROM orders WHERE orderId = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{orderId});
+        if( databaseManager.executePreparedUpdate(sql, new Object[]{orderId})) {
+            Main.logUtils.addLog("Order with id '" + orderId + "' deleted");
+            return true;
+        } else {
+            logger.error("Error while deleting order with id '{}'", orderId);
+            Main.logUtils.addLog("Error while deleting order with id '" + orderId + "'");
+            return false;
+        }
     }
 
     public Order getOrder(String orderId) {
@@ -134,6 +159,7 @@ public class OrderManager {
             }
         } catch (Exception e) {
             logger.error("Error while checking if order with id '{}'", orderId, e);
+            Main.logUtils.addLog("Error while checking if order with id '" + orderId + "'");
         }
         return null;
     }
@@ -176,6 +202,7 @@ public class OrderManager {
             return orders;
         } catch (Exception e) {
             logger.error("Error while checking if orders in Database", e);
+            Main.logUtils.addLog("Error while checking if orders in Database");
             return new ArrayList<>();
         }
     }

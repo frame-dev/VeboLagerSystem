@@ -36,7 +36,8 @@ public class VendorManager {
                 "phoneNumber TEXT," +
                 "email TEXT," +
                 "address TEXT," +
-                "suppliedArticles TEXT" +
+                "suppliedArticles TEXT," +
+                "minOrderValue DOUBLE" +
                 ");";
         databaseManager.executeUpdate(sql);
     }
@@ -55,22 +56,34 @@ public class VendorManager {
         if (existsVendor(vendor.getName())) {
             return false;
         }
-        String sql = "INSERT INTO vendors (name, contactPerson, phoneNumber, email, address, suppliedArticles) " +
-                "VALUES (?, ?, ?, ?, ?, ?);";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{vendor.getName(), vendor.getContactPerson(),
+        String sql = "INSERT INTO vendors (name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?);";
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{vendor.getName(), vendor.getContactPerson(),
                 vendor.getPhoneNumber(), vendor.getEmail(), vendor.getAddress(),
-                String.join(",", vendor.getSuppliedArticles())});
+                String.join(",", vendor.getSuppliedArticles()), vendor.getMinOrderValue()});
+        if(result) {
+            Main.logUtils.addLog("Inserted new vendor with name '" + vendor.getName() + "'");
+        } else {
+            Main.logUtils.addLog("Could not insert new vendor with name '" + vendor.getName() + "'");
+        }
+        return result;
     }
 
     public boolean updateVendor(Vendor vendor) {
         if (!existsVendor(vendor.getName())) {
             return false;
         }
-        String sql = "UPDATE vendors SET contactPerson = ?, phoneNumber = ?, email = ?, address = ?, suppliedArticles = ? " +
+        String sql = "UPDATE vendors SET contactPerson = ?, phoneNumber = ?, email = ?, address = ?, suppliedArticles = ?, minOrderValue=? " +
                 "WHERE name = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{vendor.getContactPerson(),
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{vendor.getContactPerson(),
                 vendor.getPhoneNumber(), vendor.getEmail(), vendor.getAddress(),
-                String.join(",", vendor.getSuppliedArticles()), vendor.getName()});
+                String.join(",", vendor.getSuppliedArticles()), vendor.getMinOrderValue(), vendor.getName()});
+        if(result) {
+            Main.logUtils.addLog("Updated vendor with name '" + vendor.getName() + "'");
+        } else {
+            Main.logUtils.addLog("Could not update vendor with name '" + vendor.getName() + "'");
+        }
+        return result;
     }
 
     public boolean updateVendor(String vendorName, String[] columns, Object[] data) {
@@ -96,7 +109,13 @@ public class VendorManager {
         System.arraycopy(data, 0, params, 0, data.length);
         params[data.length] = vendorName;
 
-        return databaseManager.executePreparedUpdate(sql.toString(), params);
+        boolean result = databaseManager.executePreparedUpdate(sql.toString(), params);
+        if(result) {
+            Main.logUtils.addLog("Updated vendor with name '" + vendorName + "'");
+        } else {
+            Main.logUtils.addLog("Could not update vendor with name '" + vendorName + "'");
+        }
+        return result;
     }
 
     public boolean deleteVendor(String name) {
@@ -104,7 +123,13 @@ public class VendorManager {
             return false;
         }
         String sql = "DELETE FROM vendors WHERE name = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{name});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{name});
+        if (result) {
+            Main.logUtils.addLog("Deleted vendor with name '" + name + "'");
+        } else {
+            Main.logUtils.addLog("Could not delete vendor with name '" + name + "'");
+        }
+        return result;
     }
 
     public Vendor getVendorByName(String name) {
@@ -116,6 +141,7 @@ public class VendorManager {
                 String email = resultSet.getString("email");
                 String address = resultSet.getString("address");
                 String suppliedArticlesStr = resultSet.getString("suppliedArticles");
+                double minOrderValue = resultSet.getDouble("minOrderValue");
                 List<String> suppliedArticles = new ArrayList<>();
                 if (suppliedArticlesStr != null && !suppliedArticlesStr.isEmpty()) {
                     String[] articlesArray = suppliedArticlesStr.split(",");
@@ -123,7 +149,7 @@ public class VendorManager {
                         suppliedArticles.add(article.trim());
                     }
                 }
-                return new Vendor(name, contactPerson, phoneNumber, email, address, suppliedArticles);
+                return new Vendor(name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue);
             } else {
                 return null;
             }
@@ -144,6 +170,7 @@ public class VendorManager {
                 String email = resultSet.getString("email");
                 String address = resultSet.getString("address");
                 String suppliedArticlesStr = resultSet.getString("suppliedArticles");
+                double minOrderValue = resultSet.getDouble("minOrderValue");
                 List<String> suppliedArticles = new ArrayList<>();
                 if (suppliedArticlesStr != null && !suppliedArticlesStr.isEmpty()) {
                     String[] articlesArray = suppliedArticlesStr.split(",");
@@ -151,11 +178,12 @@ public class VendorManager {
                         suppliedArticles.add(article.trim());
                     }
                 }
-                vendors.add(new Vendor(name, contactPerson, phoneNumber, email, address, suppliedArticles));
+                vendors.add(new Vendor(name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue));
             }
             return vendors;
         } catch (Exception e) {
             logger.error("Error while getting vendors", e);
+            Main.logUtils.addLog("Error while getting vendors");
             return new ArrayList<>();
         }
     }

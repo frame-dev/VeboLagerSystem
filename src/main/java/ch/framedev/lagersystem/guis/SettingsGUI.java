@@ -11,15 +11,26 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
+import javax.swing.plaf.basic.BasicComboBoxUI;
+import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.plaf.basic.ComboPopup;
 import java.awt.*;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.*;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+
+import static ch.framedev.lagersystem.main.Main.databaseManager;
 
 /**
  * Moderne Einstellungen-GUI für das VEBO Lagersystem
@@ -289,6 +300,52 @@ public class SettingsGUI extends JFrame {
         systemPanel.add(themeSection);
 
         systemPanel.add(Box.createVerticalGlue());
+        systemPanel.add(Box.createVerticalStrut(25));
+
+        JPanel otherSection = createSectionPanel("Sonstiges", "Allgemeine Einstellungen");
+        otherSection.add(Box.createVerticalStrut(18));
+
+        JLabel openSettingsLabel = createInfoLabel("Öffnet den Ordner, in dem die Einstellungsdateien gespeichert sind.");
+        otherSection.add(openSettingsLabel);
+        otherSection.add(Box.createVerticalStrut(10));
+        JButton openSettingsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Einstellungen-Ordner öffnen", new Color(52, 152, 219));
+        openSettingsFolderButton.addActionListener(e -> openSettingsFolder());
+        otherSection.add(openSettingsFolderButton);
+
+        JLabel logsLabel = createInfoLabel("Öffnet den Ordner, in dem die Anwendungsprotokolle gespeichert sind.");
+        otherSection.add(Box.createVerticalStrut(15));
+        otherSection.add(logsLabel);
+        otherSection.add(Box.createVerticalStrut(10));
+        JButton openLogsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Protokolle-Ordner öffnen", new Color(52, 152, 219));
+        openLogsFolderButton.addActionListener(e -> openLogsFolder());
+        otherSection.add(openLogsFolderButton);
+        otherSection.add(Box.createVerticalStrut(15));
+
+        JLabel logsDelete = createInfoLabel("Löscht alle Anwendungsprotokolle aus dem Protokolle-Ordner. So wie in der Datenbank.");
+        otherSection.add(Box.createVerticalStrut(15));
+        otherSection.add(logsDelete);
+        JButton deleteLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alle Protokolle löschen", new Color(220, 53, 69));
+        deleteLogsButton.addActionListener(e -> deleteAllLogs());
+        otherSection.add(Box.createVerticalStrut(10));
+        otherSection.add(deleteLogsButton);
+
+        otherSection.add(Box.createVerticalStrut(15));
+        JLabel logsDeleteTime = createInfoLabel("Löscht alle Anwendungsprotokolle, die älter als 30 Tage sind, aus dem Protokolle-Ordner. So wie in der Datenbank.");
+        otherSection.add(Box.createVerticalStrut(15));
+        otherSection.add(logsDeleteTime);
+        JCheckBox deleteOldLogsCheckBox = new JCheckBox("Alte Protokolle (älter als 30 Tage) löschen");
+        styleCheckbox(deleteOldLogsCheckBox);
+        otherSection.add(Box.createVerticalStrut(10));
+        otherSection.add(deleteOldLogsCheckBox);
+        JButton deleteOldLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alte Protokolle löschen", new Color(220, 53, 69));
+        deleteOldLogsButton.addActionListener(e -> deleteOldLogs());
+        otherSection.add(Box.createVerticalStrut(10));
+        otherSection.add(deleteOldLogsButton);
+
+
+
+        systemPanel.add(otherSection);
+
 
         // Add system panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.WRENCH + " System", systemScroll);
@@ -519,7 +576,7 @@ public class SettingsGUI extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 try {
-                    Desktop.getDesktop().browse(new java.net.URI("https://vebo.ch"));
+                    Desktop.getDesktop().browse(new URI("https://vebo.ch"));
                 } catch (Exception ex) {
                     logger.error("Fehler beim Öffnen der VEBO-Website: {}", ex.getMessage());
                 }
@@ -607,7 +664,7 @@ public class SettingsGUI extends JFrame {
         systemInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         systemInfoPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
 
-        systemInfoPanel.add(createStyledLabel(UnicodeSymbols.MONITOR + " System-Information:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+        systemInfoPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " System-Information:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
         systemInfoPanel.add(Box.createVerticalStrut(8));
         systemInfoPanel.add(createStyledLabel("Java Version: " + System.getProperty("java.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
         systemInfoPanel.add(Box.createVerticalStrut(5));
@@ -733,6 +790,114 @@ public class SettingsGUI extends JFrame {
 
         // Load current settings
         loadSettings();
+    }
+
+    private void deleteOldLogs() {
+        ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager.getInstance();
+        int deletedCount = logManager.deleteOldLogs(30);
+        File logsFolder = new File(Main.getAppDataDir(), "logs");
+        int fileDeletedCount = 0;
+        try {
+            File[] logFiles = logsFolder.listFiles();
+            if (logFiles != null) {
+                LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
+                for (File logFile : logFiles) {
+                    if (logFile.isFile()) {
+                        BasicFileAttributes attrs = Files.readAttributes(logFile.toPath(), BasicFileAttributes.class);
+                        LocalDateTime fileTime = LocalDateTime.ofInstant(attrs.creationTime().toInstant(), ZoneId.systemDefault());
+                        if (fileTime.isBefore(cutoffDate)) {
+                            Files.delete(logFile.toPath());
+                            fileDeletedCount++;
+                        }
+                    }
+                }
+            }
+            JOptionPane.showMessageDialog(this,
+                    String.format("Es wurden %d Protokolle aus der Datenbank und %d Protokolldateien gelöscht, die älter als 30 Tage sind.", deletedCount, fileDeletedCount),
+                    "Alte Protokolle gelöscht",
+                    JOptionPane.INFORMATION_MESSAGE);
+            logger.info("Es wurden {} Protokolle aus der Datenbank und {} Protokolldateien gelöscht, die älter als 30 Tage sind.", deletedCount, fileDeletedCount);
+            Main.logUtils.addLog("Es wurden " + deletedCount + " Protokolle aus der Datenbank und " + fileDeletedCount + " Protokolldateien gelöscht, die älter als 30 Tage sind.");
+        } catch (IOException ex) {
+            logger.error("Fehler beim Löschen alter Protokolle: {}", ex.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim Löschen alter Protokolle:\n" + ex.getMessage(),
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
+            Main.logUtils.addLog("Fehler beim Löschen alter Protokolle: " + ex.getMessage());
+            return;
+        }
+    }
+
+    private void deleteAllLogs() {
+        File logsFolder = new File(Main.getAppDataDir(), "logs");
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "<html><b>Alle Protokolle wirklich löschen?</b><br/><br/>" +
+                        "Diese Aktion löscht alle Protokolldateien im Protokolle-Ordner.<br/>" +
+                        "Möchten Sie fortfahren?</html>",
+                "Protokolle löschen bestätigen",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                File[] logFiles = logsFolder.listFiles();
+                if (logFiles != null) {
+                    for (File logFile : logFiles) {
+                        if (logFile.isFile()) {
+                            Files.delete(logFile.toPath());
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                logger.error("Fehler beim Löschen der Protokolle: {}", e.getMessage());
+                JOptionPane.showMessageDialog(this,
+                        "Fehler beim Löschen der Protokolle:\n" + e.getMessage(),
+                        "Fehler",
+                        JOptionPane.ERROR_MESSAGE);
+                Main.logUtils.addLog("Fehler beim Löschen der Protokolle: " + e.getMessage());
+                return;
+            }
+            JOptionPane.showMessageDialog(this,
+                    "Alle Protokolle wurden erfolgreich gelöscht.",
+                    "Protokolle gelöscht",
+                    JOptionPane.INFORMATION_MESSAGE);
+        }
+        ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager.getInstance();
+        if(logManager.clearAllLogs()) {
+            logger.info("Alle Protokolle wurden erfolgreich aus der Datenbank gelöscht.");
+            Main.logUtils.addLog("Alle Protokolle wurden erfolgreich aus der Datenbank gelöscht.");
+        } else {
+            logger.error("Fehler beim Löschen der Protokolle aus der Datenbank.");
+            Main.logUtils.addLog("Fehler beim Löschen der Protokolle aus der Datenbank.");
+        }
+    }
+
+    private void openLogsFolder() {
+        File logsDir = new File(Main.getAppDataDir(), "logs");
+        try {
+            Desktop.getDesktop().open(logsDir);
+        } catch (IOException e) {
+            logger.error("Fehler beim Öffnen des Protokolle-Ordners: {}", e.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim Öffnen des Protokolle-Ordners:\n" + e.getMessage(),
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
+            Main.logUtils.addLog("Fehler beim Öffnen des Protokolle-Ordners: " + e.getMessage());
+        }
+    }
+
+    private void openSettingsFolder() {
+        File settingsDir = Main.getAppDataDir();
+        try {
+            Desktop.getDesktop().open(settingsDir);
+        } catch (IOException e) {
+            logger.error("Fehler beim Öffnen des Einstellungen-Ordners: {}", e.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim Öffnen des Einstellungen-Ordners:\n" + e.getMessage(),
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
+            Main.logUtils.addLog("Fehler beim Öffnen des Einstellungen-Ordners: " + e.getMessage());
+        }
     }
 
     /**
@@ -906,9 +1071,9 @@ public class SettingsGUI extends JFrame {
             ));
 
             // Add focus listener for better UX
-            textField.addFocusListener(new java.awt.event.FocusAdapter() {
+            textField.addFocusListener(new FocusAdapter() {
                 @Override
-                public void focusGained(java.awt.event.FocusEvent e) {
+                public void focusGained(FocusEvent e) {
                     textField.setBorder(BorderFactory.createCompoundBorder(
                             BorderFactory.createLineBorder(ThemeManager.getPrimaryColor(), 2, true),
                             BorderFactory.createEmptyBorder(9, 13, 9, 13)
@@ -916,7 +1081,7 @@ public class SettingsGUI extends JFrame {
                 }
 
                 @Override
-                public void focusLost(java.awt.event.FocusEvent e) {
+                public void focusLost(FocusEvent e) {
                     textField.setBorder(BorderFactory.createCompoundBorder(
                             BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
                             BorderFactory.createEmptyBorder(10, 14, 10, 14)
@@ -1067,6 +1232,7 @@ public class SettingsGUI extends JFrame {
             }
         } catch (Exception e) {
             System.err.println("[SettingsGUI] Fehler beim Laden der Einstellungen: " + e.getMessage());
+            Main.logUtils.addLog("Fehler beim Laden der Einstellungen: " + e.getMessage());
         }
     }
 
@@ -1141,6 +1307,7 @@ public class SettingsGUI extends JFrame {
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE,
                     Main.iconSmall);
+            Main.logUtils.addLog("Fehler beim Speichern der Einstellungen: " + e.getMessage());
         }
     }
 
@@ -1221,6 +1388,7 @@ public class SettingsGUI extends JFrame {
         } catch (Exception e) {
             System.err.println("[SettingsGUI] Fehler beim Anwenden der Einstellungen: " + e.getMessage());
             logger.error("Fehler beim Anwenden der Einstellungen", e);
+            Main.logUtils.addLog("Fehler beim Anwenden der Einstellungen: " + e.getMessage());
         }
     }
 
@@ -1302,6 +1470,7 @@ public class SettingsGUI extends JFrame {
         } catch (Exception e) {
             logger.error("Fehler beim Starten der Update-Prüfung: {}", e.getMessage(), e);
             showUpdateError(e.getMessage());
+            Main.logUtils.addLog("Fehler beim Starten der Update-Prüfung: " + e.getMessage());
         }
     }
 
@@ -1393,6 +1562,7 @@ public class SettingsGUI extends JFrame {
             "Fehler",
             JOptionPane.ERROR_MESSAGE,
             Main.iconSmall);
+        Main.logUtils.addLog("Fehler bei Update-Prüfung");
     }
 
     /**
@@ -1450,8 +1620,7 @@ public class SettingsGUI extends JFrame {
         }
 
         try {
-            ch.framedev.lagersystem.managers.DatabaseManager dbManager =
-                    ch.framedev.lagersystem.main.Main.databaseManager;
+            DatabaseManager dbManager = databaseManager;
 
             if (dbManager != null) {
                 // Execute DROP TABLE command
@@ -1492,6 +1661,7 @@ public class SettingsGUI extends JFrame {
                             "Fehler",
                             JOptionPane.ERROR_MESSAGE,
                             Main.iconSmall);
+                    Main.logUtils.addLog(String.format("Fehler beim Löschen der Tabelle. Die Tabelle '%s' konnte nicht gelöscht werden.", tableName));
                 }
             } else {
                 JOptionPane.showMessageDialog(this,
@@ -1503,6 +1673,7 @@ public class SettingsGUI extends JFrame {
         } catch (Exception e) {
             System.err.printf("[SettingsGUI] Fehler beim Löschen der Tabelle '%s': %s%n",
                     tableName, e.getMessage());
+            Main.logUtils.addLog(String.format("Fehler beim Löschen der Tabelle '%s': %s", tableName, e.getMessage()));
             logger.error("Fehler beim Löschen der Tabelle '{}'", tableName, e);
             JOptionPane.showMessageDialog(this,
                     String.format("<html><b>Fehler beim Löschen der Tabelle</b><br/><br/>" +
@@ -1559,8 +1730,8 @@ public class SettingsGUI extends JFrame {
 
         // Perform database clearing
         try {
-            ch.framedev.lagersystem.managers.DatabaseManager dbManager =
-                    ch.framedev.lagersystem.main.Main.databaseManager;
+            DatabaseManager dbManager =
+                    databaseManager;
 
             if (dbManager != null) {
                 dbManager.clearDatabase();
@@ -1601,6 +1772,7 @@ public class SettingsGUI extends JFrame {
                         "Fehler",
                         JOptionPane.ERROR_MESSAGE,
                         Main.iconSmall);
+                Main.logUtils.addLog("Fehler: Datenbankverbindung nicht verfügbar.");
             }
         } catch (Exception e) {
             System.err.println("[SettingsGUI] Fehler beim Löschen der Datenbank: " + e.getMessage());
@@ -1611,6 +1783,7 @@ public class SettingsGUI extends JFrame {
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE,
                     Main.iconSmall);
+            Main.logUtils.addLog("Fehler beim Löschen der Datenbank: " + e.getMessage());
         }
     }
 
@@ -1839,6 +2012,7 @@ public class SettingsGUI extends JFrame {
                     JOptionPane.ERROR_MESSAGE,
                     Main.iconSmall);
             System.err.println("[SettingsGUI] Fehler beim Importieren der Artikel: " + e.getMessage());
+            Main.logUtils.addLog(String.format("Fehler beim Importieren der Artikel: %s", e.getMessage()));
         }
     }
 
@@ -1886,8 +2060,9 @@ public class SettingsGUI extends JFrame {
                     String phoneNumber = parts[2];
                     String email = parts[3];
                     String address = parts[4];
+                    double minOrderValue = Double.parseDouble(parts[5]);
 
-                    Vendor vendor = new Vendor(name, contactPerson, phoneNumber, email, address, new ArrayList<>());
+                    Vendor vendor = new Vendor(name, contactPerson, phoneNumber, email, address, new ArrayList<>(), minOrderValue);
 
                     if (vendorManager.existsVendor(name)) {
                         String[] columns = {"contactPerson", "phoneNumber", "email", "address"};
@@ -1920,6 +2095,8 @@ public class SettingsGUI extends JFrame {
                     Main.iconSmall);
 
             System.out.printf("[SettingsGUI] Lieferanten-Import: %d erfolgreich, %d Fehler%n", imported, errors);
+            String logMessage = String.format("Lieferanten-Import: %d erfolgreich, %d Fehler", imported, errors);
+            Main.logUtils.addLog(logMessage);
 
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null,
@@ -1928,6 +2105,7 @@ public class SettingsGUI extends JFrame {
                     JOptionPane.ERROR_MESSAGE,
                     Main.iconSmall);
             System.err.println("[SettingsGUI] Fehler beim Importieren der Lieferanten: " + e.getMessage());
+            Main.logUtils.addLog("Fehler beim Importieren der Lieferanten: " + e.getMessage());
         }
     }
 
@@ -1943,6 +2121,7 @@ public class SettingsGUI extends JFrame {
                         "Fehler",
                         JOptionPane.ERROR_MESSAGE,
                         Main.iconSmall);
+                Main.logUtils.addLog("Die CSV-Datei ist leer.");
                 return;
             }
 
@@ -1989,6 +2168,8 @@ public class SettingsGUI extends JFrame {
                     Main.iconSmall);
 
             System.out.printf("[SettingsGUI] Kunden-Import: %d erfolgreich, %d Fehler%n", imported, errors);
+            String logMessage = String.format("Kunden-Import: %d erfolgreich, %d Fehler", imported, errors);
+            Main.logUtils.addLog(logMessage);
 
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null,
@@ -1997,6 +2178,7 @@ public class SettingsGUI extends JFrame {
                     JOptionPane.ERROR_MESSAGE,
                     Main.iconSmall);
             System.err.println("[SettingsGUI] Fehler beim Importieren der Kunden: " + e.getMessage());
+            Main.logUtils.addLog("Fehler beim Importieren der Kunden: " + e.getMessage());
         }
     }
 
@@ -2066,20 +2248,22 @@ public class SettingsGUI extends JFrame {
             String errorMsg = "Fehler beim Exportieren der Artikel: " + e.getMessage();
             System.err.println("[SettingsGUI] " + errorMsg);
             LogManager.getLogger(SettingsGUI.class).error(errorMsg, e);
+            Main.logUtils.addLog(errorMsg);
         }
 
         // Export Vendors
         List<Vendor> vendors = VendorManager.getInstance().getVendors();
         File vendorCsvFile = new File(Main.getAppDataDir(), "vendors_export.csv");
         try (PrintWriter writer = new PrintWriter(new FileWriter(vendorCsvFile))) {
-            writer.println("Name,Kontaktperson,Telefon,E-Mail,Adresse");
+            writer.println("Name,Kontaktperson,Telefon,E-Mail,Adresse,MinBestellwert");
             for (Vendor vendor : vendors) {
-                writer.printf("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"%n",
+                writer.printf("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"%n",
                         escapeCSV(vendor.getName()),
                         escapeCSV(vendor.getContactPerson()),
                         escapeCSV(vendor.getPhoneNumber()),
                         escapeCSV(vendor.getEmail()),
-                        escapeCSV(vendor.getAddress()));
+                        escapeCSV(vendor.getAddress()),
+                        escapeCSV(String.valueOf(vendor.getMinOrderValue())));
             }
             System.out.println("[SettingsGUI] Lieferanten erfolgreich nach " + vendorCsvFile.getAbsolutePath() + " exportiert (" + vendors.size() + " Einträge)");
             successCount++;
@@ -2087,6 +2271,7 @@ public class SettingsGUI extends JFrame {
             String errorMsg = "Fehler beim Exportieren der Lieferanten: " + ex.getMessage();
             System.err.println("[SettingsGUI] " + errorMsg);
             LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
+            Main.logUtils.addLog(errorMsg);
         }
 
         // Export Clients
@@ -2105,6 +2290,7 @@ public class SettingsGUI extends JFrame {
             String errorMsg = "Fehler beim Exportieren der Kunden: " + ex.getMessage();
             System.err.println("[SettingsGUI] " + errorMsg);
             LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
+            Main.logUtils.addLog(errorMsg);
         }
 
         // Export Orders
@@ -2135,6 +2321,7 @@ public class SettingsGUI extends JFrame {
             String errorMsg = "Fehler beim Exportieren der Bestellungen: " + ex.getMessage();
             System.err.println("[SettingsGUI] " + errorMsg);
             LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
+            Main.logUtils.addLog(errorMsg);
         }
 
         // Show summary
@@ -2200,7 +2387,7 @@ public class SettingsGUI extends JFrame {
         });
 
         // Theme arrow button + popup border using a small UI override (most reliable)
-        combo.setUI(new javax.swing.plaf.basic.BasicComboBoxUI() {
+        combo.setUI(new BasicComboBoxUI() {
             @Override
             protected JButton createArrowButton() {
                 JButton b = new JButton("▾");
@@ -2221,7 +2408,7 @@ public class SettingsGUI extends JFrame {
             @Override
             protected ComboPopup createPopup() {
                 ComboPopup popup = super.createPopup();
-                if (popup instanceof javax.swing.plaf.basic.BasicComboPopup basic) {
+                if (popup instanceof BasicComboPopup basic) {
                     basic.setBorder(BorderFactory.createLineBorder(border, 1));
                     basic.getList().setBackground(bg);
                     basic.getList().setForeground(fg);

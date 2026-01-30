@@ -140,10 +140,13 @@ public class UpdateManager {
                 if (responseCode == 404) {
                     logger.warn("GitHub API 404 Not Found: Repository '{}' not found or has no releases. Response: {}",
                             GITHUB_RELEASES_URL, errorMessage);
+                    Main.logUtils.addLog("GitHub API 404 Not Found: Repository not found or has no releases.");
                 } else if (responseCode == 403) {
                     logger.warn("GitHub API rate limit exceeded (HTTP 403). Consider adding a personal token.");
+                    Main.logUtils.addLog("GitHub API rate limit exceeded (HTTP 403). Consider adding a personal token.");
                 } else {
                     logger.error("GitHub API error: HTTP {} - {}", responseCode, errorMessage);
+                    Main.logUtils.addLog("GitHub API error: HTTP " + responseCode + " - " + errorMessage);
                 }
                 connection.disconnect();
                 return cachedLatestVersion; // Return cached version if available
@@ -161,6 +164,7 @@ public class UpdateManager {
             if (jsonObject.has("tag_name")) {
                 String version = jsonObject.get("tag_name").getAsString();
                 logger.info("Latest stable version from GitHub: {}", version);
+                Main.logUtils.addLog("Latest stable version from GitHub: " + version);
 
                 // Update cache
                 cachedLatestVersion = version;
@@ -170,10 +174,12 @@ public class UpdateManager {
             }
 
             logger.warn("No tag_name found in GitHub response");
+            Main.logUtils.addLog("No tag_name found in GitHub response");
             return cachedLatestVersion;
 
         } catch (Exception e) {
             logger.error("Error fetching latest version from GitHub: {}", e.getMessage(), e);
+            Main.logUtils.addLog("Error fetching latest version from GitHub: " + e.getMessage());
             return cachedLatestVersion; // Return cached version on error
         }
     }
@@ -189,6 +195,7 @@ public class UpdateManager {
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
                 logger.warn("Failed to get all releases: HTTP {}", responseCode);
+                Main.logUtils.addLog("Failed to get all releases: HTTP " + responseCode);
                 connection.disconnect();
                 return null;
             }
@@ -212,6 +219,7 @@ public class UpdateManager {
                     break;
                 default:
                     logger.warn("Unsupported channel for this method: {}", channel);
+                    Main.logUtils.addLog("Unsupported channel for this method: " + channel);
                     return null;
             }
 
@@ -223,16 +231,19 @@ public class UpdateManager {
                     // Check if this release matches the channel
                     if (tag.contains(channelPrefix)) {
                         logger.info("Latest {} version from GitHub: {}", channel, release.get("tag_name").getAsString());
+                        Main.logUtils.addLog(String.format("Latest version from GitHub: %s", release.get("tag_name").getAsString()));
                         return release.get("tag_name").getAsString();
                     }
                 }
             }
 
             logger.info("No {} releases found", channel);
+            Main.logUtils.addLog(String.format("No %s releases found", channel));
             return null;
 
         } catch (Exception e) {
             logger.error("Error fetching {} version: {}", channel, e.getMessage(), e);
+            Main.logUtils.addLog(String.format("Error fetching %s version: %s", channel, e.getMessage()));
             return null;
         }
     }
@@ -286,6 +297,7 @@ public class UpdateManager {
             }
             return response.toString();
         } catch (Exception e) {
+            Main.logUtils.addLog("Could not read error response: " + e.getMessage());
             return "Could not read error response";
         }
     }
@@ -304,13 +316,16 @@ public class UpdateManager {
 
             if (responseCode == 200) {
                 logger.info("Repository verified successfully");
+                Main.logUtils.addLog("Repository verified successfully");
                 return true;
             } else {
                 logger.warn("Repository verification failed: HTTP {}", responseCode);
+                Main.logUtils.addLog(String.format("Repository verification failed: HTTP %d", responseCode));
                 return false;
             }
         } catch (Exception e) {
             logger.error("Error verifying repository: {}", e.getMessage());
+            Main.logUtils.addLog("Error verifying repository: " + e.getMessage());
             return false;
         }
     }
@@ -338,6 +353,7 @@ public class UpdateManager {
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
                 logger.warn("Failed to get release notes: HTTP {}", responseCode);
+                Main.logUtils.addLog(String.format("Failed to get release notes: HTTP %d", responseCode));
                 connection.disconnect();
                 return null;
             }
@@ -350,14 +366,17 @@ public class UpdateManager {
             if (jsonObject.has("body")) {
                 String notes = jsonObject.get("body").getAsString();
                 logger.debug("Release notes retrieved successfully");
+                Main.logUtils.addLog(String.format("Release notes retrieved successfully: %s", notes));
                 return notes;
             }
 
             logger.warn("No release notes found");
+            Main.logUtils.addLog("No release notes found");
             return null;
 
         } catch (Exception e) {
             logger.error("Error fetching release notes: {}", e.getMessage(), e);
+            Main.logUtils.addLog(String.format("Error fetching release notes: %s", e.getMessage()));
             return null;
         }
     }
@@ -375,6 +394,7 @@ public class UpdateManager {
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
                 logger.warn("Failed to get release info: HTTP {}", responseCode);
+                Main.logUtils.addLog(String.format("Failed to get release info: HTTP %d", responseCode));
                 connection.disconnect();
                 return null;
             }
@@ -406,6 +426,7 @@ public class UpdateManager {
 
         } catch (Exception e) {
             logger.error("Error fetching release info: {}", e.getMessage(), e);
+            Main.logUtils.addLog(String.format("Error fetching release info: %s", e.getMessage()));
             return null;
         }
     }
@@ -447,6 +468,7 @@ public class UpdateManager {
 
         if (latestVersion == null) {
             logger.debug("No latest version available from GitHub");
+            Main.logUtils.addLog("No latest version available from GitHub");
             return false;
         }
 
@@ -461,16 +483,20 @@ public class UpdateManager {
             if (updateAvailable) {
                 logger.info("Update available! Current: {} (normalized: {}), Latest: {} (normalized: {}), comparison: {}",
                         currentVersion, current, latestVersion, latest, comparison);
+                Main.logUtils.addLog(String.format("Update available! Current: %s, Latest: %s", currentVersion, latestVersion));
             } else if (comparison == 0) {
                 logger.debug("Application is up to date. Current: {}, Latest: {} (versions are equal)",
                         currentVersion, latestVersion);
+                Main.logUtils.addLog(String.format("Application is up to date! Current: %s, Latest: %s", currentVersion, latestVersion));
             } else {
                 logger.debug("Current version is newer than latest release. Current: {}, Latest: {} (comparison: {})",
                         currentVersion, latestVersion, comparison);
+                Main.logUtils.addLog(String.format("Current version is newer than latest release. Current: %s, Latest: %s", currentVersion, latestVersion));
             }
             return updateAvailable;
         } catch (Exception e) {
             logger.warn("Could not compare versions: {} vs {}", currentVersion, latestVersion, e);
+            Main.logUtils.addLog(String.format("Could not compare versions: %s vs %s", currentVersion, latestVersion));
             return false;
         }
     }
@@ -718,6 +744,7 @@ public class UpdateManager {
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
                 logger.warn("Failed to get release info: HTTP {}", responseCode);
+                Main.logUtils.addLog(String.format("Failed to get release info: HTTP %d", responseCode));
                 connection.disconnect();
                 return null;
             }
@@ -747,6 +774,7 @@ public class UpdateManager {
 
         } catch (Exception e) {
             logger.error("Error getting JAR download URL: {}", e.getMessage(), e);
+            Main.logUtils.addLog(String.format("Error getting JAR download URL: %s", e.getMessage()));
             return null;
         }
     }

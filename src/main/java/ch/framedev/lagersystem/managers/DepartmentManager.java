@@ -42,7 +42,13 @@ public class DepartmentManager {
         }
         String sql = "INSERT INTO departments (departmentName, kontoNumber) " +
                 "VALUES (?, ?);";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{departmentName, kontoNumber});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{departmentName, kontoNumber});
+        if (result) {
+            Main.logUtils.addLog(String.format("Inserted new department with name '%s'", departmentName));
+        } else {
+            Main.logUtils.addLog(String.format("Could not insert new department with name '%s'", departmentName));
+        }
+        return result;
     }
 
     public boolean existsDepartment(String departmentName) {
@@ -59,7 +65,13 @@ public class DepartmentManager {
             return false;
         }
         String sql = "DELETE FROM departments WHERE departmentName = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{departmentName});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{departmentName});
+        if (result) {
+            Main.logUtils.addLog(String.format("Deleted department with name '%s'", departmentName));
+        } else {
+            Main.logUtils.addLog(String.format("Could not delete department with name '%s'", departmentName));
+        }
+        return result;
     }
 
     public boolean updateDepartment(String departmentName, String newKontoNumber) {
@@ -67,12 +79,18 @@ public class DepartmentManager {
             return false;
         }
         String sql = "UPDATE departments SET kontoNumber = ? WHERE departmentName = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{newKontoNumber, departmentName});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{newKontoNumber, departmentName});
+        if (result) {
+            Main.logUtils.addLog(String.format("Updated department with name '%s'", departmentName));
+        } else {
+            Main.logUtils.addLog(String.format("Could not update department with name '%s'", departmentName));
+        }
+        return result;
     }
 
     public Map<String, Object> getDepartment(String departmentName) {
         String sql = "SELECT * from DEPARTMENTS WHERE departmentName = ?;";
-        try(var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{departmentName})) {
+        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{departmentName})) {
             if (resultSet.next()) {
                 return Map.of(
                         "department", resultSet.getString("departmentName"),
@@ -82,6 +100,7 @@ public class DepartmentManager {
             return null;
         } catch (Exception e) {
             logger.error("Error getting department", e);
+            Main.logUtils.addLog("Error getting department");
             return null;
         }
     }
@@ -89,7 +108,7 @@ public class DepartmentManager {
     public List<Map<String, Object>> getAllDepartments() {
         String sql = "SELECT * FROM departments;";
         List<Map<String, Object>> departments = new ArrayList<>();
-        try(var resultSet = databaseManager.executeQuery(sql)) {
+        try (var resultSet = databaseManager.executeQuery(sql)) {
             while (resultSet.next()) {
                 departments.add(Map.of(
                         "department", resultSet.getString("departmentName"),
@@ -98,6 +117,7 @@ public class DepartmentManager {
             }
         } catch (Exception e) {
             logger.error("Error while getting all departments", e);
+            Main.logUtils.addLog("Error while getting all departments");
         }
         return departments;
     }

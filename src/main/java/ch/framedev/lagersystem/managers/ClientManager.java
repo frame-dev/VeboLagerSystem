@@ -54,6 +54,9 @@ public class ClientManager {
         if (success) {
             departmentCache.put(firstLastName, department);
             allClientsCache = null;
+            Main.logUtils.addLog(String.format("Inserted new client with name '%s'", firstLastName));
+        } else {
+            Main.logUtils.addLog("Could not insert new client with name '" + firstLastName + "'");
         }
         return success;
     }
@@ -83,6 +86,9 @@ public class ClientManager {
         if (success) {
             departmentCache.put(firstLastName, newDepartment);
             allClientsCache = null;
+            Main.logUtils.addLog(String.format("Updated client with name '%s'", firstLastName));
+        } else {
+            Main.logUtils.addLog(String.format("Could not update client with name '%s'", firstLastName));
         }
         return success;
     }
@@ -95,6 +101,9 @@ public class ClientManager {
         boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName});
         if (success) {
             invalidateCaches(firstLastName);
+            Main.logUtils.addLog(String.format("Deleted client with name '%s'", firstLastName));
+        } else {
+            Main.logUtils.addLog(String.format("Could not delete client with name '%s'", firstLastName));
         }
         return success;
     }

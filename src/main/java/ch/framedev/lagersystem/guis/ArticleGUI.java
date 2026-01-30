@@ -150,7 +150,7 @@ public class ArticleGUI extends JFrame {
         });
 
         // Edit Article button
-        JButton editArticleButton = createRoundedButton(UnicodeSymbols.BETTER_EDIT + " Artikel bearbeiten");
+        JButton editArticleButton = createRoundedButton(UnicodeSymbols.CODE + " Artikel bearbeiten");
         editArticleButton.setToolTipText("Bearbeitet den ausgewählten Artikel");
         editArticleButton.addActionListener(e -> {
             int selectedRow = articleTable.getSelectedRow();
@@ -542,7 +542,7 @@ public class ArticleGUI extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = row;
         gbc.gridwidth = 1;
-        JLabel nummerLabel = createLabel.apply(UnicodeSymbols.NUMBER + " Artikelnummer *");
+        JLabel nummerLabel = createLabel.apply(UnicodeSymbols.NUMBERS + " Artikelnummer *");
         contentCard.add(nummerLabel, gbc);
         row++;
         gbc.gridy = row;
@@ -992,10 +992,11 @@ public class ArticleGUI extends JFrame {
                         ? new Color(44, 62, 80)   // Slightly lighter
                         : new Color(52, 152, 219); // Brighter blue
 
-                return new GradientPaint(
+                GradientPaint gradient = new GradientPaint(
                         0, 0, color1,
                         getWidth(), 0, color2
                 );
+                return gradient;
             }
         };
         headerPanel.setOpaque(false);
@@ -1419,7 +1420,6 @@ public class ArticleGUI extends JFrame {
                 BorderFactory.createEmptyBorder(12, 28, 12, 28)
         ));
         okBtn.setFocusPainted(false);
-        okBtn.setOpaque(true);
         okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         // Smooth hover effects
@@ -1626,7 +1626,7 @@ public class ArticleGUI extends JFrame {
         JTableHeader header = articleTable.getTableHeader();
         header.setBackground(ThemeManager.getTableHeaderBackground());
         header.setForeground(ThemeManager.getTableHeaderForeground());
-        header.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
+        header.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
     }
 
     /**
@@ -1912,15 +1912,15 @@ public class ArticleGUI extends JFrame {
             }
         };
 
-        model.addColumn("Artikelnummer");
-        model.addColumn("Name");
-        model.addColumn("Kategorie");  // New category column
-        model.addColumn("Details");
-        model.addColumn("Lagerbestand");
-        model.addColumn("Mindestbestand");
-        model.addColumn("Verkaufspreis");
-        model.addColumn("Einkaufspreis");
-        model.addColumn("Lieferant");
+        model.addColumn(UnicodeSymbols.NUMBERS + " Artikelnummer");
+        model.addColumn(UnicodeSymbols.ARTICLE_NAME + " Name");
+        model.addColumn(UnicodeSymbols.CATEGORY + " Kategorie");  // New category column
+        model.addColumn(UnicodeSymbols.CLIPBOARD + " Details");
+        model.addColumn(UnicodeSymbols.COL_LAGERBESTAND + " Lagerbestand");
+        model.addColumn(UnicodeSymbols.COL_MINDESTBESTAND + " Mindestbestand");
+        model.addColumn(UnicodeSymbols.MONEY + " Verkaufspreis");
+        model.addColumn(UnicodeSymbols.MONEY + " Einkaufspreis");
+        model.addColumn(UnicodeSymbols.TRUCK + " Lieferant");
         return model;
     }
 
@@ -2154,6 +2154,24 @@ public class ArticleGUI extends JFrame {
             closeBtn.setContentAreaFilled(false);
             closeBtn.setFocusPainted(false);
             closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            closeBtn.setPreferredSize(new Dimension(40, 40));
+            closeBtn.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    closeBtn.setForeground(Color.WHITE);
+                    closeBtn.setBackground(new Color(231, 76, 60, 100)); // Red tint on hover
+                    closeBtn.setContentAreaFilled(true);
+                    closeBtn.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    closeBtn.setForeground(new Color(255, 255, 255, 200));
+                    closeBtn.setBackground(new Color(255, 255, 255, 0));
+                    closeBtn.setContentAreaFilled(false);
+                    closeBtn.setBorder(null);
+                }
+            });
             closeBtn.addActionListener(e -> dialog.dispose());
             header.add(closeBtn, BorderLayout.EAST);
 
@@ -2258,14 +2276,14 @@ public class ArticleGUI extends JFrame {
     private void styleButton(JButton button, Color bgColor, Color fgColor) {
         button.setBackground(bgColor);
         button.setForeground(fgColor);
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         button.setFocusPainted(false);
         button.setBorderPainted(false);
         button.setOpaque(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(bgColor.darker(), 1),
-                BorderFactory.createEmptyBorder(8, 16, 8, 16)
+                BorderFactory.createLineBorder(bgColor.darker(), 2),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)
         ));
     }
 
@@ -2382,7 +2400,7 @@ public class ArticleGUI extends JFrame {
 
     private JPopupMenu createTablePopup() {
         JPopupMenu popup = new JPopupMenu();
-        JMenuItem editItem = new JMenuItem(UnicodeSymbols.BETTER_EDIT + " Bearbeiten");
+        JMenuItem editItem = new JMenuItem(UnicodeSymbols.CODE + " Bearbeiten");
         JMenuItem deleteItem = new JMenuItem(UnicodeSymbols.TRASH + " Löschen");
 
         editItem.addActionListener(e -> {
@@ -2453,7 +2471,13 @@ public class ArticleGUI extends JFrame {
             dialog.add(emptyPanel, BorderLayout.CENTER);
         } else {
             // Create table model
-            String[] columnNames = {"Status", "Typ", "Titel", "Nachricht", "Datum"};
+            String[] columnNames = {
+                    UnicodeSymbols.STATUS + " Status",
+                    UnicodeSymbols.TAG + " Typ",
+                    UnicodeSymbols.TITLE + " Titel",
+                    UnicodeSymbols.MEMO + " Nachricht",
+                    UnicodeSymbols.CALENDAR + " Datum"
+            };
             DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
                 @Override
                 public boolean isCellEditable(int row, int column) {
@@ -2463,7 +2487,7 @@ public class ArticleGUI extends JFrame {
 
             // Populate table
             for (Warning warning : warnings) {
-                String status = warning.isResolved() ? UnicodeSymbols.CHECKMARK + " Gelöst" :UnicodeSymbols.WARNING +  " Offen";
+                String status = warning.isResolved() ? UnicodeSymbols.CHECKMARK + " Gelöst" : UnicodeSymbols.WARNING + " Offen";
                 String type = switch (warning.getType()) {
                     case LOW_STOCK -> "Niedriger Bestand";
                     case ORDER_NEEDED -> "Bestellung nötig";
@@ -2852,7 +2876,7 @@ public class ArticleGUI extends JFrame {
         mainPanel.add(infoPanel, BorderLayout.NORTH);
 
         // Table for displaying QR data with enhanced styling
-        String[] columnNames = {UnicodeSymbols.CLOCK + " Timestamp", UnicodeSymbols.PACKAGE+ " Artikel", UnicodeSymbols.CHART + " Menge", UnicodeSymbols.TAG + " Typ", UnicodeSymbols.PERSON + " Eigenverbrauch", UnicodeSymbols.ID + " ID"};
+        String[] columnNames = {UnicodeSymbols.CLOCK + " Timestamp", UnicodeSymbols.PACKAGE + " Artikel", UnicodeSymbols.CHART + " Menge", UnicodeSymbols.TAG + " Typ", UnicodeSymbols.PERSON + " Eigenverbrauch", UnicodeSymbols.ID + " ID"};
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -2873,8 +2897,7 @@ public class ArticleGUI extends JFrame {
         // Alternating row colors
         qrTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value,
-                                                           boolean isSelected, boolean hasFocus, int row, int column) {
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (!isSelected) {
                     c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 249, 250));
@@ -2923,7 +2946,7 @@ public class ArticleGUI extends JFrame {
         JPanel statusArea = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         statusArea.setOpaque(false);
 
-        JLabel statusIcon = new JLabel(UnicodeSymbols.YELLOW_CIRCLE);
+        JLabel statusIcon = new JLabel(UnicodeSymbols.CIRCLE);
         statusIcon.setFont(SettingsGUI.getFontByName(Font.PLAIN, 16));
         statusIcon.setForeground(new Color(100, 200, 100));
 
@@ -2991,7 +3014,7 @@ public class ArticleGUI extends JFrame {
                 }
 
                 statusLabel.setText(added + " Artikel zur Bestellliste hinzugefügt");
-                statusIcon.setForeground(new Color(46, 204, 113));
+                statusIcon.setForeground(new Color(52, 152, 219));
             }
         });
 
@@ -3033,17 +3056,100 @@ public class ArticleGUI extends JFrame {
             }
         });
 
+        JButton addToOrderBtn = new JButton("Bestellung beim Lieferant hinzufügen");
+        addToOrderBtn.setToolTipText("Fügt die ausgewählten Artikel der Bestellung beim Lieferant hinzu");
+        styleButton(addToOrderBtn, new Color(52, 152, 219), Color.WHITE);
+        addToOrderBtn.setEnabled(false);
+        addToOrderBtn.addActionListener(e -> {
+            int[] selectedRows = qrTable.getSelectedRows();
+            if (selectedRows.length == 0) {
+                JOptionPane.showMessageDialog(dialog,
+                        "Bitte wählen Sie mindestens einen Datensatz aus.",
+                        "Keine Auswahl",
+                        JOptionPane.WARNING_MESSAGE,
+                        Main.iconSmall);
+                return;
+            }
+            int added = 0;
+            for (int row : selectedRows) {
+                String id = tableModel.getValueAt(row, 5).toString();
+                String data = (String) tableModel.getValueAt(row, 1);
+                String artikelNr = QRCodeUtils.getPartsFromData(data)[0];
+                artikelNr = artikelNr.replace("artikelNr:", "");
+                int menge = Integer.parseInt(tableModel.getValueAt(row, 2).toString());
+                Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
+                if (article != null) {
+                    SupplierOrderGUI.addArticleToSupplierOrder(article, menge);
+                    ImportUtils.addQrCodeImport(id);
+                    JOptionPane.showMessageDialog(dialog,
+                            menge + " Stück von \"" + article.getName() + "\" zur Lieferantenbestellung hinzugefügt.",
+                            "Artikel hinzugefügt",
+                            JOptionPane.INFORMATION_MESSAGE,
+                            Main.iconSmall);
+                    added++;
+                    refreshBtn.doClick();
+                } else {
+                    JOptionPane.showMessageDialog(dialog,
+                            "Artikel mit Nummer \"" + artikelNr + "\" nicht im Inventar gefunden.",
+                            "Artikel nicht gefunden",
+                            JOptionPane.WARNING_MESSAGE,
+                            Main.iconSmall);
+                }
+            }
+            if (added > 0) {
+                statusLabel.setText(added + " Artikel zur Lieferantenbestellung hinzugefügt");
+                statusIcon.setForeground(new Color(52, 152, 219));
+            }
+        });
+
+        JButton deleteBtn = new JButton(UnicodeSymbols.TRASH + " Datensätze löschen");
+        deleteBtn.setToolTipText("Löscht die ausgewählten QR-Code Datensätze vom Server");
+        styleButton(deleteBtn, new Color(231, 76, 60), Color.WHITE);
+        deleteBtn.setEnabled(false);
+        deleteBtn.addActionListener(e -> {
+            int[] selectedRows = qrTable.getSelectedRows();
+            if (selectedRows.length == 0) {
+                JOptionPane.showMessageDialog(dialog,
+                        "Bitte wählen Sie mindestens einen Datensatz aus.",
+                        "Keine Auswahl",
+                        JOptionPane.WARNING_MESSAGE,
+                        Main.iconSmall);
+                return;
+            }
+            int confirm = JOptionPane.showConfirmDialog(dialog,
+                    "Möchten Sie die ausgewählten Datensätze wirklich vom Server löschen?",
+                    "Löschen bestätigen",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, Main.iconSmall);
+            if (confirm == JOptionPane.YES_OPTION) {
+                int deleted = 0;
+                for (int i = selectedRows.length - 1; i >= 0; i--) {
+                    int row = selectedRows[i];
+                    String id = tableModel.getValueAt(row, 5).toString();
+                    ImportUtils.addQrCodeImport(id);
+                    tableModel.removeRow(row);
+                    deleted++;
+                }
+                statusLabel.setText(deleted + " Datensätze gelöscht");
+                statusIcon.setForeground(new Color(231, 76, 60));
+            }
+        });
+
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE + " Schließen");
         closeBtn.setToolTipText("Schließt dieses Fenster");
         styleButton(closeBtn, new Color(149, 165, 166), Color.WHITE);
-        closeBtn.setBackground(Color.RED);
         closeBtn.addActionListener(e -> dialog.dispose());
 
         buttonPanel.add(refreshBtn);
         buttonPanel.add(importBtn);
+        importBtn.setVisible(false);
         buttonPanel.add(importAllBtn);
+        importAllBtn.setVisible(false);
         buttonPanel.add(addToArticleListBtn);
+        addToArticleListBtn.setVisible(false);
         buttonPanel.add(removeFromInventoryBtn);
+        removeFromInventoryBtn.setVisible(false);
+        buttonPanel.add(addToOrderBtn);
+        addToOrderBtn.setVisible(false);
         buttonPanel.add(closeBtn);
 
         actionPanel.add(buttonPanel, BorderLayout.EAST);
@@ -3060,6 +3166,7 @@ public class ArticleGUI extends JFrame {
             protected void done() {
                 try {
                     List<Map<String, Object>> qrCodeDataList = get();
+                    int availableCount = 0;
 
                     if (qrCodeDataList == null || qrCodeDataList.isEmpty()) {
                         infoIcon.setText(UnicodeSymbols.WARNING);
@@ -3083,17 +3190,20 @@ public class ArticleGUI extends JFrame {
                         rowData[3] = dataMap.getOrDefault("type", "N/A");
                         rowData[4] = dataMap.getOrDefault("ownUse", "N/A");
                         rowData[5] = dataMap.getOrDefault("id", "N/A");
-                        tableModel.addRow(rowData);
+                        if (!ImportUtils.getImportedQrCodes().contains(rowData[5].toString())) {
+                            tableModel.addRow(rowData);
+                            availableCount++;
+                        }
                     }
 
                     infoIcon.setText(UnicodeSymbols.CHECKMARK);
-                    infoLabel.setText(qrCodeDataList.size() + " QR-Code Datensätze erfolgreich geladen");
+                    infoLabel.setText(availableCount + " QR-Code Datensätze erfolgreich geladen");
                     infoPanel.setBackground(new Color(230, 255, 240));
                     infoPanel.setBorder(BorderFactory.createCompoundBorder(
                             BorderFactory.createLineBorder(new Color(46, 204, 113), 2),
                             BorderFactory.createEmptyBorder(12, 18, 12, 18)
                     ));
-                    statusLabel.setText(qrCodeDataList.size() + " Datensätze bereit");
+                    statusLabel.setText(availableCount + " Datensätze bereit");
                     statusIcon.setForeground(new Color(46, 204, 113));
                     importAllBtn.setEnabled(true);
 
@@ -3120,6 +3230,7 @@ public class ArticleGUI extends JFrame {
             boolean ownUse = false;
             boolean hasSellType = false;
             boolean hasBuyType = false;
+            boolean hasOrderType = false;
 
             // Check types for all selected rows
             if (selectedCount == 1) {
@@ -3129,6 +3240,7 @@ public class ArticleGUI extends JFrame {
                 String type = qrTable.getValueAt(selectedRow, 3).toString();
                 hasSellType = type.equalsIgnoreCase("sell");
                 hasBuyType = type.equalsIgnoreCase("buy");
+                hasOrderType = type.equalsIgnoreCase("order");
             } else if (selectedCount > 1) {
                 // Check if all selected rows are same type
                 int[] selectedRows = qrTable.getSelectedRows();
@@ -3146,30 +3258,53 @@ public class ArticleGUI extends JFrame {
             if (selectedCount == 1 && ownUse) {
                 // Eigenverbrauch mode (only for single selection)
                 removeFromInventoryBtn.setEnabled(true);
+                removeFromInventoryBtn.setVisible(true);
                 importBtn.setEnabled(false);
+                importBtn.setVisible(false);
                 importAllBtn.setEnabled(false);
+                importAllBtn.setVisible(false);
                 addToArticleListBtn.setVisible(false);
+                addToOrderBtn.setEnabled(false);
                 statusLabel.setText("1 Eigenverbrauch-Datensatz ausgewählt");
             } else if (hasSelection && hasBuyType) {
                 // Normal import mode (can be multiple)
                 importBtn.setEnabled(true);
+                importBtn.setVisible(true);
                 removeFromInventoryBtn.setEnabled(false);
+                removeFromInventoryBtn.setVisible(false);
                 importAllBtn.setEnabled(true);
+                importAllBtn.setVisible(true);
                 addToArticleListBtn.setVisible(false);
+                addToOrderBtn.setEnabled(true);
                 statusLabel.setText(selectedCount + " Einlagern-Datensatz" + (selectedCount > 1 ? "e" : "") + " ausgewählt");
             } else if (hasSelection && hasSellType) {
                 // Sell mode (can be multiple)
                 removeFromInventoryBtn.setEnabled(false);
+                removeFromInventoryBtn.setVisible(false);
                 addToArticleListBtn.setVisible(true);
                 importBtn.setEnabled(false);
+                importBtn.setVisible(false);
                 importAllBtn.setEnabled(false);
+                importAllBtn.setVisible(false);
+                addToOrderBtn.setEnabled(false);
                 statusLabel.setText(selectedCount + " Verkauf-Datensatz" + (selectedCount > 1 ? "e" : "") + " ausgewählt");
+            } else if (hasSelection && hasOrderType) {
+                // Order mode (can be multiple)
+                removeFromInventoryBtn.setEnabled(false);
+                removeFromInventoryBtn.setVisible(false);
+                addToOrderBtn.setVisible(true);
+                addToOrderBtn.setEnabled(true);
+                addToArticleListBtn.setVisible(false);
+                importBtn.setVisible(false);
+                importAllBtn.setVisible(false);
+                statusLabel.setText(selectedCount + " Bestell-Datensatz " + selectedCount + " ausgewählt");
             } else {
                 // No selection or mixed types
                 importBtn.setEnabled(false);
                 removeFromInventoryBtn.setEnabled(false);
                 importAllBtn.setEnabled(tableModel.getRowCount() > 0);
                 addToArticleListBtn.setVisible(true);
+                addToOrderBtn.setEnabled(false);
                 statusLabel.setText(hasSelection ? "Gemischte Auswahl" : "Bereit zum Importieren");
             }
         });
@@ -3189,6 +3324,7 @@ public class ArticleGUI extends JFrame {
             importBtn.setEnabled(false);
             importAllBtn.setEnabled(false);
             removeFromInventoryBtn.setEnabled(false);
+            addToOrderBtn.setEnabled(false);
 
             // Create new worker for refresh
             SwingWorker<List<Map<String, Object>>, Void> refreshWorker = new SwingWorker<>() {
@@ -3201,6 +3337,7 @@ public class ArticleGUI extends JFrame {
                 protected void done() {
                     try {
                         List<Map<String, Object>> qrCodeDataList = get();
+                        int availableCount = 0;
                         if (qrCodeDataList != null && !qrCodeDataList.isEmpty()) {
                             for (Map<String, Object> dataMap : qrCodeDataList) {
                                 Object[] rowData = new Object[6];
@@ -3210,16 +3347,19 @@ public class ArticleGUI extends JFrame {
                                 rowData[3] = dataMap.getOrDefault("type", "N/A");
                                 rowData[4] = dataMap.getOrDefault("ownUse", "N/A");
                                 rowData[5] = dataMap.getOrDefault("id", "N/A");
-                                tableModel.addRow(rowData);
+                                if (!ImportUtils.getImportedQrCodes().contains(rowData[5].toString())) {
+                                    tableModel.addRow(rowData);
+                                    availableCount++;
+                                }
                             }
                             infoIcon.setText(UnicodeSymbols.CHECKMARK);
-                            infoLabel.setText(qrCodeDataList.size() + " QR-Code Datensätze aktualisiert");
+                            infoLabel.setText(availableCount + " QR-Code Datensätze aktualisiert");
                             infoPanel.setBackground(new Color(230, 255, 240));
                             infoPanel.setBorder(BorderFactory.createCompoundBorder(
                                     BorderFactory.createLineBorder(new Color(46, 204, 113), 2),
                                     BorderFactory.createEmptyBorder(12, 18, 12, 18)
                             ));
-                            statusLabel.setText(qrCodeDataList.size() + " Datensätze bereit");
+                            statusLabel.setText(availableCount + " Datensätze bereit");
                             statusIcon.setForeground(new Color(46, 204, 113));
                             importAllBtn.setEnabled(true);
                         }
@@ -3227,6 +3367,11 @@ public class ArticleGUI extends JFrame {
                         infoIcon.setText(UnicodeSymbols.CLOSE);
                         infoLabel.setText("Fehler beim Aktualisieren: " + ex.getMessage());
                         infoPanel.setBackground(new Color(255, 235, 238));
+                        infoPanel.setBorder(BorderFactory.createCompoundBorder(
+                                BorderFactory.createLineBorder(new Color(231, 76, 60), 2),
+                                BorderFactory.createEmptyBorder(12, 18, 12, 18)
+                        ));
+                        statusLabel.setText("Fehler beim Laden");
                         statusIcon.setForeground(new Color(231, 76, 60));
                     }
                 }
@@ -3323,6 +3468,8 @@ public class ArticleGUI extends JFrame {
                 importAllBtn.setEnabled(false);
                 importBtn.setEnabled(false);
                 refreshBtn.setEnabled(false);
+                removeFromInventoryBtn.setEnabled(false);
+                addToOrderBtn.setEnabled(false);
 
                 SwingWorker<Void, Integer> importWorker = new SwingWorker<>() {
                     int imported = 0;
@@ -3389,7 +3536,7 @@ public class ArticleGUI extends JFrame {
                         String message = String.format(
                                 "<html><b>Import abgeschlossen</b><br/><br/>" +
                                         UnicodeSymbols.CHECKMARK + " Erfolgreich: %d<br/>" +
-                                        (skipped > 0 ? UnicodeSymbols.SKIP + "️ Übersprungen: %d (bereits importiert)<br/>" : "") +
+                                        (skipped > 0 ? UnicodeSymbols.FAST_FORWARD + "️ Übersprungen: %d (bereits importiert)<br/>" : "") +
                                         (errors > 0 ? UnicodeSymbols.CLOSE + " Fehler: %d<br/>" : ""),
                                 imported, skipped, errors);
 
@@ -3532,8 +3679,15 @@ public class ArticleGUI extends JFrame {
                 b.setForeground(fg);
                 b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 b.addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(surface); }
-                    @Override public void mouseExited(MouseEvent e)  { b.setBackground(bg); }
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        b.setBackground(surface);
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        b.setBackground(bg);
+                    }
                 });
                 return b;
             }
@@ -3688,7 +3842,7 @@ public class ArticleGUI extends JFrame {
         // Potential revenue
         gbc.gridx = 1;
         contentCard.add(createStatPanel(
-                UnicodeSymbols.CHART_UP + " Potenzielle Einnahmen",
+                UnicodeSymbols.MIN_STOCK + " Potenzielle Einnahmen",
                 String.format("%.2f CHF", potentialRevenue),
                 new Color(52, 152, 219)
         ), gbc);
@@ -3700,7 +3854,7 @@ public class ArticleGUI extends JFrame {
         gbc.gridy = row++;
         gbc.gridwidth = 2;
         contentCard.add(createStatPanel(
-                UnicodeSymbols.TRENDING_UP + " Gewinnspanne",
+                UnicodeSymbols.CHEVRON_UP + " Gewinnspanne",
                 String.format("%.2f CHF", profitMargin),
                 new Color(241, 196, 15)
         ), gbc);
@@ -3711,7 +3865,7 @@ public class ArticleGUI extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = row;
         contentCard.add(createStatPanel(
-                UnicodeSymbols.CALCULATOR + " Ø Wert pro Artikel",
+                UnicodeSymbols.BULLET + " Ø Wert pro Artikel",
                 String.format("%.2f CHF", avgArticleValue),
                 new Color(155, 89, 182)
         ), gbc);
@@ -3720,7 +3874,7 @@ public class ArticleGUI extends JFrame {
         gbc.gridx = 1;
         String displayValue = mostValuable.length() > 20 ? mostValuable.substring(0, 17) + "..." : mostValuable;
         contentCard.add(createStatPanel(
-                UnicodeSymbols.STAR + " Wertvollster Artikel",
+                UnicodeSymbols.STAR_FILLED + " Wertvollster Artikel",
                 displayValue,
                 new Color(241, 196, 15)
         ), gbc);
@@ -3755,7 +3909,7 @@ public class ArticleGUI extends JFrame {
         gbc.gridx = 1;
         Color outOfStockColor = outOfStockCount > 0 ? new Color(192, 57, 43) : new Color(46, 204, 113);
         contentCard.add(createStatPanel(
-                UnicodeSymbols.ALERT + " Nicht vorrätig",
+                UnicodeSymbols.WARNING + " Nicht vorrätig",
                 String.valueOf(outOfStockCount),
                 outOfStockColor
         ), gbc);
@@ -3767,8 +3921,8 @@ public class ArticleGUI extends JFrame {
         gbc.gridy = row;
         gbc.gridwidth = 2;
         Color healthColor = stockHealth >= 80 ? new Color(46, 204, 113) :
-                           stockHealth >= 50 ? new Color(241, 196, 15) :
-                           new Color(231, 76, 60);
+                stockHealth >= 50 ? new Color(241, 196, 15) :
+                        new Color(231, 76, 60);
         contentCard.add(createStatPanel(
                 UnicodeSymbols.HEALTH + " Lagergesundheit",
                 String.format("%.1f%%", stockHealth),

@@ -20,10 +20,7 @@ import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.plaf.basic.ComboPopup;
 import javax.swing.table.*;
 import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +66,7 @@ public class OrderGUI extends JFrame {
 
         JButton newOrderButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Neue Bestellung erstellen");
         newOrderButton.setToolTipText("Erstellt eine neue Bestellung");
-        JButton editOrderButton = createRoundedButton(UnicodeSymbols.BETTER_EDIT + " Bestellung bearbeiten");
+        JButton editOrderButton = createRoundedButton(UnicodeSymbols.CODE + " Bestellung bearbeiten");
         editOrderButton.setToolTipText("Bearbeitet die ausgewählte Bestellung");
         JButton deleteOrderButton = createRoundedButton(UnicodeSymbols.TRASH + " Bestellung löschen");
         deleteOrderButton.setToolTipText("Löscht die ausgewählte Bestellung");
@@ -163,9 +160,9 @@ public class OrderGUI extends JFrame {
             if (order != null) {
                 EditOrderGUI editGui = new EditOrderGUI(order);
                 editGui.display();
-                editGui.addWindowListener(new java.awt.event.WindowAdapter() {
+                editGui.addWindowListener(new WindowAdapter() {
                     @Override
-                    public void windowClosed(java.awt.event.WindowEvent e) {
+                    public void windowClosed(WindowEvent e) {
                         loadOrders();
                     }
                 });
@@ -294,7 +291,7 @@ public class OrderGUI extends JFrame {
 
     private void setupTableInteractions() {
         JPopupMenu popup = new JPopupMenu();
-        JMenuItem edit = new JMenuItem(UnicodeSymbols.BETTER_EDIT + " Bearbeiten");
+        JMenuItem edit = new JMenuItem(UnicodeSymbols.CODE + " Bearbeiten");
         edit.setToolTipText("Bearbeitet die ausgewählte Bestellung");
         JMenuItem del = new JMenuItem(UnicodeSymbols.TRASH + " Löschen");
         del.setToolTipText("Löscht die ausgewählte Bestellung");
@@ -401,8 +398,6 @@ public class OrderGUI extends JFrame {
     }
 
     private void initializeOrderTable() {
-        ThemeManager tm = ThemeManager.getInstance();
-
         DefaultTableModel model = new DefaultTableModel() {
             @Override
             public int getColumnCount() {
@@ -412,13 +407,13 @@ public class OrderGUI extends JFrame {
             @Override
             public String getColumnName(int col) {
                 return switch (col) {
-                    case 0 -> "Bestell-ID";
-                    case 1 -> "Empfänger";
-                    case 2 -> "Absender";
-                    case 3 -> "Abteilung";
-                    case 4 -> "Datum";
-                    case 5 -> "Artikel";
-                    case 6 -> "Status";
+                    case 0 -> UnicodeSymbols.ID + " Bestell-ID";
+                    case 1 -> UnicodeSymbols.PERSON + " Empfänger";
+                    case 2 -> UnicodeSymbols.PERSON + " Absender";
+                    case 3 -> UnicodeSymbols.DEPARTMENT + " Abteilung";
+                    case 4 -> UnicodeSymbols.CALENDAR + " Datum";
+                    case 5 -> UnicodeSymbols.PACKAGE + " Artikel";
+                    case 6 -> UnicodeSymbols.STAR_FILLED + " Status";
                     default -> "";
                 };
             }
@@ -1097,3 +1092,4 @@ public class OrderGUI extends JFrame {
         }
     }
 }
+

@@ -35,40 +35,52 @@ public class ImportUtils {
         INVENTORY_FILE = new SimpleJavaUtils().getFromResourceFile("inventar.json", Main.class);
         if (INVENTORY_FILE == null) {
             LOGGER.warn("Inventory file 'inventar.json' not found in resources");
+            Main.logUtils.addLog("Inventory file 'inventar.json' not found in resources");
         } else if (!INVENTORY_FILE.exists()) {
             LOGGER.warn("Inventory file does not exist: {}", INVENTORY_FILE.getAbsolutePath());
+            Main.logUtils.addLog(INVENTORY_FILE.getAbsolutePath() + " does not exist");
         } else {
             LOGGER.info("Inventory file loaded: {}", INVENTORY_FILE.getAbsolutePath());
+            Main.logUtils.addLog(INVENTORY_FILE.getAbsolutePath() + " loaded successfully");
         }
 
         // Load vendor file
         VENDOR_FILE = new SimpleJavaUtils().getFromResourceFile("vendor.json", Main.class);
         if (VENDOR_FILE == null) {
             LOGGER.warn("Vendor file 'vendor.json' not found in resources");
+            Main.logUtils.addLog("Vendor file 'vendor.json' not found in resources");
         } else if (!VENDOR_FILE.exists()) {
             LOGGER.warn("Vendor file does not exist: {}", VENDOR_FILE.getAbsolutePath());
+            Main.logUtils.addLog(VENDOR_FILE.getAbsolutePath() + " does not exist");
         } else {
             LOGGER.info("Vendor file loaded: {}", VENDOR_FILE.getAbsolutePath());
+            Main.logUtils.addLog(VENDOR_FILE.getAbsolutePath() + " loaded successfully");
         }
 
         // Load department file
         DEPARTMENT_FILE = new SimpleJavaUtils().getFromResourceFile("departments.json", Main.class);
         if (DEPARTMENT_FILE == null) {
             LOGGER.warn("Department file 'departments.json' not found in resources");
+            Main.logUtils.addLog("Department file 'departments.json' not found in resources");
         } else if (!DEPARTMENT_FILE.exists()) {
             LOGGER.warn("Department file does not exist: {}", DEPARTMENT_FILE.getAbsolutePath());
+            Main.logUtils.addLog(DEPARTMENT_FILE.getAbsolutePath() + " does not exist");
         } else {
             LOGGER.info("Department file loaded: {}", DEPARTMENT_FILE.getAbsolutePath());
+            Main.logUtils.addLog(DEPARTMENT_FILE.getAbsolutePath() + " loaded successfully");
         }
 
         // Load clients file
         CLIENTS_FILE = new SimpleJavaUtils().getFromResourceFile("clients.json", Main.class);
         if(CLIENTS_FILE == null) {
             LOGGER.warn("Clients file 'clients.json' not found in resources");
+            Main.logUtils.addLog("Clients file 'clients.json' not found in resources");
         } else if (!CLIENTS_FILE.exists()) {
             LOGGER.warn("Clients file does not exist: {}", CLIENTS_FILE.getAbsolutePath());
+            Main.logUtils.addLog(CLIENTS_FILE.getAbsolutePath() + " does not exist");
         } else {
             LOGGER.info("Clients file loaded: {}", CLIENTS_FILE.getAbsolutePath());
+            Main.logUtils.addLog(CLIENTS_FILE.getAbsolutePath() + " loaded successfully");
         }
     }
 
@@ -92,6 +104,7 @@ public class ImportUtils {
 
         if(CLIENTS_FILE == null || !CLIENTS_FILE.exists()) {
             LOGGER.warn("Cannot load file 'clients.json' from resources.");
+            Main.logUtils.addLog("Cannot load file 'clients.json' from resources.");
             return clients;
         }
 
@@ -100,11 +113,13 @@ public class ImportUtils {
             JsonArray jsonArray = gson.fromJson(reader, JsonArray.class);
             if (jsonArray == null) {
                 LOGGER.info("Loaded {} clients from file 'clients.json'.", 0);
+                Main.logUtils.addLog("Loaded 0 clients from file 'clients.json'.");
                 return clients;
             }
             for (JsonElement jsonElement : jsonArray) {
                 if (!jsonElement.isJsonObject()) {
                     LOGGER.debug("Skipping non-object element in clients array");
+                    Main.logUtils.addLog("Skipping non-object element in clients array");
                     continue;
                 }
                 JsonObject jsonObject = jsonElement.getAsJsonObject();
@@ -112,8 +127,10 @@ public class ImportUtils {
                 clients.add(itemData);
             }
             LOGGER.info("Loaded {} clients from file 'clients.json'.", clients.size());
+            Main.logUtils.addLog(String.format("Loaded %d clients from file 'clients.json'.", clients.size()));
         } catch (IOException e) {
             LOGGER.error("Failed to load clients from file 'clients.json'", e);
+            Main.logUtils.addLog("Failed to load clients from file 'clients.json'.");
         }
         return clients;
     }
@@ -123,6 +140,7 @@ public class ImportUtils {
 
         if(DEPARTMENT_FILE == null || !DEPARTMENT_FILE.exists()) {
             LOGGER.warn("Cannot load file 'departments.json' from resources.");
+            Main.logUtils.addLog("Cannot load file 'departments.json' from resources.");
             return list;
         }
 
@@ -131,11 +149,13 @@ public class ImportUtils {
             JsonArray jsonArray = gson.fromJson(reader, JsonArray.class);
             if (jsonArray == null) {
                 LOGGER.info("Loaded {} departments from file 'departments.json'.", 0);
+                Main.logUtils.addLog("Loaded 0 departments from file 'departments.json'.");
                 return list;
             }
             for (JsonElement jsonElement : jsonArray) {
                 if (!jsonElement.isJsonObject()) {
                     LOGGER.debug("Skipping non-object element in departments array");
+                    Main.logUtils.addLog("Skipping non-object element in departments array");
                     continue;
                 }
                 JsonObject jsonObject = jsonElement.getAsJsonObject();
@@ -143,8 +163,10 @@ public class ImportUtils {
                 list.add(itemData);
             }
             LOGGER.info("Loaded {} departments from file 'departments.json'.", list.size());
+            Main.logUtils.addLog(String.format("Loaded %d departments from file 'departments.json'.", list.size()));
         } catch (IOException e) {
             LOGGER.error("Failed to load departments from file 'departments.json'", e);
+            Main.logUtils.addLog("Failed to load departments from file 'departments.json'.");
         }
         return list;
     }
@@ -154,6 +176,7 @@ public class ImportUtils {
 
         if(VENDOR_FILE == null || !VENDOR_FILE.exists()) {
             LOGGER.warn("Cannot load Vendor list from file 'vendor.json'.");
+            Main.logUtils.addLog("Cannot load Vendor list from file 'vendor.json'.");
             return list;
         }
 
@@ -162,11 +185,13 @@ public class ImportUtils {
             JsonArray jsonArray = gson.fromJson(reader, JsonArray.class);
             if(jsonArray == null) {
                 LOGGER.info("Loaded {} vendors from file 'vendor.json'.", 0);
+                Main.logUtils.addLog("Loaded 0 vendors from file 'vendor.json'.");
                 return list;
             }
             for (JsonElement jsonElement : jsonArray) {
                 if (!jsonElement.isJsonObject()) {
                     LOGGER.debug("Skipping non-object element in vendor array");
+                    Main.logUtils.addLog("Skipping non-object element in vendor array");
                     continue;
                 }
                 JsonObject jsonObject = jsonElement.getAsJsonObject();
@@ -175,8 +200,10 @@ public class ImportUtils {
             }
 
             LOGGER.info("Loaded {} vendors from file 'vendor.json'.", list.size());
+            Main.logUtils.addLog(String.format("Loaded %d vendors from file 'vendor.json'.", list.size()));
         } catch (IOException e) {
             LOGGER.error("Failed to load vendors from file 'vendor.json'", e);
+            Main.logUtils.addLog("Failed to load vendors from file 'vendor.json'.");
         }
         return list;
     }
@@ -186,6 +213,7 @@ public class ImportUtils {
 
         if (INVENTORY_FILE == null || !INVENTORY_FILE.exists()) {
             LOGGER.warn("Cannot load inventory: file is null or does not exist");
+            Main.logUtils.addLog("Cannot load inventory: file is null or does not exist");
             return inventoryData;
         }
 
@@ -195,12 +223,14 @@ public class ImportUtils {
 
             if (jsonArray == null) {
                 LOGGER.warn("Inventory file is empty or invalid JSON");
+                Main.logUtils.addLog("Inventory file is empty or invalid JSON");
                 return inventoryData;
             }
 
             for (JsonElement jsonElement : jsonArray) {
                 if (!jsonElement.isJsonObject()) {
                     LOGGER.debug("Skipping non-object element in inventory array");
+                    Main.logUtils.addLog("Skipping non-object element in inventory array");
                     continue;
                 }
 
@@ -210,12 +240,15 @@ public class ImportUtils {
             }
 
             LOGGER.info("Successfully loaded {} items from inventory file", inventoryData.size());
+            Main.logUtils.addLog(String.format("Loaded %d items from inventory file.", inventoryData.size()));
 
         } catch (IOException e) {
             LOGGER.error("Failed to read inventory file: {}", INVENTORY_FILE.getAbsolutePath(), e);
+            Main.logUtils.addLog("Failed to read inventory file: " + INVENTORY_FILE.getAbsolutePath());
             throw new RuntimeException("Failed to load inventory file", e);
         } catch (Exception e) {
             LOGGER.error("Unexpected error while parsing inventory file", e);
+            Main.logUtils.addLog(String.format("Unexpected error while parsing inventory file: %s", INVENTORY_FILE.getAbsolutePath()));
             throw new RuntimeException("Failed to load inventory file", e);
         }
 
@@ -281,6 +314,7 @@ public class ImportUtils {
         try(FileWriter writer = new FileWriter(file, true)) {
             writer.write(itemName + System.lineSeparator());
         } catch (IOException e) {
+            Main.logUtils.addLog("Failed to write item to imported_items.txt");
             LOGGER.error("Failed to write item to imported_items.txt", e);
         }
     }
@@ -294,6 +328,7 @@ public class ImportUtils {
         try {
             importedItems = java.nio.file.Files.readAllLines(file.toPath());
         } catch (IOException e) {
+            Main.logUtils.addLog("Failed to read items from imported_items.txt");
             LOGGER.error("Failed to read imported items from imported_items.txt", e);
         }
         return importedItems;
@@ -305,6 +340,7 @@ public class ImportUtils {
             writer.write(qrId + System.lineSeparator());
             writer.flush();
         } catch (IOException e) {
+            Main.logUtils.addLog("Failed to write imported qrcodes.txt to imported_qrcodes.txt");
             LOGGER.error("Failed to write QR code ID to imported_qrcodes.txt", e);
         }
     }
@@ -318,6 +354,7 @@ public class ImportUtils {
         try {
             importedQrCodes = java.nio.file.Files.readAllLines(file.toPath());
         } catch (IOException e) {
+            Main.logUtils.addLog("Failed to read imported qrcodes.txt from imported_qrcodes.txt");
             LOGGER.error("Failed to read imported QR codes from imported_qrcodes.txt", e);
         }
         return importedQrCodes;
@@ -328,6 +365,7 @@ public class ImportUtils {
         try(FileWriter writer = new FileWriter(file, true)) {
             writer.write(data + System.lineSeparator());
         } catch (IOException e) {
+            Main.logUtils.addLog("Failed to write own_use_list.txt");
             LOGGER.error("Failed to write data to own_use_list.txt", e);
         }
     }

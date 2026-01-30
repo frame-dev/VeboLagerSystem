@@ -110,7 +110,7 @@ public class CompleteOrderGUI extends JFrame {
         rightCard.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         rightCard.setLayout(new BorderLayout(10, 10));
 
-        JLabel detailsTitle = new JLabel(UnicodeSymbols.EMPTY_PAGE + " Bestelldetails");
+        JLabel detailsTitle = new JLabel(UnicodeSymbols.FILE + " Bestelldetails");
         detailsTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         detailsTitle.setForeground(text);
         rightCard.add(detailsTitle, BorderLayout.NORTH);
@@ -414,6 +414,7 @@ public class CompleteOrderGUI extends JFrame {
                 return;
             }
 
+            // Proceed with partial fulfillment
             completeOrderWithPartialStock(selected, articles, idx);
             return;
         }

@@ -1,5 +1,6 @@
 package ch.framedev.lagersystem.utils;
 
+import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.main.Main;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -17,22 +18,71 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Utility class for QR code operations: generation, retrieval, and parsing.
+ */
 @SuppressWarnings("unused")
 public class QRCodeUtils {
 
     private static final Logger logger = LogManager.getLogger(QRCodeUtils.class);
+    private static final File STORE = new File(Main.getAppDataDir(), "scans.json"); // eine Zeile = ein JSON
 
+    /**
+     * Generates QR code images for a list of articles.
+     * Each QR code encodes a URL with the article's QR data.
+     *
+     * @param articles List of Article objects
+     * @return List of generated QR code image files
+     */
+    public static List<File> createQrCodes(List<Article> articles) {
+        File directory = new File(Main.getAppDataDir(), "qr_codes");
+        if (!directory.exists()) {
+            if (!directory.mkdirs()) {
+                logger.error("Could not create directory for QR codes: {}", directory.getAbsolutePath());
+                Main.logUtils.addLog("Konnte Verzeichnis für QR-Codes nicht erstellen: " + directory.getAbsolutePath());
+            }
+        }
+        List<File> qrCodeFiles = new ArrayList<>();
+        for (Article article : articles) {
+            String data = article.getQrCodeData();
+            // Encode data for URL safety
+            String encodedData;
+            try {
+                // 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
+                encodedData = URLEncoder.encode(data, StandardCharsets.UTF_8);
+            } catch (Exception ex) {
+                logger.error("Error encoding QR data for article: {}", article.getArticleNumber(), ex);
+                Main.logUtils.addLog("Fehler beim Kodieren der QR-Daten für Artikel: " + article.getArticleNumber() + " - " + ex.getMessage());
+                continue;
+            }
+            String url = "https://framedev.ch/vebo/scan.php?data=" + encodedData;
+            try {
+                File qrCodeFile = QRCodeGenerator.generateQRCodeImage(url, 300, 300, Main.getAppDataDir() + "/qr_codes/" + article.getArticleNumber() + "_qrcode.png");
+                qrCodeFiles.add(qrCodeFile);
+            } catch (Exception e) {
+                logger.error("Error generating QR code for article: {}", article.getArticleNumber(), e);
+                Main.logUtils.addLog("Fehler beim Generieren des QR-Codes für Artikel: " + article.getArticleNumber() + " - " + e.getMessage());
+            }
+        }
+        return qrCodeFiles;
+    }
+
+    /**
+     * Retrieves QR code scan data from the remote website as a list of maps.
+     *
+     * @return List of maps representing QR code scan data
+     */
     @SuppressWarnings("unchecked")
     public static List<Map<String, Object>> retrieveQrCodeDataFromWebsite() {
         String urlString = "https://framedev.ch/vebo/scans.json";
         Gson gson = new Gson();
         List<Map<String, Object>> mapList = new ArrayList<>();
-
         HttpURLConnection connection = null;
         try {
             URL url = new URI(urlString).toURL();
@@ -73,8 +123,11 @@ public class QRCodeUtils {
         return mapList;
     }
 
-    private static final File STORE = new File(Main.getAppDataDir(), "scans.json"); // eine Zeile = ein JSON
-
+    /**
+     * Reads all QR code data strings from the local scans.json file.
+     *
+     * @return List of QR code data strings
+     */
     public static List<String> getDataFromQRCode() {
         Gson gson = new Gson();
         List<String> dataList = new ArrayList<>();
@@ -94,6 +147,11 @@ public class QRCodeUtils {
         return dataList;
     }
 
+    /**
+     * Reads all QR code JSON objects as strings from the local scans.json file.
+     *
+     * @return List of QR code JSON strings
+     */
     public static List<String> getQRCodes() {
         Gson gson = new Gson();
         List<String> qrCodeList = new ArrayList<>();
@@ -110,6 +168,11 @@ public class QRCodeUtils {
         return qrCodeList;
     }
 
+    /**
+     * Gets the latest QR code data string from the local scans.json file.
+     *
+     * @return Latest QR code data string, or null if not found
+     */
     public static String getLatestQRCodeData() {
         Gson gson = new Gson();
         try {
@@ -127,11 +190,22 @@ public class QRCodeUtils {
         return null;
     }
 
+    /**
+     * Splits a QR code data string into its parts using ';' as separator.
+     *
+     * @param data QR code data string
+     * @return Array of parts
+     */
     public static String[] getPartsFromData(String data) {
         if (data == null) return new String[0];
         return data.split(";");
     }
 
+    /**
+     * Reads all QR code JSON objects as maps from the local scans.json file.
+     *
+     * @return List of maps representing QR code data
+     */
     @SuppressWarnings("unchecked")
     public static List<Map<String, String>> getListMapFromJsonQRCode() {
         Gson gson = new Gson();
@@ -150,6 +224,9 @@ public class QRCodeUtils {
         return mapList;
     }
 
+    /**
+     * Deletes the local scans.json file containing stored QR codes.
+     */
     public static void clearStoredQRCodes() {
         if (STORE.exists()) {
             if(!STORE.delete()) {

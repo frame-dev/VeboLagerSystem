@@ -12,47 +12,47 @@
     "fromTo": "1301"
   },
   {
-    "category": "3.1 Abfallsäcke",
+    "category": "2.1 Abfallsäcke",
+    "fromTo": "2101 - 2109"
+  },
+  {
+    "category": "2.2 Besen, Bürsten und Pinsel",
+    "fromTo": "2201 - 2223"
+  },
+  {
+    "category": "2.3 Lappen, Tücher und Schwämme",
+    "fromTo": "2301 - 2320"
+  },
+  {
+    "category": "2.4 Abfüllflaschen alle leer",
+    "fromTo": "2401 - 2412"
+  },
+  {
+    "category": "3.1 Geschirrreiniger",
     "fromTo": "3101 - 3108"
   },
   {
-    "category": "3.2 Besen, Bürsten und Pinsel",
-    "fromTo": "3201 - 3223"
+    "category": "3.2 Reinigungsmittel",
+    "fromTo": "3201 - 3220"
   },
   {
-    "category": "3.3 Lappen, Tücher und Schwämme",
-    "fromTo": "3301 - 3314"
+    "category": "3.3 Seife",
+    "fromTo": "3301 - 3305"
   },
   {
-    "category": "3.4 Abfüllflaschen alle leer",
-    "fromTo": "3401 - 3434"
+    "category": "4.1 Küche/Kantine",
+    "fromTo": "4101 - 4119"
   },
   {
-    "category": "4.1 Geschirrreiniger",
-    "fromTo": "4101 - 4112"
+    "category": "4.2 Haushalt divers",
+    "fromTo": "4201 - 4229"
   },
   {
-    "category": "4.2 Reinigungsmittel",
-    "fromTo": "4201 - 4262"
+    "category": "4.3 Verpackungsmaterial",
+    "fromTo": "3301 - 4318"
   },
   {
-    "category": "4.3 Seife",
-    "fromTo": "4301 - 4305"
-  },
-  {
-    "category": "5.1 Küche/Kantine",
-    "fromTo": "5101 - 5119"
-  },
-  {
-    "category": "5.2 Haushalt divers",
-    "fromTo": "5201 - 5229"
-  },
-  {
-    "category": "5.3 Verpackungsmaterial",
-    "fromTo": "5301 - 5313"
-  },
-  {
-    "category": "6.1 Divers",
-    "fromTo": "6101 - 6132"
+    "category": "5.1 Divers",
+    "fromTo": "5101 - 5132"
   }
 ]

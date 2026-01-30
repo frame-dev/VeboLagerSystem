@@ -35,6 +35,7 @@ public class DatabaseManager {
     public static final String TABLE_DEPARTMENTS = "departments";
     public static final String TABLE_USERS = "users";
     public static final String TABLE_WARNINGS = "warnings";
+    public static final String TABLE_LOGS = "logs";
 
     private final Connection connection;
 
@@ -146,6 +147,16 @@ public class DatabaseManager {
             logger.error("SQL Exception during executeUpdate: ", e);
             Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
             return false;
+        }
+    }
+
+    public int executeUpdateWithCount(String sql) {
+        try (Statement stmt = connection.createStatement()) {
+            return stmt.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.error("SQL Exception during executeUpdateWithCount: ", e);
+            Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
+            return -1;
         }
     }
 
@@ -272,6 +283,7 @@ public class DatabaseManager {
                 try (Statement stmt = connection.createStatement()) {
                     int rowsDeleted = stmt.executeUpdate(sql);
                     logger.info("Cleared {} rows from table: {}", rowsDeleted, table);
+                    Main.logUtils.addLog("Tabelle " + table + " gelöscht, " + rowsDeleted + " Zeilen entfernt.");
                     clearedCount++;
                 } catch (SQLException e) {
                     logger.error("Failed to clear table: {}", table, e);
@@ -290,11 +302,14 @@ public class DatabaseManager {
 
         } catch (SQLException e) {
             logger.error("Error during clearDatabase transaction", e);
+            Main.logUtils.addLog("Fehler beim Löschen der Datenbank: " + e.getMessage());
             try {
                 connection.rollback();
                 logger.warn("Transaction rolled back due to error");
+                Main.logUtils.addLog("Transaktion zurückgesetzt aufgrund eines Fehlers.");
             } catch (SQLException rollbackEx) {
                 logger.error("Failed to rollback transaction", rollbackEx);
+                Main.logUtils.addLog("Fehler beim Zurücksetzen der Transaktion: " + rollbackEx.getMessage());
             }
             Main.logUtils.addLog("Fehler beim Löschen der Datenbank: " + e.getMessage());
             return false;
@@ -326,6 +341,7 @@ public class DatabaseManager {
         try (Statement stmt = connection.createStatement()) {
             int rowsDeleted = stmt.executeUpdate(sql);
             logger.info("Cleared {} rows from table: {}", rowsDeleted, tableName);
+            Main.logUtils.addLog("Tabelle " + tableName + " gelöscht, " + rowsDeleted + " Zeilen entfernt.");
             return true;
         } catch (SQLException e) {
             logger.error("Failed to clear table: {}", tableName, e);

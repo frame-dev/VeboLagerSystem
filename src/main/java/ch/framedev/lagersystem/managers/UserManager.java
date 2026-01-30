@@ -45,7 +45,13 @@ public class UserManager {
         }
         String sql = "INSERT INTO " + TABLE_NAME + " (username, orders) " +
                 "VALUES (?, ?);";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{user.getName(), String.join(",", user.getOrders())});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{user.getName(), String.join(",", user.getOrders())});
+        if(result) {
+            Main.logUtils.addLog("Inserted new user with name '" + user.getName() + "'");
+        } else {
+            Main.logUtils.addLog("Could not insert new user with name '" + user.getName() + "'");
+        }
+        return result;
     }
 
     public boolean existsUser(String username) {
@@ -64,7 +70,13 @@ public class UserManager {
             return false;
         }
         String sql = "UPDATE " + TABLE_NAME + " SET orders = ? WHERE username = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{String.join(",", user.getOrders()), user.getName()});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{String.join(",", user.getOrders()), user.getName()});
+        if(result) {
+            Main.logUtils.addLog("Updated user with name '" + user.getName() + "'");
+        } else {
+            Main.logUtils.addLog("Could not update user with name '" + user.getName() + "'");
+        }
+        return result;
     }
 
     public boolean updateUser(String userName, List<String> orders) {
@@ -73,7 +85,13 @@ public class UserManager {
             return false;
         }
         String sql = "UPDATE " + TABLE_NAME + " SET orders = ? WHERE username = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{String.join(",", orders), userName});
+        boolean result =  databaseManager.executePreparedUpdate(sql, new Object[]{String.join(",", orders), userName});
+        if(result) {
+            Main.logUtils.addLog("Updated user with name '" + userName + "'");
+        } else {
+            Main.logUtils.addLog("Could not update user with name '" + userName + "'");
+        }
+        return result;
     }
 
     private void sendLogWarnExistsUser(String username) {
@@ -82,7 +100,13 @@ public class UserManager {
 
     public boolean deleteUser(String username) {
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE username = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{username});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{username});
+        if(result) {
+            Main.logUtils.addLog("Deleted user with name '" + username + "'");
+        } else {
+            Main.logUtils.addLog("Could not delete user with name '" + username + "'");
+        }
+        return result;
     }
 
     public User getUserByName(String username) {
