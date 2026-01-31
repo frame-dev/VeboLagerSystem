@@ -25,11 +25,8 @@ import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 
 import static ch.framedev.lagersystem.main.Main.databaseManager;
 
@@ -2817,8 +2814,10 @@ public class SettingsGUI extends JFrame {
         File csvFile = new File(Main.getAppDataDir(), "articles_export.csv");
         try (PrintWriter writer = new PrintWriter(new FileWriter(csvFile))) {
             writer.println("Artikelnummer,Name,Details,Lagerbestand,Mindestlagerbestand,Verkaufspreis,Einkaufspreis,Lieferant");
+
             for (Article article : articles) {
-                writer.printf("\"%s\",\"%s\",\"%s\",%d,%d,%.2f,%.2f,\"%s\"%n",
+                writer.format(Locale.ROOT,
+                        "\"%s\",\"%s\",\"%s\",%d,%d,%.2f,%.2f,\"%s\"%n",
                         escapeCSV(article.getArticleNumber()),
                         escapeCSV(article.getName()),
                         escapeCSV(article.getDetails()),
@@ -2826,7 +2825,8 @@ public class SettingsGUI extends JFrame {
                         article.getMinStockLevel(),
                         article.getSellPrice(),
                         article.getPurchasePrice(),
-                        escapeCSV(article.getVendorName()));
+                        escapeCSV(article.getVendorName())
+                );
             }
             System.out.println("[SettingsGUI] Artikel erfolgreich nach " + csvFile.getAbsolutePath() + " exportiert (" + articles.size() + " Einträge)");
             successCount++;
