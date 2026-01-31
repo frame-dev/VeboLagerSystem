@@ -450,6 +450,11 @@ public class ArticleGUI extends JFrame {
         searchField.setForeground(ThemeManager.getTextPrimaryColor());
         searchField.setBackground(ThemeManager.getInputBackgroundColor());
 
+        JButton addToClientOrder = createRoundedButton(UnicodeSymbols.SHOPPING_CART + " Zur Kundenbestellung hinzufügen");
+        addToClientOrder.setToolTipText("Fügt die ausgewählten Artikel zur aktuellen Kundenbestellung hinzu");
+        addToClientOrder.addActionListener(e -> addSelectedArticlesToClientOrder());
+        searchPanel.add(addToClientOrder);
+
         JButton exportTableAsPdfBtn = createRoundedButton(UnicodeSymbols.DOWNLOAD + " Tabelle als PDF exportieren");
         exportTableAsPdfBtn.addActionListener(e -> exportTableAsPDF());
         searchPanel.add(exportTableAsPdfBtn);
@@ -506,6 +511,48 @@ public class ArticleGUI extends JFrame {
         tableScrollPane.getViewport().addComponentListener(resizeListener);
 
         SwingUtilities.invokeLater(this::adjustColumnWidths);
+    }
+
+    private void addSelectedArticlesToClientOrder() {
+        int[] selectedRows = articleTable.getSelectedRows();
+        if (selectedRows.length == 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Bitte wählen Sie mindestens einen Artikel aus, um ihn zur Kundenbestellung hinzuzufügen.",
+                    "Keine Auswahl", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+            return;
+        }
+
+        List<Article> articlesToAdd = new ArrayList<>();
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+
+        for (int selectedRow : selectedRows) {
+            int modelRow = articleTable.convertRowIndexToModel(selectedRow);
+            String artikelNr = (String) model.getValueAt(modelRow, 0);
+            Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
+            if (article != null) {
+                String input = JOptionPane.showInputDialog("Menge für Artikel (" + artikelNr + ")" + article.getName() + " eingeben:", "1");
+                if (input != null) {
+                    try {
+                        int menge = Integer.parseInt(input);
+                        ArticleListGUI.addArticle(article, menge);
+                        articlesToAdd.add(article);
+                    } catch (NumberFormatException ex) {
+                        JOptionPane.showMessageDialog(this,
+                                "Bitte geben Sie eine gültige Zahl für die Menge ein.",
+                                "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                    }
+                }
+            }
+        }
+
+        if (articlesToAdd.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Keine gültigen Artikel zum Hinzufügen gefunden.",
+                    "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+            return;
+        }
+        JOptionPane.showMessageDialog(null, "Artikel zur Kundenbestellung hinzugefügt.",
+                "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
     }
 
     @Override
