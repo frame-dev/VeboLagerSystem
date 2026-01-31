@@ -279,8 +279,8 @@ public class SplashscreenGUI extends JFrame {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            Double percent = getPercentComplete();
-            if (percent == null || percent <= 0.0) {
+            double percent = getPercentComplete();
+            if (percent <= 0.0) {
                 return;
             }
             Graphics2D g2 = (Graphics2D) g.create();
