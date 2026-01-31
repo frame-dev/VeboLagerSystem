@@ -18,6 +18,9 @@ public class ThemeManager {
 
     private static ThemeManager instance;
     private static Theme currentTheme = Theme.LIGHT;
+    private static Color customAccentColor;
+    private static Color customHeaderColor;
+    private static Color customButtonColor;
     private final List<Window> registeredWindows = new ArrayList<>();
 
     /**
@@ -216,6 +219,7 @@ public class ThemeManager {
             String darkModeStr = Main.settings.getProperty("dark_mode");
             boolean darkMode = Boolean.parseBoolean(darkModeStr);
             currentTheme = darkMode ? Theme.DARK : Theme.LIGHT;
+            loadCustomColorsFromSettings();
         }
     }
 
@@ -232,6 +236,54 @@ public class ThemeManager {
 
         applyUIDefaults();
         updateAllWindows();
+    }
+
+    public static void setCustomColors(Color accent, Color header, Color button) {
+        customAccentColor = accent;
+        customHeaderColor = header;
+        customButtonColor = button;
+        applyUIDefaults();
+        getInstance().updateAllWindows();
+    }
+
+    public static Color getCustomAccentColor() {
+        return customAccentColor;
+    }
+
+    public static Color getCustomHeaderColor() {
+        return customHeaderColor;
+    }
+
+    public static Color getCustomButtonColor() {
+        return customButtonColor;
+    }
+
+    private static void loadCustomColorsFromSettings() {
+        if (Main.settings == null) {
+            return;
+        }
+        customAccentColor = parseHexColor(Main.settings.getProperty("theme_accent_color"));
+        customHeaderColor = parseHexColor(Main.settings.getProperty("theme_header_color"));
+        customButtonColor = parseHexColor(Main.settings.getProperty("theme_button_color"));
+    }
+
+    private static Color parseHexColor(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        String hex = value.trim();
+        if (hex.startsWith("#")) {
+            hex = hex.substring(1);
+        }
+        if (hex.length() != 6) {
+            return null;
+        }
+        try {
+            int rgb = Integer.parseInt(hex, 16);
+            return new Color(rgb);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     public static boolean isDarkMode() {
@@ -776,7 +828,7 @@ public class ThemeManager {
     }
 
     public static Color getButtonBackgroundColor() {
-        return isDarkMode() ? Dark.BUTTON_BG : Light.BUTTON_BG;
+        return customButtonColor != null ? customButtonColor : (isDarkMode() ? Dark.BUTTON_BG : Light.BUTTON_BG);
     }
 
     public static Color getButtonForegroundColor() {
@@ -784,11 +836,11 @@ public class ThemeManager {
     }
 
     public static Color getButtonHoverColor() {
-        return isDarkMode() ? Dark.BUTTON_HOVER : Light.BUTTON_HOVER;
+        return getButtonHoverColor(getButtonBackgroundColor());
     }
 
     public static Color getButtonPressedColor() {
-        return isDarkMode() ? Dark.BUTTON_PRESSED : Light.BUTTON_PRESSED;
+        return getButtonPressedColor(getButtonBackgroundColor());
     }
 
     public static Color getButtonDisabledBackgroundColor() {
@@ -916,7 +968,7 @@ public class ThemeManager {
     }
 
     public static Color getHeaderBackgroundColor() {
-        return isDarkMode() ? Dark.HEADER_BG : Light.HEADER_BG;
+        return customHeaderColor != null ? customHeaderColor : (isDarkMode() ? Dark.HEADER_BG : Light.HEADER_BG);
     }
 
     public static Color getTableHeaderBackgroundColor() {
@@ -952,15 +1004,16 @@ public class ThemeManager {
     }
 
     public static Color getPrimaryColor() {
-        return isDarkMode() ? Dark.HEADER_BG : Light.HEADER_BG;
+        return getHeaderBackgroundColor();
     }
 
     public static Color getAccentColor() {
-        return new Color(52, 152, 219);
+        return customAccentColor != null ? customAccentColor : new Color(52, 152, 219);
     }
 
     public static Color getTableSelectionColor() {
-        return new Color(52, 152, 219, 60);
+        Color accent = getAccentColor();
+        return new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 60);
     }
 
     public static Color getTextOnPrimaryColor() {
@@ -1017,6 +1070,34 @@ public class ThemeManager {
 
     public static Color getTitleTextHighlightDarkColor() {
         return isDarkMode() ? Dark.TITLE_TEXT_HIGHLIGHT_DARK : Light.TITLE_TEXT_HIGHLIGHT_DARK;
+    }
+
+    public static Color withAlpha(Color base, int alpha) {
+        if (base == null) {
+            return new Color(0, 0, 0, alpha);
+        }
+        return new Color(base.getRed(), base.getGreen(), base.getBlue(), alpha);
+    }
+
+    public static Color getHeaderGradientColor() {
+        Color base = getHeaderBackgroundColor();
+        int delta = isDarkMode() ? 20 : -20;
+        return adjustColor(base, delta);
+    }
+
+    public static Color adjustColor(Color base, int delta) {
+        if (base == null) {
+            return null;
+        }
+        return new Color(
+                clamp(base.getRed() + delta),
+                clamp(base.getGreen() + delta),
+                clamp(base.getBlue() + delta)
+        );
+    }
+
+    private static int clamp(int value) {
+        return Math.max(0, Math.min(255, value));
     }
 
     public static Color getInfoBorderColor() {

@@ -87,10 +87,7 @@ public class SupplierOrderGUI extends JFrame {
 
         JLabel subtitle = new JLabel("Verwalten Sie Ihre Artikel-Nachbestellungen");
         subtitle.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        Color subtitleColor = ThemeManager.isDarkMode()
-                ? new Color(220, 230, 240, 230)
-                : new Color(255, 255, 255, 240);
-        subtitle.setForeground(subtitleColor);
+        subtitle.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 230));
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         titleTextPanel.add(title);
@@ -130,10 +127,10 @@ public class SupplierOrderGUI extends JFrame {
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         actionPanel.setBackground(ThemeManager.getBackgroundColor());
 
-        JButton removeBtn = createButton(UnicodeSymbols.TRASH + " Entfernen", new Color(220, 53, 69), e -> removeSelected());
-        JButton clearBtn = createButton(UnicodeSymbols.BROOM + " Alle löschen", new Color(243, 156, 18), e -> clearAll());
-        JButton saveBtn = createButton(UnicodeSymbols.FLOPPY + " Speichern", new Color(52, 152, 219), e -> persist());
-        JButton refreshBtn = createButton(UnicodeSymbols.REFRESH + " Aktualisieren", new Color(40, 167, 69), e -> refreshTable());
+        JButton removeBtn = createButton(UnicodeSymbols.TRASH + " Entfernen", ThemeManager.getErrorColor(), e -> removeSelected());
+        JButton clearBtn = createButton(UnicodeSymbols.BROOM + " Alle löschen", ThemeManager.getWarningColor(), e -> clearAll());
+        JButton saveBtn = createButton(UnicodeSymbols.FLOPPY + " Speichern", ThemeManager.getAccentColor(), e -> persist());
+        JButton refreshBtn = createButton(UnicodeSymbols.REFRESH + " Aktualisieren", ThemeManager.getSuccessColor(), e -> refreshTable());
 
         actionPanel.add(removeBtn);
         actionPanel.add(clearBtn);
@@ -148,9 +145,7 @@ public class SupplierOrderGUI extends JFrame {
     private static GradientPanel getGradientPanel() {
         GradientPanel header = new GradientPanel(
                 ThemeManager.getHeaderBackgroundColor(),
-                ThemeManager.isDarkMode()
-                        ? new Color(35, 47, 62)
-                        : new Color(41, 128, 185)
+                ThemeManager.getHeaderGradientColor()
         );
         header.setLayout(new BorderLayout());
         header.setPreferredSize(new Dimension(0, 100));

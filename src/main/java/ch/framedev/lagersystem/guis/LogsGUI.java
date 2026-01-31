@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
+import ch.framedev.lagersystem.utils.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import ch.framedev.lagersystem.utils.VendorOrderLogging;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -68,7 +69,7 @@ public class LogsGUI extends JFrame {
         // Main panel with padding and background
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
-        mainPanel.setBackground(new Color(242, 245, 250));
+        mainPanel.setBackground(ThemeManager.getBackgroundColor());
         add(mainPanel, BorderLayout.CENTER);
 
         // Header panel with gradient and shadow
@@ -76,7 +77,7 @@ public class LogsGUI extends JFrame {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
-                GradientPaint gp = new GradientPaint(0, 0, new Color(30, 58, 95), getWidth(), 0, new Color(41, 128, 185));
+                GradientPaint gp = new GradientPaint(0, 0, ThemeManager.getHeaderBackgroundColor(), getWidth(), 0, ThemeManager.getHeaderGradientColor());
                 g2.setPaint(gp);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 22, 22);
                 g2.setColor(new Color(0,0,0,30));
@@ -90,12 +91,12 @@ public class LogsGUI extends JFrame {
 
         JLabel titleLabel = new JLabel(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 30));
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
         JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Protokolle und Systemereignisse anzeigen");
         subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 17));
-        subtitleLabel.setForeground(new Color(220, 230, 240, 230));
+        subtitleLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 230));
         subtitleLabel.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
         headerPanel.add(subtitleLabel, BorderLayout.SOUTH);
 
@@ -107,13 +108,13 @@ public class LogsGUI extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 18, 12));
         buttonPanel.setOpaque(false);
         JButton orderLogsButton = new JButton(UnicodeSymbols.PACKAGE + " Bestellungs-Protokolle");
-        styleButton(orderLogsButton, new Color(39, 174, 96), Color.WHITE);
+        styleButton(orderLogsButton, ThemeManager.getSuccessColor(), ThemeManager.getTextOnPrimaryColor());
         orderLogsButton.addActionListener(e -> setCategory(LogCategory.ORDER));
         JButton supplierLogsButton = new JButton(UnicodeSymbols.TRUCK + " Lieferanten-Protokolle");
-        styleButton(supplierLogsButton, new Color(41, 128, 185), Color.WHITE);
+        styleButton(supplierLogsButton, ThemeManager.getAccentColor(), ThemeManager.getTextOnPrimaryColor());
         supplierLogsButton.addActionListener(e -> setCategory(LogCategory.SUPPLIER));
         JButton supplierOrderLogsButton = new JButton(UnicodeSymbols.DOCUMENT + " Lieferanten-Bestellungs-Protokolle");
-        styleButton(supplierOrderLogsButton, new Color(142, 68, 173), Color.WHITE);
+        styleButton(supplierOrderLogsButton, ThemeManager.getWarningColor(), ThemeManager.getTextOnPrimaryColor());
         supplierOrderLogsButton.addActionListener(e -> setCategory(LogCategory.SUPPLIER_ORDER));
         buttonPanel.add(supplierOrderLogsButton);
         buttonPanel.add(orderLogsButton);
@@ -122,17 +123,17 @@ public class LogsGUI extends JFrame {
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 12));
         filterPanel.setOpaque(false);
         JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche:");
-        searchLabel.setForeground(new Color(44, 62, 80));
+        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
         filterPanel.add(searchLabel);
         searchField.setToolTipText("Textsuche in Logs");
         filterPanel.add(searchField);
         JLabel fromLabel = new JLabel("Von (dd.MM.yyyy):");
-        fromLabel.setForeground(new Color(44, 62, 80));
+        fromLabel.setForeground(ThemeManager.getTextPrimaryColor());
         filterPanel.add(fromLabel);
         fromDateField.setToolTipText("z.B. 01.01.2024");
         filterPanel.add(fromDateField);
         JLabel toLabel = new JLabel("Bis (dd.MM.yyyy):");
-        toLabel.setForeground(new Color(44, 62, 80));
+        toLabel.setForeground(ThemeManager.getTextPrimaryColor());
         filterPanel.add(toLabel);
         toDateField.setToolTipText("z.B. 31.12.2024");
         filterPanel.add(toDateField);
@@ -180,8 +181,8 @@ public class LogsGUI extends JFrame {
         contentPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         logTextPane.setEditable(false);
         logTextPane.setFont(SettingsGUI.getFontByName(Font.PLAIN, 15));
-        logTextPane.setBackground(new Color(250, 250, 250));
-        logTextPane.setForeground(new Color(44, 62, 80));
+        logTextPane.setBackground(ThemeManager.getInputBackgroundColor());
+        logTextPane.setForeground(ThemeManager.getTextPrimaryColor());
         logTextPane.setBorder(BorderFactory.createEmptyBorder(16, 18, 16, 18));
         JScrollPane scrollPane = new JScrollPane(logTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -401,14 +402,14 @@ public class LogsGUI extends JFrame {
         style = logTextPane.addStyle(styleName, null);
         StyleConstants.setFontFamily(style, logTextPane.getFont().getFamily());
         StyleConstants.setFontSize(style, logTextPane.getFont().getSize());
-        StyleConstants.setForeground(style, new Color(44, 62, 80));
+        StyleConstants.setForeground(style, ThemeManager.getTextPrimaryColor());
 
         if ("info".equals(styleName)) {
-            StyleConstants.setForeground(style, new Color(52, 152, 219));
+            StyleConstants.setForeground(style, ThemeManager.getInfoColor());
         } else if ("warn".equals(styleName)) {
-            StyleConstants.setForeground(style, new Color(243, 156, 18));
+            StyleConstants.setForeground(style, ThemeManager.getWarningColor());
         } else if ("error".equals(styleName)) {
-            StyleConstants.setForeground(style, new Color(231, 76, 60));
+            StyleConstants.setForeground(style, ThemeManager.getErrorColor());
         }
         return style;
     }

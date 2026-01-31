@@ -471,9 +471,7 @@ public class ArticleGUI extends JFrame {
         showWarningsBottomBtn.setBorderPainted(false);
         showWarningsBottomBtn.setContentAreaFilled(false);
         showWarningsBottomBtn.setOpaque(true);
-        showWarningsBottomBtn.setBackground(ThemeManager.isDarkMode()
-                ? ThemeManager.getWarningForegroundColor()
-                : new Color(241, 196, 15));
+        showWarningsBottomBtn.setBackground(ThemeManager.getWarningColor());
         showWarningsBottomBtn.setForeground(Color.WHITE);
         showWarningsBottomBtn.setFont(showWarningsBottomBtn.getFont().deriveFont(Font.BOLD, 13f));
         showWarningsBottomBtn.setBorder(BorderFactory.createCompoundBorder(
@@ -490,9 +488,7 @@ public class ArticleGUI extends JFrame {
 
             @Override
             public void mouseExited(MouseEvent e) {
-                showWarningsBottomBtn.setBackground(ThemeManager.isDarkMode()
-                        ? ThemeManager.getWarningForegroundColor()
-                        : new Color(241, 196, 15));
+                showWarningsBottomBtn.setBackground(ThemeManager.getWarningColor());
             }
         });
         searchPanel.add(showWarningsBottomBtn);
@@ -1013,9 +1009,7 @@ public class ArticleGUI extends JFrame {
         mainContainer.setBackground(ThemeManager.getBackgroundColor());
 
         // Add subtle shadow border
-        Color shadowColor = ThemeManager.isDarkMode()
-                ? new Color(0, 0, 0, 80)
-                : new Color(0, 0, 0, 30);
+        Color shadowColor = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 80 : 30);
         mainContainer.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(shadowColor, 1, true),
                 BorderFactory.createEmptyBorder(0, 0, 0, 0)
@@ -1068,12 +1062,8 @@ public class ArticleGUI extends JFrame {
             }
 
             private GradientPaint getGradientPaint() {
-                Color color1 = ThemeManager.isDarkMode()
-                        ? new Color(30, 58, 95)   // Dark navy blue
-                        : new Color(41, 128, 185); // Professional blue
-                Color color2 = ThemeManager.isDarkMode()
-                        ? new Color(44, 62, 80)   // Slightly lighter
-                        : new Color(52, 152, 219); // Brighter blue
+                Color color1 = ThemeManager.getHeaderBackgroundColor();
+                Color color2 = ThemeManager.getHeaderGradientColor();
 
                 GradientPaint gradient = new GradientPaint(
                         0, 0, color1,
@@ -1092,8 +1082,8 @@ public class ArticleGUI extends JFrame {
      */
     private JButton createDialogCloseButton(JDialog dialog, Object[][] resultHolder) {
         JButton closeBtn = new JButton("X");
-        closeBtn.setForeground(new Color(255, 255, 255, 200));
-        closeBtn.setBackground(new Color(255, 255, 255, 0));
+        closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+        closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
         closeBtn.setContentAreaFilled(false);
@@ -1106,15 +1096,15 @@ public class ArticleGUI extends JFrame {
             @Override
             public void mouseEntered(MouseEvent e) {
                 closeBtn.setForeground(Color.WHITE);
-                closeBtn.setBackground(new Color(231, 76, 60, 100)); // Red tint on hover
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 100)); // Red tint on hover
                 closeBtn.setContentAreaFilled(true);
                 closeBtn.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                closeBtn.setForeground(new Color(255, 255, 255, 200));
-                closeBtn.setBackground(new Color(255, 255, 255, 0));
+                closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
                 closeBtn.setContentAreaFilled(false);
                 closeBtn.setBorder(null);
             }
@@ -1210,9 +1200,7 @@ public class ArticleGUI extends JFrame {
 
         // Blue accent for required fields (marked with *)
         if (text.contains("*")) {
-            Color blueAccent = ThemeManager.isDarkMode()
-                    ? new Color(100, 170, 255) // Lighter blue for dark mode
-                    : new Color(52, 152, 219);  // Professional blue for light mode
+            Color blueAccent = ThemeManager.getAccentColor();
 
             // Split text to style the asterisk differently
             String labelText = text.replace("*", "").trim();
@@ -1236,9 +1224,7 @@ public class ArticleGUI extends JFrame {
         field.setCaretColor(ThemeManager.getAccentColor());
 
         Color normalBorder = ThemeManager.getBorderColor();
-        Color focusBorder = ThemeManager.isDarkMode()
-                ? new Color(100, 170, 255)  // Lighter blue for dark mode
-                : new Color(52, 152, 219);   // Professional blue
+        Color focusBorder = ThemeManager.getAccentColor();
 
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(normalBorder, 1, true),
@@ -1304,9 +1290,7 @@ public class ArticleGUI extends JFrame {
         spinner.setBackground(ThemeManager.getInputBackgroundColor());
 
         Color normalBorder = ThemeManager.getBorderColor();
-        Color focusBorder = ThemeManager.isDarkMode()
-                ? new Color(100, 170, 255)
-                : new Color(52, 152, 219);
+        Color focusBorder = ThemeManager.getAccentColor();
 
         JComponent editor = spinner.getEditor();
         if (editor instanceof JSpinner.DefaultEditor defaultEditor) {
@@ -1380,9 +1364,7 @@ public class ArticleGUI extends JFrame {
         panel.add(createDialogLabel(labelText), BorderLayout.NORTH);
 
         Color normalBorder = ThemeManager.getBorderColor();
-        Color focusBorder = ThemeManager.isDarkMode()
-                ? new Color(100, 170, 255)
-                : new Color(52, 152, 219);
+        Color focusBorder = ThemeManager.getAccentColor();
 
         JFormattedTextField field = new JFormattedTextField(formatter);
         field.setColumns(10);
@@ -1445,9 +1427,7 @@ public class ArticleGUI extends JFrame {
         cancelBtn.setForeground(ThemeManager.getTextPrimaryColor());
 
         Color baseColor = ThemeManager.getSurfaceColor();
-        Color hoverColor = ThemeManager.isDarkMode()
-                ? new Color(70, 70, 70)
-                : new Color(220, 225, 230);
+        Color hoverColor = ThemeManager.getButtonHoverColor(baseColor);
 
         cancelBtn.setBackground(baseColor);
         cancelBtn.setBorder(BorderFactory.createCompoundBorder(
@@ -1487,15 +1467,9 @@ public class ArticleGUI extends JFrame {
         okBtn.setForeground(Color.WHITE);
 
         // Blue gradient colors
-        Color baseColor = ThemeManager.isDarkMode()
-                ? new Color(52, 152, 219)   // Bright blue for dark mode
-                : new Color(41, 128, 185);   // Professional blue for light mode
-        Color hoverColor = ThemeManager.isDarkMode()
-                ? new Color(72, 170, 240)
-                : new Color(52, 152, 219);
-        Color pressedColor = ThemeManager.isDarkMode()
-                ? new Color(32, 120, 200)
-                : new Color(31, 97, 141);
+        Color baseColor = ThemeManager.getButtonBackgroundColor();
+        Color hoverColor = ThemeManager.getButtonHoverColor(baseColor);
+        Color pressedColor = ThemeManager.getButtonPressedColor(baseColor);
 
         okBtn.setBackground(baseColor);
         okBtn.setBorder(BorderFactory.createCompoundBorder(
@@ -3000,10 +2974,10 @@ public class ArticleGUI extends JFrame {
             dialog.setLayout(new BorderLayout());
 
             // Main panel with rounded corners
-            RoundedPanel mainPanel = new RoundedPanel(new Color(245, 247, 250), 20);
+            RoundedPanel mainPanel = new RoundedPanel(ThemeManager.getBackgroundColor(), 20);
             mainPanel.setLayout(new BorderLayout(0, 0));
             mainPanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(220, 225, 230), 2),
+                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 2),
                     BorderFactory.createEmptyBorder(0, 0, 0, 0)
             ));
 
@@ -3013,18 +2987,18 @@ public class ArticleGUI extends JFrame {
             String icon;
             switch (warning.getType()) {
                 case LOW_STOCK:
-                    headerColor = new Color(241, 196, 15); // Orange/Yellow
-                    accentColor = new Color(243, 156, 18);
+                    headerColor = ThemeManager.getWarningColor();
+                    accentColor = ThemeManager.adjustColor(headerColor, -20);
                     icon = UnicodeSymbols.WARNING;
                     break;
                 case ORDER_NEEDED:
-                    headerColor = new Color(231, 76, 60); // Red
-                    accentColor = new Color(192, 57, 43);
+                    headerColor = ThemeManager.getErrorColor();
+                    accentColor = ThemeManager.adjustColor(headerColor, -20);
                     icon = UnicodeSymbols.CIRCLE;
                     break;
                 default:
-                    headerColor = new Color(52, 152, 219); // Blue
-                    accentColor = new Color(41, 128, 185);
+                    headerColor = ThemeManager.getAccentColor();
+                    accentColor = ThemeManager.adjustColor(headerColor, -20);
                     icon = UnicodeSymbols.INFO;
                     break;
             }
@@ -3053,15 +3027,15 @@ public class ArticleGUI extends JFrame {
                 @Override
                 public void mouseEntered(MouseEvent e) {
                     closeBtn.setForeground(Color.WHITE);
-                    closeBtn.setBackground(new Color(231, 76, 60, 100)); // Red tint on hover
+                    closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 100)); // Red tint on hover
                     closeBtn.setContentAreaFilled(true);
                     closeBtn.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
                 }
 
                 @Override
                 public void mouseExited(MouseEvent e) {
-                    closeBtn.setForeground(new Color(255, 255, 255, 200));
-                    closeBtn.setBackground(new Color(255, 255, 255, 0));
+                    closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+                    closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
                     closeBtn.setContentAreaFilled(false);
                     closeBtn.setBorder(null);
                 }
@@ -3073,7 +3047,7 @@ public class ArticleGUI extends JFrame {
 
             // Content panel
             JPanel content = new JPanel(new GridBagLayout());
-            content.setBackground(Color.WHITE);
+            content.setBackground(ThemeManager.getCardBackgroundColor());
             content.setBorder(BorderFactory.createEmptyBorder(24, 20, 20, 20));
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.gridx = 0;
@@ -3085,7 +3059,7 @@ public class ArticleGUI extends JFrame {
             // Title
             JLabel titleLabel = new JLabel("<html><b>" + warning.getTitle() + "</b></html>");
             titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
-            titleLabel.setForeground(new Color(44, 62, 80));
+            titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
             content.add(titleLabel, gbc);
 
             // Message
@@ -3096,8 +3070,8 @@ public class ArticleGUI extends JFrame {
             messageArea.setLineWrap(true);
             messageArea.setEditable(false);
             messageArea.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-            messageArea.setForeground(new Color(52, 73, 94));
-            messageArea.setBackground(Color.WHITE);
+            messageArea.setForeground(ThemeManager.getTextPrimaryColor());
+            messageArea.setBackground(ThemeManager.getCardBackgroundColor());
             messageArea.setBorder(null);
             messageArea.setRows(4);
             messageArea.setColumns(35);
@@ -3108,7 +3082,7 @@ public class ArticleGUI extends JFrame {
             gbc.insets = new Insets(0, 0, 20, 0);
             JLabel dateLabel = new JLabel(UnicodeSymbols.CALENDAR + " Datum: " + warning.getDate());
             dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-            dateLabel.setForeground(new Color(127, 140, 141));
+            dateLabel.setForeground(ThemeManager.getTextSecondaryColor());
             content.add(dateLabel, gbc);
 
             // Status indicator
@@ -3116,7 +3090,7 @@ public class ArticleGUI extends JFrame {
             gbc.insets = new Insets(0, 0, 24, 0);
             JLabel statusLabel = new JLabel(warning.isResolved() ? UnicodeSymbols.CHECKMARK + " Gelöst" : UnicodeSymbols.ERROR + " Ungelöst");
             statusLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
-            statusLabel.setForeground(warning.isResolved() ? new Color(39, 174, 96) : new Color(231, 76, 60));
+            statusLabel.setForeground(warning.isResolved() ? ThemeManager.getSuccessColor() : ThemeManager.getErrorColor());
             content.add(statusLabel, gbc);
 
             // Button panel
@@ -3126,8 +3100,8 @@ public class ArticleGUI extends JFrame {
             buttonPanel.setOpaque(false);
 
             if (!warning.isResolved()) {
-                JButton resolveBtn = new JButton("✓ Als gelöst markieren");
-                styleButton(resolveBtn, new Color(39, 174, 96), Color.WHITE);
+                JButton resolveBtn = new JButton("OK Als gelöst markieren");
+                styleButton(resolveBtn, ThemeManager.getSuccessColor(), ThemeManager.getTextOnPrimaryColor());
                 resolveBtn.addActionListener(e -> {
                     warning.setResolved(true);
                     warning.setDisplayed(true);
@@ -5097,8 +5071,8 @@ public class ArticleGUI extends JFrame {
 
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
         closeBtn.setToolTipText("Schliesst dieses Fenster");
-        closeBtn.setForeground(new Color(255, 255, 255, 200));
-        closeBtn.setBackground(new Color(255, 255, 255, 0));
+        closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+        closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
         closeBtn.setContentAreaFilled(false);
@@ -5109,15 +5083,15 @@ public class ArticleGUI extends JFrame {
             @Override
             public void mouseEntered(MouseEvent e) {
                 closeBtn.setForeground(Color.WHITE);
-                closeBtn.setBackground(new Color(231, 76, 60, 100));
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 100));
                 closeBtn.setContentAreaFilled(true);
                 closeBtn.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                closeBtn.setForeground(new Color(255, 255, 255, 200));
-                closeBtn.setBackground(new Color(255, 255, 255, 0));
+                closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
                 closeBtn.setContentAreaFilled(false);
                 closeBtn.setBorder(null);
             }

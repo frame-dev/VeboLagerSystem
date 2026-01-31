@@ -313,8 +313,8 @@ public class VendorGUI extends JFrame {
         // Close button
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
         closeBtn.setToolTipText("Fenster schliessen");
-        closeBtn.setForeground(new Color(255, 255, 255, 200));
-        closeBtn.setBackground(new Color(255, 255, 255, 0));
+        closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+        closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
         closeBtn.setContentAreaFilled(false);
@@ -324,16 +324,16 @@ public class VendorGUI extends JFrame {
         closeBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                closeBtn.setForeground(Color.WHITE);
-                closeBtn.setBackground(new Color(231, 76, 60, 100));
+                closeBtn.setForeground(ThemeManager.getTextOnPrimaryColor());
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 100));
                 closeBtn.setContentAreaFilled(true);
                 closeBtn.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                closeBtn.setForeground(new Color(255, 255, 255, 200));
-                closeBtn.setBackground(new Color(255, 255, 255, 0));
+                closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
                 closeBtn.setContentAreaFilled(false);
                 closeBtn.setBorder(null);
             }
@@ -363,9 +363,7 @@ public class VendorGUI extends JFrame {
             JLabel label = new JLabel(text);
             label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
             if (text.contains("*")) {
-                Color blueAccent = ThemeManager.isDarkMode()
-                        ? new Color(100, 170, 255)
-                        : new Color(52, 152, 219);
+                Color blueAccent = ThemeManager.getAccentColor();
                 String labelText = text.replace("*", "").trim();
                 label.setText("<html>" + labelText + " <span style='color: rgb(" +
                         blueAccent.getRed() + "," + blueAccent.getGreen() + "," + blueAccent.getBlue() +
@@ -452,9 +450,7 @@ public class VendorGUI extends JFrame {
         cancelBtn.setToolTipText("Abbrechen des Vorgangs");
         cancelBtn.setForeground(ThemeManager.getTextPrimaryColor());
         Color cancelBaseColor = ThemeManager.getSurfaceColor();
-        Color cancelHoverColor = ThemeManager.isDarkMode()
-                ? new Color(70, 70, 70)
-                : new Color(220, 225, 230);
+        Color cancelHoverColor = ThemeManager.getButtonHoverColor(cancelBaseColor);
         cancelBtn.setBackground(cancelBaseColor);
         cancelBtn.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
@@ -479,15 +475,9 @@ public class VendorGUI extends JFrame {
         okBtn.setToolTipText("Neuen Lieferanten hinzufügen");
         okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         okBtn.setForeground(Color.WHITE);
-        Color okBaseColor = ThemeManager.isDarkMode()
-                ? new Color(52, 152, 219)
-                : new Color(41, 128, 185);
-        Color okHoverColor = ThemeManager.isDarkMode()
-                ? new Color(72, 170, 240)
-                : new Color(52, 152, 219);
-        Color okPressedColor = ThemeManager.isDarkMode()
-                ? new Color(32, 120, 200)
-                : new Color(31, 97, 141);
+        Color okBaseColor = ThemeManager.getButtonBackgroundColor();
+        Color okHoverColor = ThemeManager.getButtonHoverColor(okBaseColor);
+        Color okPressedColor = ThemeManager.getButtonPressedColor(okBaseColor);
         okBtn.setBackground(okBaseColor);
         okBtn.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(okBaseColor.darker(), 1, true),
@@ -569,12 +559,8 @@ public class VendorGUI extends JFrame {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-                Color color1 = ThemeManager.isDarkMode()
-                        ? new Color(30, 58, 95)
-                        : new Color(41, 128, 185);
-                Color color2 = ThemeManager.isDarkMode()
-                        ? new Color(44, 62, 80)
-                        : new Color(52, 152, 219);
+                Color color1 = ThemeManager.getHeaderBackgroundColor();
+                Color color2 = ThemeManager.getHeaderGradientColor();
 
                 GradientPaint gradient = new GradientPaint(
                         0, 0, color1,
@@ -601,9 +587,7 @@ public class VendorGUI extends JFrame {
         field.setCaretColor(ThemeManager.getAccentColor());
 
         Color normalBorder = ThemeManager.getBorderColor();
-        Color focusBorder = ThemeManager.isDarkMode()
-                ? new Color(100, 170, 255)
-                : new Color(52, 152, 219);
+        Color focusBorder = ThemeManager.getAccentColor();
 
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(normalBorder, 1, true),
@@ -672,8 +656,8 @@ public class VendorGUI extends JFrame {
         // Close button
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
         closeBtn.setToolTipText("Fenster schliessen");
-        closeBtn.setForeground(new Color(255, 255, 255, 200));
-        closeBtn.setBackground(new Color(255, 255, 255, 0));
+        closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+        closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
         closeBtn.setContentAreaFilled(false);
@@ -683,16 +667,16 @@ public class VendorGUI extends JFrame {
         closeBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                closeBtn.setForeground(Color.WHITE);
-                closeBtn.setBackground(new Color(231, 76, 60, 100));
+                closeBtn.setForeground(ThemeManager.getTextOnPrimaryColor());
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 100));
                 closeBtn.setContentAreaFilled(true);
                 closeBtn.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                closeBtn.setForeground(new Color(255, 255, 255, 200));
-                closeBtn.setBackground(new Color(255, 255, 255, 0));
+                closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
                 closeBtn.setContentAreaFilled(false);
                 closeBtn.setBorder(null);
             }
@@ -808,9 +792,7 @@ public class VendorGUI extends JFrame {
         cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         cancelBtn.setForeground(ThemeManager.getTextPrimaryColor());
         Color cancelBaseColor = ThemeManager.getSurfaceColor();
-        Color cancelHoverColor = ThemeManager.isDarkMode()
-                ? new Color(70, 70, 70)
-                : new Color(220, 225, 230);
+        Color cancelHoverColor = ThemeManager.getButtonHoverColor(cancelBaseColor);
         cancelBtn.setBackground(cancelBaseColor);
         cancelBtn.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
@@ -835,15 +817,9 @@ public class VendorGUI extends JFrame {
         okBtn.setToolTipText("Änderungen speichern");
         okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         okBtn.setForeground(Color.WHITE);
-        Color okBaseColor = ThemeManager.isDarkMode()
-                ? new Color(52, 152, 219)
-                : new Color(41, 128, 185);
-        Color okHoverColor = ThemeManager.isDarkMode()
-                ? new Color(72, 170, 240)
-                : new Color(52, 152, 219);
-        Color okPressedColor = ThemeManager.isDarkMode()
-                ? new Color(32, 120, 200)
-                : new Color(31, 97, 141);
+        Color okBaseColor = ThemeManager.getButtonBackgroundColor();
+        Color okHoverColor = ThemeManager.getButtonHoverColor(okBaseColor);
+        Color okPressedColor = ThemeManager.getButtonPressedColor(okBaseColor);
         okBtn.setBackground(okBaseColor);
         okBtn.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(okBaseColor.darker(), 1, true),
@@ -1179,4 +1155,3 @@ public class VendorGUI extends JFrame {
         }
     }
 }
-

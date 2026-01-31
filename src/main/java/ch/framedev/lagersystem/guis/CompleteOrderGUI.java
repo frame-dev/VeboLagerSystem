@@ -57,7 +57,7 @@ public class CompleteOrderGUI extends JFrame {
         headerPanel.setPreferredSize(new Dimension(720, 80));
         headerPanel.setLayout(new GridBagLayout());
 
-        JLabel iconLabel = new JLabel("✓");
+        JLabel iconLabel = new JLabel("OK");
         iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 32));
         iconLabel.setForeground(new Color(255, 255, 255, 180));
 
@@ -277,7 +277,7 @@ public class CompleteOrderGUI extends JFrame {
         for (Article article : articles) {
             gbc.gridy++;
             int qty = order.getOrderedArticles().get(article.getArticleNumber());
-            String articleInfo = String.format("  • %s (%s) - Menge: %d",
+            String articleInfo = String.format("  - %s (%s) - Menge: %d",
                     safe(article.getName()), safe(article.getArticleNumber()), qty);
             JLabel articleLabel = new JLabel(articleInfo);
             articleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
@@ -348,11 +348,11 @@ public class CompleteOrderGUI extends JFrame {
             int newStock = currentStock - qty;
 
             if (currentStock < qty) {
-                errors.add(String.format("• %s (%s): Lager=%d, Bestellt=%d (Fehlt: %d)",
+                errors.add(String.format("- %s (%s): Lager=%d, Bestellt=%d (Fehlt: %d)",
                         safe(article.getName()), safe(article.getArticleNumber()),
                         currentStock, qty, qty - currentStock));
             } else if (newStock < article.getMinStockLevel()) {
-                warnings.add(String.format("• %s (%s): Neuer Bestand=%d < Mindestbestand=%d",
+                warnings.add(String.format("- %s (%s): Neuer Bestand=%d < Mindestbestand=%d",
                         safe(article.getName()), safe(article.getArticleNumber()),
                         newStock, article.getMinStockLevel()));
             }
@@ -385,7 +385,7 @@ public class CompleteOrderGUI extends JFrame {
             int currentStock = article.getStockQuantity();
             if (currentStock < qty) {
                 insufficientStockErrors.add(String.format(
-                        "• %s (%s): Benötigt=%d, Verfügbar=%d (Fehlt: %d)",
+                        "- %s (%s): Benötigt=%d, Verfügbar=%d (Fehlt: %d)",
                         safe(article.getName()),
                         safe(article.getArticleNumber()),
                         qty,
@@ -400,8 +400,8 @@ public class CompleteOrderGUI extends JFrame {
             errorMsg.append("Folgende Artikel haben nicht ausreichend Lagerbestand:<br/><br/>");
             insufficientStockErrors.forEach(err -> errorMsg.append(err).append("<br/>"));
             errorMsg.append("<br/><b>Optionen:</b><br/>");
-            errorMsg.append("• <b>Ja</b>: Bestellung mit verfügbarem Bestand abschließen (Fehlmenge wird protokolliert)<br/>");
-            errorMsg.append("• <b>Nein</b>: Vorgang abbrechen</html>");
+            errorMsg.append("- <b>Ja</b>: Bestellung mit verfügbarem Bestand abschließen (Fehlmenge wird protokolliert)<br/>");
+            errorMsg.append("- <b>Nein</b>: Vorgang abbrechen</html>");
 
             int choice = JOptionPane.showConfirmDialog(this,
                     errorMsg.toString(),
@@ -521,7 +521,7 @@ public class CompleteOrderGUI extends JFrame {
         resultMsg.append("<b>Bestell-ID:</b> ").append(safe(selected.getOrderId())).append("<br/><br/>");
 
         if (!fulfilledItems.isEmpty()) {
-            resultMsg.append("<b style='color:green;'>✓ Vollständig erfüllt:</b><br/>");
+            resultMsg.append("<b style='color:green;'>OK Vollständig erfüllt:</b><br/>");
             fulfilledItems.forEach(item -> resultMsg.append("  ").append(item).append("<br/>"));
             resultMsg.append("<br/>");
         }

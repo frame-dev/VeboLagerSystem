@@ -469,11 +469,11 @@ public class OrderGUI extends JFrame {
                 if (value != null) {
                     String status = value.toString();
                     if ("Abgeschlossen".equals(status)) {
-                        c.setBackground(new Color(200, 230, 201));
-                        c.setForeground(new Color(27, 94, 32));
+                        c.setBackground(ThemeManager.withAlpha(ThemeManager.getSuccessColor(), 60));
+                        c.setForeground(ThemeManager.adjustColor(ThemeManager.getSuccessColor(), -80));
                     } else if ("In Bearbeitung".equals(status)) {
-                        c.setBackground(new Color(255, 243, 224));
-                        c.setForeground(new Color(230, 81, 0));
+                        c.setBackground(ThemeManager.withAlpha(ThemeManager.getWarningColor(), 60));
+                        c.setForeground(ThemeManager.adjustColor(ThemeManager.getWarningColor(), -80));
                     }
                 }
                 return c;
@@ -1092,4 +1092,3 @@ public class OrderGUI extends JFrame {
         }
     }
 }
-

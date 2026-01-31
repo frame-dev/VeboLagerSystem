@@ -151,9 +151,7 @@ public class MainGUI extends JFrame {
         // Create gradient background panel
         GradientPanel headerPanel = new GradientPanel(
             ThemeManager.getHeaderBackgroundColor(),
-            ThemeManager.isDarkMode()
-                ? new Color(35, 47, 62)  // Darker gradient for dark mode
-                : new Color(41, 128, 185) // Lighter blue gradient for light mode
+            ThemeManager.getHeaderGradientColor()
         );
         headerPanel.setLayout(new BorderLayout());
         headerPanel.setPreferredSize(new Dimension(0, 149));
@@ -204,10 +202,7 @@ public class MainGUI extends JFrame {
         // Subtitle aligned with the "V" in "VEBO" (after icon)
         JLabel subtitleLabel = new JLabel("Zentrale Verwaltung für Artikel, Bestellungen und Lieferanten");
         subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 15));
-        Color subtitleColor = ThemeManager.isDarkMode()
-            ? new Color(220, 230, 240, 230)
-            : new Color(255, 255, 255, 240);
-        subtitleLabel.setForeground(subtitleColor);
+        subtitleLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 230));
 
         // Create wrapper with FlowLayout matching the title row
         JPanel subtitleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
@@ -242,10 +237,7 @@ public class MainGUI extends JFrame {
 
         JLabel dateLabel = new JLabel(new SimpleDateFormat("EEEE, dd. MMMM yyyy").format(new Date()));
         dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        Color dateColor = ThemeManager.isDarkMode()
-            ? new Color(220, 230, 240, 220)
-            : new Color(255, 255, 255, 220);
-        dateLabel.setForeground(dateColor);
+        dateLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
         dateLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
         rightPanel.add(settingsButton);
@@ -356,13 +348,8 @@ public class MainGUI extends JFrame {
      */
     private void applyTabBackgrounds() {
         // More visible and attractive tab backgrounds with better contrast
-        Color unselectedBg = ThemeManager.isDarkMode()
-                ? new Color(45, 52, 64)  // Darker slate for dark mode (more contrast)
-                : new Color(220, 225, 235); // Light gray-blue for light mode
-
-        Color selectedBg = ThemeManager.isDarkMode()
-                ? new Color(70, 82, 100)  // Brighter slate for selected tab in dark mode (more contrast)
-                : new Color(255, 255, 255); // Pure white for selected tab in light mode
+        Color unselectedBg = ThemeManager.getSurfaceColor();
+        Color selectedBg = ThemeManager.getCardBackgroundColor();
 
         // Set initial background colors
         for (int i = 0; i < tabbedPane.getTabCount(); i++) {
@@ -389,9 +376,8 @@ public class MainGUI extends JFrame {
                         BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                         BorderFactory.createEmptyBorder(2, 2, 2, 2)
                 ),
-                BorderFactory.createLineBorder(ThemeManager.isDarkMode()
-                        ? new Color(60, 68, 82)
-                        : new Color(220, 225, 232), 1)
+                BorderFactory.createLineBorder(
+                        ThemeManager.adjustColor(ThemeManager.getBorderColor(), ThemeManager.isDarkMode() ? 20 : -10), 1)
         ));
     }
 
@@ -400,13 +386,8 @@ public class MainGUI extends JFrame {
      */
     private void setupLazyLoading() {
         // Define colors for tab backgrounds
-        Color unselectedBg = ThemeManager.isDarkMode()
-                ? new Color(45, 52, 64)
-                : new Color(220, 225, 235);
-
-        Color selectedBg = ThemeManager.isDarkMode()
-                ? new Color(70, 82, 100)
-                : new Color(255, 255, 255);
+        Color unselectedBg = ThemeManager.getSurfaceColor();
+        Color selectedBg = ThemeManager.getCardBackgroundColor();
 
         tabbedPane.addChangeListener(e -> {
             int idx = tabbedPane.getSelectedIndex();

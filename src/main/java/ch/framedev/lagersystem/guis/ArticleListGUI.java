@@ -157,7 +157,7 @@ public class ArticleListGUI extends JFrame {
 
         searchPanel.add(searchField, BorderLayout.CENTER);
 
-        JButton clearSearch = createStyledButton("✕", new Color(220, 53, 69), 36, 36);
+        JButton clearSearch = createStyledButton("✕", ThemeManager.getErrorColor(), 36, 36);
         clearSearch.setToolTipText("Suche löschen");
         clearSearch.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         searchPanel.add(clearSearch, BorderLayout.EAST);
@@ -180,19 +180,19 @@ public class ArticleListGUI extends JFrame {
         buttonPanel.setOpaque(false);
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
 
-        JButton editQtyBtn = createStyledButton("✏️ Menge ändern", new Color(52, 152, 219), 0, 0);
+        JButton editQtyBtn = createStyledButton("✏️ Menge ändern", ThemeManager.getAccentColor(), 0, 0);
         editQtyBtn.setPreferredSize(new Dimension(160, 40));
         editQtyBtn.setToolTipText("Menge des ausgewählten Artikels ändern");
 
-        JButton removeBtn = createStyledButton("🗑️ Entfernen", new Color(220, 53, 69), 0, 0);
+        JButton removeBtn = createStyledButton("🗑 Entfernen", ThemeManager.getErrorColor(), 0, 0);
         removeBtn.setPreferredSize(new Dimension(140, 40));
         removeBtn.setToolTipText("Ausgewählten Artikel entfernen");
 
-        JButton clearAllBtn = createStyledButton("🧹 Alle löschen", new Color(243, 156, 18), 0, 0);
+        JButton clearAllBtn = createStyledButton("🧹 Alle löschen", ThemeManager.getWarningColor(), 0, 0);
         clearAllBtn.setPreferredSize(new Dimension(140, 40));
         clearAllBtn.setToolTipText("Alle Artikel aus der Liste entfernen");
 
-        JButton closeBtn = createStyledButton("Schließen", new Color(149, 165, 166), 0, 0);
+        JButton closeBtn = createStyledButton("Schließen", ThemeManager.getSecondaryColor(), 0, 0);
         closeBtn.setPreferredSize(new Dimension(120, 40));
         closeBtn.setToolTipText("Fenster schließen");
 
@@ -320,7 +320,7 @@ public class ArticleListGUI extends JFrame {
         articleJList.setCellRenderer(new ArticleCellRenderer());
         articleJList.setBackground(ThemeManager.getCardBackgroundColor());
         articleJList.setForeground(ThemeManager.getTextPrimaryColor());
-        articleJList.setSelectionBackground(new Color(52, 152, 219));
+        articleJList.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
         articleJList.setSelectionForeground(Color.WHITE);
     }
 
@@ -494,7 +494,7 @@ public class ArticleListGUI extends JFrame {
         searchPanel.add(searchIconPanel, BorderLayout.WEST);
         searchPanel.add(searchField, BorderLayout.CENTER);
 
-        JButton clearSearch = createStyledButton("✕", new Color(220, 53, 69), 36, 36);
+        JButton clearSearch = createStyledButton("✕", ThemeManager.getErrorColor(), 36, 36);
         clearSearch.setToolTipText("Suche löschen");
         clearSearch.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         clearSearch.addActionListener(e -> {
@@ -520,22 +520,22 @@ public class ArticleListGUI extends JFrame {
         buttonPanel.setOpaque(false);
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
 
-        JButton editQtyBtn = createStyledButton("✏️ Menge ändern", new Color(52, 152, 219), 0, 0);
+        JButton editQtyBtn = createStyledButton("✏️ Menge ändern", ThemeManager.getAccentColor(), 0, 0);
         editQtyBtn.setPreferredSize(new Dimension(160, 40));
         editQtyBtn.setToolTipText("Bearbeite die Menge des ausgewählten Artikels");
         editQtyBtn.addActionListener(this::handleEditQuantity);
 
-        JButton removeBtn = createStyledButton("🗑️ Entfernen", new Color(220, 53, 69), 0, 0);
+        JButton removeBtn = createStyledButton("🗑 Entfernen", ThemeManager.getErrorColor(), 0, 0);
         removeBtn.setPreferredSize(new Dimension(140, 40));
         removeBtn.setToolTipText("Entferne den ausgewählten Artikel");
         removeBtn.addActionListener(this::handleRemoveArticle);
 
-        JButton clearAllBtn = createStyledButton("🧹 Alle löschen", new Color(243, 156, 18), 0, 0);
+        JButton clearAllBtn = createStyledButton("🧹 Alle löschen", ThemeManager.getWarningColor(), 0, 0);
         clearAllBtn.setPreferredSize(new Dimension(140, 40));
         clearAllBtn.setToolTipText("Alle Artikel aus der Liste entfernen");
         clearAllBtn.addActionListener(this::handleClearAll);
 
-        JButton closeBtn = createStyledButton("Schließen", new Color(149, 165, 166), 0, 0);
+        JButton closeBtn = createStyledButton("Schließen", ThemeManager.getSecondaryColor(), 0, 0);
         closeBtn.setPreferredSize(new Dimension(120, 40));
         closeBtn.setToolTipText("Schließe das Fenster");
         closeBtn.addActionListener(e -> dispose());
@@ -632,11 +632,7 @@ public class ArticleListGUI extends JFrame {
         // Enhanced hover effect with smooth transition
         button.addMouseListener(new MouseAdapter() {
             private final Color originalBg = bgColor;
-            private final Color hoverBg = new Color(
-                Math.min(255, bgColor.getRed() + 20),
-                Math.min(255, bgColor.getGreen() + 20),
-                Math.min(255, bgColor.getBlue() + 20)
-            );
+            private final Color hoverBg = ThemeManager.getButtonHoverColor(bgColor);
 
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -650,7 +646,7 @@ public class ArticleListGUI extends JFrame {
 
             @Override
             public void mousePressed(MouseEvent e) {
-                button.setBackground(originalBg.darker());
+                button.setBackground(ThemeManager.getButtonPressedColor(originalBg));
             }
 
             @Override
@@ -680,13 +676,13 @@ public class ArticleListGUI extends JFrame {
 
             JLabel nameLabel = new JLabel(article.getName());
             nameLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-            nameLabel.setForeground(isSelected ? Color.WHITE : ThemeManager.getTextPrimaryColor());
+            nameLabel.setForeground(isSelected ? ThemeManager.getTextOnPrimaryColor() : ThemeManager.getTextPrimaryColor());
             nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-            JLabel detailLabel = new JLabel(String.format("📦 Nr: %s  •  Stock: %d",
+            JLabel detailLabel = new JLabel(String.format("📦 Nr: %s  -  Stock: %d",
                 article.getArticleNumber(), article.getStockQuantity()));
             detailLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-            detailLabel.setForeground(isSelected ? Color.WHITE : ThemeManager.getTextSecondaryColor());
+            detailLabel.setForeground(isSelected ? ThemeManager.getTextOnPrimaryColor() : ThemeManager.getTextSecondaryColor());
             detailLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
             infoPanel.add(nameLabel);
@@ -701,11 +697,11 @@ public class ArticleListGUI extends JFrame {
 
             JLabel qtyLabel = new JLabel("Qty: " + quantity);
             qtyLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-            qtyLabel.setForeground(isSelected ? Color.WHITE : ThemeManager.getTextPrimaryColor());
+            qtyLabel.setForeground(isSelected ? ThemeManager.getTextOnPrimaryColor() : ThemeManager.getTextPrimaryColor());
             qtyLabel.setOpaque(true);
-            qtyLabel.setBackground(isSelected ? new Color(41, 128, 185) : ThemeManager.getInputBackgroundColor());
+            qtyLabel.setBackground(isSelected ? ThemeManager.getAccentColor() : ThemeManager.getInputBackgroundColor());
             qtyLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(isSelected ? new Color(41, 128, 185) : ThemeManager.getBorderColor(), 1),
+                BorderFactory.createLineBorder(isSelected ? ThemeManager.getAccentColor() : ThemeManager.getBorderColor(), 1),
                 BorderFactory.createEmptyBorder(6, 14, 6, 14)
             ));
             qtyLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -726,7 +722,7 @@ public class ArticleListGUI extends JFrame {
         panel.setPreferredSize(new Dimension(list.getWidth() - 10, 72));
 
         if (isSelected) {
-            panel.setBackground(new Color(52, 152, 219));
+            panel.setBackground(ThemeManager.getSelectionBackgroundColor());
         } else {
             panel.setBackground(index % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
         }

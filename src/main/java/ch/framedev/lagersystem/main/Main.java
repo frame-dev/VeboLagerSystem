@@ -4,6 +4,7 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.User;
 import ch.framedev.lagersystem.guis.ArticleListGUI;
 import ch.framedev.lagersystem.guis.MainGUI;
+import ch.framedev.lagersystem.guis.SplashscreenGUI;
 import ch.framedev.lagersystem.guis.SettingsGUI;
 import ch.framedev.lagersystem.managers.*;
 import ch.framedev.lagersystem.utils.*;
@@ -42,13 +43,8 @@ public class Main {
         try {
             // Initialize application
             printStartupInfo();
-            initializeApplication();
-
-            // Launch GUI
-            launchGUI();
-
-            // Check for updates
-            checkForUpdates();
+            SplashscreenGUI splashscreen = createAndShowSplashscreen();
+            startInitializationWithSplashscreen(splashscreen);
 
         } catch (Exception e) {
             logger.error("Fehler beim Starten der Anwendung: {}", e.getMessage(), e);
@@ -107,18 +103,39 @@ public class Main {
     /**
      * Initialize application settings and database
      */
-    private static void initializeApplication() {
+    private static void initializeApplication(ProgressListener progressListener) {
+        updateProgress(progressListener, 3, "Starte Initialisierung...");
+        updateProgress(progressListener, 8, "Initialisiere Datenbank...");
         initializeDatabase();
+        updateProgress(progressListener, 16, "Lade Icons...");
         loadApplicationIcons();
+        updateProgress(progressListener, 24, "Lade Einstellungen...");
         loadSettings();
+        updateProgress(progressListener, 34, "Initialisiere Theme...");
         initializeTheme();
+        updateProgress(progressListener, 44, "Pruefe Datenverzeichnis...");
         ensureAppDataDirectory();
         if (settings.getProperty("first-time") == null || settings.getProperty("first-time").equalsIgnoreCase("fasle")) {
             settings.setProperty("first-time", "true");
-            int result = JOptionPane.showConfirmDialog(null, "Willkommen zum VEBO Lagersystem!\nMöchten Sie die anfänglichen Daten jetzt importieren?", "Erster Start", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, iconSmall);
+            updateProgress(progressListener, 54, "Erster Start...");
+            int result = showConfirmDialogOnEdt(
+                "Willkommen zum VEBO Lagersystem!\nMoechten Sie die anfaenglichen Daten jetzt importieren?",
+                "Erster Start",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.INFORMATION_MESSAGE,
+                iconSmall
+            );
             if(result == JOptionPane.YES_OPTION) {
-                int resultQr = JOptionPane.showConfirmDialog(null, "QR-Codes Erstellen?", "QR-Codes", JOptionPane.YES_NO_OPTION);
+                updateProgress(progressListener, 62, "QR-Code Abfrage...");
+                int resultQr = showConfirmDialogOnEdt(
+                    "QR-Codes Erstellen?",
+                    "QR-Codes",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.INFORMATION_MESSAGE,
+                    null
+                );
                 if(resultQr == JOptionPane.YES_OPTION) {
+                    updateProgress(progressListener, 68, "Erstelle QR-Codes...");
                     logger.info("QR-Codes werden erstellt...");
                     List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
                     for (File qrCodeFile : qrCodeFiles) {
@@ -132,15 +149,18 @@ public class Main {
             }
             settings.save();
             if (Boolean.parseBoolean(settings.getProperty("load-from-files"))) {
+                updateProgress(progressListener, 72, "Importiere Startdaten...");
                 // Import initial data
-                importInitialData();
+                importInitialData(progressListener);
                 // Initialize default user
+                updateProgress(progressListener, 88, "Erstelle Standard-Benutzer...");
                 initializeDefaultUser();
                 logger.info("Initial data import completed.");
             } else {
                 logger.info("Initial data import skipped as per settings.");
             }
         }
+        updateProgress(progressListener, 96, "Abschluss der Initialisierung...");
     }
 
     /**
@@ -205,12 +225,16 @@ public class Main {
     /**
      * Import all initial data (articles, vendors, departments, clients)
      */
-    private static void importInitialData() {
+    private static void importInitialData(ProgressListener progressListener) {
         ImportUtils importUtils = ImportUtils.getInstance();
 
+        updateProgress(progressListener, 76, "Importiere Artikel...");
         importArticles(importUtils);
+        updateProgress(progressListener, 80, "Importiere Lieferanten...");
         importVendors(importUtils);
+        updateProgress(progressListener, 83, "Importiere Abteilungen...");
         importDepartments(importUtils);
+        updateProgress(progressListener, 86, "Importiere Kunden...");
         importClients(importUtils);
 
         System.out.println("✓ Alle Daten importiert");
@@ -411,7 +435,7 @@ public class Main {
 
         if (!userManager.existsUser(user.getName())) {
             userManager.insertUser(user);
-            System.out.println("\n✓ Standard-Benutzer erstellt");
+            System.out.println("\nOK Standard-Benutzer erstellt");
         }
     }
 
@@ -602,7 +626,7 @@ public class Main {
             UpdateManager.ChannelUpdateResult channelResult = updateManager.checkAllChannels();
 
             if (channelResult == null) {
-                System.out.println("⚠️  Konnte nicht auf Updates prüfen (keine Verbindung zu GitHub)");
+                System.out.println("⚠  Konnte nicht auf Updates prüfen (keine Verbindung zu GitHub)");
                 return;
             }
 
@@ -614,13 +638,13 @@ public class Main {
             UpdateManager.VersionComparisonResult comparison = updateManager.compareWithLatest();
 
             if (comparison == null) {
-                System.out.println("⚠️  Konnte nicht auf Updates prüfen (keine Verbindung zu GitHub)");
+                System.out.println("⚠  Konnte nicht auf Updates prüfen (keine Verbindung zu GitHub)");
                 return;
             }
 
             // Display console output
             if (comparison.updateAvailable()) {
-                System.out.println("⚠️  Update verfügbar in deinem Channel: " + comparison.latestVersion());
+                System.out.println("⚠  Update verfügbar in deinem Channel: " + comparison.latestVersion());
             } else if (comparison.isCurrent()) {
                 System.out.println("✓ Anwendung ist auf dem neuesten Stand");
             } else if (comparison.isNewer()) {
@@ -801,4 +825,111 @@ public class Main {
             boolean enableAutomaticImport,
             int automaticImportInterval
     ) {}
+
+    private interface ProgressListener {
+        void onProgress(int percent, String message);
+    }
+
+    private record ProgressUpdate(int percent, String message) {}
+
+    private static void updateProgress(ProgressListener progressListener, int percent, String message) {
+        if (progressListener != null) {
+            progressListener.onProgress(percent, message);
+        }
+        sleepQuietly(450);
+    }
+
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private static SplashscreenGUI createAndShowSplashscreen() {
+        try {
+            final SplashscreenGUI[] splashRef = new SplashscreenGUI[1];
+            SwingUtilities.invokeAndWait(() -> {
+                splashRef[0] = new SplashscreenGUI();
+                splashRef[0].display();
+            });
+            return splashRef[0];
+        } catch (Exception e) {
+            throw new RuntimeException("Konnte Splashscreen nicht starten", e);
+        }
+    }
+
+    private static void startInitializationWithSplashscreen(SplashscreenGUI splashscreen) {
+        SwingWorker<Void, ProgressUpdate> worker = new SwingWorker<>() {
+            private Exception initException;
+
+            @Override
+            protected Void doInBackground() {
+                try {
+                    initializeApplication((percent, message) -> publish(new ProgressUpdate(percent, message)));
+                } catch (Exception e) {
+                    initException = e;
+                }
+                return null;
+            }
+
+            @Override
+            protected void process(List<ProgressUpdate> chunks) {
+                if (chunks.isEmpty()) {
+                    return;
+                }
+                ProgressUpdate last = chunks.get(chunks.size() - 1);
+                splashscreen.updateProgress(last.percent(), last.message());
+            }
+
+            @Override
+            protected void done() {
+                if (initException != null) {
+                    logger.error("Fehler beim Starten der Anwendung: {}", initException.getMessage(), initException);
+                    logUtils.addLog("Kritischer Fehler: " + initException.getMessage());
+                    logUtils.addLog("Stack trace: " + getStackTraceAsString(initException));
+                    splashscreen.close();
+                    JOptionPane.showMessageDialog(
+                        null,
+                        "Die Anwendung konnte nicht gestartet werden.\nDetails: " + initException.getMessage(),
+                        "Startfehler",
+                        JOptionPane.ERROR_MESSAGE
+                    );
+                    System.exit(1);
+                    return;
+                }
+
+                splashscreen.updateProgress(100, "Starte Hauptfenster...");
+                splashscreen.close();
+
+                // Launch GUI
+                launchGUI();
+
+                // Check for updates
+                checkForUpdates();
+            }
+        };
+        worker.execute();
+    }
+
+    private static int showConfirmDialogOnEdt(Object message, String title, int optionType, int messageType, Icon icon) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            return JOptionPane.showConfirmDialog(null, message, title, optionType, messageType, icon);
+        }
+        final int[] result = new int[1];
+        try {
+            SwingUtilities.invokeAndWait(() -> result[0] = JOptionPane.showConfirmDialog(
+                null,
+                message,
+                title,
+                optionType,
+                messageType,
+                icon
+            ));
+        } catch (Exception e) {
+            throw new RuntimeException("Dialog konnte nicht angezeigt werden", e);
+        }
+        return result[0];
+    }
 }

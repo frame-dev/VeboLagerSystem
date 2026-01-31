@@ -289,9 +289,7 @@ public class ClientGUI extends JFrame {
         // Main container with subtle shadow
         JPanel mainContainer = new JPanel(new BorderLayout());
         mainContainer.setBackground(ThemeManager.getBackgroundColor());
-        Color shadowColor = ThemeManager.isDarkMode()
-                ? new Color(0, 0, 0, 80)
-                : new Color(0, 0, 0, 30);
+        Color shadowColor = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 80 : 30);
         mainContainer.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(shadowColor, 1, true),
                 BorderFactory.createEmptyBorder(0, 0, 0, 0)
@@ -318,9 +316,9 @@ public class ClientGUI extends JFrame {
 
         // Modern close button with hover effect
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
-        closeBtn.setForeground(new Color(255, 255, 255, 200));
+        closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
         closeBtn.setToolTipText("Schließt das Fenster");
-        closeBtn.setBackground(new Color(255, 255, 255, 0));
+        closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
         closeBtn.setContentAreaFilled(false);
@@ -332,15 +330,15 @@ public class ClientGUI extends JFrame {
             @Override
             public void mouseEntered(MouseEvent e) {
                 closeBtn.setForeground(Color.WHITE);
-                closeBtn.setBackground(new Color(231, 76, 60, 100));
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 100));
                 closeBtn.setContentAreaFilled(true);
                 closeBtn.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                closeBtn.setForeground(new Color(255, 255, 255, 200));
-                closeBtn.setBackground(new Color(255, 255, 255, 0));
+                closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
                 closeBtn.setContentAreaFilled(false);
                 closeBtn.setBorder(null);
             }
@@ -371,9 +369,7 @@ public class ClientGUI extends JFrame {
             label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
 
             if (text.contains("*")) {
-                Color blueAccent = ThemeManager.isDarkMode()
-                        ? new Color(100, 170, 255)
-                        : new Color(52, 152, 219);
+                Color blueAccent = ThemeManager.getAccentColor();
                 String labelText = text.replace("*", "").trim();
                 label.setText("<html>" + labelText + " <span style='color: rgb(" +
                         blueAccent.getRed() + "," + blueAccent.getGreen() + "," + blueAccent.getBlue() +
@@ -387,9 +383,7 @@ public class ClientGUI extends JFrame {
         // Text field styling with blue focus effect
         Consumer<JTextField> styleTextField = field -> {
             Color normalBorder = ThemeManager.getInputBorderColor();
-            Color focusBorder = ThemeManager.isDarkMode()
-                    ? new Color(100, 170, 255)
-                    : new Color(52, 152, 219);
+            Color focusBorder = ThemeManager.getAccentColor();
 
             field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
             field.setBackground(ThemeManager.getInputBackgroundColor());
@@ -486,12 +480,8 @@ public class ClientGUI extends JFrame {
         });
 
         // OK button with blue gradient colors and hover
-        Color okColor = ThemeManager.isDarkMode()
-                ? new Color(52, 152, 219)
-                : new Color(41, 128, 185);
-        Color okHover = ThemeManager.isDarkMode()
-                ? new Color(72, 170, 240)
-                : new Color(52, 152, 219);
+        Color okColor = ThemeManager.getButtonBackgroundColor();
+        Color okHover = ThemeManager.getButtonHoverColor(okColor);
 
         JButton okBtn = new JButton(UnicodeSymbols.CHECKMARK + " Hinzufügen");
         okBtn.setToolTipText("Den neuen Kunden zur Datenbank hinzufügen");
@@ -581,12 +571,8 @@ public class ClientGUI extends JFrame {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-                Color color1 = ThemeManager.isDarkMode()
-                        ? new Color(30, 58, 95)
-                        : new Color(41, 128, 185);
-                Color color2 = ThemeManager.isDarkMode()
-                        ? new Color(44, 62, 80)
-                        : new Color(52, 152, 219);
+                Color color1 = ThemeManager.getHeaderBackgroundColor();
+                Color color2 = ThemeManager.getHeaderGradientColor();
 
                 GradientPaint gradient = new GradientPaint(
                         0, 0, color1,
@@ -611,9 +597,7 @@ public class ClientGUI extends JFrame {
         // Main container with subtle shadow
         JPanel mainContainer = new JPanel(new BorderLayout());
         mainContainer.setBackground(ThemeManager.getBackgroundColor());
-        Color shadowColor = ThemeManager.isDarkMode()
-                ? new Color(0, 0, 0, 80)
-                : new Color(0, 0, 0, 30);
+        Color shadowColor = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 80 : 30);
         mainContainer.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(shadowColor, 1, true),
                 BorderFactory.createEmptyBorder(0, 0, 0, 0)
@@ -712,8 +696,8 @@ public class ClientGUI extends JFrame {
 
         // Close button with hover effect
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
-        closeBtn.setForeground(new Color(255, 255, 255, 200));
-        closeBtn.setBackground(new Color(255, 255, 255, 0));
+        closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+        closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
         closeBtn.setBorderPainted(false);
         closeBtn.setFocusPainted(false);
         closeBtn.setContentAreaFilled(false);
@@ -725,14 +709,14 @@ public class ClientGUI extends JFrame {
             @Override
             public void mouseEntered(MouseEvent e) {
                 closeBtn.setForeground(Color.WHITE);
-                closeBtn.setBackground(new Color(231, 76, 60, 100));
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 100));
                 closeBtn.setContentAreaFilled(true);
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                closeBtn.setForeground(new Color(255, 255, 255, 200));
-                closeBtn.setBackground(new Color(255, 255, 255, 0));
+                closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+                closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
                 closeBtn.setContentAreaFilled(false);
             }
         });
@@ -1360,4 +1344,3 @@ public class ClientGUI extends JFrame {
         }
     }
 }
-

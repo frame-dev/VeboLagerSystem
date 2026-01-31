@@ -72,6 +72,15 @@ public class SettingsGUI extends JFrame {
     private final JLabel tableFontSample = new JLabel("Tabellenschrift Vorschau");
     private final JLabel tabFontSample = new JLabel("Tab-Schrift Vorschau");
     private final JLabel fontSample = new JLabel("Schriftart Vorschau");
+    private JButton accentColorButton;
+    private JButton headerColorButton;
+    private JButton buttonColorButton;
+    private JLabel accentHexLabel;
+    private JLabel headerHexLabel;
+    private JLabel buttonHexLabel;
+    private Color selectedAccentColor;
+    private Color selectedHeaderColor;
+    private Color selectedButtonColor;
 
     private static final int DEFAULT_STOCK_CHECK_INTERVAL = 30;
     private static final int DEFAULT_WARNING_INTERVAL = 1;
@@ -356,6 +365,16 @@ public class SettingsGUI extends JFrame {
         themeInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         themeSection.add(themeInfoLabel);
 
+        JPanel colorSection = createSectionPanel(UnicodeSymbols.COLOR_PALETTE + " Farbthemen",
+                "Akzent-, Header- und Buttonfarbe anpassen");
+        addSectionResetButton(colorSection, this::resetColorDefaults);
+        colorSection.add(Box.createVerticalStrut(12));
+        colorSection.add(createColorRow("Akzentfarbe:", "theme_accent_color"));
+        colorSection.add(Box.createVerticalStrut(10));
+        colorSection.add(createColorRow("Headerfarbe:", "theme_header_color"));
+        colorSection.add(Box.createVerticalStrut(10));
+        colorSection.add(createColorRow("Buttonfarbe:", "theme_button_color"));
+
         JPanel previewSection = createSectionPanel(UnicodeSymbols.BULB + " Live Vorschau",
                 "Vorschau auf Schrift und Farben basierend auf Ihren Einstellungen");
         previewSection.add(Box.createVerticalStrut(12));
@@ -366,6 +385,8 @@ public class SettingsGUI extends JFrame {
         appearancePanel.add(tableSettingsPanel);
         appearancePanel.add(Box.createVerticalStrut(25));
         appearancePanel.add(themeSection);
+        appearancePanel.add(Box.createVerticalStrut(25));
+        appearancePanel.add(colorSection);
         appearancePanel.add(Box.createVerticalStrut(25));
         appearancePanel.add(previewSection);
         appearancePanel.add(Box.createVerticalGlue());
@@ -589,10 +610,10 @@ public class SettingsGUI extends JFrame {
             int confirm = JOptionPane.showConfirmDialog(this,
                     "<html><b>Datenbank nach CSV exportieren?</b><br/><br/>" +
                             "Dies erstellt CSV-Dateien für:<br/>" +
-                            "• Artikel (articles_export.csv)<br/>" +
-                            "• Lieferanten (vendors_export.csv)<br/>" +
-                            "• Kunden (clients_export.csv)<br/>" +
-                            "• Bestellungen (orders_export.csv)<br/><br/>" +
+                            "- Artikel (articles_export.csv)<br/>" +
+                            "- Lieferanten (vendors_export.csv)<br/>" +
+                            "- Kunden (clients_export.csv)<br/>" +
+                            "- Bestellungen (orders_export.csv)<br/><br/>" +
                             "Speicherort: " + Main.getAppDataDir().getAbsolutePath() + "</html>",
                     "Exportieren bestätigen",
                     JOptionPane.YES_NO_OPTION,
@@ -603,7 +624,7 @@ public class SettingsGUI extends JFrame {
                 try {
                     exportToCsv();
                     JOptionPane.showMessageDialog(this,
-                            "<html><b>✓ Export erfolgreich!</b><br/><br/>" +
+                            "<html><b>OK Export erfolgreich!</b><br/><br/>" +
                                     "Alle Tabellen wurden erfolgreich exportiert.<br/>" +
                                     "Speicherort: <br/>" +
                                     Main.getAppDataDir().getAbsolutePath() + "</html>",
@@ -612,7 +633,7 @@ public class SettingsGUI extends JFrame {
                             Main.iconSmall);
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(this,
-                            "<html><b>✗ Fehler beim Export!</b><br/><br/>" +
+                            "<html><b>X Fehler beim Export!</b><br/><br/>" +
                                     ex.getMessage() + "</html>",
                             "Fehler",
                             JOptionPane.ERROR_MESSAGE,
@@ -1150,6 +1171,101 @@ public class SettingsGUI extends JFrame {
         }
     }
 
+    private JPanel createColorRow(String labelText, String key) {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        row.setOpaque(false);
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(getFontByName(Font.BOLD, 13));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        row.add(label);
+
+        JButton colorButton = createColorButton();
+        JLabel hexLabel = new JLabel("Standard");
+        hexLabel.setFont(getFontByName(Font.PLAIN, 12));
+        hexLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        if ("theme_accent_color".equals(key)) {
+            accentColorButton = colorButton;
+            accentHexLabel = hexLabel;
+        } else if ("theme_header_color".equals(key)) {
+            headerColorButton = colorButton;
+            headerHexLabel = hexLabel;
+        } else if ("theme_button_color".equals(key)) {
+            buttonColorButton = colorButton;
+            buttonHexLabel = hexLabel;
+        }
+
+        colorButton.addActionListener(e -> {
+            Color current = getSelectedColorForKey(key);
+            Color chosen = JColorChooser.showDialog(this, "Farbe waehlen", current);
+            if (chosen != null) {
+                setSelectedColorForKey(key, chosen);
+                updateColorControls();
+                updatePreview();
+            }
+        });
+
+        row.add(colorButton);
+        row.add(hexLabel);
+        return row;
+    }
+
+    private JButton createColorButton() {
+        JButton button = new JButton(" ");
+        button.setPreferredSize(new Dimension(36, 22));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(2, 2, 2, 2)
+        ));
+        button.setFocusPainted(false);
+        button.setContentAreaFilled(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private Color getSelectedColorForKey(String key) {
+        if ("theme_accent_color".equals(key)) {
+            return selectedAccentColor;
+        }
+        if ("theme_header_color".equals(key)) {
+            return selectedHeaderColor;
+        }
+        if ("theme_button_color".equals(key)) {
+            return selectedButtonColor;
+        }
+        return null;
+    }
+
+    private void setSelectedColorForKey(String key, Color color) {
+        if ("theme_accent_color".equals(key)) {
+            selectedAccentColor = color;
+        } else if ("theme_header_color".equals(key)) {
+            selectedHeaderColor = color;
+        } else if ("theme_button_color".equals(key)) {
+            selectedButtonColor = color;
+        }
+    }
+
+    private void updateColorControls() {
+        updateColorButton(accentColorButton, accentHexLabel, selectedAccentColor);
+        updateColorButton(headerColorButton, headerHexLabel, selectedHeaderColor);
+        updateColorButton(buttonColorButton, buttonHexLabel, selectedButtonColor);
+    }
+
+    private void updateColorButton(JButton button, JLabel label, Color color) {
+        if (button == null || label == null) {
+            return;
+        }
+        if (color == null) {
+            button.setBackground(ThemeManager.getInputBackgroundColor());
+            label.setText("Standard");
+        } else {
+            button.setBackground(color);
+            label.setText(toHex(color));
+        }
+    }
+
     private JButton createHeaderActionButton(String text) {
         JButton button = new JButton(text);
         button.setFont(getFontByName(Font.PLAIN, 12));
@@ -1208,22 +1324,29 @@ public class SettingsGUI extends JFrame {
         Color text = darkMode ? ThemeManager.Dark.TEXT_PRIMARY : ThemeManager.Light.TEXT_PRIMARY;
         Color secondary = darkMode ? ThemeManager.Dark.TEXT_SECONDARY : ThemeManager.Light.TEXT_SECONDARY;
         Color border = darkMode ? ThemeManager.Dark.BORDER : ThemeManager.Light.BORDER;
+        Color header = selectedHeaderColor != null ? selectedHeaderColor : (darkMode ? ThemeManager.Dark.HEADER_BG : ThemeManager.Light.HEADER_BG);
+        Color accent = selectedAccentColor != null ? selectedAccentColor : ThemeManager.getAccentColor();
+        Color button = selectedButtonColor != null ? selectedButtonColor : (darkMode ? ThemeManager.Dark.BUTTON_BG : ThemeManager.Light.BUTTON_BG);
 
         String fontName = fontComboBox == null ? "Arial" : (String) fontComboBox.getSelectedItem();
         int tableSize = fontSizeTableSpinner == null ? 16 : (Integer) fontSizeTableSpinner.getValue();
         int tabSize = fontSizeTabSpinner == null ? 15 : (Integer) fontSizeTabSpinner.getValue();
 
         previewTitleLabel.setFont(new Font(fontName, Font.BOLD, 16));
-        previewTitleLabel.setForeground(text);
+        previewTitleLabel.setForeground(Color.WHITE);
+        previewTitleLabel.setOpaque(true);
+        previewTitleLabel.setBackground(header);
+        previewTitleLabel.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
         previewBodyLabel.setFont(new Font(fontName, Font.PLAIN, 13));
         previewBodyLabel.setForeground(secondary);
         previewButton.setFont(new Font(fontName, Font.BOLD, 12));
-        previewButton.setBackground(darkMode ? ThemeManager.Dark.BUTTON_BG : ThemeManager.Light.BUTTON_BG);
+        previewButton.setBackground(button);
         previewButton.setForeground(Color.WHITE);
 
         previewTable.setFont(new Font(fontName, Font.PLAIN, Math.max(11, tableSize - 2)));
         previewTable.setForeground(text);
         previewTable.setBackground(card);
+        previewTable.setSelectionBackground(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 80));
         previewTable.getTableHeader().setFont(new Font(fontName, Font.BOLD, Math.max(10, tableSize - 3)));
         previewTable.getTableHeader().setBackground(darkMode ? ThemeManager.Dark.TABLE_HEADER_BG : ThemeManager.Light.TABLE_HEADER_BG);
         previewTable.getTableHeader().setForeground(darkMode ? ThemeManager.Dark.TABLE_HEADER_FG : ThemeManager.Light.TABLE_HEADER_FG);
@@ -1495,6 +1618,10 @@ public class SettingsGUI extends JFrame {
                 if(fontStyle != null) {
                     fontComboBox.setSelectedItem(fontStyle);
                 }
+                selectedAccentColor = parseColor(Main.settings.getProperty("theme_accent_color"));
+                selectedHeaderColor = parseColor(Main.settings.getProperty("theme_header_color"));
+                selectedButtonColor = parseColor(Main.settings.getProperty("theme_button_color"));
+                updateColorControls();
                 updatePreview();
 
                 System.out.println("[SettingsGUI] Einstellungen geladen");
@@ -1543,6 +1670,10 @@ public class SettingsGUI extends JFrame {
                 boolean darkMode = darkModeCheckbox.isSelected();
                 Main.settings.setProperty("dark_mode", String.valueOf(darkMode));
 
+                Main.settings.setProperty("theme_accent_color", colorToSetting(selectedAccentColor));
+                Main.settings.setProperty("theme_header_color", colorToSetting(selectedHeaderColor));
+                Main.settings.setProperty("theme_button_color", colorToSetting(selectedButtonColor));
+
                 // Save font size setting
                 int fontSize = (Integer) fontSizeTableSpinner.getValue();
                 Main.settings.setProperty("table_font_size", String.valueOf(fontSize));
@@ -1557,6 +1688,7 @@ public class SettingsGUI extends JFrame {
 
                 // Apply settings immediately
                 applySettings(interval, enableWarnings, warningInterval, enableAutoCheck, darkMode);
+                ThemeManager.setCustomColors(selectedAccentColor, selectedHeaderColor, selectedButtonColor);
 
                 JOptionPane.showMessageDialog(this,
                         "<html><b>Einstellungen gespeichert!</b><br/><br/>" +
@@ -1613,6 +1745,14 @@ public class SettingsGUI extends JFrame {
         updatePreview();
     }
 
+    private void resetColorDefaults() {
+        selectedAccentColor = null;
+        selectedHeaderColor = null;
+        selectedButtonColor = null;
+        updateColorControls();
+        updatePreview();
+    }
+
     private void resetServerDefaults() {
         serverUrlField.setText(DEFAULT_SERVER_URL);
     }
@@ -1625,6 +1765,7 @@ public class SettingsGUI extends JFrame {
         resetTableDefaults();
         resetThemeDefaults();
         resetServerDefaults();
+        resetColorDefaults();
     }
 
     private void exportSettingsProfile() {
@@ -1693,6 +1834,9 @@ public class SettingsGUI extends JFrame {
         props.setProperty("table_font_size_tab", String.valueOf(fontSizeTabSpinner.getValue()));
         Object fontStyle = fontComboBox.getSelectedItem();
         props.setProperty("font_style", fontStyle == null ? DEFAULT_FONT_STYLE : fontStyle.toString());
+        props.setProperty("theme_accent_color", colorToSetting(selectedAccentColor));
+        props.setProperty("theme_header_color", colorToSetting(selectedHeaderColor));
+        props.setProperty("theme_button_color", colorToSetting(selectedButtonColor));
         return props;
     }
 
@@ -1711,6 +1855,10 @@ public class SettingsGUI extends JFrame {
         fontSizeTableSpinner.setValue(parseIntProperty(props, "table_font_size", DEFAULT_TABLE_FONT_SIZE));
         fontSizeTabSpinner.setValue(parseIntProperty(props, "table_font_size_tab", DEFAULT_TAB_FONT_SIZE));
         fontComboBox.setSelectedItem(props.getProperty("font_style", DEFAULT_FONT_STYLE));
+        selectedAccentColor = parseColor(props.getProperty("theme_accent_color"));
+        selectedHeaderColor = parseColor(props.getProperty("theme_header_color"));
+        selectedButtonColor = parseColor(props.getProperty("theme_button_color"));
+        updateColorControls();
         updatePreview();
     }
 
@@ -1720,6 +1868,33 @@ public class SettingsGUI extends JFrame {
         } catch (NumberFormatException ex) {
             return fallback;
         }
+    }
+
+    private String colorToSetting(Color color) {
+        return color == null ? "" : toHex(color);
+    }
+
+    private Color parseColor(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        String hex = value.trim();
+        if (hex.startsWith("#")) {
+            hex = hex.substring(1);
+        }
+        if (hex.length() != 6) {
+            return null;
+        }
+        try {
+            int rgb = Integer.parseInt(hex, 16);
+            return new Color(rgb);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private String toHex(Color color) {
+        return String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());
     }
 
     @SuppressWarnings("MagicConstant")
@@ -2040,7 +2215,7 @@ public class SettingsGUI extends JFrame {
 
                 if (success) {
                     JOptionPane.showMessageDialog(this,
-                            String.format("<html><b>✓ Tabelle erfolgreich gelöscht</b><br/><br/>" +
+                            String.format("<html><b>OK Tabelle erfolgreich gelöscht</b><br/><br/>" +
                                             "Die Tabelle '<b>%s</b>' wurde aus der Datenbank entfernt.<br/><br/>" +
                                             "<i>Hinweis: Die zugehörigen Daten sind permanent gelöscht.</i></html>",
                                     tableName),
@@ -2106,13 +2281,13 @@ public class SettingsGUI extends JFrame {
                 "<html><b>⚠ WARNUNG: Datenbank löschen</b><br/><br/>" +
                         "Möchten Sie wirklich <b>ALLE DATEN</b> aus der Datenbank löschen?<br/><br/>" +
                         "Dies umfasst:<br/>" +
-                        "• Alle Artikel<br/>" +
-                        "• Alle Lieferanten<br/>" +
-                        "• Alle Bestellungen<br/>" +
-                        "• Alle Kunden<br/>" +
-                        "• Alle Abteilungen<br/>" +
-                        "• Alle Benutzer<br/>" +
-                        "• Alle Warnungen<br/><br/>" +
+                        "- Alle Artikel<br/>" +
+                        "- Alle Lieferanten<br/>" +
+                        "- Alle Bestellungen<br/>" +
+                        "- Alle Kunden<br/>" +
+                        "- Alle Abteilungen<br/>" +
+                        "- Alle Benutzer<br/>" +
+                        "- Alle Warnungen<br/><br/>" +
                         "<b>Diese Aktion kann NICHT rückgängig gemacht werden!</b></html>",
                 "Datenbank löschen - Bestätigung 1/2",
                 JOptionPane.YES_NO_OPTION,
@@ -2157,7 +2332,7 @@ public class SettingsGUI extends JFrame {
                     System.out.println("[SettingsGUI] imported_items.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
 
                 JOptionPane.showMessageDialog(this,
-                        "<html><b>✓ Datenbank erfolgreich gelöscht</b><br/><br/>" +
+                        "<html><b>OK Datenbank erfolgreich gelöscht</b><br/><br/>" +
                                 "Alle Daten wurden aus der Datenbank entfernt.<br/><br/>" +
                                 "Das Programm sollte nun neu gestartet werden.</html>",
                         "Erfolgreich",
@@ -2621,7 +2796,7 @@ public class SettingsGUI extends JFrame {
                 result.add(current.toString());
                 current = new StringBuilder();
             } else {
-                current.append(c);
+                current.append("©");
             }
         }
         result.add(current.toString());

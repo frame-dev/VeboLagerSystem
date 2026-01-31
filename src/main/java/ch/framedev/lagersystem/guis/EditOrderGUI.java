@@ -359,7 +359,7 @@ public class EditOrderGUI extends JFrame {
         }
 
         JOptionPane.showMessageDialog(this,
-                "<html><b>✓ Erfolgreich gespeichert!</b><br/>Die Bestellung wurde aktualisiert.</html>",
+                "<html><b>OK Erfolgreich gespeichert!</b><br/>Die Bestellung wurde aktualisiert.</html>",
                 "Erfolg",
                 JOptionPane.INFORMATION_MESSAGE,
                 Main.iconSmall);

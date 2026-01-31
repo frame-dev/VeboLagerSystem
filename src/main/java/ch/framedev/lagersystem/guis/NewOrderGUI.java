@@ -1015,11 +1015,11 @@ public class NewOrderGUI extends JFrame {
                 "<ul style='margin: 5px 0; padding-left: 20px;'>" +
                 "<li><b>Artikel hinzufügen:</b> Wählen Sie einen Artikel aus der Dropdown-Liste und klicken Sie auf \"➕ Hinzufügen\".</li>" +
                 "<li><b>Menge ändern:</b> Doppelklicken Sie in der Tabelle auf die Menge und geben Sie einen neuen Wert ein.</li>" +
-                "<li><b>Artikel entfernen:</b> Wählen Sie eine Zeile aus und klicken Sie auf \"🗑️ Entfernen\".</li>" +
+                "<li><b>Artikel entfernen:</b> Wählen Sie eine Zeile aus und klicken Sie auf \"🗑 Entfernen\".</li>" +
                 "<li><b>Gesamtpreis:</b> Der Gesamtpreis wird automatisch berechnet und angezeigt.</li>" +
                 "</ul>" +
 
-                "<h3 style='color: #34495e; margin-top: 15px;'>✅ Pflichtfelder</h3>" +
+                "<h3 style='color: #34495e; margin-top: 15px;'>OK Pflichtfelder</h3>" +
                 "<p style='margin: 5px 0;'><b style='color: #e74c3c;'>Folgende Felder müssen ausgefüllt werden:</b></p>" +
                 "<ul style='margin: 5px 0; padding-left: 20px;'>" +
                 "<li>Empfängername</li>" +
@@ -1049,7 +1049,7 @@ public class NewOrderGUI extends JFrame {
                 "<li><b>Speichern:</b> Bestellungen werden automatisch mit Datum und Uhrzeit versehen.</li>" +
                 "</ul>" +
 
-                "<h3 style='color: #34495e; margin-top: 15px;'>⚠️ Wichtige Hinweise</h3>" +
+                "<h3 style='color: #34495e; margin-top: 15px;'>⚠ Wichtige Hinweise</h3>" +
                 "<ul style='margin: 5px 0; padding-left: 20px;'>" +
                 "<li>Prüfen Sie vor dem Absenden alle Daten auf Richtigkeit.</li>" +
                 "<li>Gespeicherte Bestellungen können nachträglich bearbeitet werden.</li>" +

@@ -671,16 +671,6 @@
   },
   {
     "number": "2302",
-    "name": "Kupferlappen 17x20cm",
-    "details": "Stk.",
-    "stockQuantity": 0,
-    "minStockLevel": 0,
-    "sellPrice": 2.1,
-    "buyPrice": 1.91,
-    "vendorName": "Null"
-  },
-  {
-    "number": "2303",
     "name": "Putzlappen Hell / Bunt",
     "details": "Sack à 10kg",
     "stockQuantity": 32,
@@ -690,27 +680,7 @@
     "vendorName": "ZVG"
   },
   {
-    "number": "2304",
-    "name": "Putzschwamm hellbraun",
-    "details": "weisser Pad 10 Stk.",
-    "stockQuantity": 0,
-    "minStockLevel": 5,
-    "sellPrice": 4.0,
-    "buyPrice": 3.64,
-    "vendorName": "Null"
-  },
-  {
-    "number": "2305",
-    "name": "Putzschwamm Weiss",
-    "details": "grüner Pad 10 Stk.",
-    "stockQuantity": 0,
-    "minStockLevel": 5,
-    "sellPrice": 4.0,
-    "buyPrice": 3.64,
-    "vendorName": "Thedra"
-  },
-  {
-    "number": "2306",
+    "number": "2303",
     "name": "Putzschwamm Rot, Gelb, Blau, Grün",
     "details": "weisser Pad 10 Stk.",
     "stockQuantity": 491,
@@ -720,7 +690,7 @@
     "vendorName": "ZVG"
   },
   {
-    "number": "2307",
+    "number": "2304",
     "name": "Bodenlappen Baumwolle",
     "details": "Stk.",
     "stockQuantity": 3,
@@ -730,7 +700,7 @@
     "vendorName": "Promag"
   },
   {
-    "number": "2308",
+    "number": "2305",
     "name": "Spiraltopfreiniger (Edelstahlwolle)",
     "details": "1 Stk.",
     "stockQuantity": 39,
@@ -740,27 +710,7 @@
     "vendorName": "ZVG"
   },
   {
-    "number": "2309",
-    "name": "Stahlwatte",
-    "details": "10 Stk.",
-    "stockQuantity": 6,
-    "minStockLevel": 2,
-    "sellPrice": 3.3,
-    "buyPrice": 3.0,
-    "vendorName": "Mühlethaler"
-  },
-  {
-    "number": "2310",
-    "name": "Vliesstücher assortiert (Abwaschlappen Mehrweg)",
-    "details": "40 Stk.",
-    "stockQuantity": 0,
-    "minStockLevel": 0,
-    "sellPrice": 23.1,
-    "buyPrice": 21.0,
-    "vendorName": "Mühlethaler"
-  },
-  {
-    "number": "2311",
+    "number": "2306",
     "name": "Mikrofaser Tücher Rot, Gelb, Blau, Grün",
     "details": "Stk.",
     "stockQuantity": 430,
@@ -770,7 +720,7 @@
     "vendorName": "Atavis Graf"
   },
   {
-    "number": "2312",
+    "number": "2307",
     "name": "Zauberschwamm (Radiergummi mit Wasser)",
     "details": "Stk.",
     "stockQuantity": 102,
@@ -780,7 +730,7 @@
     "vendorName": "ZVG"
   },
   {
-    "number": "2313",
+    "number": "2308",
     "name": "Vlies Handschuhe (Hygiene Bad) ZVG",
     "details": "100 Stk. Pack",
     "stockQuantity": 3000,
@@ -790,7 +740,7 @@
     "vendorName": "ZVG"
   },
   {
-    "number": "2314",
+    "number": "2309",
     "name": "Wiper Boul (Eimer / Reinigungstücher)",
     "details": "1 Eimer",
     "stockQuantity": 1,
@@ -860,16 +810,6 @@
     "vendorName": "Mühlethaler"
   },
   {
-    "number": "4112",
-    "name": "Frischhaltefolie",
-    "details": "30cm x 300m Stk.   Gross",
-    "stockQuantity": 2,
-    "minStockLevel": 2,
-    "sellPrice": 12.1,
-    "buyPrice": 11.0,
-    "vendorName": "Mühlethaler"
-  },
-  {
     "number": "4108",
     "name": "Servietten Farbig   ¼  gross  ",
     "details": "Pack 50 Stk.",
@@ -880,23 +820,13 @@
     "vendorName": "ZVG"
   },
   {
-    "number": "4109.a",
-    "name": "Servietten Weiss      1/8      klein       (Gastro)",
-    "details": "Pack 250  Stk.  NEU",
+    "number": "4109",
+    "name": "Servietten Weiss 1/8 klein (Gastro)",
+    "details": "Pack 250 Stk. | 1 Karton à 8 Pack",
     "stockQuantity": 0,
     "minStockLevel": 5,
     "sellPrice": 8.0,
     "buyPrice": 0.0,
-    "vendorName": "ZVG"
-  },
-  {
-    "number": "4109.b",
-    "name": "Servietten Weiss      1/8      klein       (Gastro)",
-    "details": " (1 Karton à 8 Pack)",
-    "stockQuantity": 0,
-    "minStockLevel": 4,
-    "sellPrice": 48.0,
-    "buyPrice": 43.64,
     "vendorName": "ZVG"
   },
   {
@@ -1008,16 +938,6 @@
     "sellPrice": 21.0,
     "buyPrice": 19.09,
     "vendorName": "ZVG"
-  },
-  {
-    "number": "4219",
-    "name": "Staubsaugersäcke zu WS 500 Minatol",
-    "details": "10 Stk.",
-    "stockQuantity": 0,
-    "minStockLevel": 0,
-    "sellPrice": 36.20,
-    "buyPrice": 0.0,
-    "vendorName": "Minatol/Wetrok"
   },
   {
     "number": "4214",
