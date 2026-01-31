@@ -368,7 +368,6 @@ public class ThemeManager {
 
             // Enable mouse hover effects
             UIManager.put("Button.rolloverEnabled", Boolean.TRUE);
-            UIManager.put("Button.rollover", new ColorUIResource(btnHoverBg));
 
             // Font styling for buttons
             UIManager.put("Button.font", new Font("Arial", Font.BOLD, 13));
@@ -640,8 +639,6 @@ public class ThemeManager {
         d.put("FileChooser.listViewForeground", new ColorUIResource(fg));
         d.put("FileChooser.detailsViewBackground", new ColorUIResource(card));
         d.put("FileChooser.detailsViewForeground", new ColorUIResource(fg));
-
-        d.put("FileChooser.readOnly", Boolean.FALSE);
 
         // Text field inside chooser
         d.put("FileChooser.textFieldBackground", new ColorUIResource(inputBg));
