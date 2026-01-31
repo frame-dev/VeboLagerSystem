@@ -6,7 +6,7 @@
 
     <groupId>ch.framedev</groupId>
     <artifactId>VeboLagerSystem</artifactId>
-    <version>0.2-TESTING</version>
+    <version>0.3-TESTING</version>
 
     <properties>
         <java.version>21</java.version>
