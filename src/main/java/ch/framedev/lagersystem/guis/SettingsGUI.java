@@ -89,7 +89,7 @@ public class SettingsGUI extends JFrame {
     private static final boolean DEFAULT_ENABLE_QR_IMPORT = true;
     private static final boolean DEFAULT_DARK_MODE = false;
     private static final String DEFAULT_FONT_STYLE = "Arial";
-    private static final String DEFAULT_SERVER_URL = "http://localhost/scan/list.php";
+    private static final String DEFAULT_SERVER_URL = "https://framedev.ch/vebo/scans.json";
 
     public static int TABLE_FONT_SIZE = 16;
 
@@ -1581,7 +1581,7 @@ public class SettingsGUI extends JFrame {
                 // Load server URL
                 String serverUrl = Main.settings.getProperty("server_url");
                 if (serverUrl == null || serverUrl.trim().isEmpty()) {
-                    serverUrl = "http://localhost/scan/list.php";
+                    serverUrl = "https://framedev.ch/vebo/scans.json";
                 }
                 serverUrlField.setText(serverUrl);
 

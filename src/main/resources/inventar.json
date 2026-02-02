@@ -51,12 +51,42 @@
   },
   {
     "number": "1105.b",
-    "name": "Schutzbrille über Brille (Bollè)",
+    "name": "Überschutzbrille 3M",
     "details": "Stk.",
     "stockQuantity": 31,
     "minStockLevel": 5,
     "sellPrice": 12.1,
     "buyPrice": 11.0,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1105.c",
+    "name": "Schutzbrille Bollè Nes",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 0.0,
+    "buyPrice": 0.0,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1105.d",
+    "name": "Überbrille Bollè Squale",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 0.0,
+    "buyPrice": 0.0,
+    "vendorName": "Thomi"
+  },
+  {
+    "number": "1105.e",
+    "name": "Brillenetui 3M",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 0.0,
+    "buyPrice": 0.0,
     "vendorName": "Thomi"
   },
   {
@@ -81,7 +111,7 @@
   },
   {
     "number": "1108",
-    "name": "Augenschutz 1 lt. Flasche  (Ersatz)",
+    "name": "Augenschutz 1 lt. Flasche (Ersatz)",
     "details": "1l Flasche",
     "stockQuantity": 0,
     "minStockLevel": 0,
@@ -97,7 +127,7 @@
     "minStockLevel": 0,
     "sellPrice": 45.5,
     "buyPrice": 41.36,
-    "vendorName": "SUVA"
+    "vendorName": "Thomi"
   },
   {
     "number": "1110",
@@ -107,7 +137,7 @@
     "minStockLevel": 2,
     "sellPrice": 0.0,
     "buyPrice": 0.0,
-    "vendorName": "SUVA"
+    "vendorName": "SGV"
   },
   {
     "number": "1111",
@@ -127,7 +157,7 @@
     "minStockLevel": 0,
     "sellPrice": 9.7,
     "buyPrice": 8.82,
-    "vendorName": "SUVA"
+    "vendorName": "Thomi"
   },
   {
     "number": "1113",
@@ -240,19 +270,9 @@
     "vendorName": "Thomi"
   },
   {
-    "number": "1208",
-    "name": "Einweg-Latexhandschuhe S / M / L / XL",
-    "details": "100 Stk. Box",
-    "stockQuantity": 20,
-    "minStockLevel": 0,
-    "sellPrice": 5.3,
-    "buyPrice": 4.82,
-    "vendorName": "Null"
-  },
-  {
     "number": "1209",
     "name": "Handschuhe Latex Reinigung Blau",
-    "details": "Gr. 7 - 7 ½ Paar",
+    "details": "Gr. 6 - 7 ½ Paar",
     "stockQuantity": 81,
     "minStockLevel": 0,
     "sellPrice": 4.95,
@@ -401,8 +421,8 @@
   },
   {
     "number": "2106",
-    "name": "Treteimer WC",
-    "details": "3 - 5 lt. 1 Rolle",
+    "name": "3 - 5 lt.",
+    "details": "Treteimer WC (1 Rolle)",
     "stockQuantity": 12,
     "minStockLevel": 10,
     "sellPrice": 1.2,
@@ -411,6 +431,16 @@
   },
   {
     "number": "2107",
+    "name": "15 lt.",
+    "details": "Treteimer",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 0.0,
+    "buyPrice": 0.0,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "2108",
     "name": "Sammelsack Aludosen",
     "details": "1 Rolle",
     "stockQuantity": 47,
@@ -420,7 +450,7 @@
     "vendorName": "Igora"
   },
   {
-    "number": "2108",
+    "number": "2109",
     "name": "Sammelsack Pet",
     "details": "1 Rolle 3.4 | 6 Rolle 16.9",
     "stockQuantity": 47,
@@ -537,7 +567,7 @@
     "minStockLevel": 3,
     "sellPrice": 9.0,
     "buyPrice": 8.18,
-    "vendorName": "Mühlethaler"
+    "vendorName": "ZVG"
   },
   {
     "number": "2212",
@@ -547,7 +577,7 @@
     "minStockLevel": 3,
     "sellPrice": 3.25,
     "buyPrice": 2.95,
-    "vendorName": "Mühlethaler"
+    "vendorName": "Landi"
   },
   {
     "number": "2213",
@@ -557,7 +587,7 @@
     "minStockLevel": 3,
     "sellPrice": 4.35,
     "buyPrice": 3.95,
-    "vendorName": "Mühlethaler"
+    "vendorName": "Landi"
   },
   {
     "number": "2214",
@@ -597,7 +627,7 @@
     "minStockLevel": 3,
     "sellPrice": 42.0,
     "buyPrice": 38.18,
-    "vendorName": "Mühlethaler"
+    "vendorName": "ZVG"
   },
   {
     "number": "2218",
@@ -607,7 +637,7 @@
     "minStockLevel": 3,
     "sellPrice": 6.0,
     "buyPrice": 5.45,
-    "vendorName": "Steinfels"
+    "vendorName": "ZVG"
   },
   {
     "number": "2219",
@@ -617,7 +647,7 @@
     "minStockLevel": 3,
     "sellPrice": 15.0,
     "buyPrice": 13.64,
-    "vendorName": "Mühlethaler"
+    "vendorName": "ZVG"
   },
   {
     "number": "2220",
@@ -627,7 +657,7 @@
     "minStockLevel": 3,
     "sellPrice": 16.5,
     "buyPrice": 15.0,
-    "vendorName": "Mühlethaler"
+    "vendorName": "Borna"
   },
   {
     "number": "2221",
@@ -637,7 +667,7 @@
     "minStockLevel": 3,
     "sellPrice": 43.9,
     "buyPrice": 39.91,
-    "vendorName": "Mühlethaler"
+    "vendorName": "Borna"
   },
   {
     "number": "2222",
@@ -647,7 +677,7 @@
     "minStockLevel": 3,
     "sellPrice": 46.6,
     "buyPrice": 42.36,
-    "vendorName": "Mühlethaler"
+    "vendorName": "Borna"
   },
   {
     "number": "2223",
@@ -657,17 +687,17 @@
     "minStockLevel": 3,
     "sellPrice": 47.8,
     "buyPrice": 43.45,
-    "vendorName": "Mühlethaler"
+    "vendorName": "Borna"
   },
   {
     "number": "2301",
-    "name": "Abwaschlappen Baumwolle solange Vorrat",
+    "name": "Abwaschlappen Baumwolle",
     "details": "Stk.",
     "stockQuantity": 35,
     "minStockLevel": 0,
     "sellPrice": 2.0,
     "buyPrice": 1.82,
-    "vendorName": "Null"
+    "vendorName": "ZVG"
   },
   {
     "number": "2302",
@@ -697,7 +727,7 @@
     "minStockLevel": 5,
     "sellPrice": 3.65,
     "buyPrice": 3.32,
-    "vendorName": "Promag"
+    "vendorName": "ZVG"
   },
   {
     "number": "2305",
@@ -717,7 +747,7 @@
     "minStockLevel": 6,
     "sellPrice": 1.7,
     "buyPrice": 1.55,
-    "vendorName": "Atavis Graf"
+    "vendorName": "ZVG"
   },
   {
     "number": "2307",
@@ -747,7 +777,7 @@
     "minStockLevel": 0,
     "sellPrice": 22.4,
     "buyPrice": 20.36,
-    "vendorName": "Null"
+    "vendorName": "ZVG"
   },
   {
     "number": "4101",
@@ -757,7 +787,7 @@
     "minStockLevel": 2,
     "sellPrice": 3.9,
     "buyPrice": 3.55,
-    "vendorName": "Mühlethaler"
+    "vendorName": "Restbestand"
   },
   {
     "number": "4101.b",
@@ -767,7 +797,7 @@
     "minStockLevel": 2,
     "sellPrice": 38.0,
     "buyPrice": 34.55,
-    "vendorName": "Null"
+    "vendorName": "Restbestand"
   },
   {
     "number": "4104",
@@ -777,7 +807,27 @@
     "minStockLevel": 2,
     "sellPrice": 1.85,
     "buyPrice": 1.68,
-    "vendorName": "Migros"
+    "vendorName": "Restbestand"
+  },
+  {
+    "number": "4102",
+    "name": "Frischhaltefolie",
+    "details": "30cm x 30m Stk.  Kleine",
+    "stockQuantity": 7,
+    "minStockLevel": 2,
+    "sellPrice": 2.5,
+    "buyPrice": 2.27,
+    "vendorName": "Restbestand"
+  },
+  {
+    "number": "4103",
+    "name": "Frischhaltefolie: Gastronom",
+    "details": "30cm x 300m",
+    "stockQuantity": 2,
+    "minStockLevel": 2,
+    "sellPrice": 19.8,
+    "buyPrice": 18.00,
+    "vendorName": "Restbestand"
   },
   {
     "number": "4107",
@@ -788,26 +838,6 @@
     "sellPrice": 20.5,
     "buyPrice": 18.64,
     "vendorName": "ZVG"
-  },
-  {
-    "number": "4102",
-    "name": "Frischhaltefolie",
-    "details": "30cm x 30m Stk.  Kleine",
-    "stockQuantity": 7,
-    "minStockLevel": 2,
-    "sellPrice": 2.5,
-    "buyPrice": 2.27,
-    "vendorName": "Mühlethaler"
-  },
-  {
-    "number": "4103",
-    "name": "Frischhaltefolie: Gastronom",
-    "details": "30cm x 300m",
-    "stockQuantity": 2,
-    "minStockLevel": 2,
-    "sellPrice": 19.8,
-    "buyPrice": 18.00,
-    "vendorName": "Mühlethaler"
   },
   {
     "number": "4108",
@@ -837,7 +867,7 @@
     "minStockLevel": 1,
     "sellPrice": 6.85,
     "buyPrice": 6.23,
-    "vendorName": "Mühlethaler"
+    "vendorName": "ZVG"
   },
   {
     "number": "4202",
@@ -971,7 +1001,7 @@
   },
   {
     "number": "4217",
-    "name": "Rollenhalter Gross   (WH/ Intr. Küche)",
+    "name": "Rollenhalter Gross (WH/ Intr. Küche)",
     "details": "Stk.",
     "stockQuantity": 0,
     "minStockLevel": 0,
@@ -1007,7 +1037,7 @@
     "minStockLevel": 4,
     "sellPrice": 6.35,
     "buyPrice": 5.77,
-    "vendorName": "Null"
+    "vendorName": "ZVG"
   },
   {
     "number": "4221",
@@ -1442,7 +1472,7 @@
   {
     "number": "5133",
     "name": "Multitex Viskosetuch (Schreineri)",
-    "details": "Stachtel à 400 Stk.",
+    "details": "Stachel à 400 Stk.",
     "stockQuantity": 0,
     "minStockLevel": 0,
     "sellPrice": 65.30,
@@ -1451,7 +1481,7 @@
   },
   {
     "number": "5134",
-    "name": "Mutltitex Wiper Bowl (Händedesinfektion)",
+    "name": "Multitex Wiper Bowl (Händedesinfektion)",
     "details": "1 Rolle",
     "stockQuantity": 0,
     "minStockLevel": 0,

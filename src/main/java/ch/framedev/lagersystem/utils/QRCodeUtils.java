@@ -79,7 +79,11 @@ public class QRCodeUtils {
      */
     @SuppressWarnings("unchecked")
     public static List<Map<String, Object>> retrieveQrCodeDataFromWebsite() {
-        String urlString = "https://framedev.ch/vebo/scans.json";
+        String serverUrl = Main.settings.getProperty("server_url");
+        if (serverUrl == null || serverUrl.trim().isEmpty()) {
+            serverUrl = "https://framedev.ch/vebo/scans.json";
+        }
+        String urlString = serverUrl;
         Gson gson = new Gson();
         List<Map<String, Object>> mapList = new ArrayList<>();
         HttpURLConnection connection = null;
