@@ -13,6 +13,20 @@ public final class NetUtils {
     private NetUtils() {
     }
 
+    public static boolean hasNetwork() {
+        try {
+            Enumeration<NetworkInterface> ifs = NetworkInterface.getNetworkInterfaces();
+            while (ifs.hasMoreElements()) {
+                NetworkInterface nif = ifs.nextElement();
+                if (nif.isUp() && !nif.isLoopback() && !nif.isVirtual()) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
     // 1) Client-IP aus HttpExchange (prüft X-Forwarded-For / X-Real-IP / Forwarded)
     public static String getClientIp(HttpExchange exchange) {
         if (exchange == null) return null;

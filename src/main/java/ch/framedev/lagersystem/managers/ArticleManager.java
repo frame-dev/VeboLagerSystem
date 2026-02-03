@@ -51,7 +51,7 @@ public class ArticleManager {
 
         // Initialize LRU caches with thread-safe access
         this.articleCache = Collections.synchronizedMap(new LinkedHashMap<>(
-            MAX_CACHE_SIZE + 1, 0.75f, true) {
+                MAX_CACHE_SIZE + 1, 0.75f, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<String, Article> eldest) {
                 return size() > MAX_CACHE_SIZE;
@@ -59,7 +59,7 @@ public class ArticleManager {
         });
 
         this.nameCache = Collections.synchronizedMap(new LinkedHashMap<>(
-            NAME_CACHE_SIZE + 1, 0.75f, true) {
+                NAME_CACHE_SIZE + 1, 0.75f, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<String, Article> eldest) {
                 return size() > NAME_CACHE_SIZE;
@@ -69,6 +69,9 @@ public class ArticleManager {
         createTable();
     }
 
+    /**
+     * Get singleton instance
+     */
     public static ArticleManager getInstance() {
         if (instance == null) {
             instance = new ArticleManager();
@@ -91,14 +94,16 @@ public class ArticleManager {
     }
 
     /**
-     * Invalidate a specific article from cache
+     * Invalidate caches related to a specific article
+     *
+     * @param articleNumber Article number to invalidate
      */
     private void invalidateArticleCache(String articleNumber) {
         articleCache.remove(articleNumber);
         articleNumberIndex.remove(articleNumber);
         // Also need to remove from name cache if present
         nameCache.entrySet().removeIf(entry ->
-            entry.getValue().getArticleNumber().equals(articleNumber));
+                entry.getValue().getArticleNumber().equals(articleNumber));
         invalidateAllArticlesList();
     }
 
@@ -127,7 +132,9 @@ public class ArticleManager {
     }
 
     /**
-     * Add article to cache
+     * Add article to the cache
+     *
+     * @param article Article to cache
      */
     private void cacheArticle(Article article) {
         if (article != null) {
@@ -139,12 +146,14 @@ public class ArticleManager {
 
     /**
      * Check if all articles cache is still valid
+     *
+     * @return true if valid, false if expired or null
      */
     private boolean isAllArticlesCacheValid() {
         allArticlesLock.readLock().lock();
         try {
             return allArticlesCache != null &&
-                   (System.currentTimeMillis() - allArticlesCacheTime) < CACHE_EXPIRY_MS;
+                    (System.currentTimeMillis() - allArticlesCacheTime) < CACHE_EXPIRY_MS;
         } finally {
             allArticlesLock.readLock().unlock();
         }
@@ -152,6 +161,8 @@ public class ArticleManager {
 
     /**
      * Get cache statistics for monitoring
+     *
+     * @return Map of cache statistics
      */
     public Map<String, Object> getCacheStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -163,6 +174,12 @@ public class ArticleManager {
         return stats;
     }
 
+    /**
+     * Check if an article exists by its article number
+     *
+     * @param articleNumber Article number to check
+     * @return true if exists, false otherwise
+     */
     public boolean existsArticle(String articleNumber) {
         // Fast-path: cache check
         if (articleCache.containsKey(articleNumber) || articleNumberIndex.contains(articleNumber)) {
@@ -194,6 +211,12 @@ public class ArticleManager {
         }
     }
 
+    /**
+     * Insert a new article into the database
+     *
+     * @param article Article to insert
+     * @return true if successful, false otherwise
+     */
     public boolean insertArticle(Article article) {
         if (existsArticle(article.getArticleNumber())) {
             Main.logUtils.addLog("Article with the number " + article.getArticleNumber() + " already exists!");
@@ -229,6 +252,12 @@ public class ArticleManager {
         return success;
     }
 
+    /**
+     * Update an existing article in the database
+     *
+     * @param article Article to update
+     * @return true if successful, false otherwise
+     */
     public boolean updateArticle(Article article) {
         if (!existsArticle(article.getArticleNumber())) {
             return false;
@@ -263,6 +292,12 @@ public class ArticleManager {
         return success;
     }
 
+    /**
+     * Delete an article from the database by its article number
+     *
+     * @param articleNumber Article number to delete
+     * @return true if successful, false otherwise
+     */
     public boolean deleteArticleByNumber(String articleNumber) {
         if (!existsArticle(articleNumber)) {
             return false;
@@ -281,6 +316,12 @@ public class ArticleManager {
         return success;
     }
 
+    /**
+     * Delete an article from the database
+     *
+     * @param article Article to delete
+     * @return true if successful, false otherwise
+     */
     public boolean deleteArticle(Article article) {
         if (existsArticle(article.getArticleNumber())) {
             return deleteArticleByNumber(article.getArticleNumber());
@@ -288,6 +329,12 @@ public class ArticleManager {
         return false;
     }
 
+    /**
+     * Retrieve an article by its article number
+     *
+     * @param articleNumber Article number to retrieve
+     * @return Article object or null if not found
+     */
     public Article getArticleByNumber(String articleNumber) {
         Article cached = articleCache.get(articleNumber);
         if (cached != null) {
@@ -320,6 +367,12 @@ public class ArticleManager {
         }
     }
 
+    /**
+     * Retrieve an article by its name
+     *
+     * @param name Name of the article to retrieve
+     * @return Article object or null if not found
+     */
     public Article getArticleByName(String name) {
         Article cached = nameCache.get(name);
         if (cached != null) {
@@ -352,6 +405,11 @@ public class ArticleManager {
         }
     }
 
+    /**
+     * Retrieve all articles from the database
+     *
+     * @return List of all Article objects
+     */
     public List<Article> getAllArticles() {
         if (isAllArticlesCacheValid()) {
             allArticlesLock.readLock().lock();
@@ -404,22 +462,36 @@ public class ArticleManager {
         }
     }
 
+    /**
+     * Remove a specified quantity from an article's stock
+     *
+     * @param articleNumber Article number to update
+     * @param quantity      Quantity to remove
+     * @return true if successful, false otherwise
+     */
     public boolean removeFromStock(String articleNumber, int quantity) {
         Article article = getArticleByNumber(articleNumber);
-        if(article == null) {
+        if (article == null) {
             return false;
         }
         int newQuantity = article.getStockQuantity() - quantity;
-        if(newQuantity < 0) {
+        if (newQuantity < 0) {
             newQuantity = 0;
         }
         article.setStockQuantity(newQuantity);
         return updateArticle(article);
     }
 
+    /**
+     * Add a specified quantity to an article's stock
+     *
+     * @param articleNumber Article number to update
+     * @param quantity      Quantity to add
+     * @return true if successful, false otherwise
+     */
     public boolean addToStock(String articleNumber, int quantity) {
         Article article = getArticleByNumber(articleNumber);
-        if(article == null) {
+        if (article == null) {
             return false;
         }
         int newQuantity = article.getStockQuantity() + quantity;

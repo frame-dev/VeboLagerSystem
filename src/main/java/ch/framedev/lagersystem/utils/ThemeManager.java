@@ -707,7 +707,7 @@ public class ThemeManager {
             panel.setBackground(getBackgroundColor());
         }
 
-        // Scroll panes: set viewport background too
+        // Scroll panes: set a viewport background too
         if (comp instanceof JScrollPane sp) {
             sp.setBackground(getBackgroundColor());
             if (sp.getViewport() != null) sp.getViewport().setBackground(getBackgroundColor());

@@ -9,6 +9,7 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
@@ -116,9 +117,14 @@ public class LogsGUI extends JFrame {
         JButton supplierOrderLogsButton = new JButton(UnicodeSymbols.DOCUMENT + " Lieferanten-Bestellungs-Protokolle");
         styleButton(supplierOrderLogsButton, ThemeManager.getWarningColor(), ThemeManager.getTextOnPrimaryColor());
         supplierOrderLogsButton.addActionListener(e -> setCategory(LogCategory.SUPPLIER_ORDER));
+        // All Logs Button
+        JButton allLogsButton = new JButton(UnicodeSymbols.CLIPBOARD + " Alle Protokolle");
+        styleButton(allLogsButton, ThemeManager.getPrimaryColor(), ThemeManager.getTextOnPrimaryColor());
+        allLogsButton.addActionListener(this::allLogs);
         buttonPanel.add(supplierOrderLogsButton);
         buttonPanel.add(orderLogsButton);
         buttonPanel.add(supplierLogsButton);
+        buttonPanel.add(allLogsButton);
 
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 12));
         filterPanel.setOpaque(false);
@@ -245,7 +251,7 @@ public class LogsGUI extends JFrame {
         });
 
         // Button hover effects with smooth color transitions
-        for(JButton button : new JButton[]{orderLogsButton, supplierLogsButton, supplierOrderLogsButton}) {
+        for(JButton button : new JButton[]{orderLogsButton, supplierLogsButton, supplierOrderLogsButton, allLogsButton}) {
             button.addMouseListener(new MouseAdapter() {
                 final Color orig = button.getBackground();
                 final Color hover = orig.brighter();
@@ -280,6 +286,45 @@ public class LogsGUI extends JFrame {
         });
 
         setCategory(LogCategory.ORDER);
+    }
+
+    private void allLogs(ActionEvent actionEvent) {
+        File allLogsFile = new File(new File(Main.getAppDataDir(), "logs"), "vebo_lager_system.log");
+        File orderLogFile = new File(new File(Main.getAppDataDir(), "logs"), "bestellung.log");
+        File vendorOrderFile = new File(new File(Main.getAppDataDir(), "logs"), "vendorOrder.log");
+        File supplierOrderFile = new File(new File(Main.getAppDataDir(), "logs"), "supplier_orders.txt");
+        List<String> allLogs = new ArrayList<>();
+        if(allLogsFile.exists()) {
+            try {
+                allLogs.add("--- Haupt-Protokolle ---");
+                allLogs.addAll(Files.readAllLines(allLogsFile.toPath(), StandardCharsets.UTF_8));
+            } catch (IOException ignored) {
+            }
+        }
+        if (orderLogFile.exists()) {
+            try {
+                allLogs.add("--- Bestellungs-Protokolle ---");
+                allLogs.addAll(Files.readAllLines(orderLogFile.toPath(), StandardCharsets.UTF_8));
+            } catch (IOException ignored) {
+            }
+        }
+        if (vendorOrderFile.exists()) {
+            try {
+                allLogs.add("--- Lieferanten-Protokolle ---");
+                allLogs.addAll(Files.readAllLines(vendorOrderFile.toPath(), StandardCharsets.UTF_8));
+            } catch (IOException ignored) {
+            }
+        }
+        if (supplierOrderFile.exists()) {
+            try {
+                allLogs.add("--- Lieferanten-Bestellungs-Protokolle ---");
+                allLogs.addAll(Files.readAllLines(supplierOrderFile.toPath(), StandardCharsets.UTF_8));
+            } catch (IOException ignored) {
+            }
+        }
+        currentLogs = allLogs;
+        applyFilters();
+        lastUpdatedLabel.setText("Letzte Aktualisierung: " + new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(new Date()));
     }
 
     /**

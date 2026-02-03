@@ -104,17 +104,31 @@ public class Main {
      * Initialize application settings and database
      */
     private static void initializeApplication(ProgressListener progressListener) {
+        // Setup for initialization steps with progress updates
         updateProgress(progressListener, 3, "Starte Initialisierung...");
-        updateProgress(progressListener, 8, "Initialisiere Datenbank...");
-        initializeDatabase();
-        updateProgress(progressListener, 16, "Lade Icons...");
+        updateProgress(progressListener, 4, "Ueberpruefe ob mit Internet verbunden...");
+        if(NetUtils.hasNetwork()) {
+            updateProgress(progressListener, 5, "Initialisiere Datenbank...");
+            initializeDatabase();
+            updateProgress(progressListener, 8, "Datenbank initialisiert...");
+            updateProgress(progressListener, 10, "Lade Einstellungen...");
+            loadSettings();
+            updateProgress(progressListener, 15, "Einstellungen geladen...");
+            updateProgress(progressListener, 17, "Pruefe auf Updates...");
+            checkForUpdates();
+            updateProgress(progressListener, 19, "Update-Pruefung abgeschlossen...");
+        } else {
+            logger.warn("Keine Internetverbindung - Update-Pruefung uebersprungen");
+        }
+        updateProgress(progressListener, 20, "Lade Icons...");
         loadApplicationIcons();
-        updateProgress(progressListener, 24, "Lade Einstellungen...");
-        loadSettings();
+        updateProgress(progressListener, 25, "Icons geladen...");
         updateProgress(progressListener, 34, "Initialisiere Theme...");
         initializeTheme();
+        updateProgress(progressListener, 35, "Theme gesetzt...");
         updateProgress(progressListener, 44, "Pruefe Datenverzeichnis...");
         ensureAppDataDirectory();
+        updateProgress(progressListener, 50, "Datenverzeichnis bereit...");
         if (settings.getProperty("first-time") == null || settings.getProperty("first-time").equalsIgnoreCase("fasle")) {
             settings.setProperty("first-time", "true");
             updateProgress(progressListener, 54, "Erster Start...");
@@ -143,6 +157,7 @@ public class Main {
                     }
                     logger.info("QR-Codes erstellt.");
                 }
+                updateProgress(progressListener, 63, "QR-Code Abfrage abgeschlossen.");
                 settings.setProperty("load-from-files", "true");
             } else {
                 settings.setProperty("load-from-files", "false");
@@ -152,9 +167,11 @@ public class Main {
                 updateProgress(progressListener, 72, "Importiere Startdaten...");
                 // Import initial data
                 importInitialData(progressListener);
+                updateProgress(progressListener, 80, "Startdaten importiert...");
                 // Initialize default user
                 updateProgress(progressListener, 88, "Erstelle Standard-Benutzer...");
                 initializeDefaultUser();
+                updateProgress(progressListener, 90, "Standard-Benutzer erstellt...");
                 logger.info("Initial data import completed.");
             } else {
                 logger.info("Initial data import skipped as per settings.");
@@ -194,7 +211,7 @@ public class Main {
     }
 
     /**
-     * Initialize theme manager and apply theme settings
+     * Initialize the theme manager and apply theme settings
      */
     private static void initializeTheme() {
         ThemeManager.initialize();

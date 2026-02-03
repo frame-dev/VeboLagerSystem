@@ -36,6 +36,7 @@ public class DatabaseManager {
     public static final String TABLE_USERS = "users";
     public static final String TABLE_WARNINGS = "warnings";
     public static final String TABLE_LOGS = "logs";
+    public static final String TABLE_NOTES = "notes";
 
     private final Connection connection;
 

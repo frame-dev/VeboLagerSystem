@@ -32,7 +32,7 @@ public class SplashscreenGUI extends JFrame {
 
         GlassPanel card = new GlassPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(BorderFactory.createEmptyBorder(36, 52, 40, 52));
+        card.setBorder(BorderFactory.createEmptyBorder(36, 60, 40, 60));
 
         logoLabel = new AnimatedLogoLabel(loadLogo());
         logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);

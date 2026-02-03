@@ -26,4 +26,9 @@ public class User {
     public void setOrders(List<String> orders) {
         this.orders = orders;
     }
+
+    public String getQRCodeData() {
+        String ordersString = String.join(",", getOrders());
+        return "name:" + name + ";" + "orders:" + ordersString;
+    }
 }

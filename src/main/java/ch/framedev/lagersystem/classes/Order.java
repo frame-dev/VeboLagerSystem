@@ -127,4 +127,25 @@ public class Order {
         }
         return totalPrice;
     }
+
+    public String getQRCodeDataString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(orderId).append(";");
+        for (Map.Entry<String, Integer> entry : orderedArticles.entrySet()) {
+            sb.append(entry.getKey()).append(",").append(entry.getValue()).append("|");
+        }
+        // Remove trailing '|'
+        if (!orderedArticles.isEmpty()) {
+            sb.setLength(sb.length() - 1);
+        }
+        sb.append(";");
+        sb.append(receiverName).append(";");
+        sb.append(receiverKontoNumber).append(";");
+        sb.append(orderDate).append(";");
+        sb.append(senderName).append(";");
+        sb.append(senderKontoNumber).append(";");
+        sb.append(department).append(";");
+        sb.append(status);
+        return sb.toString();
+    }
 }

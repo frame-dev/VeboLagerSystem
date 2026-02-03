@@ -85,4 +85,13 @@ public class Warning {
             return displayName;
         }
     }
+
+    public String getQRCodeData() {
+        return "title:" + title + ";" +
+               "message:" + message + ";" +
+               "type:" + type.name() + ";" +
+               "date:" + date + ";" +
+               "isResolved:" + isResolved + ";" +
+               "isDisplayed:" + isDisplayed;
+    }
 }

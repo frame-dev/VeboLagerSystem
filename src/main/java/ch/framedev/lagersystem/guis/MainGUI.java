@@ -223,7 +223,7 @@ public class MainGUI extends JFrame {
      */
     private JPanel createHeaderRightPanel() {
         JPanel rightPanel = new JPanel();
-        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.X_AXIS));
         rightPanel.setOpaque(false);
 
         JButton settingsButton = new JButton(UnicodeSymbols.BETTER_GEAR + " Einstellungen");
@@ -234,14 +234,24 @@ public class MainGUI extends JFrame {
             settingsGUI.display();
         });
         settingsButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        JButton notesButton = new JButton(UnicodeSymbols.CLIPBOARD + " Notizen");
+        styleHeaderButton(notesButton);
+        notesButton.setToolTipText("Persönliche Notizen verwalten");
+        notesButton.addActionListener(e -> {
+            NotesGUI notesGUI = new NotesGUI();
+            notesGUI.display();
+        });
+        notesButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
         JLabel dateLabel = new JLabel(new SimpleDateFormat("EEEE, dd. MMMM yyyy").format(new Date()));
         dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         dateLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
         dateLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
+        rightPanel.add(notesButton);
+        rightPanel.add(Box.createHorizontalStrut(8));
         rightPanel.add(settingsButton);
-        rightPanel.add(Box.createVerticalStrut(10));
+        rightPanel.add(Box.createHorizontalStrut(10));
         rightPanel.add(dateLabel);
 
         return rightPanel;

@@ -231,7 +231,7 @@ public class UnicodeSymbols {
     public static final String CHEVRON_DOWN = "\u02C5";
 
     // ===================== Currency (Extended) =====================
-    public static final String SWISS_FRANC = "\u20A3";
+    public static final String SWISS_FRANC = "\u20A3"; // Note: Not widely supported, fallback to "CHF" may be needed
     public static final String RUPEE = "\u20B9";
     public static final String WON = "\u20A9";
     public static final String BITCOIN = "\u20BF";

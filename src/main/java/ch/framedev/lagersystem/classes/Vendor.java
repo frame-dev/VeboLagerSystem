@@ -97,4 +97,15 @@ public class Vendor {
     public void setMinOrderValue(double minOrderValue) {
         this.minOrderValue = minOrderValue;
     }
+
+    public String getQRCodeData() {
+        String articlesString = String.join(",", getSuppliedArticles());
+        return "name:" + name + ";" +
+               "contactPerson:" + contactPerson + ";" +
+               "phoneNumber:" + phoneNumber + ";" +
+               "email:" + email + ";" +
+               "address:" + address + ";" +
+               "suppliedArticles:" + articlesString + ";" +
+               "minOrderValue:" + minOrderValue;
+    }
 }
