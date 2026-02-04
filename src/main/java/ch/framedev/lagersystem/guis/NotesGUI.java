@@ -8,6 +8,11 @@ import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * Notes manager window for viewing, creating, and updating personal notes.
+ * Provides a split list/detail layout, toolbar actions, and themed dialogs.
+ * Dialogs use rounded card styling with a header strip to match the app theme.
+ */
 public class NotesGUI extends JFrame {
 
     private final NotesManager notesManager = NotesManager.getInstance();
@@ -15,6 +20,7 @@ public class NotesGUI extends JFrame {
     private final DefaultListModel<String> listModel = new DefaultListModel<>();
     private final JList<String> notesList = new JList<>(listModel);
     private final JTextArea noteContentArea = new JTextArea(20, 30);
+    private float fontScaleDelta = 0f;
 
     public NotesGUI() {
         ThemeManager.getInstance().registerWindow(this);
@@ -40,6 +46,9 @@ public class NotesGUI extends JFrame {
         contentScroll.getViewport().setBackground(ThemeManager.getBackgroundColor());
         contentScroll.getVerticalScrollBar().setUnitIncrement(16);
         root.add(contentScroll, BorderLayout.CENTER);
+
+        JPanel bottomPanel = createFooterToolbar();
+        root.add(bottomPanel, BorderLayout.SOUTH);
 
         setContentPane(root);
         setupList();
@@ -102,6 +111,24 @@ public class NotesGUI extends JFrame {
         return toolbar;
     }
 
+    private JPanel createFooterToolbar() {
+        JPanel toolBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        toolBar.setOpaque(false);
+
+        JButton fontSizeBiggerButton = new JButton("Increase Font");
+        fontSizeBiggerButton.addActionListener(listener -> bumpFontSize(2f));
+
+        JButton fontSizeSmallerButton = new JButton("Decrease Font");
+        fontSizeSmallerButton.addActionListener(listener -> bumpFontSize(-2f));
+
+        for (JButton button : new JButton[]{fontSizeBiggerButton, fontSizeSmallerButton}) {
+            styleToolbarButton(button);
+            toolBar.add(button);
+        }
+
+        return toolBar;
+    }
+
     private JPanel createContentPanel() {
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
@@ -134,6 +161,7 @@ public class NotesGUI extends JFrame {
         noteContentArea.setLineWrap(true);
         noteContentArea.setWrapStyleWord(true);
 
+        // Scroll panes for list and content
         JScrollPane listScroll = new JScrollPane(notesList);
         listScroll.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
         listScroll.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
@@ -150,13 +178,6 @@ public class NotesGUI extends JFrame {
 
         content.add(splitPane, BorderLayout.CENTER);
         return content;
-    }
-
-    private JPanel createFooterSpacer() {
-        JPanel spacer = new JPanel();
-        spacer.setOpaque(false);
-        spacer.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        return spacer;
     }
 
     private void styleToolbarButton(JButton button) {
@@ -193,7 +214,6 @@ public class NotesGUI extends JFrame {
 
         Note note = notesManager.getNoteByTitle(selectedTitle);
         if (note == null) {
-
             return;
         }
 
@@ -224,6 +244,7 @@ public class NotesGUI extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 1.0;
+        gbc.weighty = 0.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(0, 0, 8, 0);
         form.add(createDialogLabel("Inhalt:"), gbc);
@@ -233,8 +254,9 @@ public class NotesGUI extends JFrame {
         gbc.fill = GridBagConstraints.BOTH;
         form.add(createDialogScroll(contentArea), gbc);
 
-        dialog.add(form, BorderLayout.CENTER);
-        dialog.add(createDialogButtonPanel(saveButton, dialog), BorderLayout.SOUTH);
+        JPanel body = getDialogBodyPanel(dialog);
+        body.add(form, BorderLayout.CENTER);
+        body.add(createDialogButtonPanel(saveButton, dialog), BorderLayout.SOUTH);
         dialog.setVisible(true);
     }
 
@@ -270,6 +292,7 @@ public class NotesGUI extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 1.0;
+        gbc.weighty = 0.0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.insets = new Insets(0, 0, 6, 0);
         form.add(createDialogLabel("Titel:"), gbc);
@@ -287,23 +310,76 @@ public class NotesGUI extends JFrame {
         gbc.fill = GridBagConstraints.BOTH;
         form.add(createDialogScroll(contentArea), gbc);
 
-        dialog.add(form, BorderLayout.CENTER);
-        dialog.add(createDialogButtonPanel(saveButton, dialog), BorderLayout.SOUTH);
+        JPanel body = getDialogBodyPanel(dialog);
+        body.add(form, BorderLayout.CENTER);
+        body.add(createDialogButtonPanel(saveButton, dialog), BorderLayout.SOUTH);
         dialog.setVisible(true);
     }
 
     private JDialog createNoteDialogShell(String title) {
         JDialog dialog = new JDialog(this, title, true);
-        dialog.setSize(460, 520);
-        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.setSize(480, 540);
+        dialog.setMinimumSize(new Dimension(440, 440));
+        dialog.setLayout(new BorderLayout());
         dialog.setLocationRelativeTo(this);
+        dialog.setUndecorated(false);
 
-        JPanel container = new JPanel(new BorderLayout(10, 10));
-        container.setBackground(ThemeManager.getBackgroundColor());
-        container.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-        dialog.setContentPane(container);
+        JPanel root = new JPanel(new BorderLayout());
+        root.setBackground(ThemeManager.getBackgroundColor());
+        root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
+        // Card wrapper to match other dialogs
+        RoundedPanel card = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
+        card.setLayout(new BorderLayout());
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ));
+
+        // Header strip
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(ThemeManager.getHeaderBackgroundColor());
+        header.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
+
+        JLabel headerTitle = new JLabel(title);
+        headerTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
+        headerTitle.setForeground(ThemeManager.getTextOnPrimaryColor());
+        header.add(headerTitle, BorderLayout.WEST);
+
+        JButton close = new JButton(UnicodeSymbols.CLOSE);
+        close.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        close.setForeground(ThemeManager.getTextOnPrimaryColor());
+        close.setContentAreaFilled(false);
+        close.setBorderPainted(false);
+        close.setFocusPainted(false);
+        close.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        close.addActionListener(e -> dialog.dispose());
+        header.add(close, BorderLayout.EAST);
+
+        // Body card
+        RoundedPanel body = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
+        body.setLayout(new BorderLayout(10, 10));
+        body.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
+                BorderFactory.createEmptyBorder(16, 16, 16, 16)
+        ));
+
+        card.add(header, BorderLayout.NORTH);
+        card.add(body, BorderLayout.CENTER);
+
+        root.add(card, BorderLayout.CENTER);
+
+        dialog.setContentPane(root);
+        dialog.getRootPane().putClientProperty("notes.dialog.body", body);
+        if (fontScaleDelta != 0f) {
+            applyFontDelta(dialog.getContentPane(), fontScaleDelta);
+        }
         return dialog;
+    }
+
+    private JPanel getDialogBodyPanel(JDialog dialog) {
+        Object body = dialog.getRootPane().getClientProperty("notes.dialog.body");
+        return body instanceof JPanel panel ? panel : (JPanel) dialog.getContentPane();
     }
 
     private JLabel createDialogLabel(String text) {
@@ -343,6 +419,7 @@ public class NotesGUI extends JFrame {
                 JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
         scrollPane.getViewport().setBackground(ThemeManager.getInputBackgroundColor());
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         return scrollPane;
     }
 
@@ -358,6 +435,9 @@ public class NotesGUI extends JFrame {
                 BorderFactory.createEmptyBorder(8, 14, 8, 14)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        Color hover = ThemeManager.getButtonHoverColor(bg);
+        button.addChangeListener(e -> button.setBackground(button.getModel().isRollover() ? hover : bg));
         return button;
     }
 
@@ -370,7 +450,15 @@ public class NotesGUI extends JFrame {
 
         panel.add(cancel);
         panel.add(primaryButton);
-        return panel;
+
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        wrapper.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
+                BorderFactory.createEmptyBorder(10, 0, 0, 0)
+        ));
+        wrapper.add(panel, BorderLayout.EAST);
+        return wrapper;
     }
 
     private void setupList() {
@@ -381,8 +469,48 @@ public class NotesGUI extends JFrame {
         }
     }
 
+    private void bumpFontSize(float delta) {
+        fontScaleDelta += delta;
+        applyFontDelta(getContentPane(), delta);
+        revalidate();
+        repaint();
+    }
+
+    private void applyFontDelta(Component component, float delta) {
+        Font font = component.getFont();
+        if (font != null) {
+            component.setFont(font.deriveFont(font.getSize2D() + delta));
+        }
+
+        if (component instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                applyFontDelta(child, delta);
+            }
+        }
+    }
+
     public void display() {
         setVisible(true);
     }
-}
 
+    private static class RoundedPanel extends JPanel {
+        private final Color backgroundColor;
+        private final int radius;
+
+        RoundedPanel(Color bg, int radius) {
+            this.backgroundColor = bg;
+            this.radius = radius;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(backgroundColor);
+            g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
+            g2.dispose();
+            super.paintComponent(g);
+        }
+    }
+}
