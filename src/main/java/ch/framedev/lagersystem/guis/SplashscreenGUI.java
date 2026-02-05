@@ -212,8 +212,8 @@ public class SplashscreenGUI extends JFrame {
     }
 
     private void startAnimation(JComponent... components) {
-        animationTimer = new Timer(10, event -> {
-            phase += 0.035;
+        animationTimer = new Timer(15, event -> {
+            phase += 0.085;
             advanceParticles();
             logoLabel.repaint();
             statusLabel.repaint();

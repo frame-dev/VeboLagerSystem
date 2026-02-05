@@ -37,6 +37,8 @@ public class Main {
     public static ImageIcon icon;
     public static ImageIcon iconSmall;
 
+    private static boolean firstTimeSetup = false;
+
     public static final String VERSION = "0.3-TESTING";
 
     public static void main(String[] args) {
@@ -129,52 +131,59 @@ public class Main {
         updateProgress(progressListener, 44, "Pruefe Datenverzeichnis...");
         ensureAppDataDirectory();
         updateProgress(progressListener, 50, "Datenverzeichnis bereit...");
-        if (settings.getProperty("first-time") == null || settings.getProperty("first-time").equalsIgnoreCase("fasle")) {
-            settings.setProperty("first-time", "true");
-            updateProgress(progressListener, 54, "Erster Start...");
-            int result = showConfirmDialogOnEdt(
-                "Willkommen zum VEBO Lagersystem!\nMoechten Sie die anfaenglichen Daten jetzt importieren?",
-                "Erster Start",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.INFORMATION_MESSAGE,
-                iconSmall
-            );
-            if(result == JOptionPane.YES_OPTION) {
-                updateProgress(progressListener, 62, "QR-Code Abfrage...");
-                int resultQr = showConfirmDialogOnEdt(
-                    "QR-Codes Erstellen?",
-                    "QR-Codes",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.INFORMATION_MESSAGE,
-                    null
+        // Need bug fixesw
+        if (settings.getProperty("first-time") == null || settings.getProperty("first-time").equalsIgnoreCase("false")) {
+            firstTimeSetup = settings.getProperty("first-time").equalsIgnoreCase("true");
+            if(!firstTimeSetup) {
+                firstTimeSetup = true;
+                settings.setProperty("first-time", "true");
+                updateProgress(progressListener, 54, "Erster Start...");
+                int result = showConfirmDialogOnEdt(
+                        "Willkommen zum VEBO Lagersystem!\nMoechten Sie die anfaenglichen Daten jetzt importieren?",
+                        "Erster Start",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.INFORMATION_MESSAGE,
+                        iconSmall
                 );
-                if(resultQr == JOptionPane.YES_OPTION) {
-                    updateProgress(progressListener, 68, "Erstelle QR-Codes...");
-                    logger.info("QR-Codes werden erstellt...");
-                    List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
-                    for (File qrCodeFile : qrCodeFiles) {
-                        logger.info("QR-Code erstellt: {}", qrCodeFile.getAbsolutePath());
+                if (result == JOptionPane.YES_OPTION) {
+                    updateProgress(progressListener, 62, "QR-Code Abfrage...");
+                    int resultQr = showConfirmDialogOnEdt(
+                            "QR-Codes Erstellen?",
+                            "QR-Codes",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.INFORMATION_MESSAGE,
+                            null
+                    );
+                    if (resultQr == JOptionPane.YES_OPTION) {
+                        updateProgress(progressListener, 68, "Erstelle QR-Codes...");
+                        logger.info("QR-Codes werden erstellt...");
+                        List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
+                        for (File qrCodeFile : qrCodeFiles) {
+                            logger.info("QR-Code erstellt: {}", qrCodeFile.getAbsolutePath());
+                        }
+                        logger.info("QR-Codes erstellt.");
                     }
-                    logger.info("QR-Codes erstellt.");
+                    updateProgress(progressListener, 63, "QR-Code Abfrage abgeschlossen.");
+                    settings.setProperty("load-from-files", "true");
+                } else {
+                    settings.setProperty("load-from-files", "false");
                 }
-                updateProgress(progressListener, 63, "QR-Code Abfrage abgeschlossen.");
-                settings.setProperty("load-from-files", "true");
+                settings.save();
+                if (Boolean.parseBoolean(settings.getProperty("load-from-files"))) {
+                    updateProgress(progressListener, 72, "Importiere Startdaten...");
+                    // Import initial data
+                    importInitialData(progressListener);
+                    updateProgress(progressListener, 80, "Startdaten importiert...");
+                    // Initialize default user
+                    updateProgress(progressListener, 88, "Erstelle Standard-Benutzer...");
+                    initializeDefaultUser();
+                    updateProgress(progressListener, 90, "Standard-Benutzer erstellt...");
+                    logger.info("Initial data import completed.");
+                } else {
+                    logger.info("Initial data import skipped as per settings.");
+                }
             } else {
-                settings.setProperty("load-from-files", "false");
-            }
-            settings.save();
-            if (Boolean.parseBoolean(settings.getProperty("load-from-files"))) {
-                updateProgress(progressListener, 72, "Importiere Startdaten...");
-                // Import initial data
-                importInitialData(progressListener);
-                updateProgress(progressListener, 80, "Startdaten importiert...");
-                // Initialize default user
-                updateProgress(progressListener, 88, "Erstelle Standard-Benutzer...");
-                initializeDefaultUser();
-                updateProgress(progressListener, 90, "Standard-Benutzer erstellt...");
-                logger.info("Initial data import completed.");
-            } else {
-                logger.info("Initial data import skipped as per settings.");
+                logger.info("First time setup skipped as per settings.");
             }
         }
         updateProgress(progressListener, 96, "Abschluss der Initialisierung...");
@@ -228,6 +237,8 @@ public class Main {
             System.err.println(msg);
             logUtils.addLog(msg);
             throw new RuntimeException(msg);
+        } else {
+            logger.info("Anwendungsdatenverzeichnis bereit: {}", appDataDir.getAbsolutePath());
         }
     }
 
@@ -237,6 +248,8 @@ public class Main {
     private static void initializeDatabase() {
         databaseManager = new DatabaseManager(getAppDataDir().getAbsolutePath(), "vebo_lager_system.db");
         System.out.println("✓ Datenbank initialisiert");
+        logger.info("Database initialized.");
+        logUtils.addLog("Datenbank initialisiert.");
     }
 
     /**
@@ -299,16 +312,58 @@ public class Main {
      * Create Article object from map data
      */
     private static Article createArticleFromMap(Map<String, Object> data) {
+        String number = getString(data, "number", "");
+        String name = getString(data, "name", "");
+        String details = getString(data, "details", "");
+        int stockQuantity = getInt(data, "stockQuantity", 0);
+        int minStockLevel = getInt(data, "minStockLevel", 0);
+        double sellPrice = getDouble(data, "sellPrice", 0.0);
+        double buyPrice = getDouble(data, "buyPrice", 0.0);
+        String vendorName = getString(data, "vendorName", "");
+
         return new Article(
-                (String) data.get("number"),
-                (String) data.get("name"),
-                (String) data.get("details"),
-                (int) data.get("stockQuantity"),
-                (int) data.get("minStockLevel"),
-                (Double) data.get("sellPrice"),
-                (Double) data.get("buyPrice"),
-                (String) data.get("vendorName")
+                number,
+                name,
+                details,
+                stockQuantity,
+                minStockLevel,
+                sellPrice,
+                buyPrice,
+                vendorName
         );
+    }
+
+    private static String getString(Map<String, Object> data, String key, String fallback) {
+        Object value = data == null ? null : data.get(key);
+        return value == null ? fallback : value.toString();
+    }
+
+    private static int getInt(Map<String, Object> data, String key, int fallback) {
+        Object value = data == null ? null : data.get(key);
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value != null) {
+            try {
+                return Integer.parseInt(value.toString().trim());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return fallback;
+    }
+
+    private static double getDouble(Map<String, Object> data, String key, double fallback) {
+        Object value = data == null ? null : data.get(key);
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value != null) {
+            try {
+                return Double.parseDouble(value.toString().trim());
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return fallback;
     }
 
     /**
@@ -338,13 +393,14 @@ public class Main {
             result.incrementSkipped();
             return;
         }
+        String contactPerson = (String) getString(itemData, "contactPerson", "");
+        String phoneNumber = (String) getString(itemData, "phoneNumber", "");
+        String email = (String) getString(itemData, "email", "");
+        String address = (String) getString(itemData, "address", "");
 
         String[] columns = {"contactPerson", "phoneNumber", "email", "address"};
         Object[] dataValues = {
-                itemData.get("contactPerson"),
-                itemData.get("phoneNumber"),
-                itemData.get("email"),
-                itemData.get("address")
+                contactPerson, phoneNumber, email, address
         };
 
         if (vendorManager.updateVendor(vendorName, columns, dataValues)) {
@@ -379,8 +435,8 @@ public class Main {
      * Process single department import
      */
     private static void processDepartmentImport(DepartmentManager departmentManager, Map<String, Object> itemData, ImportResult result) {
-        String departmentName = (String) itemData.get("department");
-        String kontoNumber = (String) itemData.get("kontoNumber");
+        String departmentName = getString(itemData, "departmentName", "");
+        String kontoNumber = getString(itemData, "kontoNumber", "");
 
         if (shouldSkipImport(departmentName, departmentManager.existsDepartment(departmentName))) {
             result.incrementSkipped();
@@ -418,8 +474,8 @@ public class Main {
      * Process single client import
      */
     private static void processClientImport(ClientManager clientManager, Map<String, Object> itemData, ImportResult result) {
-        String firstLastName = (String) itemData.get("firstLastName");
-        String department = (String) itemData.get("department");
+        String firstLastName = getString(itemData, "firstLastName", "");
+        String department = getString(itemData, "department", "");
 
         if (shouldSkipImport(firstLastName, clientManager.existsClient(firstLastName))) {
             result.incrementSkipped();
@@ -502,7 +558,7 @@ public class Main {
     }
 
     /**
-     * Get boolean setting with default value
+     * Get boolean setting with a default value
      */
     private static boolean getBooleanSetting(String key) {
         String value = settings.getProperty(key);
@@ -568,13 +624,15 @@ public class Main {
     }
 
     /**
-     * Ensure settings file exists
+     * Ensure a settings file exists
      */
     private static File ensureSettingsFile() {
         File settingsFile = new File(getAppDataDir(), "settings.properties");
 
         if (!settingsFile.exists()) {
             createSettingsFile(settingsFile);
+        } else {
+            logger.info("Settings file already exists: {}", settingsFile.getAbsolutePath());
         }
 
         return settingsFile;
@@ -587,6 +645,9 @@ public class Main {
         try {
             if (!settingsFile.createNewFile()) {
                 System.err.println("Konnte Einstellungsdatei nicht erstellen: " + settingsFile.getAbsolutePath());
+            } else {
+                logger.info("Settings file created: {}", settingsFile.getAbsolutePath());
+                logUtils.addLog("Einstellungsdatei erstellt: " + settingsFile.getAbsolutePath());
             }
         } catch (Exception e) {
             logger.error("Fehler beim Erstellen der Einstellungsdatei: {}", e.getMessage(), e);
@@ -629,6 +690,8 @@ public class Main {
         if (githubToken != null && !githubToken.isEmpty()) {
             UpdateManager.getInstance().setPersonalToken(githubToken);
             logUtils.addLog("GitHub Token für Update-Manager gesetzt");
+        } else {
+            logUtils.addLog("Kein GitHub Token für Update-Manager gesetzt");
         }
     }
 
@@ -896,7 +959,7 @@ public class Main {
                 if (chunks.isEmpty()) {
                     return;
                 }
-                ProgressUpdate last = chunks.get(chunks.size() - 1);
+                ProgressUpdate last = chunks.getLast();
                 splashscreen.updateProgress(last.percent(), last.message());
             }
 
