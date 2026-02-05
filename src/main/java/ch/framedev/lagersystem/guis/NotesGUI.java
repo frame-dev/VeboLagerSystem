@@ -27,7 +27,7 @@ public class NotesGUI extends JFrame {
 
         setTitle(UnicodeSymbols.MEMO + " Notizen");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(780, 560);
+        setSize(860, 660);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
@@ -100,10 +100,13 @@ public class NotesGUI extends JFrame {
         JButton updateDialogButton = new JButton(UnicodeSymbols.EDIT + " Notiz bearbeiten");
         updateDialogButton.addActionListener(e -> openUpdateDialog());
 
+        JButton deleteDialogButton = new JButton(UnicodeSymbols.TRASH + " Notiz löschen");
+        deleteDialogButton.addActionListener(e -> deleteNote());
+
         JButton refreshButton = new JButton(UnicodeSymbols.REFRESH + " Aktualisieren");
         refreshButton.addActionListener(e -> setupList());
 
-        for (JButton button : new JButton[]{createNoteButton, updateDialogButton, refreshButton}) {
+        for (JButton button : new JButton[]{createNoteButton, updateDialogButton, deleteDialogButton, refreshButton}) {
             styleToolbarButton(button);
             toolbar.add(button);
         }
@@ -258,6 +261,28 @@ public class NotesGUI extends JFrame {
         body.add(form, BorderLayout.CENTER);
         body.add(createDialogButtonPanel(saveButton, dialog), BorderLayout.SOUTH);
         dialog.setVisible(true);
+    }
+
+    private void deleteNote() {
+        String selectedTitle = notesList.getSelectedValue();
+        if (selectedTitle == null) {
+            JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Notiz zum Löschen aus.",
+                    "Keine Notiz ausgewählt", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Möchten Sie die Notiz \"" + selectedTitle + "\" wirklich löschen?",
+                "Notiz löschen", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            boolean success = notesManager.deleteNote(selectedTitle);
+            if (success) {
+                setupList();
+                noteContentArea.setText("");
+            } else {
+                JOptionPane.showMessageDialog(this, "Fehler beim Löschen der Notiz.",
+                        "Fehler", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     private void createNoteDialog() {
