@@ -82,7 +82,7 @@ public class NotesGUI extends JFrame {
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         titleBox.add(title);
-        titleBox.add(Box.createVerticalStrut(2));
+        titleBox.add(Box.createVerticalStrut(3));
         titleBox.add(subtitle);
 
         header.add(titleBox, BorderLayout.WEST);
