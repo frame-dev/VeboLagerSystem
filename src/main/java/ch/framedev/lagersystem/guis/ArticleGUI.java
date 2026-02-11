@@ -8,7 +8,7 @@ import ch.framedev.lagersystem.managers.WarningManager;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeGenerator;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
-import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -38,7 +38,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.net.URLEncoder;
@@ -47,7 +46,6 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -56,9 +54,10 @@ import java.util.regex.PatternSyntaxException;
 import static ch.framedev.lagersystem.main.Main.articleListGUI;
 
 /**
- * ArticleGUI with category support for better organization.
- * Categories are loaded from categories.json and mapped to articles based on article number ranges.
- * TODO: Performance Check
+ * ArticleGUI is responsible for managing the graphical user interface for handling articles.
+ * It provides features for advanced filtering, table operations, article addition and editing,
+ * QR code generation, exporting articles, and displaying detailed information in modern styled
+ * dialogs. The class ensures consistent theme-aware styling across all components.
  */
 public class ArticleGUI extends JFrame {
 
@@ -79,7 +78,10 @@ public class ArticleGUI extends JFrame {
     private JComboBox<String> categoryFilter;
     private Map<String, CategoryRange> categories; // category name -> range
 
-    // Inner class to hold category range data
+    /**
+     * Represents a categorical range with a specific name, starting point, and ending point.
+     * The range is defined by an integer start and end value, inclusive.
+     */
     private static class CategoryRange {
         String category;
         int rangeStart;
@@ -92,6 +94,11 @@ public class ArticleGUI extends JFrame {
         }
     }
 
+    /**
+     * Constructs a new instance of the ArticleGUI class.
+     * This class is responsible for initializing and managing the user interface for article management.
+     * The GUI includes functionality for viewing, adding, editing
+     */
     public ArticleGUI() {
         ThemeManager.getInstance().registerWindow(this);
 
@@ -516,6 +523,32 @@ public class ArticleGUI extends JFrame {
         SwingUtilities.invokeLater(this::adjustColumnWidths);
     }
 
+    /**
+     * Adds the currently selected articles from the article table to a client's order.
+     * If no articles are selected, the user will be prompted to make a selection.
+     * For each selected article, the user is asked to specify a quantity.
+     * Valid articles with valid quantities are added to the client's order.
+     *
+     * Behavior:
+     * - If no rows are selected, displays a warning dialog informing the user to select at least one article.
+     * - For each selected article:
+     *   - Prompts the user to enter a quantity.
+     *   - If the quantity input is invalid (not a number), displays an error dialog and skips that article.
+     *   - Retrieves article details from ArticleManager and adds the article and specified quantity to the client's order.
+     * - If no valid articles are added (e.g., user cancels input for all articles or inputs are invalid), displays an error dialog.
+     * - Displays a success dialog if at least one article is successfully added to the client's order.
+     *
+     * Preconditions:
+     * - The article table must be populated with data.
+     * - The table model is expected to have the article number in the first column.
+     * - The article manager and corresponding data retrieval methods should be properly configured.
+     *
+     * Postconditions:
+     * - The selected articles (with specified quantities) are added to the client order if all inputs are valid.
+     *
+     * User Interactions:
+     * - Displays confirmation, warning, or error dialogs to guide and inform the user during the operation.
+     */
     private void addSelectedArticlesToClientOrder() {
         int[] selectedRows = articleTable.getSelectedRows();
         if (selectedRows.length == 0) {
@@ -564,6 +597,19 @@ public class ArticleGUI extends JFrame {
         super.dispose();
     }
 
+    /**
+     * Displays a dialog for updating an article. The dialog allows users to modify article properties
+     * such as article number, name, details, stock levels, and minimum stock levels.
+     *
+     * @param existingData An array containing the existing data of the article to be updated.
+     *                     This array should be structured as follows:
+     *                     [0: artikelNr (String/Number), 1: name (String), 2: category (Object),
+     *                     3: details (String), 4: lagerbestand (Number), 5: mindestbestand (Number),
+     *                     6: verkaufspreis (Number), 7: einkaufspreis (Number), 8: lieferant (Object)].
+     *                     Null or invalid indices in the array will be handled gracefully.
+     * @return An array containing the updated data for the article, in the same format as the input array.
+     *         If the dialog is canceled, this method will return null.
+     */
     private Object[] showUpdateArticleDialog(Object[] existingData) {
         final Object[][] resultHolder = new Object[1][];
 
@@ -980,6 +1026,13 @@ public class ArticleGUI extends JFrame {
         return resultHolder[0];
     }
 
+    /**
+     * Creates and configures a JFormattedTextField for displaying and editing a Verkaufs value.
+     *
+     * @param priceFormatter the NumberFormatter to format the input and ensure valid numeric values.
+     * @param existingVerkauf the initial value to set in the field.
+     * @return a configured JFormattedTextField with appropriate font, color, and border settings.
+     */
     private static JFormattedTextField getVerkaufField(NumberFormatter priceFormatter, double existingVerkauf) {
         JFormattedTextField verkaufField = new JFormattedTextField(priceFormatter);
         verkaufField.setColumns(12);
@@ -1679,7 +1732,7 @@ public class ArticleGUI extends JFrame {
         articleTable.setShowVerticalLines(true);
         articleTable.setGridColor(ThemeManager.getTableGridColor()); // soft light gray // soft light gray
         articleTable.setIntercellSpacing(new Dimension(1, 1));
-        articleTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
+        articleTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, Integer.parseInt(SettingsGUI.Variable.TABLE_FONT_SIZE.getValue())));
 
 
         // Alternating row colors for readability (subtle)

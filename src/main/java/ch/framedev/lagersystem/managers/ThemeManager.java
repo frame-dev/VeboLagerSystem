@@ -1,4 +1,4 @@
-package ch.framedev.lagersystem.utils;
+package ch.framedev.lagersystem.managers;
 
 import ch.framedev.lagersystem.main.Main;
 

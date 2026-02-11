@@ -1,5 +1,7 @@
 package ch.framedev.lagersystem.utils;
 
+import ch.framedev.lagersystem.managers.ThemeManager;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;

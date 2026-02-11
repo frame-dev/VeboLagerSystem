@@ -1,4 +1,4 @@
-package ch.framedev.lagersystem.utils;
+package ch.framedev.lagersystem.classes;
 
 public class Note {
 

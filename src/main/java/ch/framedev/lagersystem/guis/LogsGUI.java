@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
-import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import ch.framedev.lagersystem.utils.VendorOrderLogging;
 import org.apache.pdfbox.pdmodel.PDDocument;

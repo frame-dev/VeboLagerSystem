@@ -4,11 +4,10 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
-import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
-import javax.swing.plaf.basic.BasicTabbedPaneUI;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;

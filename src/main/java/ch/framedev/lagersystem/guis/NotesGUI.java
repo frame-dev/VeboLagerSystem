@@ -1,8 +1,8 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.managers.NotesManager;
-import ch.framedev.lagersystem.utils.Note;
-import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.classes.Note;
+import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
@@ -15,6 +15,7 @@ import java.awt.*;
  */
 public class NotesGUI extends JFrame {
 
+    // NotesManager access to Database
     private final NotesManager notesManager = NotesManager.getInstance();
 
     private final DefaultListModel<String> listModel = new DefaultListModel<>();
@@ -115,7 +116,7 @@ public class NotesGUI extends JFrame {
     }
 
     private JPanel createFooterToolbar() {
-        JPanel toolBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel toolBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 2));
         toolBar.setOpaque(false);
 
         JButton fontSizeBiggerButton = new JButton("Increase Font");
@@ -144,6 +145,7 @@ public class NotesGUI extends JFrame {
         notesList.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
         notesList.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
 
+        // Selection for Selected Note
         notesList.addListSelectionListener(e -> {
             String selectedTitle = notesList.getSelectedValue();
             if (selectedTitle == null) return;
@@ -207,6 +209,31 @@ public class NotesGUI extends JFrame {
         });
     }
 
+    /**
+     * Opens a dialog to update the content of the selected note.
+     *
+     * This method performs the following steps:
+     * 1. Retrieves the title of the currently selected note from the list.
+     *    If no note is selected, a warning message is displayed to prompt the user to make a selection.
+     * 2. Uses the retrieved title to fetch the note from the notes manager.
+     *    If the note is not found, the method exits without further action.
+     * 3. Creates and displays a dialog prepopulated with the note's current content
+     *    to allow the user to edit the note.
+     * 4. Handles the save action within the dialog:
+     *    a. Validates that the updated content is not empty.
+     *       Displays an error message if validation fails.
+     *    b. Attempts to save the changes through the notes manager.
+     *       If the update is successful, closes the dialog and refreshes the notes list.
+     *       If the update fails (e.g., due to duplicate titles), displays an error message.
+     *
+     * The dialog consists of a text area for editing the content and a save button.
+     * The layout and components are dynamically set up within this method.
+     *
+     * Note:
+     * - This method interacts with several helper methods and components for creating the dialog UI.
+     * - The notes manager is used for fetching and updating the note.
+     * - The notes list is refreshed after a successful update.
+     */
     private void openUpdateDialog() {
         String selectedTitle = notesList.getSelectedValue();
         if (selectedTitle == null) {
@@ -263,6 +290,20 @@ public class NotesGUI extends JFrame {
         dialog.setVisible(true);
     }
 
+    /**
+     * Deletes the currently selected note from the notes list.
+     *
+     * This method performs the following steps:
+     * 1. Retrieves the title of the selected note from the list. If no note is selected,
+     *    a warning message is displayed to prompt the user to make a selection.
+     * 2. Confirms with the user whether they want to delete the selected note
+     *    through a confirmation dialog.
+     * 3. If the user confirms deletion, attempts to delete the note using the notes manager.
+     *    - If the deletion is successful:
+     *      - Updates the notes list to reflect the change.
+     *      - Clears the content area of the note editor.
+     *    - If the deletion fails, displays an error message to indicate the failure.
+     */
     private void deleteNote() {
         String selectedTitle = notesList.getSelectedValue();
         if (selectedTitle == null) {
@@ -285,6 +326,42 @@ public class NotesGUI extends JFrame {
         }
     }
 
+    /**
+     * Opens a dialog to create a new note.
+     *
+     * This method initializes and displays a modal dialog for creating a new note with the
+     * following UI components:
+     * 1. A text field for entering the note's title.
+     * 2. A text area for entering the note's content.
+     * 3. A save button to confirm the creation of the note.
+     *
+     * Detailed Behavior:
+     * - Validates that both the title and content fields are not empty before allowing the note to be created.
+     *   If either field is empty, an error message is displayed and the creation process is halted.
+     * - Attempts to add the note to the underlying notes manager. On success:
+     *   a. Closes the dialog.
+     *   b. Refreshes the notes list displayed in the GUI.
+     *   On failure (e.g., duplicate title), displays an error message indicating the issue.
+     *
+     * Error Handling:
+     * If the title or content is empty, or a note with the same title already exists, appropriate
+     * error dialogs are shown to the user.
+     *
+     * Layout Structure:
+     * - The UI layout is dynamically constructed using GridBagLayout for proper alignment.
+     * - The main dialog body includes labels, input fields, and a scrollable text area.
+     * - Button panel includes the save button for submitting the note and is displayed
+     *   at the bottom of the dialog.
+     *
+     * Dependencies:
+     * - Relies on helper methods such as `createNoteDialogShell`, `createDialogTextField`,
+     *   `createDialogTextArea`, and `createDialogButton` for constructing individual dialog components.
+     * - Uses `notesManager` for managing the notes and `setupList` for refreshing the GUI.
+     *
+     * Post-condition:
+     * - If the note is successfully added, the dialog is closed and the notes list is updated.
+     * - If the note creation fails or is canceled, no changes are made to the list.
+     */
     private void createNoteDialog() {
         JDialog dialog = createNoteDialogShell(UnicodeSymbols.HEAVY_PLUS + " Notiz erstellen");
         JTextField titleField = createDialogTextField();
@@ -341,6 +418,14 @@ public class NotesGUI extends JFrame {
         dialog.setVisible(true);
     }
 
+    /**
+     * Creates and returns a modal dialog shell for displaying or editing a note.
+     * The dialog has a customizable title, a structured layout, and theme-compliant styling.
+     * It includes a header with a close button and a body panel for additional components or content.
+     *
+     * @param title the title of the dialog, typically the name of the note.
+     * @return a configured JDialog instance with the specified title and default layout.
+     */
     private JDialog createNoteDialogShell(String title) {
         JDialog dialog = new JDialog(this, title, true);
         dialog.setSize(480, 540);
@@ -402,11 +487,29 @@ public class NotesGUI extends JFrame {
         return dialog;
     }
 
+    /**
+     * Retrieves the body panel of a specified dialog, if available, falling back to the dialog's content pane if no specific body panel is set.
+     *
+     * The method checks for a custom body panel associated with the dialog via the "notes.dialog.body" client property.
+     * If such a property exists and is of type JPanel, it returns that panel. Otherwise, it defaults to returning the
+     * content pane of the dialog.
+     *
+     * @param dialog the JDialog instance from which the body panel is to be retrieved
+     * @return the JPanel representing the body of the dialog, or the dialog's content pane if no custom body panel is set
+     */
     private JPanel getDialogBodyPanel(JDialog dialog) {
         Object body = dialog.getRootPane().getClientProperty("notes.dialog.body");
         return body instanceof JPanel panel ? panel : (JPanel) dialog.getContentPane();
     }
 
+    /**
+     * Creates and returns a styled {@code JLabel} to be used within dialog components.
+     * The label is initialized with the given text and styled according to the application's
+     * font and theme settings.
+     *
+     * @param text the text to be displayed on the label
+     * @return a configured {@code JLabel} instance with the specified text and styling
+     */
     private JLabel createDialogLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
@@ -414,6 +517,21 @@ public class NotesGUI extends JFrame {
         return label;
     }
 
+    /**
+     * Creates and returns a styled {@code JTextField} for use within dialog components.
+     *
+     * The text field is configured with the following properties:
+     * - Font: Set to a predefined font with plain style and size 12.
+     * - Background color: Matches the input background color from the theme manager.
+     * - Foreground color: Matches the primary text color from the theme manager.
+     * - Caret color: Matches the primary text color from the theme manager.
+     * - Border: A combination of a line border using the input border color from the theme manager
+     *   and an empty border for padding.
+     *
+     * This text field is ready for immediate integration in themed dialog interfaces.
+     *
+     * @return a {@code JTextField} with custom styling and theme-compliant configurations
+     */
     private JTextField createDialogTextField() {
         JTextField field = new JTextField();
         field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
@@ -427,6 +545,13 @@ public class NotesGUI extends JFrame {
         return field;
     }
 
+    /**
+     * Creates and configures a JTextArea for use in a dialog. The JTextArea is initialized
+     * with the specified content and styled using the application's theme and font settings.
+     *
+     * @param content the initial text to be displayed in the JTextArea
+     * @return a configured JTextArea instance with specified text and appearance settings
+     */
     private JTextArea createDialogTextArea(String content) {
         JTextArea area = new JTextArea(content);
         area.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
@@ -438,6 +563,12 @@ public class NotesGUI extends JFrame {
         return area;
     }
 
+    /**
+     * Creates a JScrollPane configured for the given JTextArea with customized appearance and behavior.
+     *
+     * @param area the JTextArea to wrap within the JScrollPane
+     * @return a JScrollPane containing the specified JTextArea with vertical scrolling enabled and horizontal scrolling disabled
+     */
     private JScrollPane createDialogScroll(JTextArea area) {
         JScrollPane scrollPane = new JScrollPane(area,
                 JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -448,6 +579,13 @@ public class NotesGUI extends JFrame {
         return scrollPane;
     }
 
+    /**
+     * Creates and configures a customizable dialog button with the specified text and background color.
+     *
+     * @param text the text to display on the button.
+     * @param bg the background color of the button.
+     * @return a fully configured {@code JButton} with the specified properties.
+     */
     private JButton createDialogButton(String text, Color bg) {
         JButton button = new JButton(text);
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
@@ -466,6 +604,14 @@ public class NotesGUI extends JFrame {
         return button;
     }
 
+    /**
+     * Creates a panel containing dialog buttons, including a primary button and a cancel button.
+     * The panel is styled with a right-aligned layout and an appropriate border.
+     *
+     * @param primaryButton the primary action button to be added to the panel
+     * @param dialog the dialog that the cancel button will close when clicked
+     * @return a JPanel containing the styled button panel
+     */
     private JPanel createDialogButtonPanel(JButton primaryButton, JDialog dialog) {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         panel.setOpaque(false);
@@ -486,6 +632,13 @@ public class NotesGUI extends JFrame {
         return wrapper;
     }
 
+    /**
+     * Configures and populates the list model with note titles.
+     *
+     * Clears the current list model, retrieves all notes using the notes manager,
+     * extracts their titles, and updates the list model. Ensures that at least the
+     * first item is selected if the list is not empty and no item is currently selected.
+     */
     private void setupList() {
         listModel.clear();
         listModel.addAll(notesManager.getAllNotes().stream().map(Note::getTitle).toList());
@@ -494,6 +647,15 @@ public class NotesGUI extends JFrame {
         }
     }
 
+    /**
+     * Adjusts the font size of the UI components by a specified delta value.
+     * This method modifies the scaling factor for fonts and applies the change
+     * recursively to all components within the content pane. It then triggers
+     * a revalidation and repaint of the UI to reflect the updated font sizes.
+     *
+     * @param delta the amount to adjust the font size scaling factor. Positive values
+     *              increase the font size, while negative values decrease it.
+     */
     private void bumpFontSize(float delta) {
         fontScaleDelta += delta;
         applyFontDelta(getContentPane(), delta);
@@ -501,6 +663,14 @@ public class NotesGUI extends JFrame {
         repaint();
     }
 
+    /**
+     * Adjusts the font size of the specified component and all its child components
+     * by applying the given delta value.
+     *
+     * @param component the component whose font size is to be adjusted
+     * @param delta the value to adjust the font size by; positive values increase the size,
+     *              while negative values decrease the size
+     */
     private void applyFontDelta(Component component, float delta) {
         Font font = component.getFont();
         if (font != null) {
@@ -514,14 +684,37 @@ public class NotesGUI extends JFrame {
         }
     }
 
+    /**
+     * Makes the current component visible by setting its visibility state to true.
+     * This method ensures that the component is displayed on the screen.
+     */
     public void display() {
         setVisible(true);
     }
 
+    /**
+     * A custom JPanel with rounded corners and customizable background color.
+     * This panel allows rendering with anti-aliasing for smoother edges.
+     *
+     * The corner radius and background color can be specified during the
+     * instantiation of the panel. The panel is non-opaque by default to ensure
+     * the rounded corners are displayed properly.
+     *
+     * Overrides the {@code paintComponent} method to implement custom rendering
+     * behavior with rounded corners.
+     */
     private static class RoundedPanel extends JPanel {
         private final Color backgroundColor;
         private final int radius;
 
+        /**
+         * Constructs a RoundedPanel instance with a specified background color and corner radius.
+         * This panel features rounded corners and supports anti-aliasing for smoother rendering.
+         * It is non-opaque by default to properly display rounded edges.
+         *
+         * @param bg the background color of the panel
+         * @param radius the corner radius for the rounded panel
+         */
         RoundedPanel(Color bg, int radius) {
             this.backgroundColor = bg;
             this.radius = radius;

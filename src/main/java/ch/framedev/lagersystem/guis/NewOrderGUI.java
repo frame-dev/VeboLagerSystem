@@ -7,7 +7,7 @@ import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.UserManager;
-import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -55,8 +55,7 @@ public class NewOrderGUI extends JFrame {
     private final JLabel summaryTotalValue;
 
     public NewOrderGUI() {
-        ThemeManager tm = ThemeManager.getInstance();
-        tm.registerWindow(this);
+        ThemeManager.getInstance().registerWindow(this);
 
         summaryReceiverValue = createSummaryValueLabel("—");
         summaryDepartmentValue = createSummaryValueLabel("—");
@@ -1158,6 +1157,16 @@ public class NewOrderGUI extends JFrame {
         return button;
     }
 
+    /**
+     * Creates and processes a new order with the specified details.
+     *
+     * @param orderArticles       A map of article names to their respective quantities to be included in the order.
+     * @param receiverName        The name of the receiver of the order.
+     * @param receiverKontoNumber The account number of the receiver of the order.
+     * @param senderName          The name of the sender creating the order.
+     * @param senderKontoNumber   The account number of the sender creating the order.
+     * @param department          The department associated with this order.
+     */
     private void createOrder(Map<String, Integer> orderArticles, String receiverName, String receiverKontoNumber,
                              String senderName, String senderKontoNumber, String department) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");

@@ -1,19 +1,27 @@
 package ch.framedev.lagersystem.managers;
 
 import ch.framedev.lagersystem.main.Main;
-import ch.framedev.lagersystem.utils.Note;
+import ch.framedev.lagersystem.classes.Note;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class NotesManager {
 
     private final String TABLE = DatabaseManager.TABLE_NOTES;
     private static NotesManager instance;
-    private DatabaseManager databaseManager;
+    private final DatabaseManager databaseManager;
+
+    // ==================== Cache ====================
+    private final ConcurrentHashMap<String, Note> cache = new ConcurrentHashMap<>();
+    private volatile List<Note> allNotesCache = null;
+    private volatile long allNotesCacheTime = 0L;
+    private final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
 
     private NotesManager() {
         databaseManager = Main.databaseManager;
@@ -38,6 +46,10 @@ public class NotesManager {
     }
 
     public boolean exists(String title) {
+        if (title == null) return false;
+        // prefer cache
+        if (cache.containsKey(title)) return true;
+
         String sql = "SELECT COUNT(*) FROM " + TABLE + " WHERE title = ?;";
         try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
             if (resultSet.next()) {
@@ -58,37 +70,68 @@ public class NotesManager {
         SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
         String date = formatter.format(System.currentTimeMillis());
         String sql = "INSERT INTO " + TABLE + " (title, content, date) VALUES (?, ?, ?);";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{title, content, date});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title, content, date});
+        if (result) {
+            // update cache
+            Note n = new Note(title, content, date);
+            cache.put(title, n);
+            allNotesCache = null;
+            allNotesCacheTime = 0L;
+        }
+        return result;
     }
 
     public boolean updateNote(String title, String content) {
-        if(!exists(title)) {
+        if (!exists(title)) {
             Main.logUtils.addLog("Notiz mit Titel '" + title + "' existiert nicht.");
             return false;
         }
         String sql = "UPDATE " + TABLE + " SET content = ? WHERE title = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{content, title});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{content, title});
+        if (result) {
+            // invalidate per-note cache entry so next read fetches fresh data
+            cache.remove(title);
+            allNotesCache = null;
+            allNotesCacheTime = 0L;
+        }
+        return result;
     }
 
     public boolean deleteNote(String title) {
-        if(!exists(title)) {
+        if (!exists(title)) {
             Main.logUtils.addLog("Notiz mit Titel '" + title + "' existiert nicht.");
             return false;
         }
         String sql = "DELETE FROM " + TABLE + " WHERE title = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{title});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title});
+        if (result) {
+            cache.remove(title);
+            allNotesCache = null;
+            allNotesCacheTime = 0L;
+        }
+        return result;
     }
-    
+
     public List<Note> getAllNotes() {
+        long now = System.currentTimeMillis();
+        if (allNotesCache != null && (now - allNotesCacheTime) < CACHE_TTL_MILLIS) {
+            return allNotesCache;
+        }
+
         List<Note> notes = new ArrayList<>();
         String sql = "SELECT * FROM " + TABLE + ";";
-        try(ResultSet resultSet = databaseManager.executeQuery(sql)) {
+        try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
             while (resultSet.next()) {
                 String title = resultSet.getString("title");
                 String content = resultSet.getString("content");
                 String date = resultSet.getString("date");
-                notes.add(new Note(title, content, date));
+                Note n = new Note(title, content, date);
+                notes.add(n);
+                // refresh per-note cache
+                cache.put(title, n);
             }
+            allNotesCache = Collections.unmodifiableList(notes);
+            allNotesCacheTime = System.currentTimeMillis();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         } catch (Exception ex) {
@@ -98,16 +141,32 @@ public class NotesManager {
     }
 
     public Note getNoteByTitle(String title) {
+        if (title == null) return null;
+        // try cache first
+        Note cached = cache.get(title);
+        if (cached != null) return cached;
+
         String sql = "SELECT * FROM " + TABLE + " WHERE title = ?;";
         try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
             if (resultSet.next()) {
                 String content = resultSet.getString("content");
                 String date = resultSet.getString("date");
-                return new Note(title, content, date);
+                Note n = new Note(title, content, date);
+                cache.put(title, n);
+                return n;
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
         return null;
+    }
+
+    /**
+     * Clear both per-note and list caches immediately.
+     */
+    public void clearCache() {
+        cache.clear();
+        allNotesCache = null;
+        allNotesCacheTime = 0L;
     }
 }

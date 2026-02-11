@@ -7,9 +7,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("UnusedReturnValue")
 public class OrderManager {
@@ -18,6 +20,12 @@ public class OrderManager {
 
     private static OrderManager instance;
     private final DatabaseManager databaseManager;
+
+    // ==================== Cache ====================
+    private final ConcurrentHashMap<String, Order> cache = new ConcurrentHashMap<>();
+    private volatile List<Order> allOrdersCache = null;
+    private volatile long allOrdersCacheTime = 0L;
+    private final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
 
     private OrderManager() {
         databaseManager = Main.databaseManager;
@@ -47,6 +55,10 @@ public class OrderManager {
     }
 
     public boolean existsOrder(String orderId) {
+        if (orderId == null) return false;
+        // prefer cache
+        if (cache.containsKey(orderId)) return true;
+
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + " WHERE orderId = '" + orderId + "';";
         try (var resultSet = databaseManager.executeQuery(sql)) {
             return resultSet.next();
@@ -82,6 +94,10 @@ public class OrderManager {
         });
         if(result) {
             Main.logUtils.addLog("Order with id '" + order.getOrderId() + "' inserted");
+            // update cache
+            cache.put(order.getOrderId(), order);
+            allOrdersCache = null;
+            allOrdersCacheTime = 0L;
             return true;
         } else {
             logger.error("Error while inserting order with id '{}'", order.getOrderId());
@@ -116,6 +132,10 @@ public class OrderManager {
         });
         if(result) {
             Main.logUtils.addLog("Order with id '" + order.getOrderId() + "' updated");
+            // update cache
+            cache.put(order.getOrderId(), order);
+            allOrdersCache = null;
+            allOrdersCacheTime = 0L;
             return true;
         } else {
             logger.error("Error while updating order with id '{}'", order.getOrderId());
@@ -131,6 +151,10 @@ public class OrderManager {
         String sql = "DELETE FROM " + DatabaseManager.TABLE_ORDERS + " WHERE orderId = ?;";
         if( databaseManager.executePreparedUpdate(sql, new Object[]{orderId})) {
             Main.logUtils.addLog("Order with id '" + orderId + "' deleted");
+            // remove from cache
+            cache.remove(orderId);
+            allOrdersCache = null;
+            allOrdersCacheTime = 0L;
             return true;
         } else {
             logger.error("Error while deleting order with id '{}'", orderId);
@@ -140,12 +164,17 @@ public class OrderManager {
     }
 
     public Order getOrder(String orderId) {
+        if (orderId == null) return null;
+        // try cache first
+        Order cached = cache.get(orderId);
+        if (cached != null) return cached;
+
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + " WHERE orderId = '" + orderId + "';";
         try (var resultSet = databaseManager.executeQuery(sql)) {
             if (resultSet.next()) {
                 String orderedArticlesStr = resultSet.getString("orderedArticles");
                 var orderedArticles = getOrderedArticles(orderedArticlesStr);
-                return new Order(
+                Order o = new Order(
                         resultSet.getString("orderId"),
                         orderedArticles,
                         resultSet.getString("receiverName"),
@@ -156,6 +185,8 @@ public class OrderManager {
                         resultSet.getString("department"),
                         resultSet.getString("status")
                 );
+                cache.put(orderId, o);
+                return o;
             }
         } catch (Exception e) {
             logger.error("Error while checking if order with id '{}'", orderId, e);
@@ -181,13 +212,18 @@ public class OrderManager {
     }
 
     public List<Order> getOrders() {
+        long now = System.currentTimeMillis();
+        if (allOrdersCache != null && (now - allOrdersCacheTime) < CACHE_TTL_MILLIS) {
+            return allOrdersCache;
+        }
+
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + ";";
         try (var resultSet = databaseManager.executeQuery(sql)) {
             var orders = new ArrayList<Order>();
             while (resultSet.next()) {
                 String orderedArticlesStr = resultSet.getString("orderedArticles");
                 var orderedArticles = getOrderedArticles(orderedArticlesStr);
-                orders.add(new Order(
+                Order o = new Order(
                         resultSet.getString("orderId"),
                         orderedArticles,
                         resultSet.getString("receiverName"),
@@ -197,8 +233,13 @@ public class OrderManager {
                         resultSet.getString("senderKontoNumber"),
                         resultSet.getString("department"),
                         resultSet.getString("status")
-                ));
+                );
+                orders.add(o);
+                // refresh per-order cache
+                cache.put(o.getOrderId(), o);
             }
+            allOrdersCache = Collections.unmodifiableList(orders);
+            allOrdersCacheTime = System.currentTimeMillis();
             return orders;
         } catch (Exception e) {
             logger.error("Error while checking if orders in Database", e);
@@ -219,5 +260,14 @@ public class OrderManager {
             articles.add(article);
         }
         return articles;
+    }
+
+    /**
+     * Clear both per-order and list caches immediately.
+     */
+    public void clearCache() {
+        cache.clear();
+        allOrdersCache = null;
+        allOrdersCacheTime = 0L;
     }
 }

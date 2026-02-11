@@ -5,8 +5,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("unused")
 public class DepartmentManager {
@@ -15,6 +17,12 @@ public class DepartmentManager {
 
     private static DepartmentManager instance;
     private final DatabaseManager databaseManager;
+
+    // ==================== Cache ====================
+    private final ConcurrentHashMap<String, Map<String, Object>> cache = new ConcurrentHashMap<>();
+    private volatile List<Map<String, Object>> allDepartmentsCache = null;
+    private volatile long allDepartmentsCacheTime = 0L;
+    private final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
 
     private DepartmentManager() {
         databaseManager = Main.databaseManager;
@@ -45,6 +53,11 @@ public class DepartmentManager {
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{departmentName, kontoNumber});
         if (result) {
             Main.logUtils.addLog(String.format("Inserted new department with name '%s'", departmentName));
+            // update cache
+            Map<String, Object> entry = Map.of("department", departmentName, "kontoNumber", kontoNumber);
+            cache.put(departmentName, entry);
+            allDepartmentsCache = null;
+            allDepartmentsCacheTime = 0L;
         } else {
             Main.logUtils.addLog(String.format("Could not insert new department with name '%s'", departmentName));
         }
@@ -52,6 +65,10 @@ public class DepartmentManager {
     }
 
     public boolean existsDepartment(String departmentName) {
+        if (departmentName == null) return false;
+        // prefer cache
+        if (cache.containsKey(departmentName)) return true;
+
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_DEPARTMENTS + " WHERE departmentName = '" + departmentName + "';";
         try (var resultSet = databaseManager.executeQuery(sql)) {
             return resultSet.next();
@@ -68,6 +85,10 @@ public class DepartmentManager {
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{departmentName});
         if (result) {
             Main.logUtils.addLog(String.format("Deleted department with name '%s'", departmentName));
+            // invalidate cache
+            cache.remove(departmentName);
+            allDepartmentsCache = null;
+            allDepartmentsCacheTime = 0L;
         } else {
             Main.logUtils.addLog(String.format("Could not delete department with name '%s'", departmentName));
         }
@@ -82,6 +103,11 @@ public class DepartmentManager {
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{newKontoNumber, departmentName});
         if (result) {
             Main.logUtils.addLog(String.format("Updated department with name '%s'", departmentName));
+            // update cache
+            Map<String, Object> entry = Map.of("department", departmentName, "kontoNumber", newKontoNumber);
+            cache.put(departmentName, entry);
+            allDepartmentsCache = null;
+            allDepartmentsCacheTime = 0L;
         } else {
             Main.logUtils.addLog(String.format("Could not update department with name '%s'", departmentName));
         }
@@ -89,13 +115,20 @@ public class DepartmentManager {
     }
 
     public Map<String, Object> getDepartment(String departmentName) {
+        if (departmentName == null) return null;
+        // try cache first
+        Map<String, Object> cached = cache.get(departmentName);
+        if (cached != null) return cached;
+
         String sql = "SELECT * from " + DatabaseManager.TABLE_DEPARTMENTS + " WHERE departmentName = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{departmentName})) {
             if (resultSet.next()) {
-                return Map.of(
+                Map<String, Object> entry = Map.of(
                         "department", resultSet.getString("departmentName"),
                         "kontoNumber", resultSet.getString("kontoNumber")
                 );
+                cache.put(departmentName, entry);
+                return entry;
             }
             return null;
         } catch (Exception e) {
@@ -106,19 +139,38 @@ public class DepartmentManager {
     }
 
     public List<Map<String, Object>> getAllDepartments() {
+        long now = System.currentTimeMillis();
+        if (allDepartmentsCache != null && (now - allDepartmentsCacheTime) < CACHE_TTL_MILLIS) {
+            return allDepartmentsCache;
+        }
+
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_DEPARTMENTS + ";";
         List<Map<String, Object>> departments = new ArrayList<>();
         try (var resultSet = databaseManager.executeQuery(sql)) {
             while (resultSet.next()) {
-                departments.add(Map.of(
+                Map<String, Object> entry = Map.of(
                         "department", resultSet.getString("departmentName"),
                         "kontoNumber", resultSet.getString("kontoNumber")
-                ));
+                );
+                departments.add(entry);
+                // refresh per-department cache
+                cache.put((String) entry.get("department"), entry);
             }
+            allDepartmentsCache = Collections.unmodifiableList(departments);
+            allDepartmentsCacheTime = System.currentTimeMillis();
         } catch (Exception e) {
             logger.error("Error while getting all departments", e);
             Main.logUtils.addLog("Error while getting all departments");
         }
         return departments;
+    }
+
+    /**
+     * Clear both per-department and list caches immediately.
+     */
+    public void clearCache() {
+        cache.clear();
+        allDepartmentsCache = null;
+        allDepartmentsCacheTime = 0L;
     }
 }

@@ -5,7 +5,7 @@ import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.*;
-import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -29,6 +29,7 @@ import java.util.*;
 import java.util.List;
 
 import static ch.framedev.lagersystem.main.Main.databaseManager;
+import static ch.framedev.lagersystem.main.Main.settings;
 
 /**
  * Moderne Einstellungen-GUI für das VEBO Lagersystem
@@ -92,6 +93,33 @@ public class SettingsGUI extends JFrame {
     private static final String DEFAULT_SERVER_URL = "https://framedev.ch/vebo/scans.json";
 
     public static int TABLE_FONT_SIZE = 16;
+
+    public static enum Variable {
+        STOCK_CHECK_INTERVAL(settings.getProperty("stock_check_interval")),
+        ENABLE_WARNING_INTERVAL(settings.getProperty("enable_houtly_warnings")),
+        WARNING_DISPLAY_INTERVAL(settings.getProperty("warning_display_interval")),
+        ENABLE_AUTO_STOCK_CHECK(settings.getProperty("enable_auto_stock_check")),
+        SERVER_URL(settings.getProperty("server_url")),
+        ENABLE_AUTOMATIC_IMPORT_QRCODE(settings.getProperty("enable_automatic_import_qrcode")),
+        QRCODE_IMPORT_INTERVAL(settings.getProperty("qrcode_import_interval")),
+        DARK_MODE(settings.getProperty("dark_mode")),
+        TABLE_FONT_SIZE(settings.getProperty("table_font_size")),
+        TABLE_FONT_SIZE_TAB(settings.getProperty("table_font_size_tab")),
+        FONT_STYLE(settings.getProperty("font_style")),
+        THEME_ACCENT_COLOR(settings.getProperty("theme_accent_color")),
+        THEME_HEADER_COLOR(settings.getProperty("theme_header_color")),
+        THEME_BUTTON_COLOR(settings.getProperty("theme_button_color"));
+
+        final String value;
+
+        Variable(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+    }
 
     public SettingsGUI() {
         setTitle("Einstellungen");

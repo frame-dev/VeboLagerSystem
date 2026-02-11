@@ -5,7 +5,7 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.OrderManager;
-import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;

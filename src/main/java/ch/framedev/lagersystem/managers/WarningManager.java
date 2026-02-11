@@ -4,6 +4,8 @@ import ch.framedev.lagersystem.classes.Warning;
 import ch.framedev.lagersystem.main.Main;
 
 import java.util.List;
+import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class WarningManager {
 
@@ -11,6 +13,14 @@ public class WarningManager {
     private static WarningManager instance;
     // Database Manager
     private final DatabaseManager databaseManager;
+
+    // ==================== Cache ====================
+    // Per-warning cache (keyed by title)
+    private final ConcurrentHashMap<String, Warning> cache = new ConcurrentHashMap<>();
+    // Cached list of all warnings with a simple TTL
+    private volatile List<Warning> allWarningsCache = null;
+    private volatile long allWarningsCacheTime = 0L;
+    private final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
 
     /**
      * Private constructor to enforce singleton pattern
@@ -66,6 +76,11 @@ public class WarningManager {
         });
         if (result) {
             Main.logUtils.addLog("Inserted new warning with title '" + warning.getTitle() + "'");
+            // Update cache
+            cache.put(warning.getTitle(), warning);
+            // Invalidate cached list
+            allWarningsCache = null;
+            allWarningsCacheTime = 0L;
         } else {
             Main.logUtils.addLog("Could not insert new warning with title '" + warning.getTitle() + "'");
         }
@@ -82,6 +97,12 @@ public class WarningManager {
     }
 
     public boolean isResolved(String title) {
+        // Prefer cache if available
+        Warning cached = cache.get(title);
+        if (cached != null) {
+            return cached.isResolved();
+        }
+
         String sql = "SELECT isResolved FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
             if (resultSet.next()) {
@@ -98,6 +119,15 @@ public class WarningManager {
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title});
         if(result) {
             Main.logUtils.addLog("Resolved warning with title '" + title + "'");
+            // Update cache if present
+            Warning w = cache.get(title);
+            if (w != null) {
+                w.setResolved(true);
+                cache.put(title, w);
+            }
+            // Invalidate cached list
+            allWarningsCache = null;
+            allWarningsCacheTime = 0L;
         } else {
             Main.logUtils.addLog("Could not resolve warning with title '" + title + "'");
         }
@@ -123,6 +153,11 @@ public class WarningManager {
         });
         if (result) {
             Main.logUtils.addLog("Updated warning with title '" + warning.getTitle() + "'");
+            // Update cache
+            cache.put(warning.getTitle(), warning);
+            // Invalidate cached list
+            allWarningsCache = null;
+            allWarningsCacheTime = 0L;
         } else {
             Main.logUtils.addLog("Could not update warning with title '" + warning.getTitle() + "'");
         }
@@ -134,6 +169,11 @@ public class WarningManager {
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title});
         if (result) {
             Main.logUtils.addLog("Deleted warning with title '" + title + "'");
+            // Remove from cache
+            cache.remove(title);
+            // Invalidate cached list
+            allWarningsCache = null;
+            allWarningsCacheTime = 0L;
         } else {
             Main.logUtils.addLog("Could not delete warning with title '" + title + "'");
         }
@@ -141,10 +181,15 @@ public class WarningManager {
     }
 
     public Warning getWarning(String title) {
+        if (title == null) return null;
+        // Try cache first
+        Warning cached = cache.get(title);
+        if (cached != null) return cached;
+
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
             if (resultSet.next()) {
-                return new Warning(
+                Warning w = new Warning(
                         resultSet.getString("title"),
                         resultSet.getString("message"),
                         Warning.WarningType.valueOf(resultSet.getString("type")),
@@ -152,6 +197,8 @@ public class WarningManager {
                         resultSet.getString("isResolved").equals("true"),
                         resultSet.getString("isDisplayed").equals("true")
                 );
+                cache.put(title, w);
+                return w;
             }
         } catch (Exception e) {
             return null;
@@ -160,6 +207,12 @@ public class WarningManager {
     }
 
     public boolean isDisplayed(String title) {
+        // Prefer cache if available
+        Warning cached = cache.get(title);
+        if (cached != null) {
+            return cached.isDisplayed();
+        }
+
         String sql = "SELECT isDisplayed FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
             if (resultSet.next()) {
@@ -172,24 +225,45 @@ public class WarningManager {
     }
 
     public List<Warning> getAllWarnings() {
+        // Use cached list when within TTL
+        long now = System.currentTimeMillis();
+        if (allWarningsCache != null && (now - allWarningsCacheTime) < CACHE_TTL_MILLIS) {
+            return allWarningsCache;
+        }
+
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_WARNINGS + ";";
         List<Warning> warnings = new java.util.ArrayList<>();
         try (var resultSet = databaseManager.executeQuery(sql)) {
             while (resultSet.next()) {
-                warnings.add(new Warning(
+                Warning w = new Warning(
                         resultSet.getString("title"),
                         resultSet.getString("message"),
                         Warning.WarningType.valueOf(resultSet.getString("type")),
                         resultSet.getString("date"),
                         resultSet.getString("isResolved").equals("true"),
                         resultSet.getString("isDisplayed").equals("true")
-                ));
+                );
+                warnings.add(w);
+                // refresh per-warning cache
+                cache.put(w.getTitle(), w);
             }
+            // cache the list (immutable view)
+            allWarningsCache = Collections.unmodifiableList(warnings);
+            allWarningsCacheTime = System.currentTimeMillis();
         } catch (Exception e) {
             System.err.println("[WarningManager] Fehler beim Laden aller Warnungen: " + e.getMessage());
             Main.logUtils.addLog("Fehler beim Laden aller Warnungen");
             e.printStackTrace();
         }
         return warnings;
+    }
+
+    /**
+     * Clear both per-warning and list caches immediately.
+     */
+    public void clearCache() {
+        cache.clear();
+        allWarningsCache = null;
+        allWarningsCacheTime = 0L;
     }
 }

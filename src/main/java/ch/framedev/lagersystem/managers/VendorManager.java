@@ -7,7 +7,9 @@ import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("UnusedReturnValue")
 public class VendorManager {
@@ -16,6 +18,12 @@ public class VendorManager {
 
     private static VendorManager instance;
     private final DatabaseManager databaseManager;
+
+    // ==================== Cache ====================
+    private final ConcurrentHashMap<String, Vendor> cache = new ConcurrentHashMap<>();
+    private volatile List<Vendor> allVendorsCache = null;
+    private volatile long allVendorsCacheTime = 0L;
+    private final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
 
     private VendorManager() {
         databaseManager = Main.databaseManager;
@@ -43,6 +51,10 @@ public class VendorManager {
     }
 
     public boolean existsVendor(String name) {
+        // Prefer cache when available
+        if (name == null) return false;
+        if (cache.containsKey(name)) return true;
+
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_VENDORS + " WHERE name = '" + name + "';";
         try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
             return resultSet.next();
@@ -63,6 +75,10 @@ public class VendorManager {
                 String.join(",", vendor.getSuppliedArticles()), vendor.getMinOrderValue()});
         if(result) {
             Main.logUtils.addLog("Inserted new vendor with name '" + vendor.getName() + "'");
+            // update cache
+            cache.put(vendor.getName(), vendor);
+            allVendorsCache = null;
+            allVendorsCacheTime = 0L;
         } else {
             Main.logUtils.addLog("Could not insert new vendor with name '" + vendor.getName() + "'");
         }
@@ -80,6 +96,10 @@ public class VendorManager {
                 String.join(",", vendor.getSuppliedArticles()), vendor.getMinOrderValue(), vendor.getName()});
         if(result) {
             Main.logUtils.addLog("Updated vendor with name '" + vendor.getName() + "'");
+            // update cache
+            cache.put(vendor.getName(), vendor);
+            allVendorsCache = null;
+            allVendorsCacheTime = 0L;
         } else {
             Main.logUtils.addLog("Could not update vendor with name '" + vendor.getName() + "'");
         }
@@ -112,6 +132,10 @@ public class VendorManager {
         boolean result = databaseManager.executePreparedUpdate(sql.toString(), params);
         if(result) {
             Main.logUtils.addLog("Updated vendor with name '" + vendorName + "'");
+            // invalidate cache for safety (columns unknown)
+            cache.remove(vendorName);
+            allVendorsCache = null;
+            allVendorsCacheTime = 0L;
         } else {
             Main.logUtils.addLog("Could not update vendor with name '" + vendorName + "'");
         }
@@ -126,6 +150,10 @@ public class VendorManager {
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{name});
         if (result) {
             Main.logUtils.addLog("Deleted vendor with name '" + name + "'");
+            // remove from cache
+            cache.remove(name);
+            allVendorsCache = null;
+            allVendorsCacheTime = 0L;
         } else {
             Main.logUtils.addLog("Could not delete vendor with name '" + name + "'");
         }
@@ -133,6 +161,11 @@ public class VendorManager {
     }
 
     public Vendor getVendorByName(String name) {
+        if (name == null) return null;
+        // try cache first
+        Vendor cached = cache.get(name);
+        if (cached != null) return cached;
+
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_VENDORS + " WHERE name = '" + name + "';";
         try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
             if (resultSet.next()) {
@@ -149,7 +182,9 @@ public class VendorManager {
                         suppliedArticles.add(article.trim());
                     }
                 }
-                return new Vendor(name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue);
+                Vendor v = new Vendor(name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue);
+                cache.put(name, v);
+                return v;
             } else {
                 return null;
             }
@@ -160,6 +195,11 @@ public class VendorManager {
     }
 
     public List<Vendor> getVendors() {
+        long now = System.currentTimeMillis();
+        if (allVendorsCache != null && (now - allVendorsCacheTime) < CACHE_TTL_MILLIS) {
+            return allVendorsCache;
+        }
+
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_VENDORS + ";";
         try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
             List<Vendor> vendors = new ArrayList<>();
@@ -178,13 +218,27 @@ public class VendorManager {
                         suppliedArticles.add(article.trim());
                     }
                 }
-                vendors.add(new Vendor(name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue));
+                Vendor v = new Vendor(name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue);
+                vendors.add(v);
+                // refresh per-vendor cache
+                cache.put(name, v);
             }
+            allVendorsCache = Collections.unmodifiableList(vendors);
+            allVendorsCacheTime = System.currentTimeMillis();
             return vendors;
         } catch (Exception e) {
             logger.error("Error while getting vendors", e);
             Main.logUtils.addLog("Error while getting vendors");
             return new ArrayList<>();
         }
+    }
+
+    /**
+     * Clear both per-vendor and list caches immediately.
+     */
+    public void clearCache() {
+        cache.clear();
+        allVendorsCache = null;
+        allVendorsCacheTime = 0L;
     }
 }

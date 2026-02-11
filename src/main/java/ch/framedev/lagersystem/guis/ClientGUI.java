@@ -3,7 +3,7 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
-import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;

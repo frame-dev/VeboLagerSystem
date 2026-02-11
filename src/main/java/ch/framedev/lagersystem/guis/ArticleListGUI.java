@@ -2,7 +2,7 @@ package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.main.Main;
-import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.managers.ThemeManager;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;

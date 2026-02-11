@@ -7,7 +7,9 @@ import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static ch.framedev.lagersystem.managers.DatabaseManager.TABLE_LOGS;
 
@@ -21,6 +23,18 @@ public class LogManager {
     private static LogManager instance;
     private final DatabaseManager databaseManager;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+
+    // ==================== Cache ====================
+    // Per-log cache keyed by id
+    private final ConcurrentHashMap<Integer, Log> cache = new ConcurrentHashMap<>();
+    // Cached list of all logs with TTL
+    private volatile List<Log> allLogsCache = null;
+    private volatile long allLogsCacheTime = 0L;
+    // Cached counts per level and total
+    private final ConcurrentHashMap<LogLevel, Integer> countsCache = new ConcurrentHashMap<>();
+    private volatile Integer totalCountCache = null;
+    private volatile long countsCacheTime = 0L;
+    private final long CACHE_TTL_MILLIS = 60 * 1000; // 1 minute for logs/counts
 
     /**
      * Log levels enum for better type safety
@@ -65,7 +79,17 @@ public class LogManager {
      */
     public boolean createLog(Log log) {
         String sql = "INSERT INTO " + TABLE_LOGS + " (timestamp, level, message) VALUES (?, ?, ?);";
-        return databaseManager.executePreparedUpdate(sql, new Object[] {log.timestamp, log.level, log.message});
+        boolean ok = databaseManager.executePreparedUpdate(sql, new Object[]{log.timestamp, log.level, log.message});
+        if (ok) {
+            // Invalidate caches so subsequent reads see the new log
+            cache.clear();
+            allLogsCache = null;
+            allLogsCacheTime = 0L;
+            countsCache.clear();
+            totalCountCache = null;
+            countsCacheTime = 0L;
+        }
+        return ok;
     }
 
     /**
@@ -78,21 +102,30 @@ public class LogManager {
     }
 
     /**
-     * Retrieves all logs from the database
+     * Retrieves all logs from the database (cached)
      */
     public List<Log> getAllLogs() {
+        long now = System.currentTimeMillis();
+        if (allLogsCache != null && (now - allLogsCacheTime) < CACHE_TTL_MILLIS) {
+            return allLogsCache;
+        }
+
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS + " ORDER BY id DESC;";
         List<Log> logs = new ArrayList<>();
 
         try (ResultSet rs = databaseManager.executeQuery(sql)) {
             while (rs.next()) {
-                logs.add(new Log(
-                    rs.getInt("id"),
-                    rs.getString("timestamp"),
-                    rs.getString("level"),
-                    rs.getString("message")
-                ));
+                Log l = new Log(
+                        rs.getInt("id"),
+                        rs.getString("timestamp"),
+                        rs.getString("level"),
+                        rs.getString("message")
+                );
+                logs.add(l);
+                cache.put(l.id, l);
             }
+            allLogsCache = Collections.unmodifiableList(logs);
+            allLogsCacheTime = System.currentTimeMillis();
         } catch (Exception e) {
             logger.error("Error retrieving logs: {}", e.getMessage(), e);
         }
@@ -104,18 +137,21 @@ public class LogManager {
      * Retrieves logs filtered by level
      */
     public List<Log> getLogsByLevel(LogLevel level) {
+        // For this case, query DB directly (counts are cached elsewhere)
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS +
-                     " WHERE level = ? ORDER BY id DESC;";
+                " WHERE level = ? ORDER BY id DESC;";
         List<Log> logs = new ArrayList<>();
 
         try (ResultSet rs = databaseManager.executePreparedQuery(sql, new Object[]{level.name()})) {
             while (rs.next()) {
-                logs.add(new Log(
-                    rs.getInt("id"),
-                    rs.getString("timestamp"),
-                    rs.getString("level"),
-                    rs.getString("message")
-                ));
+                Log l = new Log(
+                        rs.getInt("id"),
+                        rs.getString("timestamp"),
+                        rs.getString("level"),
+                        rs.getString("message")
+                );
+                logs.add(l);
+                cache.put(l.id, l);
             }
         } catch (Exception e) {
             logger.error("Error retrieving logs by level: {}", e.getMessage(), e);
@@ -129,17 +165,19 @@ public class LogManager {
      */
     public List<Log> getLogsByDateRange(String startDate, String endDate) {
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS +
-                     " WHERE timestamp BETWEEN ? AND ? ORDER BY id DESC;";
+                " WHERE timestamp BETWEEN ? AND ? ORDER BY id DESC;";
         List<Log> logs = new ArrayList<>();
 
         try (ResultSet rs = databaseManager.executePreparedQuery(sql, new Object[]{startDate, endDate})) {
             while (rs.next()) {
-                logs.add(new Log(
-                    rs.getInt("id"),
-                    rs.getString("timestamp"),
-                    rs.getString("level"),
-                    rs.getString("message")
-                ));
+                Log l = new Log(
+                        rs.getInt("id"),
+                        rs.getString("timestamp"),
+                        rs.getString("level"),
+                        rs.getString("message")
+                );
+                logs.add(l);
+                cache.put(l.id, l);
             }
         } catch (Exception e) {
             logger.error("Error retrieving logs by date range: {}", e.getMessage(), e);
@@ -153,17 +191,19 @@ public class LogManager {
      */
     public List<Log> searchLogs(String searchTerm) {
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS +
-                     " WHERE message LIKE ? ORDER BY id DESC;";
+                " WHERE message LIKE ? ORDER BY id DESC;";
         List<Log> logs = new ArrayList<>();
 
         try (ResultSet rs = databaseManager.executePreparedQuery(sql, new Object[]{"%" + searchTerm + "%"})) {
             while (rs.next()) {
-                logs.add(new Log(
-                    rs.getInt("id"),
-                    rs.getString("timestamp"),
-                    rs.getString("level"),
-                    rs.getString("message")
-                ));
+                Log l = new Log(
+                        rs.getInt("id"),
+                        rs.getString("timestamp"),
+                        rs.getString("level"),
+                        rs.getString("message")
+                );
+                logs.add(l);
+                cache.put(l.id, l);
             }
         } catch (Exception e) {
             logger.error("Error searching logs: {}", e.getMessage(), e);
@@ -173,11 +213,46 @@ public class LogManager {
     }
 
     /**
+     * Get a single log by id (uses per-log cache)
+     */
+    public Log getLogById(int id) {
+        // try cache first
+        Log cached = cache.get(id);
+        if (cached != null) return cached;
+
+        String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS + " WHERE id = ?;";
+        try (ResultSet rs = databaseManager.executePreparedQuery(sql, new Object[]{id})) {
+            if (rs.next()) {
+                Log l = new Log(
+                        rs.getInt("id"),
+                        rs.getString("timestamp"),
+                        rs.getString("level"),
+                        rs.getString("message")
+                );
+                cache.put(id, l);
+                return l;
+            }
+        } catch (Exception e) {
+            logger.error("Error getting log by id {}: {}", id, e.getMessage(), e);
+        }
+        return null;
+    }
+
+    /**
      * Deletes a log entry by ID
      */
     public boolean deleteLog(int id) {
         String sql = "DELETE FROM " + TABLE_LOGS + " WHERE id = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{id});
+        boolean ok = databaseManager.executePreparedUpdate(sql, new Object[]{id});
+        if (ok) {
+            cache.remove(id);
+            allLogsCache = null;
+            allLogsCacheTime = 0L;
+            countsCache.clear();
+            totalCountCache = null;
+            countsCacheTime = 0L;
+        }
+        return ok;
     }
 
     /**
@@ -188,7 +263,16 @@ public class LogManager {
         String cutoffTimestamp = cutoffDate.format(FORMATTER);
         String sql = "DELETE FROM " + TABLE_LOGS + " WHERE timestamp < '" + cutoffTimestamp + "';";
         try {
-            return databaseManager.executeUpdateWithCount(sql);
+            int count = databaseManager.executeUpdateWithCount(sql);
+            if (count > 0) {
+                cache.clear();
+                allLogsCache = null;
+                allLogsCacheTime = 0L;
+                countsCache.clear();
+                totalCountCache = null;
+                countsCacheTime = 0L;
+            }
+            return count;
         } catch (Exception e) {
             logger.error("Error deleting old logs: {}", e.getMessage(), e);
             return 0;
@@ -202,6 +286,13 @@ public class LogManager {
         // Deletes logs older than 30 days based on the timestamp column (assumed ISO 8601 or yyyy-MM-dd HH:mm:ss format)
         String sql = "DELETE FROM " + TABLE_LOGS + " WHERE date(timestamp) < date('now', '-30 days')";
         databaseManager.executeUpdate(sql);
+        // invalidate caches
+        cache.clear();
+        allLogsCache = null;
+        allLogsCacheTime = 0L;
+        countsCache.clear();
+        totalCountCache = null;
+        countsCacheTime = 0L;
     }
 
     /**
@@ -209,17 +300,34 @@ public class LogManager {
      */
     public boolean clearAllLogs() {
         String sql = "DELETE FROM " + TABLE_LOGS + ";";
-        return databaseManager.executeUpdate(sql);
+        boolean ok = databaseManager.executeUpdate(sql);
+        if (ok) {
+            cache.clear();
+            allLogsCache = null;
+            allLogsCacheTime = 0L;
+            countsCache.clear();
+            totalCountCache = null;
+            countsCacheTime = 0L;
+        }
+        return ok;
     }
 
     /**
-     * Gets the count of logs by level
+     * Gets the count of logs by level (cached)
      */
     public int getLogCountByLevel(LogLevel level) {
+        long now = System.currentTimeMillis();
+        if (countsCache.containsKey(level) && (now - countsCacheTime) < CACHE_TTL_MILLIS) {
+            return countsCache.get(level);
+        }
+
         String sql = "SELECT COUNT(*) as count FROM " + TABLE_LOGS + " WHERE level = ?;";
         try (ResultSet rs = databaseManager.executePreparedQuery(sql, new Object[]{level.name()})) {
             if (rs.next()) {
-                return rs.getInt("count");
+                int count = rs.getInt("count");
+                countsCache.put(level, count);
+                countsCacheTime = System.currentTimeMillis();
+                return count;
             }
         } catch (Exception e) {
             logger.error("Error getting log count by level: {}", e.getMessage(), e);
@@ -228,17 +336,36 @@ public class LogManager {
     }
 
     /**
-     * Gets the total count of all logs
+     * Gets the total count of all logs (cached)
      */
     public int getTotalLogCount() {
+        long now = System.currentTimeMillis();
+        if (totalCountCache != null && (now - countsCacheTime) < CACHE_TTL_MILLIS) {
+            return totalCountCache;
+        }
         String sql = "SELECT COUNT(*) as count FROM " + TABLE_LOGS + ";";
         try (ResultSet rs = databaseManager.executeQuery(sql)) {
             if (rs.next()) {
-                return rs.getInt("count");
+                int count = rs.getInt("count");
+                totalCountCache = count;
+                countsCacheTime = System.currentTimeMillis();
+                return count;
             }
         } catch (Exception e) {
             logger.error("Error getting total log count: {}", e.getMessage(), e);
         }
         return 0;
+    }
+
+    /**
+     * Clear in-memory caches immediately.
+     */
+    public void clearCache() {
+        cache.clear();
+        allLogsCache = null;
+        allLogsCacheTime = 0L;
+        countsCache.clear();
+        totalCountCache = null;
+        countsCacheTime = 0L;
     }
 }

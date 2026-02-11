@@ -5,7 +5,7 @@ import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
-import ch.framedev.lagersystem.utils.ThemeManager;
+import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
