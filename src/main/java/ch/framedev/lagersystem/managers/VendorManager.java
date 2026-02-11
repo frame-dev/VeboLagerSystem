@@ -30,7 +30,7 @@ public class VendorManager {
     }
 
     private void createTable() {
-        String sql = "CREATE TABLE IF NOT EXISTS vendors (" +
+        String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_VENDORS + " (" +
                 "name TEXT," +
                 "contactPerson TEXT," +
                 "phoneNumber TEXT," +
@@ -43,7 +43,7 @@ public class VendorManager {
     }
 
     public boolean existsVendor(String name) {
-        String sql = "SELECT * FROM vendors WHERE name = '" + name + "';";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_VENDORS + " WHERE name = '" + name + "';";
         try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
             return resultSet.next();
         } catch (Exception e) {
@@ -56,7 +56,7 @@ public class VendorManager {
         if (existsVendor(vendor.getName())) {
             return false;
         }
-        String sql = "INSERT INTO vendors (name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue) " +
+        String sql = "INSERT INTO " + DatabaseManager.TABLE_VENDORS + " (name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?);";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{vendor.getName(), vendor.getContactPerson(),
                 vendor.getPhoneNumber(), vendor.getEmail(), vendor.getAddress(),
@@ -73,7 +73,7 @@ public class VendorManager {
         if (!existsVendor(vendor.getName())) {
             return false;
         }
-        String sql = "UPDATE vendors SET contactPerson = ?, phoneNumber = ?, email = ?, address = ?, suppliedArticles = ?, minOrderValue=? " +
+        String sql = "UPDATE " + DatabaseManager.TABLE_VENDORS + " SET contactPerson = ?, phoneNumber = ?, email = ?, address = ?, suppliedArticles = ?, minOrderValue=? " +
                 "WHERE name = ?;";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{vendor.getContactPerson(),
                 vendor.getPhoneNumber(), vendor.getEmail(), vendor.getAddress(),
@@ -95,7 +95,7 @@ public class VendorManager {
         }
 
         // Build dynamic UPDATE statement
-        StringBuilder sql = new StringBuilder("UPDATE vendors SET ");
+        StringBuilder sql = new StringBuilder("UPDATE " + DatabaseManager.TABLE_VENDORS + " SET ");
         for (int i = 0; i < columns.length; i++) {
             sql.append(columns[i]).append(" = ?");
             if (i < columns.length - 1) {
@@ -122,7 +122,7 @@ public class VendorManager {
         if (!existsVendor(name)) {
             return false;
         }
-        String sql = "DELETE FROM vendors WHERE name = ?;";
+        String sql = "DELETE FROM " + DatabaseManager.TABLE_VENDORS + " WHERE name = ?;";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{name});
         if (result) {
             Main.logUtils.addLog("Deleted vendor with name '" + name + "'");
@@ -133,7 +133,7 @@ public class VendorManager {
     }
 
     public Vendor getVendorByName(String name) {
-        String sql = "SELECT * FROM vendors WHERE name = '" + name + "';";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_VENDORS + " WHERE name = '" + name + "';";
         try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
             if (resultSet.next()) {
                 String contactPerson = resultSet.getString("contactPerson");
@@ -160,7 +160,7 @@ public class VendorManager {
     }
 
     public List<Vendor> getVendors() {
-        String sql = "SELECT * FROM vendors;";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_VENDORS + ";";
         try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
             List<Vendor> vendors = new ArrayList<>();
             while (resultSet.next()) {

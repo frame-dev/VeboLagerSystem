@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -326,7 +327,7 @@ public class ImportUtils {
             return importedItems;
         }
         try {
-            importedItems = java.nio.file.Files.readAllLines(file.toPath());
+            importedItems = Files.readAllLines(file.toPath());
         } catch (IOException e) {
             Main.logUtils.addLog("Failed to read items from imported_items.txt");
             LOGGER.error("Failed to read imported items from imported_items.txt", e);
@@ -352,7 +353,7 @@ public class ImportUtils {
             return importedQrCodes;
         }
         try {
-            importedQrCodes = java.nio.file.Files.readAllLines(file.toPath());
+            importedQrCodes = Files.readAllLines(file.toPath());
         } catch (IOException e) {
             Main.logUtils.addLog("Failed to read imported qrcodes.txt from imported_qrcodes.txt");
             LOGGER.error("Failed to read imported QR codes from imported_qrcodes.txt", e);

@@ -154,7 +154,7 @@ public class MainGUI extends JFrame {
             ThemeManager.getHeaderGradientColor()
         );
         headerPanel.setLayout(new BorderLayout());
-        headerPanel.setPreferredSize(new Dimension(0, 149));
+        headerPanel.setPreferredSize(new Dimension(0, 180));
         headerPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 0, 0, 30)),
                 BorderFactory.createEmptyBorder(30, 60, 30, 60)
@@ -197,7 +197,7 @@ public class MainGUI extends JFrame {
         titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         headerTextPanel.add(titleRow);
 
-        headerTextPanel.add(Box.createVerticalStrut(10));
+        headerTextPanel.add(Box.createVerticalStrut(2));
 
         // Subtitle aligned with the "V" in "VEBO" (after icon)
         JLabel subtitleLabel = new JLabel("Zentrale Verwaltung für Artikel, Bestellungen und Lieferanten");
@@ -210,7 +210,7 @@ public class MainGUI extends JFrame {
         subtitleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Add invisible spacer matching icon width (approximately 42px + 10px gap = 52px)
-        subtitleRow.add(Box.createHorizontalStrut(52));
+        subtitleRow.add(Box.createHorizontalStrut(12));
         subtitleRow.add(subtitleLabel);
 
         headerTextPanel.add(subtitleRow);
@@ -304,10 +304,10 @@ public class MainGUI extends JFrame {
 
         // Enhanced padding and border for modern look with bigger tabs
         tabbedPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(10, 20, 10, 20),
+                BorderFactory.createEmptyBorder(8, 15, 8, 15),
                 BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(4, 4, 4, 4)
+                        BorderFactory.createEmptyBorder(2, 2, 2, 2)
                 )
         ));
 
@@ -321,7 +321,7 @@ public class MainGUI extends JFrame {
         // Setup lazy loading
         setupLazyLoading();
 
-        // Load first tab immediately
+        // Load the first tab immediately
         loadTabContent(0, articleWrapper);
         articleWrapper.putClientProperty("loaded", Boolean.TRUE);
         setJMenuBar(createMenuBar());
@@ -380,11 +380,11 @@ public class MainGUI extends JFrame {
         // Set component background for better visual separation
         tabbedPane.setOpaque(true);
 
-        // Enhanced border with rounded appearance
+        // Enhanced border with a rounded appearance
         tabbedPane.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(2, 2, 2, 2)
+                        BorderFactory.createEmptyBorder(4, 4, 4, 4)
                 ),
                 BorderFactory.createLineBorder(
                         ThemeManager.adjustColor(ThemeManager.getBorderColor(), ThemeManager.isDarkMode() ? 20 : -10), 1)
@@ -468,7 +468,7 @@ public class MainGUI extends JFrame {
                 button.setBackground(hover);
                 button.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(hover.darker(), 2),
-                        BorderFactory.createEmptyBorder(9, 19, 9, 19)
+                        BorderFactory.createEmptyBorder(8, 18, 8, 18)
                 ));
             }
 

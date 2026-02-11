@@ -37,8 +37,6 @@ public class Main {
     public static ImageIcon icon;
     public static ImageIcon iconSmall;
 
-    private static boolean firstTimeSetup = false;
-
     public static final String VERSION = "0.3-TESTING";
 
     public static void main(String[] args) {
@@ -133,11 +131,11 @@ public class Main {
         updateProgress(progressListener, 50, "Datenverzeichnis bereit...");
         // Need bug fixes
         if (settings.getProperty("first-time") == null || settings.getProperty("first-time").equalsIgnoreCase("false")) {
-            firstTimeSetup = settings.getProperty("first-time").equalsIgnoreCase("true");
+            boolean firstTimeSetup = settings.getProperty("first-time").equalsIgnoreCase("true");
             System.out.println(firstTimeSetup);
             if(!firstTimeSetup) {
                 firstTimeSetup = true;
-                settings.setProperty("first-time", "true");
+                settings.setProperty("first-time", String.valueOf(firstTimeSetup));
                 updateProgress(progressListener, 54, "Erster Start...");
                 int result = showConfirmDialogOnEdt(
                         "Willkommen zum VEBO Lagersystem!\nMoechten Sie die anfaenglichen Daten jetzt importieren?",
@@ -216,6 +214,7 @@ public class Main {
             return new ImageIcon(scaledImage);
         } catch (Exception e) {
             logger.error("Fehler beim Laden des Icons: {}", e.getMessage(), e);
+            logUtils.addLog("Fehler beim Laden des Icons: " + e.getMessage());
             throw new MalformedURLException("Failed to load resource: " + resourceName);
         }
     }

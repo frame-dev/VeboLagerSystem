@@ -27,7 +27,7 @@ public class ClientManager {
     }
 
     private void createTable() {
-        String sql = "CREATE TABLE IF NOT EXISTS clients (" +
+        String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_CLIENTS + " (" +
                 "firstLastName TEXT PRIMARY KEY," +
                 "department TEXT" +
                 ");";
@@ -49,7 +49,7 @@ public class ClientManager {
     }
 
     public boolean insertClient(String firstLastName, String department) {
-        String sql = "INSERT INTO clients (firstLastName, department) VALUES (?, ?);";
+        String sql = "INSERT INTO " + DatabaseManager.TABLE_CLIENTS + " (firstLastName, department) VALUES (?, ?);";
         boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName, department});
         if (success) {
             departmentCache.put(firstLastName, department);
@@ -65,7 +65,7 @@ public class ClientManager {
         if (departmentCache.containsKey(firstLastName)) {
             return true;
         }
-        String sql = "SELECT 1 FROM clients WHERE firstLastName = ? LIMIT 1;";
+        String sql = "SELECT 1 FROM " + DatabaseManager.TABLE_CLIENTS + " WHERE firstLastName = ? LIMIT 1;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{firstLastName})) {
             boolean exists = resultSet.next();
             if (exists) {
@@ -81,7 +81,7 @@ public class ClientManager {
         if (!existsClient(firstLastName)) {
             return false;
         }
-        String sql = "UPDATE clients SET department = ? WHERE firstLastName = ?;";
+        String sql = "UPDATE " + DatabaseManager.TABLE_CLIENTS + " SET department = ? WHERE firstLastName = ?;";
         boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{newDepartment, firstLastName});
         if (success) {
             departmentCache.put(firstLastName, newDepartment);
@@ -97,7 +97,7 @@ public class ClientManager {
         if (!existsClient(firstLastName)) {
             return false;
         }
-        String sql = "DELETE FROM clients WHERE firstLastName = ?;";
+        String sql = "DELETE FROM " + DatabaseManager.TABLE_CLIENTS + " WHERE firstLastName = ?;";
         boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName});
         if (success) {
             invalidateCaches(firstLastName);
@@ -112,7 +112,7 @@ public class ClientManager {
         if (departmentCache.containsKey(firstLastName)) {
             return departmentCache.get(firstLastName);
         }
-        String sql = "SELECT department FROM clients WHERE firstLastName = ?;";
+        String sql = "SELECT department FROM * " + DatabaseManager.TABLE_CLIENTS + " WHERE firstLastName = ?;";
         try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{firstLastName})) {
             if (resultSet.next()) {
                 String dept = resultSet.getString("department");
@@ -129,7 +129,7 @@ public class ClientManager {
             return new ArrayList<>(allClientsCache);
         }
 
-        String sql = "SELECT firstLastName, department FROM clients;";
+        String sql = "SELECT firstLastName, department FROM " + DatabaseManager.TABLE_CLIENTS +";";
         List<Map<String, String>> clients = new ArrayList<>();
         try (var resultSet = databaseManager.executeQuery(sql)) {
             while (resultSet.next()) {

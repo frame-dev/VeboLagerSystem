@@ -36,7 +36,7 @@ public class WarningManager {
      * Create the warnings table if it does not exist
      */
     private void createTable() {
-        String sql = "CREATE TABLE IF NOT EXISTS warnings (" +
+        String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_WARNINGS + " (" +
                 "title TEXT," +
                 "message TEXT," +
                 "type TEXT," +
@@ -54,7 +54,7 @@ public class WarningManager {
      * @return true if insertion was successful, false otherwise
      */
     public boolean insertWarning(Warning warning) {
-        String sql = "INSERT INTO warnings (title, message, type, date, isResolved, isDisplayed) " +
+        String sql = "INSERT INTO " + DatabaseManager.TABLE_WARNINGS + " (title, message, type, date, isResolved, isDisplayed) " +
                 "VALUES (?, ?, ?, ?, ?, ?);";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
                 warning.getTitle(),
@@ -73,7 +73,7 @@ public class WarningManager {
     }
 
     public boolean hasWarning(String title) {
-        String sql = "SELECT * FROM warnings WHERE title = ?;";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
             return resultSet.next();
         } catch (Exception e) {
@@ -82,7 +82,7 @@ public class WarningManager {
     }
 
     public boolean isResolved(String title) {
-        String sql = "SELECT isResolved FROM warnings WHERE title = ?;";
+        String sql = "SELECT isResolved FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
             if (resultSet.next()) {
                 return resultSet.getString("isResolved").equals("true");
@@ -94,7 +94,7 @@ public class WarningManager {
     }
 
     public boolean resolveWarning(String title) {
-        String sql = "UPDATE warnings SET isResolved = 'true' WHERE title = ?;";
+        String sql = "UPDATE " + DatabaseManager.TABLE_WARNINGS + " SET isResolved = 'true' WHERE title = ?;";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title});
         if(result) {
             Main.logUtils.addLog("Resolved warning with title '" + title + "'");
@@ -111,7 +111,7 @@ public class WarningManager {
      * @return true if update was successful, false otherwise
      */
     public boolean updateWarning(Warning warning) {
-        String sql = "UPDATE warnings SET message = ?, type = ?, date = ?, isResolved = ?, isDisplayed = ? " +
+        String sql = "UPDATE " + DatabaseManager.TABLE_WARNINGS + " SET message = ?, type = ?, date = ?, isResolved = ?, isDisplayed = ? " +
                 "WHERE title = ?;";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
                 warning.getMessage(),
@@ -130,7 +130,7 @@ public class WarningManager {
     }
 
     public boolean deleteWarning(String title) {
-        String sql = "DELETE FROM warnings WHERE title = ?;";
+        String sql = "DELETE FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title});
         if (result) {
             Main.logUtils.addLog("Deleted warning with title '" + title + "'");
@@ -141,7 +141,7 @@ public class WarningManager {
     }
 
     public Warning getWarning(String title) {
-        String sql = "SELECT * FROM warnings WHERE title = ?;";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
             if (resultSet.next()) {
                 return new Warning(
@@ -160,7 +160,7 @@ public class WarningManager {
     }
 
     public boolean isDisplayed(String title) {
-        String sql = "SELECT isDisplayed FROM warnings WHERE title = ?;";
+        String sql = "SELECT isDisplayed FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
             if (resultSet.next()) {
                 return resultSet.getString("isDisplayed").equals("true");
@@ -172,7 +172,7 @@ public class WarningManager {
     }
 
     public List<Warning> getAllWarnings() {
-        String sql = "SELECT * FROM warnings;";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_WARNINGS + ";";
         List<Warning> warnings = new java.util.ArrayList<>();
         try (var resultSet = databaseManager.executeQuery(sql)) {
             while (resultSet.next()) {

@@ -5,60 +5,66 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 public class LogUtils {
 
-    private final Logger LOGGER = LogManager.getLogger(LogUtils.class);
-    private final File LOG_FILE;
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+    private static final Logger LOGGER = LogManager.getLogger(LogUtils.class);
+    private static final DateTimeFormatter DATE_FORMAT =
+            DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss", Locale.ROOT);
+    private final Path logFilePath;
 
     public LogUtils() {
-        this.LOG_FILE = new File(Main.getAppDataDir() + "/logs", "vebo_lager_system.log");
+        this.logFilePath = new File(Main.getAppDataDir() + "/logs", "vebo_lager_system.log").toPath();
         initializeLogFile();
     }
 
     private void initializeLogFile() {
-        // Ensure parent directory exists
-        File parentDir = LOG_FILE.getParentFile();
-        if (parentDir != null && !parentDir.exists()) {
-            if (!parentDir.mkdirs()) {
-                System.err.println("Konnte Log-Verzeichnis nicht erstellen: " + parentDir.getAbsolutePath());
-                return;
-            }
+        Path parentDir = logFilePath.getParent();
+        if (parentDir == null) {
+            LOGGER.log(Level.ERROR, "Kein Log-Verzeichnis fuer Pfad: {}", logFilePath);
+            return;
         }
-
-        // Ensure log file exists
-        if (!LOG_FILE.exists()) {
-            try {
-                if (!LOG_FILE.createNewFile()) {
-                    System.err.println("Konnte Log-Datei nicht erstellen: " + LOG_FILE.getAbsolutePath());
-                }
-            } catch (IOException e) {
-                LOGGER.log(Level.ERROR, "Fehler beim Erstellen der Log-Datei: {}", LOG_FILE.getAbsolutePath(), e);
+        try {
+            Files.createDirectories(parentDir);
+            if (!Files.exists(logFilePath)) {
+                Files.createFile(logFilePath);
             }
+        } catch (IOException e) {
+            LOGGER.log(Level.ERROR, "Fehler beim Erstellen der Log-Datei: {}", logFilePath, e);
         }
     }
 
     public synchronized void addLog(String logEntry) {
-        String timestampedEntry = "[" + dateFormat.format(new Date()) + "] >> " + logEntry;
+        String timestampedEntry = "[" + DATE_FORMAT.format(LocalDateTime.now()) + "] >> " + logEntry;
         writeLogToFile(timestampedEntry);
         LOGGER.log(Level.INFO, logEntry);
         ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager.getInstance();
-        if(!logManager.createLog(ch.framedev.lagersystem.managers.LogManager.LogLevel.INFO, logEntry))
+        if (!logManager.createLog(ch.framedev.lagersystem.managers.LogManager.LogLevel.INFO, logEntry)) {
             LOGGER.log(Level.ERROR, "LogManager could not create log");
+        }
     }
 
     private void writeLogToFile(String logEntry) {
-        try (FileWriter writer = new FileWriter(LOG_FILE, true)) {
-            writer.write(logEntry + System.lineSeparator());
-            writer.flush();
+        try (BufferedWriter writer = Files.newBufferedWriter(
+                logFilePath,
+                StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND
+        )) {
+            writer.write(logEntry);
+            writer.newLine();
         } catch (IOException e) {
-            LOGGER.log(Level.ERROR, "Fehler beim Schreiben der Log-Datei: {}", LOG_FILE.getAbsolutePath(), e);
+            LOGGER.log(Level.ERROR, "Fehler beim Schreiben der Log-Datei: {}", logFilePath, e);
         }
     }
 }

@@ -29,7 +29,7 @@ public class DepartmentManager {
     }
 
     private void createTable() {
-        String sql = "CREATE TABLE IF NOT EXISTS departments (" +
+        String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_DEPARTMENTS + " (" +
                 "departmentName TEXT," +
                 "kontoNumber TEXT" +
                 ");";
@@ -40,7 +40,7 @@ public class DepartmentManager {
         if (existsDepartment(departmentName)) {
             return false;
         }
-        String sql = "INSERT INTO departments (departmentName, kontoNumber) " +
+        String sql = "INSERT INTO " + DatabaseManager.TABLE_DEPARTMENTS + " (departmentName, kontoNumber) " +
                 "VALUES (?, ?);";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{departmentName, kontoNumber});
         if (result) {
@@ -52,7 +52,7 @@ public class DepartmentManager {
     }
 
     public boolean existsDepartment(String departmentName) {
-        String sql = "SELECT * FROM departments WHERE departmentName = '" + departmentName + "';";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_DEPARTMENTS + " WHERE departmentName = '" + departmentName + "';";
         try (var resultSet = databaseManager.executeQuery(sql)) {
             return resultSet.next();
         } catch (Exception e) {
@@ -64,7 +64,7 @@ public class DepartmentManager {
         if (!existsDepartment(departmentName)) {
             return false;
         }
-        String sql = "DELETE FROM departments WHERE departmentName = ?;";
+        String sql = "DELETE FROM " + DatabaseManager.TABLE_DEPARTMENTS + " WHERE departmentName = ?;";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{departmentName});
         if (result) {
             Main.logUtils.addLog(String.format("Deleted department with name '%s'", departmentName));
@@ -78,7 +78,7 @@ public class DepartmentManager {
         if (!existsDepartment(departmentName)) {
             return false;
         }
-        String sql = "UPDATE departments SET kontoNumber = ? WHERE departmentName = ?;";
+        String sql = "UPDATE " + DatabaseManager.TABLE_DEPARTMENTS + " SET kontoNumber = ? WHERE departmentName = ?;";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{newKontoNumber, departmentName});
         if (result) {
             Main.logUtils.addLog(String.format("Updated department with name '%s'", departmentName));
@@ -106,7 +106,7 @@ public class DepartmentManager {
     }
 
     public List<Map<String, Object>> getAllDepartments() {
-        String sql = "SELECT * FROM departments;";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_DEPARTMENTS + ";";
         List<Map<String, Object>> departments = new ArrayList<>();
         try (var resultSet = databaseManager.executeQuery(sql)) {
             while (resultSet.next()) {

@@ -80,7 +80,7 @@ public class ArticleManager {
     }
 
     private void createTable() {
-        String sql = "CREATE TABLE IF NOT EXISTS articles (" +
+        String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_ARTICLES + " (" +
                 "articleNumber TEXT," +
                 "name TEXT," +
                 "details TEXT," +
@@ -197,7 +197,7 @@ public class ArticleManager {
             }
         }
 
-        String sql = "SELECT 1 FROM articles WHERE articleNumber = ? LIMIT 1;";
+        String sql = "SELECT 1 FROM " + DatabaseManager.TABLE_ARTICLES + " WHERE articleNumber = ? LIMIT 1;";
         try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber})) {
             boolean exists = resultSet.next();
             if (exists) {
@@ -222,7 +222,7 @@ public class ArticleManager {
             Main.logUtils.addLog("Article with the number " + article.getArticleNumber() + " already exists!");
             return false;
         }
-        String sql = "INSERT INTO articles (articleNumber, name, details, stockQuantity, minStockLevel, sellPrice, purchasePrice, vendorName) " +
+        String sql = "INSERT INTO " + DatabaseManager.TABLE_ARTICLES + " (articleNumber, name, details, stockQuantity, minStockLevel, sellPrice, purchasePrice, vendorName) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
         VendorManager vendorManager = VendorManager.getInstance();
         if (!vendorManager.existsVendor(article.getVendorName())) {
@@ -262,7 +262,7 @@ public class ArticleManager {
         if (!existsArticle(article.getArticleNumber())) {
             return false;
         }
-        String sql = "UPDATE articles SET name = ?, details = ?, stockQuantity = ?, minStockLevel = ?, sellPrice = ?, purchasePrice = ?, vendorName = ? " +
+        String sql = "UPDATE " + DatabaseManager.TABLE_ARTICLES + " SET name = ?, details = ?, stockQuantity = ?, minStockLevel = ?, sellPrice = ?, purchasePrice = ?, vendorName = ? " +
                 "WHERE articleNumber = ?;";
         VendorManager vendorManager = VendorManager.getInstance();
         if (!vendorManager.existsVendor(article.getVendorName())) {
@@ -302,7 +302,7 @@ public class ArticleManager {
         if (!existsArticle(articleNumber)) {
             return false;
         }
-        String sql = "DELETE FROM articles WHERE articleNumber = ?;";
+        String sql = "DELETE FROM " + DatabaseManager.TABLE_ARTICLES + " WHERE articleNumber = ?;";
         boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{articleNumber});
 
         if (success) {
@@ -342,7 +342,7 @@ public class ArticleManager {
             return cached;
         }
 
-        String sql = "SELECT * FROM articles WHERE articleNumber = ? LIMIT 1;";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_ARTICLES + " WHERE articleNumber = ? LIMIT 1;";
         try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber})) {
             if (resultSet.next()) {
                 Article article = new Article(
@@ -380,7 +380,7 @@ public class ArticleManager {
             return cached;
         }
 
-        String sql = "SELECT * FROM articles WHERE name = ? LIMIT 1;";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_ARTICLES + " WHERE name = ? LIMIT 1;";
         try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{name})) {
             if (resultSet.next()) {
                 Article article = new Article(
@@ -423,7 +423,7 @@ public class ArticleManager {
             }
         }
 
-        String sql = "SELECT * FROM articles;";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_ARTICLES + ";";
         try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
             List<Article> articles = new ArrayList<>();
             while (resultSet.next()) {

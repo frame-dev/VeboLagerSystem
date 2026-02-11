@@ -11,7 +11,7 @@ import java.util.List;
 
 public class NotesManager {
 
-    private final String TABLE = "notes";
+    private final String TABLE = DatabaseManager.TABLE_NOTES;
     private static NotesManager instance;
     private DatabaseManager databaseManager;
 

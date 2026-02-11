@@ -32,7 +32,7 @@ public class OrderManager {
     }
 
     private void createTable() {
-        String sql = "CREATE TABLE IF NOT EXISTS orders (" +
+        String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_ORDERS + " (" +
                 "orderId TEXT," +
                 "orderedArticles TEXT," +
                 "receiverName TEXT," +
@@ -47,7 +47,7 @@ public class OrderManager {
     }
 
     public boolean existsOrder(String orderId) {
-        String sql = "SELECT * FROM orders WHERE orderId = '" + orderId + "';";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + " WHERE orderId = '" + orderId + "';";
         try (var resultSet = databaseManager.executeQuery(sql)) {
             return resultSet.next();
         } catch (Exception e) {
@@ -67,7 +67,7 @@ public class OrderManager {
         if (!articlesBuilder.isEmpty()) {
             articlesBuilder.setLength(articlesBuilder.length() - 1); // Remove trailing comma
         }
-        String sql = "INSERT INTO orders (orderId, orderedArticles, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber, department, status) " +
+        String sql = "INSERT INTO " + DatabaseManager.TABLE_ORDERS + " (orderId, orderedArticles, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber, department, status) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
                 order.getOrderId(),
@@ -101,7 +101,7 @@ public class OrderManager {
         if (!articlesBuilder.isEmpty()) {
             articlesBuilder.setLength(articlesBuilder.length() - 1); // Remove trailing comma
         }
-        String sql = "UPDATE orders SET orderedArticles = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?, status = ?" +
+        String sql = "UPDATE " + DatabaseManager.TABLE_ORDERS + " SET orderedArticles = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?, status = ?" +
                 "WHERE orderId = ?;";
         boolean result =  databaseManager.executePreparedUpdate(sql, new Object[]{
                 articlesBuilder.toString(),
@@ -128,7 +128,7 @@ public class OrderManager {
         if (!existsOrder(orderId)) {
             return false;
         }
-        String sql = "DELETE FROM orders WHERE orderId = ?;";
+        String sql = "DELETE FROM " + DatabaseManager.TABLE_ORDERS + " WHERE orderId = ?;";
         if( databaseManager.executePreparedUpdate(sql, new Object[]{orderId})) {
             Main.logUtils.addLog("Order with id '" + orderId + "' deleted");
             return true;
@@ -181,7 +181,7 @@ public class OrderManager {
     }
 
     public List<Order> getOrders() {
-        String sql = "SELECT * FROM orders;";
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + ";";
         try (var resultSet = databaseManager.executeQuery(sql)) {
             var orders = new ArrayList<Order>();
             while (resultSet.next()) {

@@ -16,7 +16,7 @@ public class UserManager {
     private static UserManager instance;
     private final DatabaseManager databaseManager;
 
-    private final String TABLE_NAME = "users";
+    private final String TABLE_NAME = DatabaseManager.TABLE_USERS;
 
     private UserManager() {
         databaseManager = Main.databaseManager;
