@@ -89,7 +89,7 @@ public class DepartmentManager {
     }
 
     public Map<String, Object> getDepartment(String departmentName) {
-        String sql = "SELECT * from DEPARTMENTS WHERE departmentName = ?;";
+        String sql = "SELECT * from " + DatabaseManager.TABLE_DEPARTMENTS + " WHERE departmentName = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{departmentName})) {
             if (resultSet.next()) {
                 return Map.of(

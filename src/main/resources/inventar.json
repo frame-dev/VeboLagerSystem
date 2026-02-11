@@ -780,6 +780,116 @@
     "vendorName": "ZVG"
   },
   {
+    "number": "2401",
+    "name": "Dosierflasche Kompl. leer unbeschriftet",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.40,
+    "buyPrice": 3.09,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "2402",
+    "name": "WC Reiniger Profi Flasche",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.60,
+    "buyPrice": 3.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "2403",
+    "name": "Schaumreiniger SRS sauer Flasche",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.60,
+    "buyPrice": 3.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "2404",
+    "name": "Kalklöser KL Flüssig Flasche",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.60,
+    "buyPrice": 3.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "2405",
+    "name": "Sanitärreiniger SR Cool Flasche",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.60,
+    "buyPrice": 3.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "2406",
+    "name": "Orange Clean Flasche",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.60,
+    "buyPrice": 3.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "2407",
+    "name": "Radical Provi Flasche",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.60,
+    "buyPrice": 3.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "2408",
+    "name": "Sportreiniger Citron Flasche",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.60,
+    "buyPrice": 3.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "2409",
+    "name": "Glasreiniger GL Fix Flasche",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 3.60,
+    "buyPrice": 3.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3101",
+    "name": "Handspühlmittel Aloe Vera",
+    "details": "1 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 7.30,
+    "buyPrice": 6.64,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3102",
+    "name": "Handspühlmittel Aloe Vera",
+    "details": "5 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 36.5,
+    "buyPrice": 33.18,
+    "vendorName": "ZVG"
+  },
+  {
     "number": "3103",
     "name": "Clean Lav GSM-Tabs 5 in 1 für Geschirrspüler",
     "details": "Pack à 50 Stk.",
@@ -788,6 +898,346 @@
     "sellPrice": 14.5,
     "buyPrice": 13.09,
     "vendorName": "ZVG"
+  },
+  {
+    "number": "3107",
+    "name": "Wasserenthärter - Salz",
+    "details": "25 kg",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 0.0,
+    "buyPrice": 0.0,
+    "vendorName": "Landi"
+  },
+  {
+    "number": "3201",
+    "name": "WC Reiniger Profi",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 54.10,
+    "buyPrice": 49.18,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3202",
+    "name": "Germex Hallenbad",
+    "details": "",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 135.0,
+    "buyPrice": 122.73,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3203",
+    "name": "Schaumreiniger SRS sauer",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 66.60,
+    "buyPrice": 60.55,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3204",
+    "name": "Kalklöser KL Flüssig",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 133.20,
+    "buyPrice": 121.09,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3205",
+    "name": "Sanitärreiniger SR Cool",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 57.10,
+    "buyPrice": 52.09,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3206",
+    "name": "Orange Clean",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 62.0,
+    "buyPrice": 55.45,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3207",
+    "name": "Radical Provi",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 71.50,
+    "buyPrice": 63.64,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3208",
+    "name": "Sportreiniger Citron Din. 18032",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 76.0,
+    "buyPrice": 67.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3209",
+    "name": "Glasreiniger GL Fix",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 62.40,
+    "buyPrice": 56.73,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3210",
+    "name": "Schaumseife foam & fresh",
+    "details": "5 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 19.65,
+    "buyPrice": 17.95,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3211",
+    "name": "Handwaschlotion HWL ÖKO",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 41.0,
+    "buyPrice": 37.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3212",
+    "name": "Handwaschmittel HS Aloe Vera",
+    "details": "1 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 4.10,
+    "buyPrice": 3.73,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3213",
+    "name": "Handwaschmittel HS Aloe Vera",
+    "details": "5 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 23.8,
+    "buyPrice": 21.64,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3214",
+    "name": "Durgol Entkalker alt",
+    "details": "1 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 5.0,
+    "buyPrice": 4.55,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3215",
+    "name": "Pramex Entkalker neu",
+    "details": "1 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 7.75,
+    "buyPrice": 7.05,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3216",
+    "name": "Pramex Entkalker neu",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 75.0,
+    "buyPrice": 68.18,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3217",
+    "name": "Kälte Spray (Kaugummientferner)",
+    "details": "Dose 500ml.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 14.0,
+    "buyPrice": 12.73,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3218",
+    "name": "Radical Profi",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 71.0,
+    "buyPrice": 63.64,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3219",
+    "name": "Desipur OH Schnelldesinfektion",
+    "details": "9.5 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 73.70,
+    "buyPrice": 66.91,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3220",
+    "name": "Händedesinfektion",
+    "details": "5 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 58.60,
+    "buyPrice": 53.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3221",
+    "name": "Schimmelentferner germex C",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 119.0,
+    "buyPrice": 108.18,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3222",
+    "name": "Anti-Foam Entschäumer",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 160.0,
+    "buyPrice": 145.45,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3223",
+    "name": "Flächendesinfektion BC - Sept",
+    "details": "5 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 36.0,
+    "buyPrice": 32.73,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3224",
+    "name": "Grill-und Konvektiomatenreiniger",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 64.25,
+    "buyPrice": 58.41,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3225",
+    "name": "Linoleum-Grundreiniger",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 71.35,
+    "buyPrice": 64.87,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3226",
+    "name": "Sprayemulision",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 148.7,
+    "buyPrice": 135.18,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3227",
+    "name": "Fussbodenbeschichtung",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 160.0,
+    "buyPrice": 145.45,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3228",
+    "name": "Schaumseife mina - foam",
+    "details": "5 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 28.35,
+    "buyPrice": 25.77,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3229",
+    "name": "Schieferoel",
+    "details": "10 lt.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 154.60,
+    "buyPrice": 140.55,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3230",
+    "name": "Germex tabs",
+    "details": "150Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 38.60,
+    "buyPrice": 35.27,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3301",
+    "name": "Handwaschlotion",
+    "details": "Flasche à 500g",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 4.2,
+    "buyPrice": 3.82,
+    "vendorName": "ZVG"
+  },
+  {
+    "number": "3302",
+    "name": "Sandseife gepresst",
+    "details": "Stk.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 1.55,
+    "buyPrice": 1.41,
+    "vendorName": "Null"
+  },
+  {
+    "number": "3303",
+    "name": "Sandseife (Paste Type A)",
+    "details": "10 kg.",
+    "stockQuantity": 0,
+    "minStockLevel": 0,
+    "sellPrice": 85.35,
+    "buyPrice": 77.59,
+    "vendorName": "VTT"
   },
   {
     "number": "4101",

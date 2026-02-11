@@ -133,19 +133,23 @@ public class NewOrderGUI extends JFrame {
         styleComboBox(receiverNameCombobox);
         styleComboBox(departmentList);
 
+        // Receiver / Sender form
+        receiverKontoField = new JTextField();
+
         receiverNameCombobox.addActionListener(listener -> {
             String selected = (String) receiverNameCombobox.getSelectedItem();
             if (selected == null || selected.trim().isEmpty()) return;
 
             String department = ClientManager.getInstance().getDepartmentByName(selected);
+            String kontoNr = DepartmentManager.getInstance().getDepartment(department).get("kontoNumber").toString();
             if (department != null && !department.trim().isEmpty()) {
                 departmentList.setSelectedItem(department);
+                if (kontoNr != null && !kontoNr.trim().isEmpty())
+                    receiverKontoField.setText(DepartmentManager.getInstance().getDepartment(department).get("kontoNumber").toString());
             }
             updateSummaryBar();
         });
 
-        // Receiver / Sender form
-        receiverKontoField = new JTextField();
         senderNameCombobox = new JComboBox<>();
         fillSenderNameCombobox();
         senderKontoField = new JTextField();
@@ -388,8 +392,15 @@ public class NewOrderGUI extends JFrame {
                 b.setForeground(fg);
                 b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 b.addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(surface); }
-                    @Override public void mouseExited(MouseEvent e)  { b.setBackground(bg); }
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        b.setBackground(surface);
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        b.setBackground(bg);
+                    }
                 });
                 return b;
             }
@@ -725,6 +736,10 @@ public class NewOrderGUI extends JFrame {
                 throw new IOException("No usable font found (install a system TTF or add PDFBox 2.x).");
             }
 
+            final boolean useWinAnsiFallback =
+                    regularFont.getClass().getSimpleName().contains("PDType1Font") ||
+                            boldFont.getClass().getSimpleName().contains("PDType1Font");
+
             try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
                 float pageWidth = page.getMediaBox().getWidth();
                 float margin = 50;
@@ -792,13 +807,13 @@ public class NewOrderGUI extends JFrame {
                 cs.beginText();
                 cs.setFont(regularFont, 10);
                 cs.newLineAtOffset(margin + 10, yPosition - 32);
-                cs.showText(Objects.requireNonNull(senderNameCombobox.getSelectedItem()).toString());
+                cs.showText(sanitizeForWinAnsi(Objects.requireNonNull(senderNameCombobox.getSelectedItem()).toString(), useWinAnsiFallback));
                 cs.endText();
 
                 cs.beginText();
                 cs.setFont(regularFont, 9);
                 cs.newLineAtOffset(margin + 10, yPosition - 47);
-                cs.showText("Konto: " + senderKontoField.getText().trim());
+                cs.showText(sanitizeForWinAnsi("Konto: " + senderKontoField.getText().trim(), useWinAnsiFallback));
                 cs.endText();
 
                 float rightBoxX = margin + (pageWidth - 2 * margin) / 2 + 15;
@@ -814,20 +829,20 @@ public class NewOrderGUI extends JFrame {
                 cs.beginText();
                 cs.setFont(regularFont, 10);
                 cs.newLineAtOffset(rightBoxX, yPosition - 32);
-                cs.showText(receiver);
+                cs.showText(sanitizeForWinAnsi(receiver, useWinAnsiFallback));
                 cs.endText();
 
                 cs.beginText();
                 cs.setFont(regularFont, 9);
                 cs.newLineAtOffset(rightBoxX, yPosition - 47);
-                cs.showText("Konto: " + receiverKontoField.getText().trim());
+                cs.showText(sanitizeForWinAnsi("Konto: " + receiverKontoField.getText().trim(), useWinAnsiFallback));
                 cs.endText();
 
                 String dept = departmentList.getSelectedItem() != null ? departmentList.getSelectedItem().toString().trim() : "";
                 cs.beginText();
                 cs.setFont(regularFont, 9);
                 cs.newLineAtOffset(rightBoxX, yPosition - 62);
-                cs.showText("Abteilung: " + dept);
+                cs.showText(sanitizeForWinAnsi("Abteilung: " + dept, useWinAnsiFallback));
                 cs.endText();
 
                 yPosition -= boxHeight + 30;
@@ -873,8 +888,9 @@ public class NewOrderGUI extends JFrame {
 
                     String articleName = a.getName();
                     if (articleName.length() > 35) articleName = articleName.substring(0, 32) + "...";
+                    String articleLabel = articleName + " (" + a.getArticleNumber() + ")";
 
-                    cs.showText(articleName + " (" + a.getArticleNumber() + ")");
+                    cs.showText(sanitizeForWinAnsi(articleLabel, useWinAnsiFallback));
                     cs.newLineAtOffset(200, 0);
                     cs.showText(String.valueOf(qty));
                     cs.newLineAtOffset(60, 0);
@@ -921,6 +937,21 @@ public class NewOrderGUI extends JFrame {
 
             doc.save(file);
         }
+    }
+
+    private static String sanitizeForWinAnsi(String text, boolean useWinAnsiFallback) {
+        if (!useWinAnsiFallback || text == null || text.isEmpty()) {
+            return text == null ? "" : text;
+        }
+        StringBuilder sb = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); ) {
+            int cp = text.codePointAt(i);
+            if (cp <= 255) {
+                sb.appendCodePoint(cp);
+            }
+            i += Character.charCount(cp);
+        }
+        return sb.toString();
     }
 
     private JMenuBar createJMenu() {
@@ -1189,4 +1220,6 @@ public class NewOrderGUI extends JFrame {
         }
     }
 }
+
+
 

@@ -18,6 +18,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
@@ -37,6 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.net.URLEncoder;
@@ -45,6 +47,7 @@ import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -1699,18 +1702,18 @@ public class ArticleGUI extends JFrame {
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
         rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
 
-        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance();
+        // NumberFormat currencyFormat = NumberFormat.getCurrencyInstance();
         DefaultTableCellRenderer currencyRenderer = new DefaultTableCellRenderer() {
             @Override
             public void setValue(Object value) {
-                if (value instanceof Number) setText(currencyFormat.format(((Number) value).doubleValue()));
+                if (value instanceof Number) setText(((Number) value).doubleValue() + " CHF");
                 else setText(value == null ? "" : value.toString());
                 setHorizontalAlignment(SwingConstants.RIGHT);
             }
         };
 
         // Make column widths reasonable (initial preferred widths)
-        javax.swing.table.TableColumnModel tcm = articleTable.getColumnModel();
+        TableColumnModel tcm = articleTable.getColumnModel();
         for (int i = 0; i < baseColumnWidths.length && i < tcm.getColumnCount(); i++) {
             tcm.getColumn(i).setPreferredWidth(baseColumnWidths[i]);
         }
@@ -1797,6 +1800,10 @@ public class ArticleGUI extends JFrame {
                 }
             }
 
+            final boolean useWinAnsiFallback =
+                    boldFont.getClass().getSimpleName().contains("PDType1Font") ||
+                    regularFont.getClass().getSimpleName().contains("PDType1Font");
+
             // Page setup - Use A4 landscape for all columns to fit
             PDRectangle pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()); // Landscape
             float margin = 30;
@@ -1867,6 +1874,9 @@ public class ArticleGUI extends JFrame {
                     float xPos = margin;
                     for (int col = 0; col < numCols; col++) {
                         String header = table.getColumnName(col);
+                        if (useWinAnsiFallback) {
+                            header = sanitizeForWinAnsi(header);
+                        }
                         // Truncate header if too long
                         float textWidth = boldFont.getStringWidth(header) / 1000f * headerFontSize;
                         if (textWidth > columnWidths[col] - 2 * cellPadding) {
@@ -1966,6 +1976,10 @@ public class ArticleGUI extends JFrame {
                         }
                     }
 
+                    if (useWinAnsiFallback) {
+                        text = sanitizeForWinAnsi(text);
+                    }
+
                     // Truncate if too long
                     float textWidth = regularFont.getStringWidth(text) / 1000f * fontSize;
                     if (textWidth > columnWidths[col] - 2 * cellPadding) {
@@ -2016,7 +2030,23 @@ public class ArticleGUI extends JFrame {
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE,
                     Main.iconSmall);
+            ex.printStackTrace();
         }
+    }
+
+    private static String sanitizeForWinAnsi(String text) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); ) {
+            int cp = text.codePointAt(i);
+            if (cp <= 255) {
+                sb.appendCodePoint(cp);
+            }
+            i += Character.charCount(cp);
+        }
+        return sb.toString();
     }
 
     private static DefaultTableModel getDefaultTableModel() {
@@ -2160,7 +2190,7 @@ public class ArticleGUI extends JFrame {
 
     private void loadArticles() {
         ArticleManager articleManager = ArticleManager.getInstance();
-        java.util.List<Article> articles = articleManager.getAllArticles();
+        List<Article> articles = articleManager.getAllArticles();
         if (articles == null) return;
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
         isUpdatingTable = true;
@@ -2540,19 +2570,7 @@ public class ArticleGUI extends JFrame {
         }
 
         try (PDDocument doc = new PDDocument()) {
-            PDFont regularFont;
-            File arial = new File("/Library/Fonts/Arial.ttf");
-            if (arial.exists()) {
-                regularFont = PDType0Font.load(doc, arial);
-            } else {
-                try {
-                    Class<?> c = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
-                    Object helv = c.getField("HELVETICA").get(null);
-                    regularFont = (PDFont) helv;
-                } catch (Exception e) {
-                    throw new IOException("Keine verwendbaren Schriftarten gefunden");
-                }
-            }
+            PDFont regularFont = PDType1Font.HELVETICA;
 
             PDRectangle pageSize = PDRectangle.A4;
             float margin = 40f;
@@ -2572,6 +2590,7 @@ public class ArticleGUI extends JFrame {
                         article.getStockQuantity() + " | Min: " + article.getMinStockLevel() +
                         " | VK: " + article.getSellPrice() + " | EK: " + article.getPurchasePrice() +
                         " | Lieferant: " + article.getVendorName();
+                line = sanitizeForWinAnsi(line);
                 List<String> wrapped = wrapLine(line, regularFont, fontSize, maxWidth);
                 for (String part : wrapped) {
                     if (y - lineHeight < margin) {
@@ -2881,7 +2900,8 @@ public class ArticleGUI extends JFrame {
     private String buildQrCodeUrl(Article article) {
         String data = article.getQrCodeData();
         String encodedData = URLEncoder.encode(data, StandardCharsets.UTF_8);
-        return "https://framedev.ch/vebo/scan.php?data=" + encodedData;
+        String serverUrl = "https://framedev.ch/vebo/scan.php";
+        return serverUrl + "?data=" + encodedData;
     }
 
     private void exportQrCodesToPdf(List<QrPreviewItem> items) {
@@ -2909,19 +2929,7 @@ public class ArticleGUI extends JFrame {
         }
 
         try (PDDocument doc = new PDDocument()) {
-            PDFont regularFont;
-            File arial = new File("/Library/Fonts/Arial.ttf");
-            if (arial.exists()) {
-                regularFont = PDType0Font.load(doc, arial);
-            } else {
-                try {
-                    Class<?> c = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
-                    Object helv = c.getField("HELVETICA").get(null);
-                    regularFont = (PDFont) helv;
-                } catch (Exception e) {
-                    throw new IOException("Keine verwendbaren Schriftarten gefunden");
-                }
-            }
+            PDFont regularFont = PDType1Font.HELVETICA;
 
             PDRectangle pageSize = PDRectangle.A4;
             float margin = 30f;
@@ -2962,6 +2970,7 @@ public class ArticleGUI extends JFrame {
                 contentStream.drawImage(image, imageX, imageY, imageSize, imageSize);
 
                 String labelText = item.article().getArticleNumber() + " - " + item.article().getName();
+                labelText = sanitizeForWinAnsi(labelText);
                 labelText = trimTextToWidth(labelText, regularFont, fontSize, cellWidth - 12);
                 contentStream.beginText();
                 contentStream.setFont(regularFont, fontSize);

@@ -131,9 +131,10 @@ public class Main {
         updateProgress(progressListener, 44, "Pruefe Datenverzeichnis...");
         ensureAppDataDirectory();
         updateProgress(progressListener, 50, "Datenverzeichnis bereit...");
-        // Need bug fixesw
+        // Need bug fixes
         if (settings.getProperty("first-time") == null || settings.getProperty("first-time").equalsIgnoreCase("false")) {
             firstTimeSetup = settings.getProperty("first-time").equalsIgnoreCase("true");
+            System.out.println(firstTimeSetup);
             if(!firstTimeSetup) {
                 firstTimeSetup = true;
                 settings.setProperty("first-time", "true");
@@ -435,7 +436,7 @@ public class Main {
      * Process single department import
      */
     private static void processDepartmentImport(DepartmentManager departmentManager, Map<String, Object> itemData, ImportResult result) {
-        String departmentName = getString(itemData, "departmentName", "");
+        String departmentName = getString(itemData, "department", "");
         String kontoNumber = getString(itemData, "kontoNumber", "");
 
         if (shouldSkipImport(departmentName, departmentManager.existsDepartment(departmentName))) {
@@ -616,6 +617,10 @@ public class Main {
     private static void loadSettings() {
         File settingsFile = ensureSettingsFile();
         settings = new Settings("settings.properties", Main.class, settingsFile);
+        if(!settings.contains("first-time")) {
+            settings.setProperty("first-time", "false");
+            settings.save();
+        }
         System.out.println("✓ Einstellungen geladen");
 
         applyThemeSettings();
@@ -916,7 +921,7 @@ public class Main {
         if (progressListener != null) {
             progressListener.onProgress(percent, message);
         }
-        sleepQuietly(450);
+        sleepQuietly(300);
     }
 
     private static void sleepQuietly(long millis) {

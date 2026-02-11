@@ -88,7 +88,7 @@ public class SettingsGUI extends JFrame {
     private static final boolean DEFAULT_ENABLE_WARNINGS = true;
     private static final boolean DEFAULT_ENABLE_QR_IMPORT = true;
     private static final boolean DEFAULT_DARK_MODE = false;
-    private static final String DEFAULT_FONT_STYLE = "Arial";
+    private static final String DEFAULT_FONT_STYLE = "Dialog";
     private static final String DEFAULT_SERVER_URL = "https://framedev.ch/vebo/scans.json";
 
     public static int TABLE_FONT_SIZE = 16;
@@ -1325,7 +1325,7 @@ public class SettingsGUI extends JFrame {
         Color accent = selectedAccentColor != null ? selectedAccentColor : ThemeManager.getAccentColor();
         Color button = selectedButtonColor != null ? selectedButtonColor : (darkMode ? ThemeManager.Dark.BUTTON_BG : ThemeManager.Light.BUTTON_BG);
 
-        String fontName = fontComboBox == null ? "Arial" : (String) fontComboBox.getSelectedItem();
+        String fontName = fontComboBox == null ? DEFAULT_FONT_STYLE : (String) fontComboBox.getSelectedItem();
         int tableSize = fontSizeTableSpinner == null ? 16 : (Integer) fontSizeTableSpinner.getValue();
         int tabSize = fontSizeTabSpinner == null ? 15 : (Integer) fontSizeTabSpinner.getValue();
 
@@ -1898,9 +1898,22 @@ public class SettingsGUI extends JFrame {
     public static Font getFontByName(int style, int fontSize) {
         String fontName = Main.settings.getProperty("font_style");
         if(fontName == null || fontName.trim().isEmpty()) {
-            fontName = "Arial";
+            Font uiFont = UIManager.getFont("Label.font");
+            fontName = uiFont == null ? DEFAULT_FONT_STYLE : uiFont.getFamily();
+        } else if (isWindows() && ("Arial".equalsIgnoreCase(fontName) || "Arial Unicode MS".equalsIgnoreCase(fontName))) {
+            Font uiFont = UIManager.getFont("Label.font");
+            fontName = uiFont == null ? DEFAULT_FONT_STYLE : uiFont.getFamily();
         }
-        return new Font(fontName, style, fontSize);
+        Font font = new Font(fontName, style, fontSize);
+        if (isWindows() && font.canDisplayUpTo("\uD83D\uDCC1") != -1) {
+            font = new Font("Dialog", style, fontSize);
+        }
+        return font;
+    }
+
+    private static boolean isWindows() {
+        String osName = System.getProperty("os.name", "");
+        return osName.toLowerCase(Locale.ROOT).contains("win");
     }
 
     /**
@@ -2431,7 +2444,7 @@ public class SettingsGUI extends JFrame {
         String selectedItem = (String) fontComboBox.getSelectedItem();
         if(selectedItem == null) {
             logger.error("Font-ComboBox hat kein ausgewähltes Element, Standardwert wird verwendet");
-            selectedItem = "Arial";
+            selectedItem = DEFAULT_FONT_STYLE;
         }
         label.setFont(new Font(selectedItem, fontStyle, fontSize));
         label.setForeground(color);

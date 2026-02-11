@@ -369,8 +369,12 @@ public class ThemeManager {
             // Enable mouse hover effects
             UIManager.put("Button.rolloverEnabled", Boolean.TRUE);
 
-            // Font styling for buttons
-            UIManager.put("Button.font", new Font("Arial", Font.BOLD, 13));
+            // Font styling for buttons (use logical font for emoji fallback on Windows)
+            Font buttonFont = UIManager.getFont("Button.font");
+            if (buttonFont == null) {
+                buttonFont = new Font("Dialog", Font.PLAIN, 13);
+            }
+            UIManager.put("Button.font", buttonFont.deriveFont(Font.BOLD, 13f));
 
             // ---- TextField / PasswordField ----
             UIManager.put("TextField.background", new ColorUIResource(inputBg));
@@ -542,10 +546,14 @@ public class ThemeManager {
             UIManager.put("FileView.floppyDriveIcon", null);
             UIManager.put("FileView.hardDriveIcon", null);
 
-            UIManager.put("ToolTip.font", new Font("Arial", Font.BOLD, 16));
-            UIManager.put("TabbedPane.tabInsets", new Insets(30, 25, 18, 30));
+            Font toolTipFont = UIManager.getFont("ToolTip.font");
+            if (toolTipFont == null) {
+                toolTipFont = new Font("Dialog", Font.PLAIN, 16);
+            }
+            UIManager.put("ToolTip.font", toolTipFont.deriveFont(Font.BOLD, 16f));
+            //UIManager.put("TabbedPane.tabInsets", new Insets(18, 25, 18, 25));
             UIManager.put("TabbedPane.selectedTabPadInsets", new Insets(2, 2, 2, 2));
-            UIManager.put("TabbedPane.tabAreaInsets", new Insets(4, 4, 0, 4));
+            UIManager.put("TabbedPane.tabAreaInsets", new Insets(2, 2, 0, 2));
         }
     }
 

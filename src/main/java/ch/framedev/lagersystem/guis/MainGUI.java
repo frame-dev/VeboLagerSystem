@@ -275,24 +275,24 @@ public class MainGUI extends JFrame {
                 UIManager.put("TabbedPane.darkShadow", ThemeManager.getBorderColor().darker().darker());
 
                 // This affects height, but only if the current LAF/UI delegate honors it
-                UIManager.put("TabbedPane.tabInsets", new Insets(25, 25, 25, 25));
+                // UIManager.put("TabbedPane.tabInsets", new Insets(25, 25, 25, 25));
 
                 super.updateUI();
 
                 // Force layout recalc
                 revalidate();
                 repaint();
-                this.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 8));
+                this.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 3));
             }
         };
-        tabbedPane.setUI(new BasicTabbedPaneUI() {
+        /**tabbedPane.setUI(new BasicTabbedPaneUI() {
 
             @Override
             protected int calculateTabHeight(int tabPlacement, int tabIndex, int fontHeight) {
                 // your desired tab height
-                return 100;
+                return 30;
             }
-        });
+        });*/
 
         // Trigger UI update
         tabbedPane.updateUI();
@@ -304,10 +304,10 @@ public class MainGUI extends JFrame {
 
         // Enhanced padding and border for modern look with bigger tabs
         tabbedPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(20, 30, 20, 30),
+                BorderFactory.createEmptyBorder(10, 20, 10, 20),
                 BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(8, 8, 8, 8)
+                        BorderFactory.createEmptyBorder(4, 4, 4, 4)
                 )
         ));
 

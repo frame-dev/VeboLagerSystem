@@ -39,7 +39,7 @@ public class SupplierOrderGUI extends JFrame {
         UnicodeSymbols.ARTICLE_NAME + " Name",
         UnicodeSymbols.TRUCK + " Lieferant",
         UnicodeSymbols.PACKAGE + " Bestell Menge",
-        UnicodeSymbols.COL_LAGER_MENGE + " Lager Menge",
+        UnicodeSymbols.COL_LAGER_MENGE,
         UnicodeSymbols.CLOCK + " Hinzugefügt"
     };
 
