@@ -29,6 +29,8 @@ import java.util.Map;
 public class Main {
 
     private static final Logger logger = LogManager.getLogger(Main.class);
+    private static volatile File appDataDirCache;
+    private static volatile boolean updatesChecked;
 
     public static DatabaseManager databaseManager;
     public static ArticleListGUI articleListGUI;
@@ -115,7 +117,7 @@ public class Main {
             loadSettings();
             updateProgress(progressListener, 15, "Einstellungen geladen...");
             updateProgress(progressListener, 17, "Pruefe auf Updates...");
-            checkForUpdates();
+            checkForUpdatesOnce();
             updateProgress(progressListener, 19, "Update-Pruefung abgeschlossen...");
         } else {
             logger.warn("Keine Internetverbindung - Update-Pruefung uebersprungen");
@@ -130,8 +132,9 @@ public class Main {
         ensureAppDataDirectory();
         updateProgress(progressListener, 50, "Datenverzeichnis bereit...");
         // Need bug fixes
-        if (settings.getProperty("first-time") == null || settings.getProperty("first-time").equalsIgnoreCase("false")) {
-            boolean firstTimeSetup = settings.getProperty("first-time").equalsIgnoreCase("true");
+        String firstTimeSetting = settings.getProperty("first-time");
+        if (firstTimeSetting == null || firstTimeSetting.equalsIgnoreCase("false")) {
+            boolean firstTimeSetup = "true".equalsIgnoreCase(firstTimeSetting);
             System.out.println(firstTimeSetup);
             if(!firstTimeSetup) {
                 firstTimeSetup = true;
@@ -257,15 +260,16 @@ public class Main {
      */
     private static void importInitialData(ProgressListener progressListener) {
         ImportUtils importUtils = ImportUtils.getInstance();
+        java.util.Set<String> importedItems = new java.util.HashSet<>(ImportUtils.getImportedItems());
 
         updateProgress(progressListener, 76, "Importiere Artikel...");
-        importArticles(importUtils);
+        importArticles(importUtils, importedItems);
         updateProgress(progressListener, 80, "Importiere Lieferanten...");
-        importVendors(importUtils);
+        importVendors(importUtils, importedItems);
         updateProgress(progressListener, 83, "Importiere Abteilungen...");
-        importDepartments(importUtils);
+        importDepartments(importUtils, importedItems);
         updateProgress(progressListener, 86, "Importiere Kunden...");
-        importClients(importUtils);
+        importClients(importUtils, importedItems);
 
         System.out.println("✓ Alle Daten importiert");
     }
@@ -273,7 +277,7 @@ public class Main {
     /**
      * Import articles from inventory file
      */
-    private static void importArticles(ImportUtils importUtils) {
+    private static void importArticles(ImportUtils importUtils, java.util.Set<String> importedItems) {
         ArticleManager articleManager = ArticleManager.getInstance();
         List<Map<String, Object>> data = importUtils.loadInventoryFile();
 
@@ -282,7 +286,7 @@ public class Main {
 
         for (Map<String, Object> itemData : data) {
             Article article = createArticleFromMap(itemData);
-            processArticleImport(articleManager, article, result);
+            processArticleImport(articleManager, article, result, importedItems);
         }
 
         result.printSummary();
@@ -291,17 +295,16 @@ public class Main {
     /**
      * Process single article import
      */
-    private static void processArticleImport(ArticleManager articleManager, Article article, ImportResult result) {
-        if (ImportUtils.getImportedItems().contains(article.getArticleNumber())) {
+    private static void processArticleImport(ArticleManager articleManager, Article article, ImportResult result, java.util.Set<String> importedItems) {
+        if (importedItems.contains(article.getArticleNumber())) {
             result.incrementSkipped();
             return;
         }
 
         if (articleManager.insertArticle(article)) {
             result.incrementImported();
-            if (!ImportUtils.getImportedItems().contains(article.getArticleNumber())) {
-                ImportUtils.addToList(article.getArticleNumber());
-            }
+            importedItems.add(article.getArticleNumber());
+            ImportUtils.addToList(article.getArticleNumber());
             logUtils.addLog("Importierter Artikel: " + article.getName() + " (" + article.getArticleNumber() + ")");
         } else {
             result.incrementSkipped();
@@ -369,7 +372,7 @@ public class Main {
     /**
      * Import vendors from vendor file
      */
-    private static void importVendors(ImportUtils importUtils) {
+    private static void importVendors(ImportUtils importUtils, java.util.Set<String> importedItems) {
         VendorManager vendorManager = VendorManager.getInstance();
         List<Map<String, Object>> vendorData = importUtils.loadVendorList();
 
@@ -377,7 +380,7 @@ public class Main {
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : vendorData) {
-            processVendorImport(vendorManager, itemData, result);
+            processVendorImport(vendorManager, itemData, result, importedItems);
         }
 
         result.printSummary();
@@ -386,17 +389,17 @@ public class Main {
     /**
      * Process single vendor import
      */
-    private static void processVendorImport(VendorManager vendorManager, Map<String, Object> itemData, ImportResult result) {
+    private static void processVendorImport(VendorManager vendorManager, Map<String, Object> itemData, ImportResult result, java.util.Set<String> importedItems) {
         String vendorName = (String) itemData.get("name");
 
-        if (ImportUtils.getImportedItems().contains(vendorName)) {
+        if (importedItems.contains(vendorName)) {
             result.incrementSkipped();
             return;
         }
-        String contactPerson = (String) getString(itemData, "contactPerson", "");
-        String phoneNumber = (String) getString(itemData, "phoneNumber", "");
-        String email = (String) getString(itemData, "email", "");
-        String address = (String) getString(itemData, "address", "");
+        String contactPerson = getString(itemData, "contactPerson", "");
+        String phoneNumber = getString(itemData, "phoneNumber", "");
+        String email = getString(itemData, "email", "");
+        String address = getString(itemData, "address", "");
 
         String[] columns = {"contactPerson", "phoneNumber", "email", "address"};
         Object[] dataValues = {
@@ -405,6 +408,7 @@ public class Main {
 
         if (vendorManager.updateVendor(vendorName, columns, dataValues)) {
             result.incrementImported();
+            importedItems.add(vendorName);
             ImportUtils.addToList(vendorName);
             logUtils.addLog("Importierter Lieferant: " + vendorName);
         } else {
@@ -417,7 +421,7 @@ public class Main {
     /**
      * Import departments from departments file
      */
-    private static void importDepartments(ImportUtils importUtils) {
+    private static void importDepartments(ImportUtils importUtils, java.util.Set<String> importedItems) {
         DepartmentManager departmentManager = DepartmentManager.getInstance();
         List<Map<String, Object>> departmentData = importUtils.loadDepartmentsList();
 
@@ -425,7 +429,7 @@ public class Main {
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : departmentData) {
-            processDepartmentImport(departmentManager, itemData, result);
+            processDepartmentImport(departmentManager, itemData, result, importedItems);
         }
 
         result.printSummary();
@@ -434,17 +438,18 @@ public class Main {
     /**
      * Process single department import
      */
-    private static void processDepartmentImport(DepartmentManager departmentManager, Map<String, Object> itemData, ImportResult result) {
+    private static void processDepartmentImport(DepartmentManager departmentManager, Map<String, Object> itemData, ImportResult result, java.util.Set<String> importedItems) {
         String departmentName = getString(itemData, "department", "");
         String kontoNumber = getString(itemData, "kontoNumber", "");
 
-        if (shouldSkipImport(departmentName, departmentManager.existsDepartment(departmentName))) {
+        if (shouldSkipImport(departmentName, departmentManager.existsDepartment(departmentName), importedItems)) {
             result.incrementSkipped();
             return;
         }
 
         if (departmentManager.insertDepartment(departmentName, kontoNumber)) {
             result.incrementImported();
+            importedItems.add(departmentName);
             ImportUtils.addToList(departmentName);
             logUtils.addLog("Importierte Abteilung: " + departmentName);
         } else {
@@ -456,7 +461,7 @@ public class Main {
     /**
      * Import clients from clients file
      */
-    private static void importClients(ImportUtils importUtils) {
+    private static void importClients(ImportUtils importUtils, java.util.Set<String> importedItems) {
         ClientManager clientManager = ClientManager.getInstance();
         List<Map<String, Object>> clientData = importUtils.loadClientsList();
 
@@ -464,7 +469,7 @@ public class Main {
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : clientData) {
-            processClientImport(clientManager, itemData, result);
+            processClientImport(clientManager, itemData, result, importedItems);
         }
 
         result.printSummary();
@@ -473,17 +478,18 @@ public class Main {
     /**
      * Process single client import
      */
-    private static void processClientImport(ClientManager clientManager, Map<String, Object> itemData, ImportResult result) {
+    private static void processClientImport(ClientManager clientManager, Map<String, Object> itemData, ImportResult result, java.util.Set<String> importedItems) {
         String firstLastName = getString(itemData, "firstLastName", "");
         String department = getString(itemData, "department", "");
 
-        if (shouldSkipImport(firstLastName, clientManager.existsClient(firstLastName))) {
+        if (shouldSkipImport(firstLastName, clientManager.existsClient(firstLastName), importedItems)) {
             result.incrementSkipped();
             return;
         }
 
         if (clientManager.insertClient(firstLastName, department)) {
             result.incrementImported();
+            importedItems.add(firstLastName);
             ImportUtils.addToList(firstLastName);
             logUtils.addLog("Importierter Kunde: " + firstLastName);
         } else {
@@ -495,8 +501,8 @@ public class Main {
     /**
      * Check if import should be skipped
      */
-    private static boolean shouldSkipImport(String itemName, boolean existsInManager) {
-        return ImportUtils.getImportedItems().contains(itemName) || existsInManager;
+    private static boolean shouldSkipImport(String itemName, boolean existsInManager, java.util.Set<String> importedItems) {
+        return importedItems.contains(itemName) || existsInManager;
     }
 
     /**
@@ -601,12 +607,20 @@ public class Main {
      * @return File object representing the app data directory
      */
     public static File getAppDataDir() {
+        File cached = appDataDirCache;
+        if (cached != null) {
+            return cached;
+        }
         try {
-            return UserDataDir.getAppPath("VeboLagerSystem").toFile();
+            File resolved = UserDataDir.getAppPath("VeboLagerSystem").toFile();
+            appDataDirCache = resolved;
+            return resolved;
         } catch (Exception e) {
             logger.error("Could not get VeboLagerSystem directory.", e);
             logUtils.addLog("Fehler beim Ermitteln des App-Datenverzeichnisses: " + e.getMessage());
-            return new File(".");
+            File fallback = new File(".");
+            appDataDirCache = fallback;
+            return fallback;
         }
     }
 
@@ -991,10 +1005,18 @@ public class Main {
                 launchGUI();
 
                 // Check for updates
-                checkForUpdates();
+                checkForUpdatesOnce();
             }
         };
         worker.execute();
+    }
+
+    private static void checkForUpdatesOnce() {
+        if (updatesChecked) {
+            return;
+        }
+        updatesChecked = true;
+        checkForUpdates();
     }
 
     private static int showConfirmDialogOnEdt(Object message, String title, int optionType, int messageType, Icon icon) {

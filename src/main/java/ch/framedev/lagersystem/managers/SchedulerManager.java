@@ -17,6 +17,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static ch.framedev.lagersystem.dialogs.DisplayWarningDialog.displayWarning;
+
 /**
  * Verwaltet geplante Aufgaben wie die Überprüfung des Lagerbestands.
  * Optimiert durch:
@@ -281,7 +283,7 @@ public class SchedulerManager {
 
             // Zeige Warnungen nacheinander an (nur wenn GUI verfügbar ist)
             for (Warning warning : pendingWarnings) {
-                MainGUI.articleGUI.displayWarning(warning);
+                displayWarning(MainGUI.articleGUI, warning);
                 // Markiere als angezeigt
                 warning.setDisplayed(true);
                 warningManager.updateWarning(warning);

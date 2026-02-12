@@ -15,6 +15,7 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Modern Main Dashboard for VEBO Lagersystem with Tabbed Interface
@@ -30,6 +31,8 @@ public class MainGUI extends JFrame {
     private ClientGUI clientGUI;
     private SupplierOrderGUI supplierOrderGUI;
     private LogsGUI logsGUI;
+    private SettingsGUI settingsGUI;
+    private NotesGUI notesGUI;
 
     // Tab wrappers
     private final JPanel articleWrapper = createTabWrapper();
@@ -49,7 +52,9 @@ public class MainGUI extends JFrame {
         setSize(1200, 800);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
-        setIconImage(Main.icon.getImage());
+        if (Main.icon != null) {
+            setIconImage(Main.icon.getImage());
+        }
         setExtendedState(JFrame.MAXIMIZED_BOTH);
 
         // Background
@@ -229,16 +234,14 @@ public class MainGUI extends JFrame {
         styleHeaderButton(settingsButton);
         settingsButton.setToolTipText("Einstellungen des Programms öffnen");
         settingsButton.addActionListener(e -> {
-            SettingsGUI settingsGUI = new SettingsGUI();
-            settingsGUI.display();
+            settingsGUI = showOrCreateWindow(settingsGUI, SettingsGUI::new);
         });
         settingsButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
         JButton notesButton = new JButton(UnicodeSymbols.CLIPBOARD + " Notizen");
         styleHeaderButton(notesButton);
         notesButton.setToolTipText("Persönliche Notizen verwalten");
         notesButton.addActionListener(e -> {
-            NotesGUI notesGUI = new NotesGUI();
-            notesGUI.display();
+            notesGUI = showOrCreateWindow(notesGUI, NotesGUI::new);
         });
         notesButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
@@ -492,10 +495,36 @@ public class MainGUI extends JFrame {
         });
     }
 
+    /**
+     * Displays the main GUI window by making it visible.
+     * This method sets the visibility of the {@code MainGUI} frame to {@code true},
+     * allowing the user to interact with the application's graphical interface.
+     */
     public void display() {
         setVisible(true);
     }
 
+    private <T extends JFrame> T showOrCreateWindow(T existing, Supplier<T> factory) {
+        T window = existing;
+        if (window == null || !window.isDisplayable()) {
+            window = factory.get();
+        }
+        if (!window.isVisible()) {
+            window.setVisible(true);
+        }
+        window.toFront();
+        window.requestFocus();
+        return window;
+    }
+
+    /**
+     * Creates and configures the menu bar for the application.
+     * The menu bar includes a "Werkzeuge" menu with options for generating QR codes
+     * for all articles or for selected articles. Each menu item is associated with
+     * its respective action.
+     *
+     * @return the configured {@code JMenuBar} instance
+     */
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
         JMenu toolsMenu = new JMenu("Werkzeuge");
@@ -509,6 +538,17 @@ public class MainGUI extends JFrame {
         return menuBar;
     }
 
+    /**
+     * Generates QR codes for all articles in the application.
+     *
+     * This method retrieves the full list of articles using the article manager.
+     * If no articles are available, it displays a warning dialog to inform the user.
+     * Otherwise, it invokes the {@code generateQrCodesForList} method to generate
+     * QR codes for the retrieved list of articles with a confirmation prompt.
+     *
+     * The confirmation prompt text is localized and asks the user whether they want
+     * to generate QR codes for all articles.
+     */
     private void generateQrCodesForArticles() {
         List<Article> articles = ArticleManager.getInstance().getAllArticles();
         if (articles == null || articles.isEmpty()) {
@@ -523,6 +563,30 @@ public class MainGUI extends JFrame {
         generateQrCodesForList(articles, "QR-Codes fuer alle Artikel generieren?");
     }
 
+    /**
+     * Generates QR codes for the selected articles within the application.
+     *
+     * This method retrieves a list of selected articles from the article GUI and
+     * initiates QR code generation if a valid selection is made. If the article
+     * GUI is not initialized or no articles are selected, it displays a warning
+     * dialog to notify the user of the missing selection.
+     *
+     * The confirmation prompt includes the total count of selected articles, asking
+     * the user for confirmation before proceeding with the QR code generation.
+     *
+     * Preconditions:
+     * - The article GUI tab must be opened, and at least one article should be selected.
+     *
+     * Postconditions:
+     * - Invokes the {@code generateQrCodesForList} method to generate QR codes
+     *   for the list of selected articles, following confirmation from the user.
+     *
+     * Warning messages:
+     * - If the article GUI is not initialized, a dialog indicates that the article
+     *   tab must be opened.
+     * - If no articles are selected, a dialog indicates that at least one article
+     *   must be chosen.
+     */
     private void generateQrCodesForSelectedArticles() {
         if (articleGUI == null) {
             JOptionPane.showMessageDialog(
@@ -546,6 +610,17 @@ public class MainGUI extends JFrame {
         generateQrCodesForList(selectedArticles, "QR-Codes fuer " + selectedArticles.size() + " ausgewählte Artikel generieren?");
     }
 
+    /**
+     * Generates QR codes for a given list of articles after displaying a confirmation dialog.
+     *
+     * This method allows the user to confirm whether they want to proceed with generating QR codes
+     * for the provided list of articles. A progress dialog is displayed during the generation process.
+     * Upon completion, the user is notified about the result, including the number of QR codes
+     * generated and the output directory.
+     *
+     * @param articles the list of articles for which QR codes will be generated
+     * @param promptText the text to display in the confirmation dialog prompt
+     */
     private void generateQrCodesForList(List<Article> articles, String promptText) {
         File outputDir = new File(Main.getAppDataDir(), "qr_codes");
         int result = JOptionPane.showConfirmDialog(

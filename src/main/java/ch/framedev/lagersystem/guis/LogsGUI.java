@@ -31,6 +31,8 @@ import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import ch.framedev.lagersystem.utils.VendorOrderLogging;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -39,6 +41,8 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
 public class LogsGUI extends JFrame {
+
+    private final Logger logger = LogManager.getLogger(LogsGUI.class);
 
     private final List<String> orderLogsData = new ArrayList<>();
     private final List<String> supplierLogsData = new ArrayList<>();
@@ -74,21 +78,7 @@ public class LogsGUI extends JFrame {
         add(mainPanel, BorderLayout.CENTER);
 
         // Header panel with gradient and shadow
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                GradientPaint gp = new GradientPaint(0, 0, ThemeManager.getHeaderBackgroundColor(), getWidth(), 0, ThemeManager.getHeaderGradientColor());
-                g2.setPaint(gp);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 22, 22);
-                g2.setColor(new Color(0,0,0,30));
-                g2.fillRoundRect(4, getHeight()-8, getWidth()-8, 8, 8, 8); // subtle shadow
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(18, 32, 18, 32));
+        JPanel headerPanel = getHeaderPanel();
 
         JLabel titleLabel = new JLabel(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 30));
@@ -170,21 +160,7 @@ public class LogsGUI extends JFrame {
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
         // Card-like content panel for logs (fills all remaining space)
-        JPanel contentPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(Color.WHITE);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
-                g2.setColor(new Color(0,0,0,10));
-                g2.fillRoundRect(4, getHeight()-8, getWidth()-8, 8, 8, 8); // subtle shadow
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        contentPanel.setOpaque(false);
-        contentPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        JPanel contentPanel = getContentPanel();
         logTextPane.setEditable(false);
         logTextPane.setFont(SettingsGUI.getFontByName(Font.PLAIN, 15));
         logTextPane.setBackground(ThemeManager.getInputBackgroundColor());
@@ -286,6 +262,44 @@ public class LogsGUI extends JFrame {
         });
 
         setCategory(LogCategory.ORDER);
+    }
+
+    private static JPanel getContentPanel() {
+        JPanel contentPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(Color.WHITE);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
+                g2.setColor(new Color(0,0,0,10));
+                g2.fillRoundRect(4, getHeight()-8, getWidth()-8, 8, 8, 8); // subtle shadow
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        contentPanel.setOpaque(false);
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        return contentPanel;
+    }
+
+    private static JPanel getHeaderPanel() {
+        JPanel headerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                GradientPaint gp = new GradientPaint(0, 0, ThemeManager.getHeaderBackgroundColor(), getWidth(), 0, ThemeManager.getHeaderGradientColor());
+                g2.setPaint(gp);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 22, 22);
+                g2.setColor(new Color(0,0,0,30));
+                g2.fillRoundRect(4, getHeight()-8, getWidth()-8, 8, 8, 8); // subtle shadow
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(18, 32, 18, 32));
+        return headerPanel;
     }
 
     private void allLogs(ActionEvent actionEvent) {
@@ -502,16 +516,7 @@ public class LogsGUI extends JFrame {
     }
 
     private void initPopupMenu() {
-        JPopupMenu popupMenu = new JPopupMenu();
-        JMenuItem copySelected = new JMenuItem("Auswahl kopieren");
-        copySelected.addActionListener(e -> copyText(logTextPane.getSelectedText()));
-        JMenuItem copyLine = new JMenuItem("Zeile kopieren");
-        copyLine.addActionListener(e -> copyText(getCurrentLineText()));
-        JMenuItem copyAll = new JMenuItem("Alles kopieren");
-        copyAll.addActionListener(e -> copyText(logTextPane.getText()));
-        popupMenu.add(copySelected);
-        popupMenu.add(copyLine);
-        popupMenu.add(copyAll);
+        JPopupMenu popupMenu = getPopupMenu();
 
         logTextPane.addMouseListener(new MouseAdapter() {
             @Override
@@ -528,6 +533,20 @@ public class LogsGUI extends JFrame {
                 }
             }
         });
+    }
+
+    private JPopupMenu getPopupMenu() {
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem copySelected = new JMenuItem("Auswahl kopieren");
+        copySelected.addActionListener(e -> copyText(logTextPane.getSelectedText()));
+        JMenuItem copyLine = new JMenuItem("Zeile kopieren");
+        copyLine.addActionListener(e -> copyText(getCurrentLineText()));
+        JMenuItem copyAll = new JMenuItem("Alles kopieren");
+        copyAll.addActionListener(e -> copyText(logTextPane.getText()));
+        popupMenu.add(copySelected);
+        popupMenu.add(copyLine);
+        popupMenu.add(copyAll);
+        return popupMenu;
     }
 
     private String getCurrentLineText() {
@@ -586,6 +605,7 @@ public class LogsGUI extends JFrame {
                     "Fehler beim CSV-Export: " + ex.getMessage(),
                     "CSV Export",
                     JOptionPane.ERROR_MESSAGE);
+            logger.error("Could not export CSV {}", ex.getMessage(), ex);
         }
     }
 
@@ -595,6 +615,7 @@ public class LogsGUI extends JFrame {
                     "Keine Logs zum Export vorhanden.",
                     "PDF Export",
                     JOptionPane.WARNING_MESSAGE);
+            logger.warn("No Logs found to export!");
             return;
         }
 
@@ -622,6 +643,7 @@ public class LogsGUI extends JFrame {
                     Object helv = c.getField("HELVETICA").get(null);
                     regularFont = (PDFont) helv;
                 } catch (Exception e) {
+                    logger.error("No usable Font found!", e);
                     throw new IOException("Keine verwendbaren Schriftarten gefunden");
                 }
             }
@@ -669,6 +691,7 @@ public class LogsGUI extends JFrame {
                     "Fehler beim PDF-Export: " + ex.getMessage(),
                     "PDF Export",
                     JOptionPane.ERROR_MESSAGE);
+            logger.error("Could not create PDF-Export {}", ex.getMessage(), ex);
         }
     }
 
@@ -680,16 +703,16 @@ public class LogsGUI extends JFrame {
         String[] words = text.split("\\s+");
         StringBuilder current = new StringBuilder();
         for (String word : words) {
-            String candidate = current.length() == 0 ? word : current + " " + word;
+            String candidate = current.isEmpty() ? word : current + " " + word;
             float width = font.getStringWidth(candidate) / 1000f * fontSize;
-            if (width > maxWidth && current.length() > 0) {
+            if (width > maxWidth && !current.isEmpty()) {
                 lines.add(current.toString());
                 current = new StringBuilder(word);
             } else {
                 current = new StringBuilder(candidate);
             }
         }
-        if (current.length() > 0) {
+        if (!current.isEmpty()) {
             lines.add(current.toString());
         }
         return lines;
@@ -718,7 +741,10 @@ public class LogsGUI extends JFrame {
 
         try {
             if (logFile.getParentFile() != null && !logFile.getParentFile().exists()) {
-                logFile.getParentFile().mkdirs();
+                if(!logFile.getParentFile().mkdirs()) {
+                    logger.error("Could not create Parent file: {}", logFile.getParentFile().getAbsolutePath());
+                    throw new IOException("Fehler beim Erstellen der Verzeichnisse");
+                }
             }
             Files.writeString(logFile.toPath(), "", StandardCharsets.UTF_8);
             refreshCurrentLogs();
@@ -727,6 +753,7 @@ public class LogsGUI extends JFrame {
                     "Fehler beim Loeschen der Logs: " + ex.getMessage(),
                     "Logs loeschen",
                     JOptionPane.ERROR_MESSAGE);
+            logger.error("Fehler beim Loeschen der Logs: {}", ex.getMessage(), ex);
         }
     }
 }

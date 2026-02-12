@@ -31,6 +31,32 @@ public class ImportUtils {
     private final File CLIENTS_FILE;
     private static volatile ImportUtils instance;
 
+    /**
+     * Private constructor for the ImportUtils class to initialize and load
+     * essential configuration files required by the application. This constructor
+     * is intended for internal use and performs the following operations:
+     *
+     * 1. Loads the inventory file 'inventar.json' from the application's resources.
+     *    Logs a warning if the file is not found or does not exist and an info
+     *    message if the file is successfully loaded.
+     *
+     * 2. Loads the vendor file 'vendor.json'. Logs a warning if the file is not
+     *    found or does not exist and an info message if the file is successfully
+     *    loaded.
+     *
+     * 3. Loads the department file 'departments.json'. Logs a warning if the file
+     *    is not found or does not exist and an info message if the file is
+     *    successfully loaded.
+     *
+     * 4. Loads the clients file 'clients.json'. Logs a warning if the file is not
+     *    found or does not exist and an info message if the file is successfully
+     *    loaded.
+     *
+     * The LOGGER is used to report file loading statuses, and messages are also
+     * recorded using the logging utility provided by the Main class. If any of
+     * the required files are not found, the respective warnings ensure visibility
+     * to issues during the initialization phase.
+     */
     private ImportUtils() {
         // Load inventory file
         INVENTORY_FILE = new SimpleJavaUtils().getFromResourceFile("inventar.json", Main.class);

@@ -2,7 +2,7 @@
 
 > **Ein modernes Lagerverwaltungssystem für VEBO Oensingen**
 
-[![Version](https://img.shields.io/badge/version-0.2--TESTING-blue.svg)](https://github.com/frame-dev/VeboLagerSystem)
+[![Version](https://img.shields.io/badge/version-0.3--TESTING-blue.svg)](https://github.com/frame-dev/VeboLagerSystem)
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-Active%20Development-green.svg)](https://github.com/frame-dev/VeboLagerSystem)
@@ -18,186 +18,164 @@
 - [Installation](#-installation)
 - [Verwendung](#-verwendung)
 - [Architektur](#-architektur)
+- [Datenbank-Schema](#-datenbank-schema)
 - [Funktionsdetails](#-funktionsdetails)
-- [Entwicklung](#-entwicklung)
 - [Konfiguration](#-konfiguration)
+- [App-Datenverzeichnis](#-app-datenverzeichnis)
+- [QR-Scan-Server (Optional)](#-qr-scan-server-optional)
 - [Roadmap](#-roadmap)
 - [Beiträge](#-beiträge)
 - [Support](#-support)
 - [Lizenz](#-lizenz)
+- [Danksagungen](#-danksagungen)
+- [Statistiken](#-statistiken)
+- [Links](#-links)
 
 ---
 
 ## 🎯 Überblick
 
-**VEBO Lagersystem** ist eine umfassende Desktop-Anwendung zur Verwaltung von Lagerbeständen, Artikeln, Bestellungen und Lieferanten. Die Anwendung wurde speziell für die Bedürfnisse von VEBO Oensingen entwickelt und bietet eine intuitive, moderne Benutzeroberfläche mit umfangreichen Funktionen.
+**VEBO Lagersystem** ist eine umfassende Desktop-Anwendung zur Verwaltung von Lagerbeständen, Artikeln, Bestellungen, Lieferanten und Abteilungen. Die Anwendung wurde speziell für die Bedürfnisse von VEBO Oensingen entwickelt und bietet eine moderne Benutzeroberfläche, eine robuste Datenhaltung und zahlreiche Automatisierungen.
 
 ### Hauptziele
 
-- ✅ **Effiziente Lagerverwaltung:** Echtzeitübersicht über alle Lagerbestände
-- ✅ **Automatisierung:** Automatische Bestandsprüfung und Warnmeldungen
-- ✅ **Benutzerfreundlichkeit:** Moderne, intuitive Benutzeroberfläche
-- ✅ **Nachvollziehbarkeit:** Vollständige Audit-Trails und Logging
-- ✅ **Flexibilität:** Anpassbare Einstellungen und Themes
+- ✅ **Effiziente Lagerverwaltung:** Echtzeitübersicht über Bestände
+- ✅ **Automatisierung:** Periodische Lagerchecks und Warnungen
+- ✅ **Benutzerfreundlichkeit:** Moderne, konsistente UI mit Theme- und Font-Optionen
+- ✅ **Nachvollziehbarkeit:** Protokolle, Audit-Trails und Logs
+- ✅ **Flexibilität:** Anpassbare Einstellungen, QR-Workflow, Updates
 
 ---
 
 ## ✨ Hauptfunktionen
 
 ### 📦 Artikelverwaltung
-- **Vollständige Artikeldatenbank** mit Artikelnummer, Name, Details
-- **Lagerbestandsverwaltung** mit Min/Max-Levels
-- **Preisverwaltung** (Einkaufs- und Verkaufspreise)
-- **Lieferantenzuordnung** für jeden Artikel
-- **Kategorisierung** und Filterung
-- **Suchfunktion** für schnellen Zugriff
-- **Import/Export** von Artikeldaten (CSV)
-- **QR-Code-Unterstützung** für Artikelidentifikation
+- Vollständige Artikeldatenbank mit Artikelnummer, Details und Preisen
+- Lagerbestandsverwaltung mit Min/Max-Levels
+- Lieferantenzuordnung, Kategorien und Such-/Filterfunktionen
+- **Bulk-Aktionen:** Mehrfach löschen, Bestand anpassen, Auswahl exportieren
+- **QR-Code Features:**
+  - QR-Codes für Artikel generieren
+  - QR-Code Vorschau + PDF-Export
+  - QR-Code Daten abrufen (Server/JSON)
+- Detaillierte Lagerinformationen pro Artikel
 
 ### 🚚 Lieferantenverwaltung
-- **Lieferantendatenbank** mit vollständigen Kontaktdaten
-- **Verwaltung von:**
-  - Firmenname und Kontaktperson
-  - Telefonnummer und E-Mail
-  - Adresse
-  - Zugeordnete Artikel
-- **Import/Export** von Lieferantendaten
-- **Schnellsuche** und Filterung
+- Lieferantendatenbank mit Kontaktdaten
+- Artikel-Zuordnung und Suche
+- Lieferanten-Logs und Lieferanten-Bestellungsprotokolle
 
 ### 📋 Bestellungsverwaltung
-- **Bestellungserstellung** mit mehreren Artikeln
-- **Empfänger- und Absenderverwaltung**
-- **Abteilungszuordnung**
-- **Automatische Preisberechnung**
-- **Bestellstatus-Tracking** (Ausstehend, Abgeschlossen, Storniert)
-- **PDF-Export** für Bestellungen mit professionellem Layout
-- **Bestellhistorie** mit vollständiger Nachverfolgung
-- **Bestellprotokollierung** mit Zeitstempel und Benutzer
+- Bestellung erstellen, bearbeiten und löschen
+- Status-Tracking (Offen/Abgeschlossen)
+- **Bestellung abschließen** (eigener Workflow)
+- Filter (Offen/Abgeschlossen), Suche nach ID/Empfänger/Abteilung
+- PDF-Export mit professionellem Layout
+- Bestellprotokolle inkl. Benutzer-Tracking
 
-### 👥 Kundenverwaltung
-- **Kundendatenbank** mit Namen und Abteilungen
-- **Abteilungsverwaltung**
-- **Schnelle Kundensuche**
-- **Import/Export** von Kundendaten
+### 🧾 Lieferanten-Bestellungen (Nachbestellungen)
+- Eigene Oberfläche für Nachbestellungen
+- Persistente Liste (`supplier_orders.txt`)
+- Aktionen: Entfernen, Alle löschen, Speichern, Aktualisieren
+- Protokollierung in `vendorOrder.log`
+
+### 👥 Kunden & Abteilungen
+- Kundenverwaltung inkl. Abteilungszuordnung
+- Abteilungen mit Kontonummern (Departments)
+- Import aus JSON-Ressourcen für Startdaten
+
+### 📝 Notizen
+- Persönliche Notizen mit Titel/Datum
+- Erstellen, Bearbeiten, Löschen, Aktualisieren
+- Split-View (Liste + Details) mit Such-/Filterkomfort
 
 ### ⚠️ Warnsystem
-- **Automatische Lagerbestandsprüfung**
-  - Konfigurierbare Prüfintervalle (5-1440 Minuten)
-  - Warnungen bei Unterschreitung des Mindestbestands
-- **Warnungsanzeige**
-  - Automatische Popup-Benachrichtigungen
-  - Konfigurierbare Anzeigeintervalle (1-24 Stunden)
-  - Ungelesene Warnungen werden hervorgehoben
-- **Warnungstypen:**
-  - Niedriger Lagerbestand
-  - Kritischer Lagerbestand (< 50% des Mindestbestands)
-- **Warnungshistorie** für Nachverfolgung
-
-### 📱 QR-Code-Integration
-- **Automatischer QR-Code-Import** von Server
-- **Konfigurierbare Import-Intervalle** (1-60 Minuten)
-- **Artikelzuordnung** über QR-Codes
-- **Scan-Historie** mit Tracking
-- **Server-Synchronisation** für zentrale QR-Code-Verwaltung
-
-### 🎨 Theme-System
-- **Light Mode:** Heller, professioneller Look
-- **Dark Mode:** Augenschonend für Nachtarbeit
-- **Automatische Theme-Anwendung** auf alle Komponenten
-- **Konsistente Farbgebung:**
-  - Primary Blue: Professional Blue für Header
-  - Accent Colors: Für Buttons und Highlights
-  - Success/Warning/Error Colors: Für Status-Feedback
-- **Theme-Persistenz:** Einstellungen bleiben erhalten
-
-### ⚙️ Einstellungen & Konfiguration
-- **System-Einstellungen:**
-  - Lagerbestandsprüfung konfigurieren
-  - Warnungsanzeige anpassen
-  - QR-Code-Import einstellen
-  - Font-Größe für Tabellen
-  - Theme-Auswahl (Light/Dark)
-- **Verbindungseinstellungen:**
-  - Server-URL für QR-Code-Scans
-- **Datenbankmanagement:**
-  - Datenbank bereinigen
-  - Einzelne Tabellen löschen
-  - Sicherheitsabfragen
-- **Import/Export:**
-  - CSV-Import für Artikel, Lieferanten, Kunden
-  - CSV-Export aller Tabellen
-  - Bestellungen als PDF exportieren
-
-### 📊 Reporting & Export
-- **PDF-Export:**
-  - Bestellungen mit vollständigen Details
-  - Professionelles Layout mit Logo
-  - Preisaufstellungen
-- **CSV-Export:**
-  - Artikel, Lieferanten, Kunden, Bestellungen
-  - Vollständige Datenexporte
-  - Backup-Funktionalität
-- **Logs & Audit-Trails:**
-  - Anwendungs-Log (application.log)
-  - Bestellungs-Log (bestellung.log)
-  - Nachverfolgung aller Änderungen
+- Automatische Lagerbestandsprüfung
+- Konfigurierbare Intervalle
+- Warnungen bei Mindest- und kritischen Beständen
+- Ungelesene Warnungen werden hervorgehoben
 
 ### 🔐 Benutzerverwaltung
-- **User-System** mit Namen
-- **Standard-User:** Admin wird automatisch erstellt
-- **Benutzer-Tracking** bei Bestellungen
-- **Audit-Trail** für alle Aktionen
+- Benutzer-System mit Standard-User (Admin)
+- Benutzer-Tracking in Bestellungen und Logs
 
-### 💾 Datenbankmanagement
-- **SQLite-Datenbank** für lokale Speicherung
-- **Automatische Tabellenerstellung**
-- **Datenintegrität** durch Constraints
-- **Backup-Funktionen** durch Export
-- **Datenbank-Bereinigung** für Fresh-Start
+### 📱 QR-Code-Integration
+- QR-Scans aus Server-JSON importieren
+- Automatische Import-Intervalle
+- Duplikat-Tracking (`imported_qrcodes.txt`)
+- Eigenverbrauch-Tracking (`own_use_list.txt`)
+- Optionaler lokaler **QR-Scan-Server** (siehe unten)
+
+### 📊 Logs & Protokolle
+- Zentrales Logsystem mit DB-Logs und Datei-Logs
+- Logs-UI mit:
+  - Kategorien (Bestellungen, Lieferanten, Lieferantenbestellungen)
+  - Such- und Datumsfilter
+  - PDF/CSV-Export
+  - Auto-Refresh
+
+### 📤 Import/Export & Backup
+- CSV-Import für Artikel, Lieferanten und Kunden
+- CSV-Export aller Tabellen (Artikel, Lieferanten, Kunden, Bestellungen)
+- Artikel-Export als PDF/CSV aus der Artikelverwaltung
+- Startdaten-Import aus JSON-Ressourcen (inventar, vendor, clients, departments)
+
+### 🎨 Theme- & UI-System
+- Light/Dark Mode
+- Anpassbare Accent/Header/Button-Farben
+- Konfigurierbare Schriftarten
+- Tabellen- und Tab-Fontgrößen
+- Einheitliche UI-Elemente (Rounded Cards, Gradients)
+
+### 🔄 Update-Check (GitHub Releases)
+- Automatische Updateprüfung über GitHub Releases
+- Release-Kanäle: Stable, Beta, Alpha, Testing
+- Optionaler GitHub Token für höhere Rate-Limits
 
 ---
 
 ## 📸 Screenshots
 
 ### Hauptfenster (Tabbed Interface)
-*Moderne Benutzeroberfläche mit Tabs für alle Hauptfunktionen*
+*Tabs für Artikel, Lieferanten, Bestellungen, Kunden, Einstellungen*
 
 ### Artikelverwaltung
-*Vollständige Übersicht mit Such- und Filterfunktionen*
+*Bulk-Tools, QR-Buttons und Detailsicht*
 
-### Neue Bestellung
-*Intuitive Bestellerfassung mit Artikelauswahl und Preisberechnung*
+### Bestellungen
+*Bearbeiten, Abschließen, Filtern und Protokollieren*
 
-### Einstellungen
-*Umfassende Konfigurationsmöglichkeiten mit Live-Preview*
+### Lieferanten-Bestellungen
+*Nachbestellungen verwalten und protokollieren*
 
-### Dark Mode
-*Augenschonendes Design für Nachtarbeit*
+### Notizen & Logs
+*Notizverwaltung sowie Log-Analyse mit Export*
 
 ---
 
 ## 🛠️ Technologie-Stack
 
 ### Frontend
-- **Java Swing** - Moderne Desktop-GUI
+- **Java Swing** - Desktop-GUI
 - **Custom UI Components** - Gradient Panels, Rounded Panels
-- **Theme System** - Light/Dark Mode Support
-- **HTML/CSS** - Für formatierte Hilfe-Dialoge
+- **Theme System** - Light/Dark + Custom Colors
+- **HTML/CSS** - Formatierte Dialoge/Hilfetexte
 
 ### Backend
-- **Java 21** - Moderne Java-Features
+- **Java 21**
 - **SQLite** - Embedded Datenbank
-- **Apache PDFBox** - PDF-Generierung
-- **Apache Log4j2** - Professionelles Logging
+- **Apache PDFBox 2.0.35** - PDF-Generierung
+- **Log4j2** - Logging
 - **Gson** - JSON-Verarbeitung
+- **ZXing** - QR-Code-Generierung
 
 ### Build & Tools
 - **Maven** - Build Management
-- **SimpleJavaUtils** - Utility-Bibliothek
+- **SimpleJavaUtils** - Utilities
 - **SnakeYAML** - YAML-Konfiguration
 - **Commons Lang3** - Apache Commons Utilities
 
-### Dependencies
+### Dependencies (Auszug)
 ```xml
 <!-- Core -->
 <dependency>
@@ -210,7 +188,7 @@
 <dependency>
     <groupId>org.apache.pdfbox</groupId>
     <artifactId>pdfbox</artifactId>
-    <version>3.0.3</version>
+    <version>2.0.35</version>
 </dependency>
 
 <!-- Logging -->
@@ -219,12 +197,29 @@
     <artifactId>log4j-core</artifactId>
     <version>2.24.3</version>
 </dependency>
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-api</artifactId>
+    <version>2.24.3</version>
+</dependency>
 
 <!-- JSON -->
 <dependency>
     <groupId>com.google.code.gson</groupId>
     <artifactId>gson</artifactId>
     <version>2.11.0</version>
+</dependency>
+
+<!-- QR-Code -->
+<dependency>
+    <groupId>com.google.zxing</groupId>
+    <artifactId>core</artifactId>
+    <version>3.5.3</version>
+</dependency>
+<dependency>
+    <groupId>com.google.zxing</groupId>
+    <artifactId>javase</artifactId>
+    <version>3.5.3</version>
 </dependency>
 ```
 
@@ -235,8 +230,8 @@
 ### Voraussetzungen
 
 - **Java Development Kit (JDK) 21** oder höher
-- **Maven 3.6+** für Build
-- **Git** für Repository-Zugriff
+- **Maven 3.6+**
+- **Git**
 
 ### Schritt-für-Schritt Installation
 
@@ -251,12 +246,7 @@ cd VeboLagerSystem
 mvn clean install
 ```
 
-3. **Anwendung kompilieren**
-```bash
-mvn compile
-```
-
-4. **Anwendung starten**
+3. **Anwendung starten**
 ```bash
 mvn exec:java -Dexec.mainClass="ch.framedev.lagersystem.main.Main"
 ```
@@ -265,7 +255,7 @@ mvn exec:java -Dexec.mainClass="ch.framedev.lagersystem.main.Main"
 
 ```bash
 mvn clean package
-java -jar target/VeboLagerSystem-0.2-TESTING.jar
+java -jar target/VeboLagerSystem-0.3-TESTING.jar
 ```
 
 ---
@@ -274,65 +264,39 @@ java -jar target/VeboLagerSystem-0.2-TESTING.jar
 
 ### Erster Start
 
-1. **Automatische Initialisierung:**
-   - Datenbank wird erstellt
-   - Standard-User "Admin" wird angelegt
-   - Beispieldaten werden importiert (optional)
-
-2. **Hauptfenster öffnet sich:**
-   - Tab "Artikel" für Artikelverwaltung
-   - Tab "Lieferanten" für Lieferantenverwaltung
-   - Tab "Bestellungen" für Bestellungsverwaltung
-   - Tab "Kunden" für Kundenverwaltung
+- Datenbank und Einstellungen werden initialisiert
+- Optionaler Import der Startdaten (Artikel/Lieferanten/Kunden/Abteilungen)
+- Optionales QR-Code-Generieren für Startartikel
+- Automatische Update-Prüfung (wenn Internet verfügbar)
 
 ### Artikel verwalten
 
-1. **Neuen Artikel hinzufügen:**
-   - Button "➕ Neuer Artikel" klicken
-   - Formular ausfüllen (Artikelnummer, Name, Details, etc.)
-   - Speichern
+- Artikel hinzufügen, bearbeiten, löschen
+- Mehrfachaktionen: Bestand anpassen, Export, Bulk-Delete
+- QR-Codes erzeugen, als PDF exportieren oder QR-Daten abrufen
 
-2. **Artikel bearbeiten:**
-   - Artikel in Tabelle auswählen
-   - Button "✏️ Bearbeiten" klicken
-   - Änderungen vornehmen
-   - Speichern
+### Bestellungen verwalten
 
-3. **Artikel löschen:**
-   - Artikel auswählen
-   - Button "🗑️ Löschen" klicken
-   - Bestätigen
+- Neue Bestellung anlegen
+- Bestehende Bestellungen bearbeiten
+- Bestellungen abschließen (Statuswechsel)
+- PDF-Export und Bestellprotokoll
 
-### Bestellung erstellen
+### Lieferanten-Bestellungen
 
-1. **Neue Bestellung:**
-   - Tab "Bestellungen" → "Neue Bestellung"
-   - Empfänger und Absender auswählen
-   - Abteilung zuordnen
-   - Artikel hinzufügen mit Mengen
-   - Button "📦 Bestellen" klicken
+- Nachbestellungen sammeln und verwalten
+- Einträge entfernen oder Liste speichern
 
-2. **PDF exportieren:**
-   - Button "📄 Export PDF" klicken
-   - PDF wird im Benutzerverzeichnis gespeichert
+### Notizen & Logs
 
-### Einstellungen anpassen
-
-1. **Einstellungen öffnen:**
-   - Button "⚙️ Einstellungen" im Header
-
-2. **Tabs durchgehen:**
-   - **System:** Automatisierung konfigurieren
-   - **Verbindung:** Server-URL einstellen
-   - **Datenbank:** Datenbank verwalten
-   - **Import/Export:** Daten sichern/wiederherstellen
-   - **Über:** Versionsinformationen
+- Notizen erstellen und bearbeiten
+- Logs im UI filtern, suchen und exportieren
 
 ---
 
 ## 🏗️ Architektur
 
-### Projekt-Struktur
+### Projekt-Struktur (Auszug)
 
 ```
 VeboLagerSystem/
@@ -344,6 +308,7 @@ VeboLagerSystem/
 │   │   │       │   └── OrderActions.java
 │   │   │       ├── classes/         # Domain-Modelle
 │   │   │       │   ├── Article.java
+│   │   │       │   ├── Note.java
 │   │   │       │   ├── Order.java
 │   │   │       │   ├── User.java
 │   │   │       │   ├── Vendor.java
@@ -351,11 +316,17 @@ VeboLagerSystem/
 │   │   │       ├── guis/            # GUI-Komponenten
 │   │   │       │   ├── MainGUI.java
 │   │   │       │   ├── ArticleGUI.java
+│   │   │       │   ├── ArticleListGUI.java
 │   │   │       │   ├── VendorGUI.java
 │   │   │       │   ├── OrderGUI.java
+│   │   │       │   ├── CompleteOrderGUI.java
+│   │   │       │   ├── EditOrderGUI.java
+│   │   │       │   ├── SupplierOrderGUI.java
 │   │   │       │   ├── ClientGUI.java
-│   │   │       │   ├── NewOrderGUI.java
-│   │   │       │   └── SettingsGUI.java
+│   │   │       │   ├── NotesGUI.java
+│   │   │       │   ├── LogsGUI.java
+│   │   │       │   ├── SettingsGUI.java
+│   │   │       │   └── SplashscreenGUI.java
 │   │   │       ├── main/            # Hauptklasse
 │   │   │       │   └── Main.java
 │   │   │       ├── managers/        # Business-Logic
@@ -364,16 +335,23 @@ VeboLagerSystem/
 │   │   │       │   ├── VendorManager.java
 │   │   │       │   ├── OrderManager.java
 │   │   │       │   ├── ClientManager.java
+│   │   │       │   ├── DepartmentManager.java
+│   │   │       │   ├── NotesManager.java
+│   │   │       │   ├── LogManager.java
+│   │   │       │   ├── UpdateManager.java
 │   │   │       │   ├── UserManager.java
 │   │   │       │   ├── WarningManager.java
 │   │   │       │   └── SchedulerManager.java
-│   │   │       ├── scan/            # QR-Code Scanning
-│   │   │       │   └── ScanImporter.java
+│   │   │       ├── scan/            # QR-Scan-Server
+│   │   │       │   └── ScanServer.java
 │   │   │       └── utils/           # Utilities
 │   │   │           ├── ThemeManager.java
 │   │   │           ├── LogUtils.java
 │   │   │           ├── ImportUtils.java
+│   │   │           ├── QRCodeUtils.java
+│   │   │           ├── QRCodeGenerator.java
 │   │   │           ├── OrderLoggingUtils.java
+│   │   │           ├── VendorOrderLogging.java
 │   │   │           └── UserDataDir.java
 │   │   └── resources/              # Ressourcen
 │   │       ├── logo.png
@@ -382,25 +360,23 @@ VeboLagerSystem/
 │   │       ├── inventar.json
 │   │       ├── vendor.json
 │   │       ├── clients.json
+│   │       ├── departments.json
 │   │       └── categories.json
-│   └── test/                       # Tests
-│       └── java/
-├── logs/                           # Log-Dateien
-│   ├── application.log
-│   └── bestellung.log
-├── Docs/                           # Dokumentation
-├── pom.xml                         # Maven-Konfiguration
-└── README.md                       # Diese Datei
+│   └── test/
+├── pom.xml
+└── README.md
 ```
 
 ### Design-Patterns
 
-- **Singleton Pattern:** Manager-Klassen (ArticleManager, ThemeManager, etc.)
-- **Observer Pattern:** Theme-Updates für alle Fenster
-- **Factory Pattern:** Button-Erstellung mit Theme-Support
-- **MVC Pattern:** Trennung von GUI, Business-Logic und Daten
+- **Singleton:** Manager-Klassen
+- **Observer:** Theme-Updates für alle Fenster
+- **Factory:** UI-Komponenten (Buttons)
+- **MVC:** Trennung GUI / Business-Logic / Daten
 
-### Datenbank-Schema
+---
+
+## 🗃️ Datenbank-Schema
 
 ```sql
 -- Articles
@@ -427,21 +403,27 @@ CREATE TABLE IF NOT EXISTS vendors (
 
 -- Orders
 CREATE TABLE IF NOT EXISTS orders (
-    orderId TEXT PRIMARY KEY,
-    receiverName TEXT NOT NULL,
-    receiverKontoNumber TEXT NOT NULL,
-    senderName TEXT NOT NULL,
-    senderKontoNumber TEXT NOT NULL,
-    orderedArticles TEXT NOT NULL,
-    orderDate TEXT NOT NULL,
-    status TEXT DEFAULT 'Ausstehend',
-    department TEXT
+    orderId TEXT,
+    orderedArticles TEXT,
+    receiverName TEXT,
+    receiverKontoNumber TEXT,
+    orderDate TEXT,
+    senderName TEXT,
+    senderKontoNumber TEXT,
+    department TEXT,
+    status TEXT
 );
 
 -- Clients
 CREATE TABLE IF NOT EXISTS clients (
     firstLastName TEXT PRIMARY KEY,
     department TEXT
+);
+
+-- Departments
+CREATE TABLE IF NOT EXISTS departments (
+    departmentName TEXT,
+    kontoNumber TEXT
 );
 
 -- Users
@@ -459,6 +441,22 @@ CREATE TABLE IF NOT EXISTS warnings (
     timestamp TEXT NOT NULL,
     isRead INTEGER DEFAULT 0
 );
+
+-- Notes
+CREATE TABLE IF NOT EXISTS notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    content VARCHAR(2555),
+    date TEXT
+);
+
+-- Logs
+CREATE TABLE IF NOT EXISTS logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT NOT NULL,
+    level TEXT NOT NULL,
+    message TEXT NOT NULL
+);
 ```
 
 ---
@@ -467,219 +465,113 @@ CREATE TABLE IF NOT EXISTS warnings (
 
 ### Automatische Lagerbestandsprüfung
 
-Der `SchedulerManager` führt automatisch Bestandsprüfungen durch:
+Der `SchedulerManager` führt regelmäßig Bestandsprüfungen durch:
 
-```java
-// Konfigurierbar über Einstellungen
-- Prüfintervall: 5-1440 Minuten (Standard: 30 Min.)
-- Prüft alle Artikel auf Mindestbestand
-- Erstellt Warnungen bei Unterschreitung
-- Unterscheidet zwischen:
-  * Niedriger Bestand (< Mindestbestand)
-  * Kritischer Bestand (< 50% des Mindestbestands)
-```
+- Intervall: 5–1440 Minuten (Standard: 30 Min.)
+- Warnungen bei Unterschreitung des Mindestbestands
+- Kritischer Bestand bei < 50% des Mindestbestands
 
 ### Warnungssystem
 
-**Warnungstypen:**
-- `LOW_STOCK`: Lagerbestand unter Mindestbestand
-- `CRITICAL_STOCK`: Lagerbestand unter 50% des Mindestbestands
+- `LOW_STOCK`: Bestand unter Mindestbestand
+- `CRITICAL_STOCK`: Bestand < 50% des Mindestbestands
+- Anzeige in Popups, nur ungelesene Warnungen
 
-**Automatische Anzeige:**
-- Konfigurierbar: 1-24 Stunden
-- Nur ungelesene Warnungen werden angezeigt
-- Popup-Dialog mit Details
-- Warnungen können als gelesen markiert werden
+### QR-Code-Workflow
 
-### QR-Code-Integration
+- QR-Codes für Artikel erstellen und als PNG speichern
+- QR-Preview + PDF-Export aus der Artikelverwaltung
+- Scans als JSON importieren (Server-URL konfigurierbar)
+- Eigenverbrauchs-Tracking (optional)
 
-**Server-basiertes System:**
-```
-1. QR-Codes werden über Web-Interface gescannt
-2. Server speichert Scan-Daten in Datenbank
-3. VeboLagerSystem importiert automatisch:
-   - list.php liefert JSON-Array mit Scans
-   - Artikel werden zugeordnet und verarbeitet
-   - Tracking verhindert Duplikate
-```
+### Update-Check
 
-**Import-Prozess:**
-```java
-// Automatischer Import alle X Minuten
-1. GET Request an Server-URL
-2. JSON-Parsing der Scan-Daten
-3. Artikelzuordnung über Nummer
-4. Verarbeitung und Logging
-5. Tracking in imported_qrcodes.txt
-```
-
-### PDF-Export für Bestellungen
-
-**Features:**
-- Professionelles Layout mit Logo
-- Vollständige Bestelldetails:
-  - Empfänger und Absender
-  - Datum und Bestellnummer
-  - Artikelliste mit Preisen
-  - Gesamtpreis
-- Automatische Seitenumbrüche
-- Unicode-Support (UTF-8)
-- Speicherung im Benutzerverzeichnis
-
-### Theme-System
-
-**Light Mode Colors:**
-```java
-Background: #F5F7FA
-Card: #FFFFFF
-Primary: #2980B9 (Blue)
-Text: #1F2D3D (Dark Gray)
-```
-
-**Dark Mode Colors:**
-```java
-Background: #1A1A1A
-Card: #2D2D2D
-Primary: #1E3A5F (Dark Blue)
-Text: #F0F0F0 (Light Gray)
-```
-
-**Theme-Anwendung:**
-- Automatisch auf alle Komponenten
-- Persistente Speicherung
-- Live-Update ohne Neustart
-- UIManager-Integration für System-Dialoge
-
----
-
-## 👨‍💻 Entwicklung
-
-### Development Setup
-
-```bash
-# Repository klonen
-git clone https://github.com/frame-dev/VeboLagerSystem.git
-cd VeboLagerSystem
-
-# Dependencies installieren
-mvn clean install
-
-# Kompilieren
-mvn compile
-
-# Tests ausführen
-mvn test
-
-# Anwendung starten (Development)
-mvn exec:java
-```
-
-### Code-Style
-
-- **Java Code Conventions** von Oracle
-- **Kommentare auf Deutsch** für Business-Logic
-- **JavaDoc** für öffentliche APIs
-- **Logging:** Log4j2 für alle wichtigen Ereignisse
-
-### Testing
-
-```bash
-# Alle Tests ausführen
-mvn test
-
-# Spezifischen Test ausführen
-mvn test -Dtest=ArticleManagerTest
-
-# Test Coverage
-mvn jacoco:report
-```
-
-### Debugging
-
-**Log-Dateien:**
-- `logs/application.log` - Haupt-Anwendungslog
-- `logs/bestellung.log` - Bestellungs-spezifisches Log
-
-**Log-Level:**
-```properties
-# In log4j2.xml konfigurierbar
-DEBUG - Detaillierte Debug-Informationen
-INFO - Normale Informationen
-WARN - Warnungen
-ERROR - Fehler
-```
-
-### Build
-
-```bash
-# Clean Build
-mvn clean package
-
-# Skip Tests
-mvn clean package -DskipTests
-
-# Mit Dependencies
-mvn clean package -DincludeDependencies
-```
+- Prüfung über GitHub Releases
+- Unterstützt Stable/Beta/Alpha/Testing
+- GitHub Token optional (höhere Rate-Limits)
 
 ---
 
 ## ⚙️ Konfiguration
 
-### Settings.properties
+Die Einstellungen werden in `settings.properties` im App-Datenverzeichnis gespeichert.
 
-Die Anwendung speichert Einstellungen in `settings.properties`:
+Beispiel (wird automatisch gepflegt):
 
 ```properties
-# Automatisierung
+# First run / Import
+first-time=true
+load-from-files=true
+
+# Scheduler
 stock_check_interval=30
-enable_auto_stock_check=true
 enable_hourly_warnings=true
 warning_display_interval=1
+enable_auto_stock_check=true
 
 # QR-Code Import
-enable_automatic_import_qrcode=false
+enable_automatic_import_qrcode=true
 qrcode_import_interval=10
-server_url=http://localhost/scan/list.php
+server_url=https://framedev.ch/vebo/scans.json
 
-# Theme
+# Theme / UI
 dark_mode=false
 table_font_size=16
+table_font_size_tab=15
+font_style=Dialog
+theme_accent_color=
+theme_header_color=
+theme_button_color=
 
-# Application
-last_user=Admin
-```
-
-### Datenverzeichnis
-
-**Speicherort:**
-- Windows: `%APPDATA%/VeboLagerSystem/`
-- macOS: `~/Library/Application Support/VeboLagerSystem/`
-- Linux: `~/.VeboLagerSystem/`
-
-**Inhalt:**
-```
-VeboLagerSystem/
-├── database.db              # SQLite-Datenbank
-├── settings.properties      # Einstellungen
-├── own_use_list.txt        # Eigenverbrauch-Tracking
-├── imported_qrcodes.txt    # QR-Code-Import-Tracking
-├── imported_items.txt      # Artikel-Import-Tracking
-└── logs/                   # Log-Dateien
-    ├── application.log
-    └── bestellung.log
+# Update-Manager
+github-token=
 ```
 
 ---
 
-## 🗺️ Roadmap
+## 💾 App-Datenverzeichnis
 
-### Version 0.3 (Geplant)
-- [ ] Erweiterte Suchfunktionen mit Filtern
-- [ ] Benutzerrechteverwaltung mit Rollen
-- [ ] Dashboard mit Statistiken
-- [ ] Erweiterte Reporting-Funktionen
-- [ ] Multi-Sprach-Unterstützung (DE/EN/FR)
+**Speicherort:**
+- Windows: `%APPDATA%/VeboLagerSystem/`
+- macOS: `~/Library/Application Support/VeboLagerSystem/`
+- Linux: `$XDG_DATA_HOME/VeboLagerSystem/` oder `~/.local/share/VeboLagerSystem/`
+
+**Inhalt (Auszug):**
+```
+VeboLagerSystem/
+├── vebo_lager_system.db      # SQLite-Datenbank
+├── settings.properties       # Einstellungen
+├── scans.json                # QR-Scan-Daten
+├── qr_codes/                 # Generierte QR-Codes
+├── supplier_orders.txt       # Lieferanten-Nachbestellungen
+├── imported_qrcodes.txt      # QR-Code-Import-Tracking
+├── imported_items.txt        # Import-Tracking
+├── own_use_list.txt          # Eigenverbrauch-Tracking
+└── logs/
+    ├── vebo_lager_system.log # App-Log
+    ├── bestellung.log        # Bestell-Log
+    └── vendorOrder.log       # Lieferanten-Log
+```
+
+---
+
+## 📡 QR-Scan-Server (Optional)
+
+Ein kleiner HTTP-Server für QR-Scans ist im Projekt enthalten (`ScanServer`).
+
+**Start:**
+```bash
+mvn exec:java -Dexec.mainClass="ch.framedev.lagersystem.scan.ScanServer"
+```
+
+**Endpoints:**
+- `/scan?data=...` (Formular + Speicherung)
+- `/list` (JSON aller Scans)
+- `/latest` (letzter Scan als JSON)
+
+---
+
+## 🗺️ Roadmap
 
 ### Version 0.4 (Geplant)
 - [ ] REST API für externe Integration
@@ -706,33 +598,15 @@ VeboLagerSystem/
 
 ## 🤝 Beiträge
 
-### Contribution Guidelines
-
-1. **Fork** das Repository
-2. Erstelle einen **Feature Branch** (`git checkout -b feature/AmazingFeature`)
-3. **Commit** deine Änderungen (`git commit -m 'Add some AmazingFeature'`)
-4. **Push** zum Branch (`git push origin feature/AmazingFeature`)
-5. Öffne einen **Pull Request**
-
-### Code Review Process
-
-- Alle Pull Requests werden reviewed
-- Mindestens 1 Approval erforderlich
-- Alle Tests müssen passing sein
-- Code Coverage sollte nicht sinken
-
-### Coding Standards
-
-- Java Code Conventions befolgen
-- JavaDoc für öffentliche APIs
-- Unit Tests für neue Features
-- Logging für wichtige Operationen
+1. Fork das Repository
+2. Feature Branch erstellen (`git checkout -b feature/AmazingFeature`)
+3. Commit (`git commit -m 'Add some AmazingFeature'`)
+4. Push (`git push origin feature/AmazingFeature`)
+5. Pull Request öffnen
 
 ---
 
 ## 📞 Support
-
-### Kontakt
 
 - **Entwickler:** Darryl Huber
 - **Organisation:** VEBO Oensingen
@@ -741,30 +615,27 @@ VeboLagerSystem/
 
 ### Probleme melden
 
-Bei Problemen oder Fragen:
-
-1. **Issue erstellen** auf GitHub
-2. **Beschreibung** des Problems
-3. **Screenshots** wenn möglich
-4. **Log-Dateien** anhängen
-5. **Schritte zur Reproduktion** angeben
+1. Issue erstellen (GitHub)
+2. Beschreibung des Problems
+3. Schritte zur Reproduktion
+4. Relevante Log-Dateien (falls vorhanden)
 
 ### FAQ
 
-**Q: Wie ändere ich das Theme?**
-A: Einstellungen → System → Design & Darstellung → Dark Mode aktivieren
+**Q: Wie ändere ich das Theme?**  
+A: Einstellungen → Darstellung → Theme/Colors anpassen
 
-**Q: Wo werden die Daten gespeichert?**
-A: Im Benutzerverzeichnis unter `VeboLagerSystem/` (siehe Konfiguration)
+**Q: Wo werden die Daten gespeichert?**  
+A: Im App-Datenverzeichnis unter `VeboLagerSystem/` (siehe Abschnitt App-Datenverzeichnis)
 
-**Q: Kann ich Daten aus Excel importieren?**
-A: Ja, über CSV-Export aus Excel und Import in VeboLagerSystem
+**Q: Kann ich Daten aus Excel importieren?**  
+A: Ja, über CSV-Export aus Excel und Import in VEBO Lagersystem
 
-**Q: Funktioniert das System offline?**
-A: Ja, nur der QR-Code-Import benötigt eine Server-Verbindung
+**Q: Funktioniert das System offline?**  
+A: Ja, nur der QR-Code-Import und Update-Check benötigen eine Server-Verbindung
 
-**Q: Kann ich die Datenbank sichern?**
-A: Ja, über Einstellungen → Import/Export → Datenbank Exportieren
+**Q: Gibt es einen QR-Scan-Server?**  
+A: Ja, optional über `ScanServer` (siehe Abschnitt QR-Scan-Server)
 
 ---
 
@@ -776,27 +647,25 @@ A: Ja, über Einstellungen → Import/Export → Datenbank Exportieren
 
 Diese Software ist Eigentum von VEBO Oensingen und darf ohne ausdrückliche schriftliche Genehmigung nicht kopiert, verändert oder verteilt werden.
 
-**Disclaimer:**
-Diese Software wird "wie sie ist" bereitgestellt, ohne jegliche Garantie. Der Autor haftet nicht für Schäden, die durch die Verwendung dieser Software entstehen.
-
 ---
 
 ## 🙏 Danksagungen
 
-- **VEBO Oensingen** für die Unterstützung und Anforderungen
+- **VEBO Oensingen** für Anforderungen und Feedback
 - **Apache Software Foundation** für PDFBox und Log4j
 - **SQLite Team** für die embedded Datenbank
+- **ZXing Project** für QR-Code-Generierung
 - **Java Community** für Libraries und Tools
 
 ---
 
 ## 📊 Statistiken
 
-- **Version:** 0.2-TESTING
-- **Release Date:** Januar 2026
-- **Lines of Code:** ~12,000+
-- **Classes:** 50+
-- **Dependencies:** 15+
+- **Version:** 0.3-TESTING
+- **Stand:** Februar 2026
+- **Java Dateien:** 46
+- **Zeilen Code (Java):** ~27k
+- **Dependencies:** 10
 - **Supported Platforms:** Windows, macOS, Linux
 
 ---
