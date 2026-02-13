@@ -4,6 +4,7 @@ import ch.framedev.lagersystem.main.Main;
 
 import javax.swing.*;
 import javax.swing.plaf.ColorUIResource;
+import javax.swing.plaf.FontUIResource;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.util.ArrayList;
@@ -638,6 +639,41 @@ public class ThemeManager {
         d.put("OptionPane.messageForeground", new ColorUIResource(fg));
         d.put("OptionPane.foreground", new ColorUIResource(fg));
 
+        // ---------- Fonts (emoji-safe on Windows/macOS) ----------
+        if (isWindowsOrMac()) {
+            String[] fontKeys = {
+                    "defaultFont",
+                    "Label.font",
+                    "Button.font",
+                    "ToggleButton.font",
+                    "Menu.font",
+                    "MenuItem.font",
+                    "CheckBox.font",
+                    "RadioButton.font",
+                    "TextField.font",
+                    "PasswordField.font",
+                    "TextArea.font",
+                    "TextPane.font",
+                    "EditorPane.font",
+                    "Table.font",
+                    "TableHeader.font",
+                    "TabbedPane.font",
+                    "ComboBox.font",
+                    "List.font",
+                    "ToolTip.font",
+                    "TitledBorder.font",
+                    "OptionPane.messageFont",
+                    "OptionPane.buttonFont"
+            };
+            for (String key : fontKeys) {
+                Font font = d.getFont(key);
+                Font safeFont = withEmojiFallback(font);
+                if (safeFont != null) {
+                    d.put(key, new FontUIResource(safeFont));
+                }
+            }
+        }
+
         // ---------- FileChooser ----------
         d.put("FileChooser.background", new ColorUIResource(bg));
         d.put("FileChooser.foreground", new ColorUIResource(fg));
@@ -669,6 +705,22 @@ public class ThemeManager {
         // ---------- Borders ----------
         d.put("Separator.foreground", new ColorUIResource(border));
         d.put("Separator.background", new ColorUIResource(border));
+    }
+
+    private static Font withEmojiFallback(Font font) {
+        if (font == null) {
+            return null;
+        }
+        if (font.canDisplayUpTo("\uD83D\uDCC1") != -1) {
+            return new Font("Dialog", font.getStyle(), font.getSize());
+        }
+        return font;
+    }
+
+    private static boolean isWindowsOrMac() {
+        String osName = System.getProperty("os.name", "");
+        String lower = osName.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("win") || lower.contains("mac");
     }
 
     // =========================

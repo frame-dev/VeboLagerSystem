@@ -6,50 +6,34 @@ package ch.framedev.lagersystem.classes;
 @SuppressWarnings("unused")
 public class Article {
 
-    /**
-     * Unique article identifier.
-     */
+    /** Unique article identifier. */
     private String articleNumber;
-    /**
-     * Display name of the article.
-     */
+    /** Display name of the article. */
     private String name;
-    /**
-     * Optional free-text description.
-     */
+    /** Optional free-text description. */
     private String details;
-    /**
-     * Current stock quantity in inventory.
-     */
+    /** Current stock quantity in inventory. */
     private int stockQuantity;
-    /**
-     * Minimum stock level threshold for warnings.
-     */
+    /** Minimum stock level threshold for warnings. */
     private int minStockLevel;
-    /**
-     * Sales price per unit.
-     */
+    /** Sales price per unit. */
     private double sellPrice;
-    /**
-     * Purchase price per unit.
-     */
+    /** Purchase price per unit. */
     private double purchasePrice;
-    /**
-     * Name of the vendor or supplier.
-     */
+    /** Name of the vendor or supplier. */
     private String vendorName;
 
     /**
      * Creates a new article instance.
      *
      * @param articleNumber unique article identifier
-     * @param name          display name
-     * @param details       optional description
+     * @param name display name
+     * @param details optional description
      * @param stockQuantity current stock quantity
      * @param minStockLevel minimum stock level threshold
-     * @param sellPrice     sales price per unit
+     * @param sellPrice sales price per unit
      * @param purchasePrice purchase price per unit
-     * @param vendorName    vendor or supplier name
+     * @param vendorName vendor or supplier name
      */
     public Article(String articleNumber, String name, String details, int stockQuantity, int minStockLevel,
                    double sellPrice, double purchasePrice, String vendorName) {
@@ -63,114 +47,82 @@ public class Article {
         this.vendorName = vendorName;
     }
 
-    /**
-     * @return unique article identifier
-     */
+    /** @return unique article identifier */
     public String getArticleNumber() {
         return articleNumber;
     }
 
-    /**
-     * @param articleNumber unique article identifier
-     */
+    /** @param articleNumber unique article identifier */
     public void setArticleNumber(String articleNumber) {
         this.articleNumber = articleNumber;
     }
 
-    /**
-     * @return display name
-     */
+    /** @return display name */
     public String getName() {
         return name;
     }
 
-    /**
-     * @param name display name
-     */
+    /** @param name display name */
     public void setName(String name) {
         this.name = name;
     }
 
-    /**
-     * @return optional description
-     */
+    /** @return optional description */
     public String getDetails() {
         return details;
     }
 
-    /**
-     * @param details optional description
-     */
+    /** @param details optional description */
     public void setDetails(String details) {
         this.details = details;
     }
 
-    /**
-     * @return current stock quantity
-     */
+    /** @return current stock quantity */
     public int getStockQuantity() {
         return stockQuantity;
     }
 
-    /**
-     * @param stockQuantity current stock quantity
-     */
+    /** @param stockQuantity current stock quantity */
     public void setStockQuantity(int stockQuantity) {
         this.stockQuantity = stockQuantity;
     }
 
-    /**
-     * @return minimum stock level threshold
-     */
+    /** @return minimum stock level threshold */
     public int getMinStockLevel() {
         return minStockLevel;
     }
 
-    /**
-     * @param minStockLevel minimum stock level threshold
-     */
+    /** @param minStockLevel minimum stock level threshold */
     public void setMinStockLevel(int minStockLevel) {
         this.minStockLevel = minStockLevel;
     }
 
-    /**
-     * @return sales price per unit
-     */
+    /** @return sales price per unit */
     public double getSellPrice() {
         return sellPrice;
     }
 
-    /**
-     * @param sellPrice sales price per unit
-     */
+    /** @param sellPrice sales price per unit */
     public void setSellPrice(double sellPrice) {
         this.sellPrice = sellPrice;
     }
 
-    /**
-     * @return purchase price per unit
-     */
+    /** @return purchase price per unit */
     public double getPurchasePrice() {
         return purchasePrice;
     }
 
-    /**
-     * @param purchasePrice purchase price per unit
-     */
+    /** @param purchasePrice purchase price per unit */
     public void setPurchasePrice(double purchasePrice) {
         this.purchasePrice = purchasePrice;
     }
 
-    /**
-     * @return vendor or supplier name
-     */
+    /** @return vendor or supplier name */
     public String getVendorName() {
         return vendorName;
     }
 
-    /**
-     * @param vendorName vendor or supplier name
-     */
+    /** @param vendorName vendor or supplier name */
     public void setVendorName(String vendorName) {
         this.vendorName = vendorName;
     }

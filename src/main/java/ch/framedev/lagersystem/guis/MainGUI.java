@@ -15,6 +15,7 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Supplier;
 
 /**
@@ -187,8 +188,9 @@ public class MainGUI extends JFrame {
         JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         titleRow.setOpaque(false);
 
-        JLabel iconLabel = new JLabel(UnicodeSymbols.PACKAGE);
-        iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 42));
+        Font headerIconFont = SettingsGUI.getFontByName(Font.BOLD, 42);
+        JLabel iconLabel = new JLabel(UnicodeSymbols.safeSymbol(UnicodeSymbols.PACKAGE, "PKG", headerIconFont));
+        iconLabel.setFont(getEmojiCapableFont(headerIconFont));
         iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
         titleRow.add(iconLabel);
 
@@ -230,14 +232,15 @@ public class MainGUI extends JFrame {
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.X_AXIS));
         rightPanel.setOpaque(false);
 
-        JButton settingsButton = new JButton(UnicodeSymbols.BETTER_GEAR + " Einstellungen");
+        Font headerButtonFont = SettingsGUI.getFontByName(Font.BOLD, 12);
+        JButton settingsButton = new JButton(UnicodeSymbols.safeSymbol(UnicodeSymbols.BETTER_GEAR, "CFG", headerButtonFont) + " Einstellungen");
         styleHeaderButton(settingsButton);
         settingsButton.setToolTipText("Einstellungen des Programms öffnen");
         settingsButton.addActionListener(e -> {
             settingsGUI = showOrCreateWindow(settingsGUI, SettingsGUI::new);
         });
         settingsButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        JButton notesButton = new JButton(UnicodeSymbols.CLIPBOARD + " Notizen");
+        JButton notesButton = new JButton(UnicodeSymbols.safeSymbol(UnicodeSymbols.CLIPBOARD, "CLIP", headerButtonFont) + " Notizen");
         styleHeaderButton(notesButton);
         notesButton.setToolTipText("Persönliche Notizen verwalten");
         notesButton.addActionListener(e -> {
@@ -284,7 +287,7 @@ public class MainGUI extends JFrame {
                 // Force layout recalc
                 revalidate();
                 repaint();
-                this.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 3));
+                this.setFont(getEmojiCapableFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 3)));
             }
         };
         /**tabbedPane.setUI(new BasicTabbedPaneUI() {
@@ -346,13 +349,18 @@ public class MainGUI extends JFrame {
      * Adds all tabs to the tabbed pane
      */
     private void addTabs() {
+        Font tabFont = tabbedPane.getFont();
+        String tabPackage = UnicodeSymbols.safeSymbol(UnicodeSymbols.PACKAGE, "PKG", tabFont);
+        String tabTruck = UnicodeSymbols.safeSymbol(UnicodeSymbols.TRUCK, "TRK", tabFont);
+        String tabClipboard = UnicodeSymbols.safeSymbol(UnicodeSymbols.CLIPBOARD, "CLIP", tabFont);
+        String tabPeople = UnicodeSymbols.safeSymbol(UnicodeSymbols.PEOPLE, "USERS", tabFont);
         // Add extra spacing for bigger, more prominent tabs
-        tabbedPane.addTab("<html>     " + UnicodeSymbols.PACKAGE + "  Artikel     </html>", null, articleWrapper, "Artikelverwaltung");
-        tabbedPane.addTab("<html>     " + UnicodeSymbols.TRUCK + "  Lieferanten     </html>", null, vendorWrapper, "Lieferantenverwaltung");
-        tabbedPane.addTab("<html>     " + UnicodeSymbols.CLIPBOARD + "  Bestellungen     </html>", null, orderWrapper, "Bestellungsverwaltung");
-        tabbedPane.addTab("<html>     " + UnicodeSymbols.PEOPLE + "  Kunden     </html>", null, clientWrapper, "Kundenverwaltung");
-        tabbedPane.addTab("<html>     " + UnicodeSymbols.TRUCK + UnicodeSymbols.PACKAGE + "  Lieferantenbestellungen     </html>", null, supplierOrderWrapper, "Lieferantenbestellungen verwalten");
-        tabbedPane.addTab("<html>     " + UnicodeSymbols.CLIPBOARD + " Protokolle     </html>", null, logsWrapper, "Systemprotokolle anzeigen");
+        tabbedPane.addTab("<html>     " + tabPackage + "  Artikel     </html>", null, articleWrapper, "Artikelverwaltung");
+        tabbedPane.addTab("<html>     " + tabTruck + "  Lieferanten     </html>", null, vendorWrapper, "Lieferantenverwaltung");
+        tabbedPane.addTab("<html>     " + tabClipboard + "  Bestellungen     </html>", null, orderWrapper, "Bestellungsverwaltung");
+        tabbedPane.addTab("<html>     " + tabPeople + "  Kunden     </html>", null, clientWrapper, "Kundenverwaltung");
+        tabbedPane.addTab("<html>     " + tabTruck + tabPackage + "  Lieferantenbestellungen     </html>", null, supplierOrderWrapper, "Lieferantenbestellungen verwalten");
+        tabbedPane.addTab("<html>     " + tabClipboard + " Protokolle     </html>", null, logsWrapper, "Systemprotokolle anzeigen");
     }
 
     /**
@@ -451,7 +459,7 @@ public class MainGUI extends JFrame {
         Color hover = ThemeManager.getButtonHoverColor(base);
         Color pressed = ThemeManager.getButtonPressedColor(base);
 
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        button.setFont(getEmojiCapableFont(SettingsGUI.getFontByName(Font.BOLD, 12)));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setBackground(base);
         button.setOpaque(true);
@@ -493,6 +501,18 @@ public class MainGUI extends JFrame {
                 button.setBackground(button.contains(evt.getPoint()) ? hover : base);
             }
         });
+    }
+
+    private static Font getEmojiCapableFont(Font baseFont) {
+        if (baseFont == null) {
+            return null;
+        }
+        String osName = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+        if (osName.contains("mac")) {
+            // Use logical font to allow emoji fallback on macOS.
+            return new Font("Dialog", baseFont.getStyle(), baseFont.getSize());
+        }
+        return baseFont;
     }
 
     /**

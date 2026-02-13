@@ -39,6 +39,7 @@ public class OrderGUI extends JFrame {
     private final JLabel orderCountLabel;
 
     public OrderGUI() {
+        ThemeManager.applyUIDefaults();
         setTitle("Bestellungen Verwaltung");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(1100, 600);

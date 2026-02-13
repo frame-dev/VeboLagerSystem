@@ -1933,7 +1933,7 @@ public class SettingsGUI extends JFrame {
             fontName = uiFont == null ? DEFAULT_FONT_STYLE : uiFont.getFamily();
         }
         Font font = new Font(fontName, style, fontSize);
-        if (isWindows() && font.canDisplayUpTo("\uD83D\uDCC1") != -1) {
+        if ((isWindows() || isMac()) && font.canDisplayUpTo("\uD83D\uDCC1") != -1) {
             font = new Font("Dialog", style, fontSize);
         }
         return font;
@@ -1942,6 +1942,11 @@ public class SettingsGUI extends JFrame {
     private static boolean isWindows() {
         String osName = System.getProperty("os.name", "");
         return osName.toLowerCase(Locale.ROOT).contains("win");
+    }
+
+    private static boolean isMac() {
+        String osName = System.getProperty("os.name", "");
+        return osName.toLowerCase(Locale.ROOT).contains("mac");
     }
 
     /**

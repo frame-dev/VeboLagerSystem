@@ -38,13 +38,13 @@ public class Main {
     public static Settings settings;
     public static ImageIcon icon;
     public static ImageIcon iconSmall;
-
     public static final String VERSION = "0.3-TESTING";
 
     public static void main(String[] args) {
         try {
             // Initialize application
             printStartupInfo();
+            // Start Splashscreen and initialization in background
             SplashscreenGUI splashscreen = createAndShowSplashscreen();
             startInitializationWithSplashscreen(splashscreen);
 
@@ -108,7 +108,7 @@ public class Main {
     private static void initializeApplication(ProgressListener progressListener) {
         // Setup for initialization steps with progress updates
         updateProgress(progressListener, 3, "Starte Initialisierung...");
-        updateProgress(progressListener, 4, "Ueberpruefe ob mit Internet verbunden...");
+        updateProgress(progressListener, 4, "Überprüfen ob mit Internet verbunden...");
         if(NetUtils.hasNetwork()) {
             updateProgress(progressListener, 5, "Initialisiere Datenbank...");
             initializeDatabase();
@@ -116,11 +116,11 @@ public class Main {
             updateProgress(progressListener, 10, "Lade Einstellungen...");
             loadSettings();
             updateProgress(progressListener, 15, "Einstellungen geladen...");
-            updateProgress(progressListener, 17, "Pruefe auf Updates...");
+            updateProgress(progressListener, 17, "Prüfe auf Updates...");
             checkForUpdatesOnce();
-            updateProgress(progressListener, 19, "Update-Pruefung abgeschlossen...");
+            updateProgress(progressListener, 19, "Update-Prüfung abgeschlossen...");
         } else {
-            logger.warn("Keine Internetverbindung - Update-Pruefung uebersprungen");
+            logger.warn("Keine Internetverbindung - Update-Prüfung übersprungen");
         }
         updateProgress(progressListener, 20, "Lade Icons...");
         loadApplicationIcons();
@@ -128,64 +128,53 @@ public class Main {
         updateProgress(progressListener, 34, "Initialisiere Theme...");
         initializeTheme();
         updateProgress(progressListener, 35, "Theme gesetzt...");
-        updateProgress(progressListener, 44, "Pruefe Datenverzeichnis...");
+        updateProgress(progressListener, 44, "Prüfe Datenverzeichnis...");
         ensureAppDataDirectory();
         updateProgress(progressListener, 50, "Datenverzeichnis bereit...");
         // Need bug fixes
         String firstTimeSetting = settings.getProperty("first-time");
         if (firstTimeSetting == null || firstTimeSetting.equalsIgnoreCase("false")) {
-            boolean firstTimeSetup = "true".equalsIgnoreCase(firstTimeSetting);
-            System.out.println(firstTimeSetup);
-            if(!firstTimeSetup) {
-                firstTimeSetup = true;
-                settings.setProperty("first-time", String.valueOf(firstTimeSetup));
-                updateProgress(progressListener, 54, "Erster Start...");
-                int result = showConfirmDialogOnEdt(
-                        "Willkommen zum VEBO Lagersystem!\nMoechten Sie die anfaenglichen Daten jetzt importieren?",
-                        "Erster Start",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.INFORMATION_MESSAGE,
-                        iconSmall
+            settings.setProperty("first-time", "true");
+            updateProgress(progressListener, 54, "Erster Start...");
+            int result = showConfirmDialogOnEdt(
+                    "Willkommen zum VEBO Lagersystem!\nMöchten Sie die anfänglichen Daten jetzt importieren?",
+                    "Erster Start",
+                    iconSmall
+            );
+            if (result == JOptionPane.YES_OPTION) {
+                updateProgress(progressListener, 62, "QR-Code Abfrage...");
+                int resultQr = showConfirmDialogOnEdt(
+                        "QR-Codes Erstellen?",
+                        "QR-Codes",
+                        null
                 );
-                if (result == JOptionPane.YES_OPTION) {
-                    updateProgress(progressListener, 62, "QR-Code Abfrage...");
-                    int resultQr = showConfirmDialogOnEdt(
-                            "QR-Codes Erstellen?",
-                            "QR-Codes",
-                            JOptionPane.YES_NO_OPTION,
-                            JOptionPane.INFORMATION_MESSAGE,
-                            null
-                    );
-                    if (resultQr == JOptionPane.YES_OPTION) {
-                        updateProgress(progressListener, 68, "Erstelle QR-Codes...");
-                        logger.info("QR-Codes werden erstellt...");
-                        List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
-                        for (File qrCodeFile : qrCodeFiles) {
-                            logger.info("QR-Code erstellt: {}", qrCodeFile.getAbsolutePath());
-                        }
-                        logger.info("QR-Codes erstellt.");
+                if (resultQr == JOptionPane.YES_OPTION) {
+                    updateProgress(progressListener, 68, "Erstelle QR-Codes...");
+                    logger.info("QR-Codes werden erstellt...");
+                    List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
+                    for (File qrCodeFile : qrCodeFiles) {
+                        logger.info("QR-Code erstellt: {}", qrCodeFile.getAbsolutePath());
                     }
-                    updateProgress(progressListener, 63, "QR-Code Abfrage abgeschlossen.");
-                    settings.setProperty("load-from-files", "true");
-                } else {
-                    settings.setProperty("load-from-files", "false");
+                    logger.info("QR-Codes erstellt.");
                 }
-                settings.save();
-                if (Boolean.parseBoolean(settings.getProperty("load-from-files"))) {
-                    updateProgress(progressListener, 72, "Importiere Startdaten...");
-                    // Import initial data
-                    importInitialData(progressListener);
-                    updateProgress(progressListener, 80, "Startdaten importiert...");
-                    // Initialize default user
-                    updateProgress(progressListener, 88, "Erstelle Standard-Benutzer...");
-                    initializeDefaultUser();
-                    updateProgress(progressListener, 90, "Standard-Benutzer erstellt...");
-                    logger.info("Initial data import completed.");
-                } else {
-                    logger.info("Initial data import skipped as per settings.");
-                }
+                updateProgress(progressListener, 63, "QR-Code Abfrage abgeschlossen.");
+                settings.setProperty("load-from-files", "true");
             } else {
-                logger.info("First time setup skipped as per settings.");
+                settings.setProperty("load-from-files", "false");
+            }
+            settings.save();
+            if (Boolean.parseBoolean(settings.getProperty("load-from-files"))) {
+                updateProgress(progressListener, 72, "Importiere Startdaten...");
+                // Import initial data
+                importInitialData(progressListener);
+                updateProgress(progressListener, 80, "Startdaten importiert...");
+                // Initialize default user
+                updateProgress(progressListener, 88, "Erstelle Standard-Benutzer...");
+                initializeDefaultUser();
+                updateProgress(progressListener, 90, "Standard-Benutzer erstellt...");
+                logger.info("Initial data import completed.");
+            } else {
+                logger.info("Initial data import skipped as per settings.");
             }
         }
         updateProgress(progressListener, 96, "Abschluss der Initialisierung...");
@@ -315,14 +304,14 @@ public class Main {
      * Create Article object from map data
      */
     private static Article createArticleFromMap(Map<String, Object> data) {
-        String number = getString(data, "number", "");
-        String name = getString(data, "name", "");
-        String details = getString(data, "details", "");
-        int stockQuantity = getInt(data, "stockQuantity", 0);
-        int minStockLevel = getInt(data, "minStockLevel", 0);
-        double sellPrice = getDouble(data, "sellPrice", 0.0);
-        double buyPrice = getDouble(data, "buyPrice", 0.0);
-        String vendorName = getString(data, "vendorName", "");
+        String number = getString(data, "number");
+        String name = getString(data, "name");
+        String details = getString(data, "details");
+        int stockQuantity = getInt(data, "stockQuantity");
+        int minStockLevel = getInt(data, "minStockLevel");
+        double sellPrice = getDouble(data, "sellPrice");
+        double buyPrice = getDouble(data, "buyPrice");
+        String vendorName = getString(data, "vendorName");
 
         return new Article(
                 number,
@@ -336,12 +325,12 @@ public class Main {
         );
     }
 
-    private static String getString(Map<String, Object> data, String key, String fallback) {
+    private static String getString(Map<String, Object> data, String key) {
         Object value = data == null ? null : data.get(key);
-        return value == null ? fallback : value.toString();
+        return value == null ? "" : value.toString();
     }
 
-    private static int getInt(Map<String, Object> data, String key, int fallback) {
+    private static int getInt(Map<String, Object> data, String key) {
         Object value = data == null ? null : data.get(key);
         if (value instanceof Number number) {
             return number.intValue();
@@ -352,10 +341,10 @@ public class Main {
             } catch (NumberFormatException ignored) {
             }
         }
-        return fallback;
+        return 0;
     }
 
-    private static double getDouble(Map<String, Object> data, String key, double fallback) {
+    private static double getDouble(Map<String, Object> data, String key) {
         Object value = data == null ? null : data.get(key);
         if (value instanceof Number number) {
             return number.doubleValue();
@@ -366,7 +355,7 @@ public class Main {
             } catch (NumberFormatException ignored) {
             }
         }
-        return fallback;
+        return 0.0;
     }
 
     /**
@@ -396,10 +385,10 @@ public class Main {
             result.incrementSkipped();
             return;
         }
-        String contactPerson = getString(itemData, "contactPerson", "");
-        String phoneNumber = getString(itemData, "phoneNumber", "");
-        String email = getString(itemData, "email", "");
-        String address = getString(itemData, "address", "");
+        String contactPerson = getString(itemData, "contactPerson");
+        String phoneNumber = getString(itemData, "phoneNumber");
+        String email = getString(itemData, "email");
+        String address = getString(itemData, "address");
 
         String[] columns = {"contactPerson", "phoneNumber", "email", "address"};
         Object[] dataValues = {
@@ -439,8 +428,8 @@ public class Main {
      * Process single department import
      */
     private static void processDepartmentImport(DepartmentManager departmentManager, Map<String, Object> itemData, ImportResult result, java.util.Set<String> importedItems) {
-        String departmentName = getString(itemData, "department", "");
-        String kontoNumber = getString(itemData, "kontoNumber", "");
+        String departmentName = getString(itemData, "department");
+        String kontoNumber = getString(itemData, "kontoNumber");
 
         if (shouldSkipImport(departmentName, departmentManager.existsDepartment(departmentName), importedItems)) {
             result.incrementSkipped();
@@ -479,8 +468,8 @@ public class Main {
      * Process single client import
      */
     private static void processClientImport(ClientManager clientManager, Map<String, Object> itemData, ImportResult result, java.util.Set<String> importedItems) {
-        String firstLastName = getString(itemData, "firstLastName", "");
-        String department = getString(itemData, "department", "");
+        String firstLastName = getString(itemData, "firstLastName");
+        String department = getString(itemData, "department");
 
         if (shouldSkipImport(firstLastName, clientManager.existsClient(firstLastName), importedItems)) {
             result.incrementSkipped();
@@ -934,12 +923,12 @@ public class Main {
         if (progressListener != null) {
             progressListener.onProgress(percent, message);
         }
-        sleepQuietly(300);
+        sleepQuietly();
     }
 
-    private static void sleepQuietly(long millis) {
+    private static void sleepQuietly() {
         try {
-            Thread.sleep(millis);
+            Thread.sleep((long) 300);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -1019,9 +1008,9 @@ public class Main {
         checkForUpdates();
     }
 
-    private static int showConfirmDialogOnEdt(Object message, String title, int optionType, int messageType, Icon icon) {
+    private static int showConfirmDialogOnEdt(Object message, String title, Icon icon) {
         if (SwingUtilities.isEventDispatchThread()) {
-            return JOptionPane.showConfirmDialog(null, message, title, optionType, messageType, icon);
+            return JOptionPane.showConfirmDialog(null, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, icon);
         }
         final int[] result = new int[1];
         try {
@@ -1029,8 +1018,8 @@ public class Main {
                 null,
                 message,
                 title,
-                optionType,
-                messageType,
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.INFORMATION_MESSAGE,
                 icon
             ));
         } catch (Exception e) {

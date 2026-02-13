@@ -65,6 +65,7 @@ public class LogsGUI extends JFrame {
     }
 
     public LogsGUI() {
+        ThemeManager.applyUIDefaults();
         setTitle(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");
         setSize(900, 650);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);

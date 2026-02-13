@@ -30,6 +30,7 @@ public class VendorGUI extends JFrame {
     private final int[] baseColumnWidths = new int[]{120, 260, 160, 140, 220, 300};
 
     public VendorGUI() {
+        ThemeManager.applyUIDefaults();
         setTitle("Lieferant Verwaltung");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(900, 560);
