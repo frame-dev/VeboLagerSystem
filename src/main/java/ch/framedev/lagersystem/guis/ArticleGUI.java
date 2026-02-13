@@ -26,7 +26,6 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.TableModelEvent;
-import javax.swing.event.TableModelListener;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.plaf.basic.ComboPopup;
@@ -106,7 +105,7 @@ public class ArticleGUI extends JFrame {
         // Load categories from JSON
         loadCategories();
 
-        // Initialize table early so toolbar actions can reference it
+        // Initialize a table early so toolbar actions can reference it
         articleTable = new JTable();
         initializeTable();
 
@@ -1113,11 +1112,10 @@ public class ArticleGUI extends JFrame {
                 Color color1 = ThemeManager.getHeaderBackgroundColor();
                 Color color2 = ThemeManager.getHeaderGradientColor();
 
-                GradientPaint gradient = new GradientPaint(
+                return new GradientPaint(
                         0, 0, color1,
                         getWidth(), 0, color2
                 );
-                return gradient;
             }
         };
         headerPanel.setOpaque(false);
@@ -1700,7 +1698,6 @@ public class ArticleGUI extends JFrame {
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
         rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
 
-        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance();
         DefaultTableCellRenderer currencyRenderer = new DefaultTableCellRenderer() {
             @Override
             public void setValue(Object value) {
@@ -2218,19 +2215,16 @@ public class ArticleGUI extends JFrame {
     }
 
     private void registerInlineEditListener(DefaultTableModel model) {
-        model.addTableModelListener(new TableModelListener() {
-            @Override
-            public void tableChanged(TableModelEvent e) {
-                if (isUpdatingTable || e.getType() != TableModelEvent.UPDATE) {
-                    return;
-                }
-                int row = e.getFirstRow();
-                int column = e.getColumn();
-                if (row < 0 || column < 0) {
-                    return;
-                }
-                handleInlineEdit(row);
+        model.addTableModelListener(e -> {
+            if (isUpdatingTable || e.getType() != TableModelEvent.UPDATE) {
+                return;
             }
+            int row = e.getFirstRow();
+            int column = e.getColumn();
+            if (row < 0 || column < 0) {
+                return;
+            }
+            handleInlineEdit(row);
         });
     }
 
@@ -2631,16 +2625,16 @@ public class ArticleGUI extends JFrame {
         String[] words = text.split("\\s+");
         StringBuilder current = new StringBuilder();
         for (String word : words) {
-            String candidate = current.length() == 0 ? word : current + " " + word;
+            String candidate = current.isEmpty() ? word : current + " " + word;
             float width = font.getStringWidth(candidate) / 1000f * fontSize;
-            if (width > maxWidth && current.length() > 0) {
+            if (width > maxWidth && !current.isEmpty()) {
                 lines.add(current.toString());
                 current = new StringBuilder(word);
             } else {
                 current = new StringBuilder(candidate);
             }
         }
-        if (current.length() > 0) {
+        if (!current.isEmpty()) {
             lines.add(current.toString());
         }
         return lines;
@@ -3391,19 +3385,7 @@ public class ArticleGUI extends JFrame {
             dialog.add(emptyPanel, BorderLayout.CENTER);
         } else {
             // Create table model
-            String[] columnNames = {
-                    UnicodeSymbols.STATUS + " Status",
-                    UnicodeSymbols.TAG + " Typ",
-                    UnicodeSymbols.TITLE + " Titel",
-                    UnicodeSymbols.MEMO + " Nachricht",
-                    UnicodeSymbols.CALENDAR + " Datum"
-            };
-            DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
-                @Override
-                public boolean isCellEditable(int row, int column) {
-                    return false;
-                }
-            };
+            DefaultTableModel tableModel = getTableModel();
 
             // Populate table
             for (Warning warning : warnings) {
@@ -3609,6 +3591,23 @@ public class ArticleGUI extends JFrame {
         dialog.setVisible(true);
     }
 
+    private static DefaultTableModel getTableModel() {
+        String[] columnNames = {
+                UnicodeSymbols.STATUS + " Status",
+                UnicodeSymbols.TAG + " Typ",
+                UnicodeSymbols.TITLE + " Titel",
+                UnicodeSymbols.MEMO + " Nachricht",
+                UnicodeSymbols.CALENDAR + " Datum"
+        };
+        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        return tableModel;
+    }
+
     private static JTable getWarningsTable(DefaultTableModel tableModel) {
         JTable warningsTable = new JTable(tableModel);
         warningsTable.setRowHeight(32);
@@ -3763,9 +3762,7 @@ public class ArticleGUI extends JFrame {
                     if (priceMin != null && priceValue < priceMin) {
                         return false;
                     }
-                    if (priceMax != null && priceValue > priceMax) {
-                        return false;
-                    }
+                    return priceMax == null || priceValue <= priceMax;
                 }
 
                 return true;
