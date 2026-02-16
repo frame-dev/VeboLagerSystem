@@ -120,6 +120,7 @@ public class Main {
             checkForUpdatesOnce();
             updateProgress(progressListener, 19, "Update-Prüfung abgeschlossen...");
         } else {
+            sleepQuietly();
             logger.warn("Keine Internetverbindung - Update-Prüfung übersprungen");
         }
         updateProgress(progressListener, 20, "Lade Icons...");

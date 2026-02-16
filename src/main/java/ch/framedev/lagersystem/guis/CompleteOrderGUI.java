@@ -7,6 +7,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.UserManager;
+import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -50,7 +51,7 @@ public class CompleteOrderGUI extends JFrame {
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
         headerWrapper.setBackground(bg);
 
-        GradientPanel headerPanel = new GradientPanel(
+        JFrameUtils.GradientPanel headerPanel = new JFrameUtils.GradientPanel(
                 ThemeManager.getHeaderBackgroundColor(),
                 ThemeManager.getButtonHoverColor(ThemeManager.getHeaderBackgroundColor())
         );
@@ -85,7 +86,7 @@ public class CompleteOrderGUI extends JFrame {
         JPanel leftPanel = new JPanel(new BorderLayout(8, 8));
         leftPanel.setOpaque(false);
 
-        RoundedPanel leftCard = new RoundedPanel(card, 16);
+        JFrameUtils.RoundedPanel leftCard = new JFrameUtils.RoundedPanel(card, 16);
         leftCard.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         leftCard.setLayout(new BorderLayout(8, 8));
 
@@ -106,7 +107,7 @@ public class CompleteOrderGUI extends JFrame {
         JPanel rightPanel = new JPanel(new BorderLayout(8, 8));
         rightPanel.setOpaque(false);
 
-        RoundedPanel rightCard = new RoundedPanel(card, 16);
+        JFrameUtils.RoundedPanel rightCard = new JFrameUtils.RoundedPanel(card, 16);
         rightCard.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         rightCard.setLayout(new BorderLayout(10, 10));
 
@@ -761,49 +762,6 @@ public class CompleteOrderGUI extends JFrame {
             }
 
             return this;
-        }
-    }
-
-    private static class GradientPanel extends JPanel {
-        private final Color color1;
-        private final Color color2;
-
-        GradientPanel(Color color1, Color color2) {
-            this.color1 = color1;
-            this.color2 = color2;
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            GradientPaint gp = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
-            g2.setPaint(gp);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-            g2.dispose();
-            super.paintComponent(g);
-        }
-    }
-
-    private static class RoundedPanel extends JPanel {
-        private final Color bg;
-        private final int radius;
-
-        RoundedPanel(Color bg, int radius) {
-            this.bg = bg;
-            this.radius = radius;
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(bg);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
-            g2.dispose();
-            super.paintComponent(g);
         }
     }
 }

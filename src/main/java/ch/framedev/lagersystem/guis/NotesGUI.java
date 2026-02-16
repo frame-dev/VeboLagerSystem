@@ -211,7 +211,7 @@ public class NotesGUI extends JFrame {
 
     /**
      * Opens a dialog to update the content of the selected note.
-     *
+     * <p>
      * This method performs the following steps:
      * 1. Retrieves the title of the currently selected note from the list.
      *    If no note is selected, a warning message is displayed to prompt the user to make a selection.
@@ -225,10 +225,10 @@ public class NotesGUI extends JFrame {
      *    b. Attempts to save the changes through the notes manager.
      *       If the update is successful, closes the dialog and refreshes the notes list.
      *       If the update fails (e.g., due to duplicate titles), displays an error message.
-     *
+     * <p>
      * The dialog consists of a text area for editing the content and a save button.
      * The layout and components are dynamically set up within this method.
-     *
+     * <p>
      * Note:
      * - This method interacts with several helper methods and components for creating the dialog UI.
      * - The notes manager is used for fetching and updating the note.
@@ -292,7 +292,7 @@ public class NotesGUI extends JFrame {
 
     /**
      * Deletes the currently selected note from the notes list.
-     *
+     * <p>
      * This method performs the following steps:
      * 1. Retrieves the title of the selected note from the list. If no note is selected,
      *    a warning message is displayed to prompt the user to make a selection.
@@ -328,13 +328,13 @@ public class NotesGUI extends JFrame {
 
     /**
      * Opens a dialog to create a new note.
-     *
+     * <p>
      * This method initializes and displays a modal dialog for creating a new note with the
      * following UI components:
      * 1. A text field for entering the note's title.
      * 2. A text area for entering the note's content.
      * 3. A save button to confirm the creation of the note.
-     *
+     * <p>
      * Detailed Behavior:
      * - Validates that both the title and content fields are not empty before allowing the note to be created.
      *   If either field is empty, an error message is displayed and the creation process is halted.
@@ -342,22 +342,22 @@ public class NotesGUI extends JFrame {
      *   a. Closes the dialog.
      *   b. Refreshes the notes list displayed in the GUI.
      *   On failure (e.g., duplicate title), displays an error message indicating the issue.
-     *
+     * <p>
      * Error Handling:
      * If the title or content is empty, or a note with the same title already exists, appropriate
      * error dialogs are shown to the user.
-     *
+     * <p>
      * Layout Structure:
      * - The UI layout is dynamically constructed using GridBagLayout for proper alignment.
      * - The main dialog body includes labels, input fields, and a scrollable text area.
      * - Button panel includes the save button for submitting the note and is displayed
      *   at the bottom of the dialog.
-     *
+     * <p>
      * Dependencies:
      * - Relies on helper methods such as `createNoteDialogShell`, `createDialogTextField`,
      *   `createDialogTextArea`, and `createDialogButton` for constructing individual dialog components.
      * - Uses `notesManager` for managing the notes and `setupList` for refreshing the GUI.
-     *
+     * <p>
      * Post-condition:
      * - If the note is successfully added, the dialog is closed and the notes list is updated.
      * - If the note creation fails or is canceled, no changes are made to the list.
@@ -489,7 +489,7 @@ public class NotesGUI extends JFrame {
 
     /**
      * Retrieves the body panel of a specified dialog, if available, falling back to the dialog's content pane if no specific body panel is set.
-     *
+     * <p>
      * The method checks for a custom body panel associated with the dialog via the "notes.dialog.body" client property.
      * If such a property exists and is of type JPanel, it returns that panel. Otherwise, it defaults to returning the
      * content pane of the dialog.
@@ -519,7 +519,7 @@ public class NotesGUI extends JFrame {
 
     /**
      * Creates and returns a styled {@code JTextField} for use within dialog components.
-     *
+     * <p>
      * The text field is configured with the following properties:
      * - Font: Set to a predefined font with plain style and size 12.
      * - Background color: Matches the input background color from the theme manager.
@@ -527,7 +527,7 @@ public class NotesGUI extends JFrame {
      * - Caret color: Matches the primary text color from the theme manager.
      * - Border: A combination of a line border using the input border color from the theme manager
      *   and an empty border for padding.
-     *
+     * <p>
      * This text field is ready for immediate integration in themed dialog interfaces.
      *
      * @return a {@code JTextField} with custom styling and theme-compliant configurations
@@ -634,7 +634,7 @@ public class NotesGUI extends JFrame {
 
     /**
      * Configures and populates the list model with note titles.
-     *
+     * <p>
      * Clears the current list model, retrieves all notes using the notes manager,
      * extracts their titles, and updates the list model. Ensures that at least the
      * first item is selected if the list is not empty and no item is currently selected.
@@ -695,11 +695,11 @@ public class NotesGUI extends JFrame {
     /**
      * A custom JPanel with rounded corners and customizable background color.
      * This panel allows rendering with anti-aliasing for smoother edges.
-     *
+     * <p>
      * The corner radius and background color can be specified during the
      * instantiation of the panel. The panel is non-opaque by default to ensure
      * the rounded corners are displayed properly.
-     *
+     * <p>
      * Overrides the {@code paintComponent} method to implement custom rendering
      * behavior with rounded corners.
      */

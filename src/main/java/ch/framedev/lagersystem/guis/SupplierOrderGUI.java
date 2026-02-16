@@ -9,6 +9,8 @@ import ch.framedev.lagersystem.utils.VendorOrderLogging;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import static ch.framedev.lagersystem.utils.JFrameUtils.GradientPanel;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
@@ -310,30 +312,5 @@ public class SupplierOrderGUI extends JFrame {
     public void dispose() {
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
-    }
-
-    /**
-     * Gradient panel for modern header design
-     */
-    private static class GradientPanel extends JPanel {
-        private final Color color1;
-        private final Color color2;
-
-        GradientPanel(Color color1, Color color2) {
-            this.color1 = color1;
-            this.color2 = color2;
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            GradientPaint gp = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
-            g2.setPaint(gp);
-            g2.fillRect(0, 0, getWidth(), getHeight());
-            g2.dispose();
-            super.paintComponent(g);
-        }
     }
 }

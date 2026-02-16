@@ -6,6 +6,8 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
@@ -52,7 +54,7 @@ public class EditOrderGUI extends JFrame {
         JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
         headerWrapper.setBackground(ThemeManager.getBackgroundColor());
 
-        GradientPanel header = new GradientPanel(
+        JFrameUtils.GradientPanel header = new JFrameUtils.GradientPanel(
                 ThemeManager.getHeaderBackgroundColor(),
                 ThemeManager.getButtonHoverColor(ThemeManager.getHeaderBackgroundColor())
         );
@@ -460,50 +462,5 @@ public class EditOrderGUI extends JFrame {
 
     private static String safe(String s) {
         return s == null ? "" : s;
-    }
-
-    // Gradient panel for header
-    private static class GradientPanel extends JPanel {
-        private final Color color1;
-        private final Color color2;
-
-        GradientPanel(Color color1, Color color2) {
-            this.color1 = color1;
-            this.color2 = color2;
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            GradientPaint gp = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
-            g2.setPaint(gp);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-            g2.dispose();
-            super.paintComponent(g);
-        }
-    }
-
-    // Rounded panel for card styling
-    private static class RoundedPanel extends JPanel {
-        private final Color bg;
-        private final int radius;
-
-        RoundedPanel(Color bg, int radius) {
-            this.bg = bg;
-            this.radius = radius;
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(bg);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
-            g2.dispose();
-            super.paintComponent(g);
-        }
     }
 }

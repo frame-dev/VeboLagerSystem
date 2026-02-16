@@ -200,13 +200,13 @@ public class ArticleGUI extends JFrame {
 
                 ArticleManager articleManager = ArticleManager.getInstance();
                 Article article = new Article(
-                        (String) updatedRow[0],
-                        (String) updatedRow[1],
-                        (String) updatedRow[2],
-                        (Integer) updatedRow[3],
-                        (Integer) updatedRow[4],
-                        (Double) updatedRow[5],
-                        (Double) updatedRow[6],
+                        (String) updatedRow[0], // Artikelnummer
+                        (String) updatedRow[1], // Name
+                        (String) updatedRow[2], // Details
+                        (Integer) updatedRow[3], // Lagerbestand
+                        (Integer) updatedRow[4], // Mindestbestand
+                        (Double) updatedRow[5], // Verkaufspreis
+                        (Double) updatedRow[6], // Einkaufspreis
                         (String) updatedRow[7] // lieferant
                 );
 
@@ -972,7 +972,7 @@ public class ArticleGUI extends JFrame {
         }
         if (value instanceof String str) {
             try {
-                return Double.parseDouble(str.trim());
+                return Double.parseDouble(str.trim().replace(" CHF", ""));
             } catch (NumberFormatException ignored) {
                 return null;
             }
