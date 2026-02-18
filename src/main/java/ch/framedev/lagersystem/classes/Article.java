@@ -1,5 +1,7 @@
 package ch.framedev.lagersystem.classes;
 
+import ch.framedev.lagersystem.utils.ArticleUtils;
+
 /**
  * Represents a catalog article with inventory and pricing data.
  */
@@ -125,6 +127,10 @@ public class Article {
     /** @param vendorName vendor or supplier name */
     public void setVendorName(String vendorName) {
         this.vendorName = vendorName;
+    }
+
+    public String getCategory() {
+        return ArticleUtils.getCategoryForArticle(articleNumber);
     }
 
     /**

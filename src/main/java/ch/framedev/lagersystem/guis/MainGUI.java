@@ -249,11 +249,33 @@ public class MainGUI extends JFrame {
         });
         notesButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
+        JButton converterButton = new JButton(UnicodeSymbols.safeSymbol(UnicodeSymbols.CALCULATOR, "CALC", headerButtonFont) + " Einheitenrechner/Befüllungshilfe");
+        styleHeaderButton(converterButton);
+        converterButton.setToolTipText("Einheitenrechner und Befüllungshilfe öffnen");
+        converterButton.addActionListener(e -> {
+            if(articleGUI.getSelectedArticles().isEmpty()) {
+                JOptionPane.showMessageDialog(MainGUI.this, "Keine Artikel gefunden!");
+                return;
+            }
+            List<Article> articles = articleGUI.getSelectedArticles();
+            if(articles.size() == 1) {
+                ConverterGUI converterGUI = new ConverterGUI(articles.getFirst());
+                converterGUI.setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(this, "Mehr als ein Artikel ausgewählt! Es wird der erste Artikel verwendet: " + articles.getFirst().getName());
+                ConverterGUI converterGUI = new ConverterGUI(articles.getFirst());
+                converterGUI.setVisible(true);
+            }
+        });
+        converterButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
         JLabel dateLabel = new JLabel(new SimpleDateFormat("EEEE, dd. MMMM yyyy").format(new Date()));
         dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         dateLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
         dateLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
+        rightPanel.add(converterButton);
+        rightPanel.add(Box.createHorizontalStrut(8));
         rightPanel.add(notesButton);
         rightPanel.add(Box.createHorizontalStrut(8));
         rightPanel.add(settingsButton);

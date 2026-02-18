@@ -106,7 +106,7 @@ public class ArticleDialog {
             return label;
         };
 
-        // Helper method for styling text fields with hover effect
+        // Helper method for styling text fields with a hover effect
         Consumer<JTextField> styleTextField = field -> {
             field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
             field.setBackground(ThemeManager.getInputBackgroundColor());

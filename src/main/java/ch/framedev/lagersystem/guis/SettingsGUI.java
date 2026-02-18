@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.*;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.SettingsUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -89,7 +90,7 @@ public class SettingsGUI extends JFrame {
     private static final boolean DEFAULT_ENABLE_WARNINGS = true;
     private static final boolean DEFAULT_ENABLE_QR_IMPORT = true;
     private static final boolean DEFAULT_DARK_MODE = false;
-    private static final String DEFAULT_FONT_STYLE = "Dialog";
+    public static final String DEFAULT_FONT_STYLE = "Dialog";
     private static final String DEFAULT_SERVER_URL = "https://framedev.ch/vebo/scans.json";
 
     public static int TABLE_FONT_SIZE = 16;
@@ -1043,17 +1044,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private void openSettingsFolder() {
-        File settingsDir = Main.getAppDataDir();
-        try {
-            Desktop.getDesktop().open(settingsDir);
-        } catch (IOException e) {
-            logger.error("Fehler beim Öffnen des Einstellungen-Ordners: {}", e.getMessage());
-            JOptionPane.showMessageDialog(this,
-                    "Fehler beim Öffnen des Einstellungen-Ordners:\n" + e.getMessage(),
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
-            Main.logUtils.addLog("Fehler beim Öffnen des Einstellungen-Ordners: " + e.getMessage());
-        }
+        SettingsUtils.openSettingsFolder(this);
     }
 
     /**
@@ -1118,79 +1109,13 @@ public class SettingsGUI extends JFrame {
      * Creates a modern styled section panel with card-like appearance
      */
     private JPanel createSectionPanel(String title, String description) {
-        RoundedPanel section = getRoundedPanel();
-        section.putClientProperty("searchText", (title + " " + description).toLowerCase());
-        searchableSections.add(section);
-
-        // Header panel with better visual hierarchy
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setOpaque(false);
-        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-
-        JPanel headerLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        headerLeft.setOpaque(false);
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(getFontByName(Font.BOLD, 20));
-        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
-        headerLeft.add(titleLabel);
-        headerPanel.add(headerLeft, BorderLayout.WEST);
-
-        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        headerActions.setOpaque(false);
-        headerPanel.add(headerActions, BorderLayout.EAST);
-        section.putClientProperty("headerActions", headerActions);
-
-        // Description with better formatting
-        JLabel descLabel = new JLabel("<html><div style='line-height: 1.8; color: #6c757d; font-weight: 300;'>" +
-                description + "</div></html>");
-        descLabel.setFont(getFontByName(Font.PLAIN, 13));
-        descLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        descLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
-
-        // Add a subtle separator line
-        JSeparator separator = new JSeparator(JSeparator.HORIZONTAL);
-        separator.setForeground(ThemeManager.getBorderColor());
-        separator.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        separator.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        section.add(headerPanel);
-        section.add(Box.createVerticalStrut(12));
-        section.add(descLabel);
-        section.add(Box.createVerticalStrut(20));
-        section.add(separator);
-        section.add(Box.createVerticalStrut(8));
-
-        return section;
-    }
-
-    private static RoundedPanel getRoundedPanel() {
-        RoundedPanel section = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
-        section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
-
-        // Enhanced shadow and border with depth effect
-        section.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(
-                                new Color(0, 0, 0, 10), 3),
-                        BorderFactory.createEmptyBorder(1, 1, 3, 1)
-                ),
-                BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(28, 32, 28, 32)
-                )
-        ));
-
-        section.setMaximumSize(new Dimension(Integer.MAX_VALUE, 520));
-        section.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return section;
+        return SettingsUtils.createSectionPanel(title, description, searchableSections);
     }
 
     private void addSectionResetButton(JPanel section, Runnable action) {
         Object actions = section.getClientProperty("headerActions");
         if (actions instanceof JPanel panel) {
-            JButton resetButton = createHeaderActionButton("Zuruecksetzen");
+            JButton resetButton = createHeaderActionButton();
             resetButton.addActionListener(e -> action.run());
             panel.add(resetButton);
         }
@@ -1291,8 +1216,8 @@ public class SettingsGUI extends JFrame {
         }
     }
 
-    private JButton createHeaderActionButton(String text) {
-        JButton button = new JButton(text);
+    private JButton createHeaderActionButton() {
+        JButton button = new JButton("Zuruecksetzen");
         button.setFont(getFontByName(Font.PLAIN, 12));
         button.setForeground(ThemeManager.getTextPrimaryColor());
         button.setBackground(ThemeManager.getSurfaceColor());
@@ -1306,7 +1231,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private JPanel createPreviewPanel() {
-        RoundedPanel previewCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
+        SettingsUtils.RoundedPanel previewCard = new SettingsUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
         previewCardPanel = previewCard;
         previewCard.setLayout(new BorderLayout(12, 12));
         previewCard.setBorder(BorderFactory.createCompoundBorder(
@@ -1344,7 +1269,6 @@ public class SettingsGUI extends JFrame {
 
     private void updatePreview() {
         boolean darkMode = darkModeCheckbox != null && darkModeCheckbox.isSelected();
-        Color background = darkMode ? ThemeManager.Dark.BACKGROUND : ThemeManager.Light.BACKGROUND;
         Color card = darkMode ? ThemeManager.Dark.CARD_BACKGROUND : ThemeManager.Light.CARD_BACKGROUND;
         Color text = darkMode ? ThemeManager.Dark.TEXT_PRIMARY : ThemeManager.Light.TEXT_PRIMARY;
         Color secondary = darkMode ? ThemeManager.Dark.TEXT_SECONDARY : ThemeManager.Light.TEXT_SECONDARY;
@@ -1436,7 +1360,7 @@ public class SettingsGUI extends JFrame {
     }
 
     /**
-     * Styles a checkbox with modern appearance and enhanced click area
+     * Styles a checkbox with a modern appearance and enhanced click area
      */
     private void styleCheckbox(JCheckBox checkbox) {
         checkbox.setFont(getFontByName(Font.PLAIN, 14));
@@ -2494,38 +2418,6 @@ public class SettingsGUI extends JFrame {
         label.setForeground(ThemeManager.getTextSecondaryColor());
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         return label;
-    }
-
-    /**
-     * Rounded panel for modern card design with enhanced shadow
-     */
-    private static class RoundedPanel extends JPanel {
-        private final Color backgroundColor;
-        private final int radius;
-
-        RoundedPanel(Color bg, int radius) {
-            this.backgroundColor = bg;
-            this.radius = radius;
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-            // Draw subtle shadow
-            g2.setColor(new Color(0, 0, 0, 15));
-            g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, radius, radius);
-
-            // Draw main card
-            g2.setColor(backgroundColor);
-            g2.fillRoundRect(0, 0, getWidth() - 2, getHeight() - 2, radius, radius);
-
-            g2.dispose();
-            super.paintComponent(g);
-        }
     }
 
     private static void importFromCsv() {

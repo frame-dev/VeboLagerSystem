@@ -44,7 +44,7 @@ public class Main {
         try {
             // Initialize application
             printStartupInfo();
-            // Start Splashscreen and initialization in background
+            // Start the Splashscreen and initialization in the background
             SplashscreenGUI splashscreen = createAndShowSplashscreen();
             startInitializationWithSplashscreen(splashscreen);
 
@@ -198,7 +198,7 @@ public class Main {
     }
 
     /**
-     * Create a scaled ImageIcon from resource file
+     * Create a scaled ImageIcon from a resource file
      */
     private static ImageIcon createScaledIcon(SimpleJavaUtils utils, String resourceName, int width, int height) throws MalformedURLException {
         try {
@@ -271,7 +271,7 @@ public class Main {
         ArticleManager articleManager = ArticleManager.getInstance();
         List<Map<String, Object>> data = importUtils.loadInventoryFile();
 
-        System.out.println("\n📦 Importiere " + data.size() + " Artikel...");
+        System.out.println("\nImportiere " + data.size() + " Artikel...");
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : data) {
@@ -415,7 +415,7 @@ public class Main {
         DepartmentManager departmentManager = DepartmentManager.getInstance();
         List<Map<String, Object>> departmentData = importUtils.loadDepartmentsList();
 
-        System.out.println("\n🏢 Importiere " + departmentData.size() + " Abteilungen...");
+        System.out.println("\nImportiere " + departmentData.size() + " Abteilungen...");
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : departmentData) {

@@ -66,12 +66,12 @@ public class ArticleGUI extends JFrame {
     private Map<String, CategoryRange> categories; // category name -> range
 
     // Inner class to hold category range data
-    private static class CategoryRange {
-        String category;
-        int rangeStart;
-        int rangeEnd;
+    public static class CategoryRange {
+        public String category;
+        public int rangeStart;
+        public int rangeEnd;
 
-        CategoryRange(String category, int start, int end) {
+        public CategoryRange(String category, int start, int end) {
             this.category = category;
             this.rangeStart = start;
             this.rangeEnd = end;
