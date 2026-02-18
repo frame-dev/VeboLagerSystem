@@ -30,6 +30,13 @@ public final class ArticleExporter {
     private ArticleExporter() {
     }
 
+    /**
+     * Exports the contents of a JTable to a PDF file, allowing the user to choose the save location and file name. The PDF will include a header with the title and export date, a table with the article data, and a footer with page numbers and total article count.
+     * @param parent The parent component for the file chooser dialog
+     * @param table The JTable containing the article data to be exported
+     * @param baseColumnWidths An array of integers representing the base widths for each column, which will be used to calculate proportional column widths in the PDF. If the array has fewer entries than the number of columns in the table, default widths will be used for the remaining columns.
+     * @param icon An Icon to be used in error messages if the export process fails. This can be null if no icon is desired.
+     */
     public static void exportTableAsPdf(Component parent, JTable table, int[] baseColumnWidths, Icon icon) {
         if (table == null) {
             return;
@@ -56,7 +63,7 @@ public final class ArticleExporter {
 
             final boolean useWinAnsiFallback =
                     boldFont.getClass().getSimpleName().contains("PDType1Font") ||
-                    regularFont.getClass().getSimpleName().contains("PDType1Font");
+                            regularFont.getClass().getSimpleName().contains("PDType1Font");
 
             // Page setup - Use A4 landscape for all columns to fit
             PDRectangle pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()); // Landscape
@@ -269,6 +276,11 @@ public final class ArticleExporter {
         }
     }
 
+    /**
+     * Sanitizes a string to ensure it only contains characters that can be represented in WinAnsi encoding.
+     * @param text The input text to sanitize
+     * @return A sanitized version of the input text, where characters that cannot be represented in WinAnsi are removed. If the input text is null or empty, an empty string is returned.
+     */
     public static String sanitizeForWinAnsi(String text) {
         if (text == null || text.isEmpty()) {
             return "";
@@ -288,7 +300,7 @@ public final class ArticleExporter {
         PDFont regular = null;
         PDFont bold = null;
 
-        String[] regularCandidates = new String[] {
+        String[] regularCandidates = new String[]{
                 "/Library/Fonts/Arial.ttf",
                 "/System/Library/Fonts/Supplemental/Arial.ttf",
                 "C:/Windows/Fonts/arial.ttf",
@@ -297,7 +309,7 @@ public final class ArticleExporter {
                 "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf"
         };
 
-        String[] boldCandidates = new String[] {
+        String[] boldCandidates = new String[]{
                 "/Library/Fonts/Arial Bold.ttf",
                 "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
                 "C:/Windows/Fonts/arialbd.ttf",
@@ -361,9 +373,20 @@ public final class ArticleExporter {
             regular = bold;
         }
 
-        return new PDFont[] { bold, regular };
+        return new PDFont[]{bold, regular};
     }
 
+    /**
+     * Generates a PDF file representing an order, including sender and receiver information, department, and a list of ordered articles with their quantities and prices.
+     * @param file The file to which the PDF will be saved
+     * @param senderNameCombobox A JComboBox containing the sender's name (selected item will be used)
+     * @param senderKontoField A JTextField containing the sender's account information
+     * @param receiverNameCombobox A JComboBox containing the receiver's name (selected item will be used)
+     * @param receiverKontoField A JTextField containing the receiver's account information
+     * @param departmentList A JComboBox containing the department information (selected item will be used)
+     * @param orderArticles A Map of Article objects to their ordered quantities, representing the articles included in the order
+     * @throws IOException If an error occurs during PDF generation or saving the file
+     */
     @SuppressWarnings("deprecation")
     public static void exportOrderToPDF(File file, JComboBox<String> senderNameCombobox, JTextField senderKontoField, JComboBox<String> receiverNameCombobox, JTextField receiverKontoField, JComboBox<String> departmentList, Map<Article, Integer> orderArticles) throws IOException {
         try (PDDocument doc = new PDDocument()) {
@@ -601,6 +624,11 @@ public final class ArticleExporter {
         }
     }
 
+    /**
+     * Safely retrieves the selling price of an article, returning 0.0 if any exceptions occur (e.g., method not found).
+     * @param a The article for which to retrieve the selling price
+     * @return The selling price of the article, or 0.0 if it cannot be retrieved due to an exception
+     */
     private static double safePrice(Article a) {
         try {
             return a.getSellPrice();
@@ -609,6 +637,12 @@ public final class ArticleExporter {
         }
     }
 
+    /**
+     * Sanitizes a string to ensure it only contains characters that can be represented in WinAnsi encoding.
+     * @param text The input text to sanitize
+     * @param useWinAnsiFallback Whether to perform the sanitization. If false, the original text is returned without modification.
+     * @return A sanitized version of the input text, where characters that cannot be represented in WinAnsi are removed if useWinAnsiFallback is true. If useWinAnsiFallback is false, the original text is returned unchanged.
+     */
     private static String sanitizeForWinAnsi(String text, boolean useWinAnsiFallback) {
         if (!useWinAnsiFallback || text == null || text.isEmpty()) {
             return text == null ? "" : text;
@@ -624,6 +658,10 @@ public final class ArticleExporter {
         return sb.toString();
     }
 
+    /**
+     * Exports the given list of articles to a PDF file, prompting the user for the save location.
+     * @param articles Die Liste der Artikel, die exportiert werden sollen
+     */
     public static void exportArticlesToPdf(java.util.List<Article> articles) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("PDF Speichern");
@@ -694,6 +732,16 @@ public final class ArticleExporter {
         }
     }
 
+    /**
+     * Wraps a single line of text into multiple lines based on the specified font, font size, and maximum width.
+     *
+     * @param text     The text to wrap
+     * @param font     The PDFont used to measure text width
+     * @param fontSize The font size used for the text, needed to calculate the width in user space units
+     * @param maxWidth The maximum width in user space units that a line can occupy before wrapping
+     * @return A list of strings, each representing a line of wrapped text that fits within the specified width
+     * @throws IOException If an error occurs while measuring text width with the PDFont
+     */
     private static List<String> wrapLine(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
         List<String> lines = new ArrayList<>();
         if (text == null) {
@@ -717,6 +765,11 @@ public final class ArticleExporter {
         return lines;
     }
 
+    /**
+     * Exports the given list of articles to a CSV file, prompting the user for the save location.
+     *
+     * @param articles Die Liste der Artikel, die exportiert werden sollen
+     */
     public static void exportArticlesToCsv(List<Article> articles) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("CSV Speichern");
@@ -766,6 +819,12 @@ public final class ArticleExporter {
         }
     }
 
+    /**
+     * Escapes a value for CSV output, adding quotes if necessary and doubling internal quotes.
+     *
+     * @param value The value to escape
+     * @return The escaped value, ready for CSV output
+     */
     private static String escapeCsv(String value) {
         if (value == null) {
             return "";

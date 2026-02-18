@@ -23,7 +23,7 @@ public class ArticleUtils {
     private static Map<String, ArticleGUI.CategoryRange> categories; // category name -> range
 
     /**
-     * Load categories from categories.json resource file
+     * Load categories from the categories.json resource file
      */
     private static void loadCategories() {
         categories = new HashMap<>();
@@ -69,7 +69,9 @@ public class ArticleUtils {
     }
 
     /**
-     * Get category for an article based on its article number
+     * Get a category for a given article number based on loaded categories and their ranges
+     * @param articleNumber Article number to find a category for (e.g., "1101-ABC")
+     * @return Category name if found, otherwise "Unbekannt"
      */
     public static String getCategoryForArticle(String articleNumber) {
         loadCategories();
@@ -99,13 +101,27 @@ public class ArticleUtils {
         return "Unbekannt";
     }
 
-    // 10l = 25.54 CHF fill to 750ml
+    /**
+     * Calculate price for filling based on sell price, liter information and filling amount
+     * @param sellPrice Sell price of the article (e.g., 25.54 CHF)
+     * @param liter Liter information from article details (e.g., 10 for "10 lt.")
+     * @param fillingAmount Amount to fill (e.g., 750 for 750ml)
+     * @param unit Unit of filling amount (LITER or MILLILITER)
+     * @return Calculated price for filling
+     */
     public static double calculatePriceForFilling(double sellPrice, double liter, double fillingAmount, VolumeUnit unit) {
         double pricePerLitre = sellPrice / liter;
         double fillingAmountInLitres = (unit == VolumeUnit.LITER) ? fillingAmount : fillingAmount / 1000.0;
         return pricePerLitre * fillingAmountInLitres;
     }
 
+    /**
+     * Calculate price for filling based on article details (must contain liter information)
+     * @param article Article to calculate price for
+     * @param fillingAmount Amount to fill (e.g., 750 for 750ml)
+     * @param unit Unit of filling amount (LITER or MILLILITER)
+     * @return Calculated price for filling
+     */
     public static double calculatePriceForFilling(Article article, double fillingAmount, VolumeUnit unit) {
         String details = article.getDetails();
         String category = getCategoryForArticle(article.getArticleNumber()); // Get main category (e.g., "Reinigungsmittel" from "Reinigungsmittel - Geschirrreiniger")
