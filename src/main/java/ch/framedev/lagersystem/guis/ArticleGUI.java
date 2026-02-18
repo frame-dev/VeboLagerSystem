@@ -20,10 +20,7 @@ import javax.swing.table.*;
 import javax.swing.text.NumberFormatter;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.NumberFormat;
@@ -1467,11 +1464,7 @@ public class ArticleGUI extends JFrame {
     private void loadCategories() {
         categories = new HashMap<>();
         try {
-            InputStream is = getClass().getResourceAsStream("/categories.json");
-            if (is == null) {
-                System.err.println("categories.json not found in resources");
-                return;
-            }
+            InputStream is = new FileInputStream(new File(Main.getAppDataDir(), "categories.json"));
 
             Gson gson = new Gson();
             java.lang.reflect.Type listType = new TypeToken<List<Map<String, String>>>() {

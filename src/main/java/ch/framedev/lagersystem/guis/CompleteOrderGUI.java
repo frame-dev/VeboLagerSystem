@@ -324,7 +324,6 @@ public class CompleteOrderGUI extends JFrame {
 
         Order selected = item.order;
 
-        // Confirmation FIRST
         int res = JOptionPane.showConfirmDialog(this,
                 "Möchten Sie die Bestellung " + safe(selected.getOrderId()) + " abschließen?\n" +
                         "Der Lagerbestand wird entsprechend reduziert.",
@@ -334,13 +333,11 @@ public class CompleteOrderGUI extends JFrame {
 
         if (res != JOptionPane.YES_OPTION) return;
 
-        // Resolve articles
         List<Article> articles = selected.getOrderedArticles().keySet().stream()
                 .map(s -> ArticleManager.getInstance().getArticleByNumber(s))
                 .filter(Objects::nonNull)
                 .toList();
 
-        // Build warnings + shortages (now includes "Wird geliefert")
         List<String> warnings = new ArrayList<>();
         List<String> shortages = new ArrayList<>();
 
@@ -375,31 +372,38 @@ public class CompleteOrderGUI extends JFrame {
             }
         }
 
-        // If shortages exist -> offer PARTIAL fulfillment
+        // ---------- NEW: open PartialOrderGUI instead of immediate partial completion ----------
         if (!shortages.isEmpty()) {
             StringBuilder msg = new StringBuilder("<html><b>WARNUNG: Nicht genügend Lagerbestand!</b><br/><br/>");
             msg.append("Folgende Artikel können nicht vollständig geliefert werden:<br/><br/>");
             shortages.forEach(s -> msg.append(s).append("<br/>"));
-            msg.append("<br/><b>Optionen:</b><br/>");
-            msg.append("- <b>Ja</b>: Teil-Lieferung durchführen (Fehlmenge wird protokolliert)<br/>");
-            msg.append("- <b>Nein</b>: Vorgang abbrechen</html>");
+            msg.append("<br/>Möchten Sie die Teilbestellung jetzt vervollständigen?</html>");
 
             int choice = JOptionPane.showConfirmDialog(this,
                     msg.toString(),
-                    "Unzureichender Lagerbestand",
+                    "Teilbestellung",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.WARNING_MESSAGE,
                     Main.iconSmall);
 
             if (choice != JOptionPane.YES_OPTION) return;
 
-            // Partial fulfillment
-            completeOrderWithPartialStock(selected, articles);
-            refreshList();
+            // Open the new GUI
+            PartialOrderGUI gui = new PartialOrderGUI(selected);
+            gui.setVisible(true);
+
+            // After closing partial GUI, refresh list (window listener)
+            gui.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowClosed(java.awt.event.WindowEvent e) {
+                    refreshList();
+                }
+            });
+
             return;
         }
+        // -------------------------------------------------------------------------------------
 
-        // No shortages -> but maybe warnings (min stock)
         if (!warnings.isEmpty()) {
             StringBuilder msg = new StringBuilder("<html><b>WARNUNG: Mindestbestand wird unterschritten!</b><br/><br/>");
             warnings.forEach(warn -> msg.append(warn).append("<br/>"));
@@ -409,7 +413,6 @@ public class CompleteOrderGUI extends JFrame {
             if (warnRes != JOptionPane.YES_OPTION) return;
         }
 
-        // Full fulfillment
         ArticleManager articleManager = ArticleManager.getInstance();
         boolean allStockUpdated = true;
 
@@ -421,10 +424,8 @@ public class CompleteOrderGUI extends JFrame {
             }
         }
 
-        // Update user + log
         updateUserAndLog(selected);
 
-        // Update order
         selected.setStatus("Abgeschlossen");
         boolean updated = OrderManager.getInstance().updateOrder(selected);
 
@@ -451,109 +452,6 @@ public class CompleteOrderGUI extends JFrame {
         }
 
         refreshList();
-    }
-
-    /**
-     * Completes an order with partial stock fulfillment.
-     * Deducts available stock and logs items that need to be ordered.
-     */
-    private void completeOrderWithPartialStock(Order selected, List<Article> articles) {
-        ArticleManager articleManager = ArticleManager.getInstance();
-
-        List<String> fulfilledItems = new ArrayList<>();
-        List<String> partialItems = new ArrayList<>();
-        List<String> unfulfillableItems = new ArrayList<>();
-
-        StringBuilder orderNotes = new StringBuilder();
-        orderNotes.append("Teilweise abgeschlossen - Fehlmengen:\n");
-
-        boolean hasPartialFulfillment = false;
-
-        for (Article article : articles) {
-            int qtyOrdered = selected.getOrderedArticles().get(article.getArticleNumber());
-            int currentStock = article.getStockQuantity();
-
-            if (currentStock >= qtyOrdered) {
-                if (articleManager.removeFromStock(article.getArticleNumber(), qtyOrdered)) {
-                    fulfilledItems.add(String.format("%s: %d/%d", safe(article.getName()), qtyOrdered, qtyOrdered));
-                } else {
-                    System.err.println("[CompleteOrderGUI] Fehler beim Reduzieren des Lagerbestands für: " + article.getArticleNumber());
-                }
-            } else if (currentStock > 0) {
-                int shortage = qtyOrdered - currentStock;
-                if (articleManager.removeFromStock(article.getArticleNumber(), currentStock)) {
-                    partialItems.add(String.format("%s: %d/%d (Fehlmenge: %d)",
-                            safe(article.getName()), currentStock, qtyOrdered, shortage));
-                    orderNotes.append(String.format("- %s (%s): %d Stück fehlen\n",
-                            safe(article.getName()), safe(article.getArticleNumber()), shortage));
-                    hasPartialFulfillment = true;
-                }
-            } else {
-                unfulfillableItems.add(String.format("%s: 0/%d (Komplett fehlend)",
-                        safe(article.getName()), qtyOrdered));
-                orderNotes.append(String.format("- %s (%s): %d Stück fehlen (kein Bestand)\n",
-                        safe(article.getName()), safe(article.getArticleNumber()), qtyOrdered));
-                hasPartialFulfillment = true;
-            }
-        }
-
-        // Update order status
-        selected.setStatus(hasPartialFulfillment ? "Teilweise abgeschlossen" : "Abgeschlossen");
-        boolean updatedOrder = OrderManager.getInstance().updateOrder(selected);
-
-        // Update user + log (still log partial completion)
-        updateUserAndLog(selected);
-
-        StringBuilder resultMsg = new StringBuilder("<html><b>Bestellung verarbeitet!</b><br/><br/>");
-        resultMsg.append("<b>Bestell-ID:</b> ").append(safe(selected.getOrderId())).append("<br/><br/>");
-
-        if (!fulfilledItems.isEmpty()) {
-            resultMsg.append("<b style='color:green;'>OK Vollständig erfüllt:</b><br/>");
-            fulfilledItems.forEach(item -> resultMsg.append("  ").append(item).append("<br/>"));
-            resultMsg.append("<br/>");
-        }
-
-        if (!partialItems.isEmpty()) {
-            resultMsg.append("<b style='color:orange;'>⚠ Teilweise erfüllt:</b><br/>");
-            partialItems.forEach(item -> resultMsg.append("  ").append(item).append("<br/>"));
-            resultMsg.append("<br/>");
-        }
-
-        if (!unfulfillableItems.isEmpty()) {
-            resultMsg.append("<b style='color:red;'>✕ Nicht erfüllt:</b><br/>");
-            unfulfillableItems.forEach(item -> resultMsg.append("  ").append(item).append("<br/>"));
-            resultMsg.append("<br/>");
-        }
-
-        if (hasPartialFulfillment) {
-            resultMsg.append("<br/><b style='color:red;'>WICHTIG:</b> Fehlende Artikel müssen nachbestellt werden!<br/>");
-            resultMsg.append("<b>Status:</b> Teilweise abgeschlossen<br/>");
-        } else {
-            resultMsg.append("<b>Status:</b> Abgeschlossen<br/>");
-        }
-
-        resultMsg.append("</html>");
-
-        if (updatedOrder) {
-            JOptionPane.showMessageDialog(this,
-                    resultMsg.toString(),
-                    "Bestellung verarbeitet",
-                    hasPartialFulfillment ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
-
-            if (hasPartialFulfillment) {
-                System.out.println("[CompleteOrderGUI] Bestellung " + safe(selected.getOrderId()) + " teilweise abgeschlossen:");
-                System.out.println(orderNotes);
-            }
-        } else {
-            JOptionPane.showMessageDialog(this,
-                    "<html><b>Warnung:</b><br/><br/>" +
-                            "Lagerbestände wurden teilweise aktualisiert, aber der Bestellstatus konnte nicht aktualisiert werden.<br/>" +
-                            "Bitte überprüfen Sie die Bestellung manuell.</html>",
-                    "Teilweise erfolgreich",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
-        }
     }
 
     private void updateUserAndLog(Order selected) {
@@ -683,22 +581,17 @@ public class CompleteOrderGUI extends JFrame {
         private final Border padding;
 
         OrderListCellRenderer() {
-            setLayout(new BorderLayout(10, 5));
+            setLayout(new BorderLayout(10, 6));
             setOpaque(true);
 
-            padding = BorderFactory.createEmptyBorder(8, 12, 8, 12);
+            // a bit more breathing room on left/right
+            padding = BorderFactory.createEmptyBorder(10, 12, 10, 12);
 
             idLabel = new JLabel();
             idLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
 
-            JPanel infoPanel = new JPanel(new GridLayout(2, 1, 0, 2));
-            infoPanel.setOpaque(false);
-
             nameLabel = new JLabel();
             nameLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-
-            JPanel bottomRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-            bottomRow.setOpaque(false);
 
             deptLabel = new JLabel();
             deptLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
@@ -706,18 +599,45 @@ public class CompleteOrderGUI extends JFrame {
             dateLabel = new JLabel();
             dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
 
-            JLabel sep = new JLabel("|");
+            // --- Center stack (name + meta row) -----------------------------------
+            JPanel center = new JPanel();
+            center.setOpaque(false);
+            center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
+            center.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+
+            // keep labels aligned nicely
+            nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            JPanel metaRow = new JPanel();
+            metaRow.setOpaque(false);
+            metaRow.setLayout(new BoxLayout(metaRow, BoxLayout.X_AXIS));
+            metaRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            JLabel sep = new JLabel("•"); // cleaner than "|"
+            sep.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
             sep.setForeground(ThemeManager.getTextSecondaryColor());
 
-            bottomRow.add(deptLabel);
-            bottomRow.add(sep);
-            bottomRow.add(dateLabel);
+            deptLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            dateLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-            infoPanel.add(nameLabel);
-            infoPanel.add(bottomRow);
+            // ensure meta labels don't collapse in BoxLayout
+            deptLabel.setMinimumSize(deptLabel.getPreferredSize());
+            dateLabel.setMinimumSize(dateLabel.getPreferredSize());
 
+            metaRow.add(deptLabel);
+            metaRow.add(Box.createHorizontalStrut(8));
+            metaRow.add(sep);
+            metaRow.add(Box.createHorizontalStrut(8));
+            metaRow.add(dateLabel);
+            metaRow.add(Box.createHorizontalGlue()); // pushes content left
+
+            center.add(nameLabel);
+            center.add(Box.createVerticalStrut(4));
+            center.add(metaRow);
+
+            // --- Assemble ----------------------------------------------------------
             add(idLabel, BorderLayout.NORTH);
-            add(infoPanel, BorderLayout.CENTER);
+            add(center, BorderLayout.CENTER);
         }
 
         @Override
@@ -727,16 +647,19 @@ public class CompleteOrderGUI extends JFrame {
 
             Order order = value.order;
 
-            idLabel.setText(UnicodeSymbols.INFO + " " + safe(order.getOrderId()));
-            nameLabel.setText("Empfänger: " + safe(order.getReceiverName()));
-            deptLabel.setText(UnicodeSymbols.DEPARTMENT + " " + safe(order.getDepartment()));
-            dateLabel.setText(UnicodeSymbols.CALENDAR + " " + safe(order.getOrderDate()));
-
             Color bg = ThemeManager.getCardBackgroundColor();
             Color fg = ThemeManager.getTextPrimaryColor();
             Color muted = ThemeManager.getTextSecondaryColor();
             Color divider = ThemeManager.getDividerColor();
             Color accent = ThemeManager.getAccentColor();
+
+            idLabel.setText(UnicodeSymbols.INFO + " " + safe(order.getOrderId()));
+
+            String receiver = safe(order.getReceiverName());
+            nameLabel.setText("<html><b>Empfänger:</b> " + escapeHtml(receiver) + "</html>");
+
+            deptLabel.setText(UnicodeSymbols.DEPARTMENT + " " + safe(order.getDepartment()));
+            dateLabel.setText(UnicodeSymbols.CALENDAR + " " + safe(order.getOrderDate()));
 
             idLabel.setForeground(accent);
             nameLabel.setForeground(fg);
@@ -744,7 +667,7 @@ public class CompleteOrderGUI extends JFrame {
             dateLabel.setForeground(muted);
 
             setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(1, 0, 1, 0, divider),
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, divider),
                     padding
             ));
 
@@ -757,9 +680,15 @@ public class CompleteOrderGUI extends JFrame {
             } else {
                 setBackground(bg);
             }
-            // ensure enough height, but still allows larger if needed
-            setPreferredSize(new Dimension(list.getWidth(), 72));
+
             return this;
+        }
+
+        private static String escapeHtml(String s) {
+            return s == null ? "" : s
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;");
         }
     }
 }

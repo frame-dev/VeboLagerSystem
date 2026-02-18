@@ -4,9 +4,12 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.guis.ArticleGUI;
 import ch.framedev.lagersystem.main.Main;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 import javax.swing.*;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -20,19 +23,15 @@ public class ArticleUtils {
         LITER, MILLILITER
     }
 
-    private static Map<String, ArticleGUI.CategoryRange> categories; // category name -> range
+    public static Map<String, ArticleGUI.CategoryRange> categories; // category name -> range
 
     /**
      * Load categories from the categories.json resource file
      */
-    private static void loadCategories() {
+    public static void loadCategories() {
         categories = new HashMap<>();
         try {
-            InputStream is = ArticleUtils.class.getResourceAsStream("/categories.json");
-            if (is == null) {
-                System.err.println("categories.json not found in resources");
-                return;
-            }
+            InputStream is = new FileInputStream(new File(Main.getAppDataDir(), "categories.json"));
 
             Gson gson = new Gson();
             java.lang.reflect.Type listType = new TypeToken<List<Map<String, String>>>() {
@@ -65,6 +64,38 @@ public class ArticleUtils {
         } catch (Exception e) {
             System.err.println("Error loading categories: " + e.getMessage());
             JOptionPane.showMessageDialog(null, "Fehler beim Laden der Kategorien: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+        }
+    }
+
+    public static void addNewCategory(String categoryName, int rangeStart, int rangeEnd) {
+        if (categories == null) {
+            loadCategories();
+        }
+        categories.put(categoryName, new ArticleGUI.CategoryRange(categoryName, rangeStart, rangeEnd));
+        saveCategories();
+    }
+
+    private static void saveCategories() {
+        if (categories == null) {
+            return;
+        }
+        try {
+            List<Map<String, String>> categoryList = categories.values().stream().map(range -> {
+                Map<String, String> map = new HashMap<>();
+                map.put("category", range.category);
+                map.put("fromTo", range.rangeStart == range.rangeEnd ? String.valueOf(range.rangeStart) : range.rangeStart + " - " + range.rangeEnd);
+                return map;
+            }).toList();
+
+            Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
+            String json = gson.toJson(categoryList);
+
+            File outFile = new File(Main.getAppDataDir(), "categories.json");
+            java.nio.file.Files.writeString(outFile.toPath(), json, StandardCharsets.UTF_8);
+
+        } catch (Exception e) {
+            System.err.println("Error saving categories: " + e.getMessage());
+            JOptionPane.showMessageDialog(null, "Fehler beim Speichern der Kategorien: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
         }
     }
 

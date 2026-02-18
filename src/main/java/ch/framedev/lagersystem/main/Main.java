@@ -16,7 +16,9 @@ import org.apache.logging.log4j.Logger;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
 import java.net.MalformedURLException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -629,6 +631,16 @@ public class Main {
         applyThemeSettings();
         applyTableFontSettings();
         loadGitHubToken();
+        SimpleJavaUtils utils = new SimpleJavaUtils();
+        try {
+            if(!new File(getAppDataDir(), "categories.json").exists()) {
+                Files.copy(utils.getFromResourceFile("categories.json", Main.class).toPath(),
+                        new File(getAppDataDir(), "categories.json").toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**

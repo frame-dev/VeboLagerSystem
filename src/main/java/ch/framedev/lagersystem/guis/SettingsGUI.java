@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.*;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.SettingsUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.LogManager;
@@ -31,6 +32,8 @@ import java.util.List;
 
 import static ch.framedev.lagersystem.main.Main.databaseManager;
 import static ch.framedev.lagersystem.main.Main.settings;
+import static ch.framedev.lagersystem.utils.ArticleUtils.categories;
+import static ch.framedev.lagersystem.utils.ArticleUtils.loadCategories;
 
 /**
  * Moderne Einstellungen-GUI für das VEBO Lagersystem
@@ -282,8 +285,113 @@ public class SettingsGUI extends JFrame {
         qrCodeOptionsPanel.add(qrIntervalPanel);
 
         systemPanel.add(qrCodeOptionsPanel);
-
         systemPanel.add(Box.createVerticalStrut(25));
+
+        JPanel categoryPanel = createSectionPanel("Kategorien", "Einstellungen zu verschiedenen Kategorien");
+        JLabel categoryInfoLabel = createInfoLabel("Hier können Sie die verschiedenen Kategorien anpassen.");
+
+        JButton categorySettingsFileButton = createStyledButton(
+                UnicodeSymbols.FOLDER + " Kategorien Datei öffnen",
+                new Color(52, 152, 219)
+        );
+        categorySettingsFileButton.addActionListener(e -> openCategorySettingsFile());
+
+        categoryPanel.add(categoryInfoLabel);
+        categoryPanel.add(Box.createVerticalStrut(10));
+        categoryPanel.add(categorySettingsFileButton);
+        categoryPanel.add(Box.createVerticalStrut(18));
+
+// ---- Add Category Form -----------------------------------------------------
+
+        JLabel categoryNameLabel = new JLabel("Kategoriename:");
+        categoryNameLabel.setFont(getFontByName(Font.BOLD, 13));
+        categoryNameLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JTextField categoryNameField = new JTextField();
+        styleInputField(categoryNameField);
+
+        JTextField fromRange = new JTextField();
+        styleInputField(fromRange);
+        fromRange.setToolTipText("Von (z.B. 100)");
+
+        JTextField toRange = new JTextField();
+        styleInputField(toRange);
+        toRange.setToolTipText("Bis (z.B. 200)");
+
+        JButton addCategoryButton = createStyledButton(
+                UnicodeSymbols.PLUS + " Hinzufügen",
+                new Color(46, 204, 113)
+        );
+
+        addCategoryButton.addActionListener(e -> {
+            String newCategory = categoryNameField.getText().trim();
+            String from = fromRange.getText().trim();
+            String to = toRange.getText().trim();
+
+            if (newCategory.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Bitte einen Kategorienamen eingeben.", "Hinweis",
+                        JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+                return;
+            }
+
+            // Optional: validate ranges if you need them numeric
+            if (!from.isEmpty() || !to.isEmpty()) {
+                try {
+                    int f = from.isEmpty() ? Integer.MIN_VALUE : Integer.parseInt(from);
+                    int t = to.isEmpty() ? Integer.MAX_VALUE : Integer.parseInt(to);
+                    if (f > t) throw new NumberFormatException();
+                    addNewCategory(newCategory, f, t); // adapt to your method
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Ungültiger Bereich (Von/Bis).", "Fehler",
+                            JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                    return;
+                }
+            }
+            categoryNameField.setText("");
+            fromRange.setText("");
+            toRange.setText("");
+        });
+
+// Layout panel
+        JPanel addCategoryPanel = new JPanel(new GridBagLayout());
+        addCategoryPanel.setOpaque(false);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 4;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(0, 0, 8, 0);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        addCategoryPanel.add(categoryNameLabel, gbc);
+
+// Row: Name | Von | Bis | Button
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
+        gbc.insets = new Insets(0, 0, 0, 10);
+        gbc.weightx = 1.0;
+        gbc.gridx = 0;
+        addCategoryPanel.add(categoryNameField, gbc);
+
+        gbc.weightx = 0.0;
+        gbc.gridx = 1;
+        fromRange.setPreferredSize(new Dimension(90, 36));
+        addCategoryPanel.add(fromRange, gbc);
+
+        gbc.gridx = 2;
+        toRange.setPreferredSize(new Dimension(90, 36));
+        addCategoryPanel.add(toRange, gbc);
+
+        gbc.insets = new Insets(0, 0, 0, 0);
+        gbc.gridx = 3;
+        addCategoryButton.setPreferredSize(new Dimension(150, 36));
+        addCategoryPanel.add(addCategoryButton, gbc);
+
+        categoryPanel.add(addCategoryPanel);
+
+// finally add to system panel
+        systemPanel.add(categoryPanel);
 
 
         // === CATEGORY 1b: Darstellung ===
@@ -462,7 +570,6 @@ public class SettingsGUI extends JFrame {
         deleteOldLogsButton.addActionListener(e -> deleteOldLogs());
         otherSection.add(Box.createVerticalStrut(10));
         otherSection.add(deleteOldLogsButton);
-
 
 
         systemPanel.add(otherSection);
@@ -722,6 +829,7 @@ public class SettingsGUI extends JFrame {
                 appNameLabel.setForeground(ThemeManager.getTitleTextHighlightColor());
                 appNameLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
             }
+
             @Override
             public void mouseExited(MouseEvent e) {
                 appNameLabel.setForeground(ThemeManager.getTitleTextColor());
@@ -754,9 +862,9 @@ public class SettingsGUI extends JFrame {
 
         JTextArea descriptionArea = new JTextArea(
                 "VEBO Lagersystem ist eine moderne Lagerverwaltungssoftware für die effiziente " +
-                "Verwaltung von Artikeln, Bestellungen, Lieferanten und Kunden. Die Anwendung " +
-                "bietet umfangreiche Funktionen für die Bestandsverwaltung, automatische Warnungen " +
-                "bei niedrigem Lagerbestand und QR-Code-basierte Artikelerfassung."
+                        "Verwaltung von Artikeln, Bestellungen, Lieferanten und Kunden. Die Anwendung " +
+                        "bietet umfangreiche Funktionen für die Bestandsverwaltung, automatische Warnungen " +
+                        "bei niedrigem Lagerbestand und QR-Code-basierte Artikelerfassung."
         );
         descriptionArea.setWrapStyleWord(true);
         descriptionArea.setLineWrap(true);
@@ -949,6 +1057,58 @@ public class SettingsGUI extends JFrame {
         loadSettings();
     }
 
+    private void styleInputField(JTextField field) {
+        field.setFont(getFontByName(Font.PLAIN, 13));
+        field.setBackground(ThemeManager.getInputBackgroundColor());
+        field.setForeground(ThemeManager.getTextPrimaryColor());
+        field.setCaretColor(ThemeManager.getTextPrimaryColor());
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+    }
+
+    private void addNewCategory(String newCategory, int from, int to) {
+        loadCategories();
+        if (newCategory == null || newCategory.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Der Kategoriename darf nicht leer sein.",
+                    "Ungültiger Name",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (categories.containsKey(newCategory)) {
+            JOptionPane.showMessageDialog(this,
+                    "Diese Kategorie existiert bereits.",
+                    "Kategorie existiert",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        ArticleUtils.addNewCategory(newCategory, from, to);
+        loadCategories();
+    }
+
+    private void openCategorySettingsFile() {
+        File file = new File(Main.getAppDataDir(), "categories.json");
+        try {
+            if (!file.exists()) {
+                file.createNewFile();
+                try (FileWriter writer = new FileWriter(file)) {
+                    writer.write("{}");
+                }
+            }
+            Desktop.getDesktop().edit(file);
+        } catch (IOException e) {
+            logger.error("Fehler beim Öffnen der Kategorien-Datei: {}", e.getMessage());
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim Öffnen der Kategorien-Datei:\n" + e.getMessage(),
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
+            Main.logUtils.addLog("Fehler beim Öffnen der Kategorien-Datei: " + e.getMessage());
+        }
+    }
+
     private void deleteOldLogs() {
         ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager.getInstance();
         int deletedCount = logManager.deleteOldLogs(30);
@@ -1020,7 +1180,7 @@ public class SettingsGUI extends JFrame {
                     JOptionPane.INFORMATION_MESSAGE);
         }
         ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager.getInstance();
-        if(logManager.clearAllLogs()) {
+        if (logManager.clearAllLogs()) {
             logger.info("Alle Protokolle wurden erfolgreich aus der Datenbank gelöscht.");
             Main.logUtils.addLog("Alle Protokolle wurden erfolgreich aus der Datenbank gelöscht.");
         } else {
@@ -1564,7 +1724,7 @@ public class SettingsGUI extends JFrame {
                 tabFontSlider.setValue(fontSizeTab);
 
                 String fontStyle = Main.settings.getProperty("font_style");
-                if(fontStyle != null) {
+                if (fontStyle != null) {
                     fontComboBox.setSelectedItem(fontStyle);
                 }
                 selectedAccentColor = parseColor(Main.settings.getProperty("theme_accent_color"));
@@ -1849,7 +2009,7 @@ public class SettingsGUI extends JFrame {
     @SuppressWarnings("MagicConstant")
     public static Font getFontByName(int style, int fontSize) {
         String fontName = Main.settings.getProperty("font_style");
-        if(fontName == null || fontName.trim().isEmpty()) {
+        if (fontName == null || fontName.trim().isEmpty()) {
             Font uiFont = UIManager.getFont("Label.font");
             fontName = uiFont == null ? DEFAULT_FONT_STYLE : uiFont.getFamily();
         } else if (isWindows() && ("Arial".equalsIgnoreCase(fontName) || "Arial Unicode MS".equalsIgnoreCase(fontName))) {
@@ -1887,9 +2047,9 @@ public class SettingsGUI extends JFrame {
                 // Show restart recommendation for full theme change
                 int restart = JOptionPane.showConfirmDialog(this,
                         "<html>Das Theme wurde geändert.<br/><br/>" +
-                        "Es wird empfohlen, das Programm neu zu starten,<br/>" +
-                        "damit das Theme vollständig angewendet wird.<br/><br/>" +
-                        "Möchten Sie jetzt neu starten?</html>",
+                                "Es wird empfohlen, das Programm neu zu starten,<br/>" +
+                                "damit das Theme vollständig angewendet wird.<br/><br/>" +
+                                "Möchten Sie jetzt neu starten?</html>",
                         "Neustart empfohlen",
                         JOptionPane.YES_NO_OPTION,
                         JOptionPane.QUESTION_MESSAGE,
@@ -1928,7 +2088,7 @@ public class SettingsGUI extends JFrame {
                 System.out.println("[SettingsGUI] Automatische Warnanzeige deaktiviert");
             }
 
-            if(automaticImportCheckBox.isSelected()) {
+            if (automaticImportCheckBox.isSelected()) {
                 scheduler.startAutoImportQrCodes(
                         (Integer) qrCodeImportIntervalSpinner.getValue(),
                         java.util.concurrent.TimeUnit.MINUTES
@@ -1980,8 +2140,8 @@ public class SettingsGUI extends JFrame {
             JPanel progressPanel = new JPanel(new BorderLayout(10, 10));
             progressPanel.setBackground(ThemeManager.getCardBackgroundColor());
             progressPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 2),
-                BorderFactory.createEmptyBorder(20, 20, 20, 20)
+                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 2),
+                    BorderFactory.createEmptyBorder(20, 20, 20, 20)
             ));
 
             JLabel progressLabel = new JLabel("<html><center>Prüfe auf " + channelDisplay + "-Updates...<br/>Bitte warten...</center></html>");
@@ -2033,12 +2193,12 @@ public class SettingsGUI extends JFrame {
     private void handleUpdateResult(String latestVersion, String channel) {
         if (latestVersion == null) {
             JOptionPane.showMessageDialog(this,
-                "<html><b>Keine Update-Informationen verfügbar</b><br/><br/>" +
-                "Die Update-Informationen konnten nicht abgerufen werden.<br/>" +
-                "Bitte überprüfen Sie Ihre Internetverbindung.</html>",
-                "Update-Prüfung",
-                JOptionPane.WARNING_MESSAGE,
-                Main.iconSmall);
+                    "<html><b>Keine Update-Informationen verfügbar</b><br/><br/>" +
+                            "Die Update-Informationen konnten nicht abgerufen werden.<br/>" +
+                            "Bitte überprüfen Sie Ihre Internetverbindung.</html>",
+                    "Update-Prüfung",
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
             return;
         }
 
@@ -2067,17 +2227,17 @@ public class SettingsGUI extends JFrame {
 
         Object[] options = {"Download-Seite öffnen", "Später"};
         int result = JOptionPane.showOptionDialog(this,
-            "<html><b>" + UnicodeSymbols.DOWNLOAD + " Update verfügbar!</b><br/><br/>" +
-            "Eine neue Version ist verfügbar:<br/><br/>" +
-            "Aktuelle Version: <b>" + currentVersion + "</b><br/>" +
-            "Neue Version: <b>" + latestVersion + channelDisplay + "</b><br/><br/>" +
-            "Möchten Sie die Download-Seite öffnen?</html>",
-            "Update verfügbar",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.INFORMATION_MESSAGE,
-            Main.iconSmall,
-            options,
-            options[0]);
+                "<html><b>" + UnicodeSymbols.DOWNLOAD + " Update verfügbar!</b><br/><br/>" +
+                        "Eine neue Version ist verfügbar:<br/><br/>" +
+                        "Aktuelle Version: <b>" + currentVersion + "</b><br/>" +
+                        "Neue Version: <b>" + latestVersion + channelDisplay + "</b><br/><br/>" +
+                        "Möchten Sie die Download-Seite öffnen?</html>",
+                "Update verfügbar",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.INFORMATION_MESSAGE,
+                Main.iconSmall,
+                options,
+                options[0]);
 
         if (result == 0) { // Download-Seite öffnen
             openDownloadPage(downloadUrl);
@@ -2096,12 +2256,12 @@ public class SettingsGUI extends JFrame {
         };
 
         JOptionPane.showMessageDialog(this,
-            "<html><b>" + UnicodeSymbols.CHECKMARK + " Keine Updates verfügbar</b><br/><br/>" +
-            "Sie verwenden bereits die neueste Version" + channelDisplay + ":<br/>" +
-            "<b>Version " + currentVersion + "</b></html>",
-            "Update-Prüfung",
-            JOptionPane.INFORMATION_MESSAGE,
-            Main.iconSmall);
+                "<html><b>" + UnicodeSymbols.CHECKMARK + " Keine Updates verfügbar</b><br/><br/>" +
+                        "Sie verwenden bereits die neueste Version" + channelDisplay + ":<br/>" +
+                        "<b>Version " + currentVersion + "</b></html>",
+                "Update-Prüfung",
+                JOptionPane.INFORMATION_MESSAGE,
+                Main.iconSmall);
     }
 
     /**
@@ -2109,12 +2269,12 @@ public class SettingsGUI extends JFrame {
      */
     private void showUpdateError(String errorMessage) {
         JOptionPane.showMessageDialog(this,
-            "<html><b>" + UnicodeSymbols.WARNING + " Fehler bei Update-Prüfung</b><br/><br/>" +
-            "Die Update-Prüfung ist fehlgeschlagen:<br/>" +
-            errorMessage + "</html>",
-            "Fehler",
-            JOptionPane.ERROR_MESSAGE,
-            Main.iconSmall);
+                "<html><b>" + UnicodeSymbols.WARNING + " Fehler bei Update-Prüfung</b><br/><br/>" +
+                        "Die Update-Prüfung ist fehlgeschlagen:<br/>" +
+                        errorMessage + "</html>",
+                "Fehler",
+                JOptionPane.ERROR_MESSAGE,
+                Main.iconSmall);
         Main.logUtils.addLog("Fehler bei Update-Prüfung");
     }
 
@@ -2141,22 +2301,22 @@ public class SettingsGUI extends JFrame {
             } else {
                 // Fallback: show URL in dialog
                 JOptionPane.showMessageDialog(this,
-                    "<html><b>Download-Link:</b><br/><br/>" +
-                    "<a href='" + url + "'>" + url + "</a><br/><br/>" +
-                    "Bitte kopieren Sie den Link und öffnen Sie ihn in Ihrem Browser.</html>",
-                    "Download-Link",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+                        "<html><b>Download-Link:</b><br/><br/>" +
+                                "<a href='" + url + "'>" + url + "</a><br/><br/>" +
+                                "Bitte kopieren Sie den Link und öffnen Sie ihn in Ihrem Browser.</html>",
+                        "Download-Link",
+                        JOptionPane.INFORMATION_MESSAGE,
+                        Main.iconSmall);
             }
         } catch (Exception e) {
             logger.error("Fehler beim Öffnen der Download-Seite: {}", e.getMessage(), e);
             JOptionPane.showMessageDialog(this,
-                "<html><b>Fehler beim Öffnen des Browsers</b><br/><br/>" +
-                "Bitte öffnen Sie den folgenden Link manuell:<br/>" +
-                url + "</html>",
-                "Fehler",
-                JOptionPane.ERROR_MESSAGE,
-                Main.iconSmall);
+                    "<html><b>Fehler beim Öffnen des Browsers</b><br/><br/>" +
+                            "Bitte öffnen Sie den folgenden Link manuell:<br/>" +
+                            url + "</html>",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
         }
     }
 
@@ -2399,7 +2559,7 @@ public class SettingsGUI extends JFrame {
     private JLabel createStyledLabel(String text, int fontSize, int fontStyle, Color color) {
         JLabel label = new JLabel(text);
         String selectedItem = (String) fontComboBox.getSelectedItem();
-        if(selectedItem == null) {
+        if (selectedItem == null) {
             logger.error("Font-ComboBox hat kein ausgewähltes Element, Standardwert wird verwendet");
             selectedItem = DEFAULT_FONT_STYLE;
         }
@@ -2865,11 +3025,11 @@ public class SettingsGUI extends JFrame {
     }
 
     private void styleComboBox(JComboBox<String> combo) {
-        Color bg     = ThemeManager.getInputBackgroundColor();
-        Color fg     = ThemeManager.getTextPrimaryColor();
+        Color bg = ThemeManager.getInputBackgroundColor();
+        Color fg = ThemeManager.getTextPrimaryColor();
         Color border = ThemeManager.getInputBorderColor();
-        Color selBg  = ThemeManager.getSelectionBackgroundColor();
-        Color selFg  = ThemeManager.getSelectionForegroundColor();
+        Color selBg = ThemeManager.getSelectionBackgroundColor();
+        Color selFg = ThemeManager.getSelectionForegroundColor();
 
         combo.setOpaque(true);
         combo.setBackground(bg);
@@ -2923,8 +3083,15 @@ public class SettingsGUI extends JFrame {
                 b.setForeground(fg);
                 b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 b.addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(ThemeManager.getSurfaceColor()); }
-                    @Override public void mouseExited(MouseEvent e)  { b.setBackground(bg); }
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        b.setBackground(ThemeManager.getSurfaceColor());
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        b.setBackground(bg);
+                    }
                 });
                 return b;
             }

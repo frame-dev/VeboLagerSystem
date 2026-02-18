@@ -79,6 +79,10 @@ public class Order {
         this.status = status;
     }
 
+    public Order() {
+
+    }
+
     /** @return unique order identifier */
     public String getOrderId() {
         return orderId;

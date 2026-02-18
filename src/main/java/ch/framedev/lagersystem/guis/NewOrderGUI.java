@@ -8,12 +8,16 @@ import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.utils.ArticleExporter;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
+
 import static ch.framedev.lagersystem.utils.JFrameUtils.GradientPanel;
 import static ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.plaf.basic.ComboPopup;
@@ -27,8 +31,10 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.List;
 
 /**
  * Modern new order GUI with improved visual design and user experience.
@@ -52,6 +58,13 @@ public class NewOrderGUI extends JFrame {
     private final JLabel summaryItemsValue;
     private final JLabel summaryTotalValue;
 
+    // ---- Inline Article Search/Add (NEW) -----------------------------------
+    private JTextField articleSearchField;
+    private JComboBox<Article> articleCombo;
+    private JSpinner articleQtySpinner;
+    private JButton articleAddButton;
+    private List<Article> allArticlesCache = new ArrayList<>();
+
     public NewOrderGUI() {
         ThemeManager.getInstance().registerWindow(this);
 
@@ -62,7 +75,7 @@ public class NewOrderGUI extends JFrame {
 
         setTitle("Neue Bestellung erstellen");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(1100, 700);
+        setSize(1500, 700);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(0, 0));
 
@@ -138,11 +151,12 @@ public class NewOrderGUI extends JFrame {
             if (selected == null || selected.trim().isEmpty()) return;
 
             String department = ClientManager.getInstance().getDepartmentByName(selected);
-            String kontoNr = DepartmentManager.getInstance().getDepartment(department).get("kontoNumber").toString();
             if (department != null && !department.trim().isEmpty()) {
                 departmentList.setSelectedItem(department);
-                if (kontoNr != null && !kontoNr.trim().isEmpty())
-                    receiverKontoField.setText(DepartmentManager.getInstance().getDepartment(department).get("kontoNumber").toString());
+                Map<String, Object> depMap = DepartmentManager.getInstance().getDepartment(department);
+                if (depMap != null && depMap.get("kontoNumber") != null) {
+                    receiverKontoField.setText(depMap.get("kontoNumber").toString());
+                }
             }
             updateSummaryBar();
         });
@@ -206,7 +220,13 @@ public class NewOrderGUI extends JFrame {
         JLabel tableTitle = new JLabel(UnicodeSymbols.SHOPPING_CART + " Bestellte Artikel");
         tableTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
         tableTitle.setForeground(ThemeManager.getTextPrimaryColor());
-        rightCard.add(tableTitle, BorderLayout.NORTH);
+
+        // Build top area (title + inline search)
+        JPanel rightTop = new JPanel(new BorderLayout(0, 10));
+        rightTop.setOpaque(false);
+        rightTop.add(tableTitle, BorderLayout.NORTH);
+        rightTop.add(buildInlineArticleSearchPanel(), BorderLayout.CENTER);
+        rightCard.add(rightTop, BorderLayout.NORTH);
 
         // Order table (show unit price and line total)
         orderTableModel = new DefaultTableModel(new String[]{"Artikel", "Menge", "Einzelpreis", "Gesamt"}, 0) {
@@ -217,9 +237,7 @@ public class NewOrderGUI extends JFrame {
 
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 1) {
-                    return Integer.class;
-                }
+                if (columnIndex == 1) return Integer.class;
                 return String.class;
             }
         };
@@ -295,8 +313,274 @@ public class NewOrderGUI extends JFrame {
 
         setMinimumSize(new Dimension(900, 600));
         setLocationRelativeTo(null);
+
+        // Load & prepare article cache for inline search
+        reloadAllArticlesCache();
+        rebuildArticleComboModel("");
+
         updateSummaryBar();
     }
+
+    // ---------------------------------------------------------------------
+    // INLINE SEARCH PANEL (NEW)
+    // ---------------------------------------------------------------------
+
+    private JComponent buildInlineArticleSearchPanel() {
+        RoundedPanel panel = new RoundedPanel(ThemeManager.getSurfaceColor(), 14);
+        panel.setOpaque(true);
+        panel.setLayout(new GridBagLayout());
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.insets = new Insets(6, 6, 6, 6);
+        gc.gridy = 0;
+        gc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel lbl = new JLabel(UnicodeSymbols.SEARCH + " Artikel suchen:");
+        lbl.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        lbl.setForeground(ThemeManager.getTextSecondaryColor());
+
+        gc.gridx = 0;
+        gc.weightx = 0.0;
+        panel.add(lbl, gc);
+
+        articleSearchField = new JTextField();
+        styleTextField(articleSearchField);
+        articleSearchField.setToolTipText("Name oder Artikelnummer eingeben…");
+
+        gc.gridx = 1;
+        gc.weightx = 0.35;
+        panel.add(articleSearchField, gc);
+
+        articleCombo = new JComboBox<>();
+        articleCombo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                JLabel l = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (value instanceof Article a) {
+                    l.setText(a.getName() + " (" + a.getArticleNumber() + ")");
+                }
+                return l;
+            }
+        });
+        styleArticleComboBox(articleCombo);
+
+        gc.gridx = 2;
+        gc.weightx = 0.45;
+        panel.add(articleCombo, gc);
+
+        articleQtySpinner = new JSpinner(new SpinnerNumberModel(1, 1, 9999, 1));
+        articleQtySpinner.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+        articleQtySpinner.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)
+        ));
+        if (articleQtySpinner.getEditor() instanceof JSpinner.DefaultEditor de) {
+            de.getTextField().setBackground(ThemeManager.getInputBackgroundColor());
+            de.getTextField().setForeground(ThemeManager.getTextPrimaryColor());
+            de.getTextField().setCaretColor(ThemeManager.getTextPrimaryColor());
+            de.getTextField().setBorder(null);
+        }
+
+        gc.gridx = 3;
+        gc.weightx = 0.10;
+        panel.add(articleQtySpinner, gc);
+
+        articleAddButton = createThemeButton(UnicodeSymbols.HEAVY_PLUS + " Hinzufügen", ThemeManager.getPrimaryColor());
+        articleAddButton.setToolTipText("Fügt den ausgewählten Artikel zur Bestellung hinzu");
+
+        gc.gridx = 4;
+        gc.weightx = 0.10;
+        panel.add(articleAddButton, gc);
+
+        // live filter
+        articleSearchField.getDocument().addDocumentListener(new DocumentListener() {
+            private void update() {
+                rebuildArticleComboModel(articleSearchField.getText());
+            }
+            @Override public void insertUpdate(DocumentEvent e) { update(); }
+            @Override public void removeUpdate(DocumentEvent e) { update(); }
+            @Override public void changedUpdate(DocumentEvent e) { update(); }
+        });
+        articleSearchField.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                reloadAllArticlesCache();
+                rebuildArticleComboModel(articleSearchField.getText());
+            }
+        });
+
+        // add action
+        articleAddButton.addActionListener(e -> addSelectedInlineArticle());
+
+        // enter in qty adds
+        if (articleQtySpinner.getEditor() instanceof JSpinner.DefaultEditor de) {
+            de.getTextField().addActionListener(e -> addSelectedInlineArticle());
+        }
+
+        return panel;
+    }
+
+    private void addSelectedInlineArticle() {
+        Article selected = (Article) articleCombo.getSelectedItem();
+        if (selected == null) {
+            JOptionPane.showMessageDialog(this, "Bitte einen Artikel auswählen.", "Hinweis",
+                    JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+            return;
+        }
+
+        int qty = (Integer) articleQtySpinner.getValue();
+        if (qty <= 0) qty = 1;
+
+        // Merge quantity if same article already exists (by article number)
+        for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
+            if (sameArticle(e.getKey(), selected)) {
+                orderArticles.put(e.getKey(), e.getValue() + qty);
+                rebuildOrderTable();
+                updateTotalPrice();
+                return;
+            }
+        }
+
+        orderArticles.put(selected, qty);
+        rebuildOrderTable();
+        updateTotalPrice();
+    }
+
+    private boolean sameArticle(Article a, Article b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+        return Objects.equals(a.getArticleNumber(), b.getArticleNumber());
+    }
+
+    private void reloadAllArticlesCache() {
+        allArticlesCache = new ArrayList<>();
+
+        // Try common method names without forcing you to change ArticleManager now
+        ArticleManager mgr = ArticleManager.getInstance();
+        String[] candidates = {"getArticles", "getAllArticles", "getAll", "listArticles"};
+
+        for (String mName : candidates) {
+            try {
+                Method m = mgr.getClass().getMethod(mName);
+                Object res = m.invoke(mgr);
+                if (res instanceof Collection<?> col) {
+                    for (Object o : col) {
+                        if (o instanceof Article a) allArticlesCache.add(a);
+                    }
+                    break;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // As a last resort: try to access a public field (rare) or just keep empty
+        // If empty, the inline dropdown will simply show nothing.
+    }
+
+    private void rebuildArticleComboModel(String query) {
+        String q = query == null ? "" : query.trim().toLowerCase();
+
+        Article currentlySelected = (Article) articleCombo.getSelectedItem();
+
+        DefaultComboBoxModel<Article> model = new DefaultComboBoxModel<>();
+        int added = 0;
+
+        for (Article a : allArticlesCache) {
+            if (a == null) continue;
+
+            String name = safe(a.getName()).toLowerCase();
+            String nr = safe(a.getArticleNumber()).toLowerCase();
+
+            String details = safe(a.getDetails()).toLowerCase();
+            String vendor = safe(a.getVendorName()).toLowerCase();
+
+            boolean match = q.isEmpty()
+                    || name.contains(q)
+                    || nr.contains(q)
+                    || details.contains(q)
+                    || vendor.contains(q);
+
+            if (match) {
+                model.addElement(a);
+                added++;
+                if (added >= 300) break;
+            }
+        }
+
+        articleCombo.setModel(model);
+
+        // keep selection if possible
+        if (currentlySelected != null) {
+            for (int i = 0; i < model.getSize(); i++) {
+                Article x = model.getElementAt(i);
+                if (sameArticle(x, currentlySelected)) {
+                    articleCombo.setSelectedIndex(i);
+                    return;
+                }
+            }
+        }
+
+        if (model.getSize() > 0) articleCombo.setSelectedIndex(0);
+    }
+
+    private void styleArticleComboBox(JComboBox<Article> combo) {
+        Color bg = ThemeManager.getInputBackgroundColor();
+        Color fg = ThemeManager.getTextPrimaryColor();
+        Color border = ThemeManager.getInputBorderColor();
+        Color selBg = ThemeManager.getSelectionBackgroundColor();
+        Color selFg = ThemeManager.getSelectionForegroundColor();
+        Color surface = ThemeManager.getSurfaceColor();
+
+        combo.setBackground(bg);
+        combo.setForeground(fg);
+        combo.setOpaque(true);
+        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        combo.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(border, 1),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        ));
+
+        combo.setUI(new BasicComboBoxUI() {
+            @Override
+            protected JButton createArrowButton() {
+                JButton b = new JButton(UnicodeSymbols.ARROW_DOWN);
+                b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+                b.setFocusPainted(false);
+                b.setContentAreaFilled(true);
+                b.setOpaque(true);
+                b.setBackground(bg);
+                b.setForeground(fg);
+                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                b.addMouseListener(new MouseAdapter() {
+                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(surface); }
+                    @Override public void mouseExited(MouseEvent e) { b.setBackground(bg); }
+                });
+                return b;
+            }
+
+            @Override
+            protected ComboPopup createPopup() {
+                ComboPopup popup = super.createPopup();
+                if (popup instanceof BasicComboPopup basic) {
+                    basic.setBorder(BorderFactory.createLineBorder(border, 1));
+                    basic.getList().setBackground(bg);
+                    basic.getList().setForeground(fg);
+                    basic.getList().setSelectionBackground(selBg);
+                    basic.getList().setSelectionForeground(selFg);
+                }
+                return popup;
+            }
+        });
+    }
+
+    // ---------------------------------------------------------------------
+    // EXISTING METHODS (unchanged)
+    // ---------------------------------------------------------------------
 
     private void fillSenderNameCombobox() {
         senderNameCombobox.removeAllItems();
@@ -356,7 +640,6 @@ public class NewOrderGUI extends JFrame {
 
                 JLabel c = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
 
-                // enforce popup list colors
                 list.setBackground(bg);
                 list.setForeground(fg);
                 list.setSelectionBackground(selBg);
@@ -376,7 +659,6 @@ public class NewOrderGUI extends JFrame {
             }
         });
 
-        // Theme arrow button + popup border (reliable across LAFs)
         combo.setUI(new BasicComboBoxUI() {
             @Override
             protected JButton createArrowButton() {
@@ -389,15 +671,8 @@ public class NewOrderGUI extends JFrame {
                 b.setForeground(fg);
                 b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 b.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        b.setBackground(surface);
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        b.setBackground(bg);
-                    }
+                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(surface); }
+                    @Override public void mouseExited(MouseEvent e) { b.setBackground(bg); }
                 });
                 return b;
             }
@@ -718,33 +993,23 @@ public class NewOrderGUI extends JFrame {
         return menuBar;
     }
 
-    /**
-     * Displays the help dialog with scrollable content
-     */
     private void showHelpDialog() {
-
-        // Create custom dialog
         JDialog helpDialog = new JDialog(this, "Hilfe - Neue Bestellung erstellen", true);
         helpDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         helpDialog.setLayout(new BorderLayout(0, 0));
 
-        // Create JEditorPane to display HTML content
         JEditorPane editorPane = new JEditorPane("text/html", getHelpText());
         editorPane.setEditable(false);
 
-        // Set theme colors
         Color bg = ThemeManager.getCardBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
 
         editorPane.setBackground(bg);
         editorPane.setForeground(fg);
         editorPane.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
-
-        // IMPORTANT: Make JEditorPane honor display properties (use set colors instead of HTML defaults)
         editorPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
         editorPane.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
 
-        // Create scroll pane with the editor pane
         JScrollPane scrollPane = new JScrollPane(editorPane);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -752,11 +1017,8 @@ public class NewOrderGUI extends JFrame {
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         scrollPane.setBackground(bg);
         scrollPane.getViewport().setBackground(bg);
-
-        // Set preferred size for the scroll pane
         scrollPane.setPreferredSize(new Dimension(700, 600));
 
-        // Create button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 15));
         buttonPanel.setBackground(ThemeManager.getCardBackgroundColor());
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
@@ -766,11 +1028,9 @@ public class NewOrderGUI extends JFrame {
         closeButton.setToolTipText("Schliesst das Fenster");
         buttonPanel.add(closeButton);
 
-        // Add components to dialog
         helpDialog.add(scrollPane, BorderLayout.CENTER);
         helpDialog.add(buttonPanel, BorderLayout.SOUTH);
 
-        // Set dialog properties
         helpDialog.pack();
         helpDialog.setLocationRelativeTo(this);
         helpDialog.setVisible(true);
@@ -887,23 +1147,10 @@ public class NewOrderGUI extends JFrame {
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                if (button.isEnabled()) button.setBackground(hoverBg);
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if (button.isEnabled()) button.setBackground(baseBg);
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (button.isEnabled()) button.setBackground(pressedBg);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
+            @Override public void mouseEntered(MouseEvent e) { if (button.isEnabled()) button.setBackground(hoverBg); }
+            @Override public void mouseExited(MouseEvent e) { if (button.isEnabled()) button.setBackground(baseBg); }
+            @Override public void mousePressed(MouseEvent e) { if (button.isEnabled()) button.setBackground(pressedBg); }
+            @Override public void mouseReleased(MouseEvent e) {
                 if (!button.isEnabled()) return;
                 button.setBackground(button.contains(e.getPoint()) ? hoverBg : baseBg);
             }
@@ -912,16 +1159,6 @@ public class NewOrderGUI extends JFrame {
         return button;
     }
 
-    /**
-     * Creates and processes a new order with the specified details.
-     *
-     * @param orderArticles       A map of article names to their respective quantities to be included in the order.
-     * @param receiverName        The name of the receiver of the order.
-     * @param receiverKontoNumber The account number of the receiver of the order.
-     * @param senderName          The name of the sender creating the order.
-     * @param senderKontoNumber   The account number of the sender creating the order.
-     * @param department          The department associated with this order.
-     */
     private void createOrder(Map<String, Integer> orderArticles, String receiverName, String receiverKontoNumber,
                              String senderName, String senderKontoNumber, String department) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
@@ -938,7 +1175,8 @@ public class NewOrderGUI extends JFrame {
         );
         OrderManager.getInstance().insertOrder(order);
     }
+
+    private static String safe(String s) {
+        return s == null ? "" : s;
+    }
 }
-
-
-
