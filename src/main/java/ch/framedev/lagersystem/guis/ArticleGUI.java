@@ -8,12 +8,6 @@ import ch.framedev.lagersystem.utils.*;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.font.PDFont;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -108,12 +102,6 @@ public class ArticleGUI extends JFrame {
         headerPanel.setLayout(new GridBagLayout());
         headerPanel.setPreferredSize(new Dimension(760, 64));
 
-        /*JLabel title = new JLabel("Artikel Verwaltung");
-        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 24));
-        title.setForeground(ThemeManager.getTextPrimaryColor());
-        headerPanel.add(title);
-        headerWrapper.add(headerPanel);*/
-
         // =========================
         // Toolbar
         // =========================
@@ -194,8 +182,8 @@ public class ArticleGUI extends JFrame {
                 model.setValueAt(updatedRow[2], modelRow, 3); // Details
                 model.setValueAt(updatedRow[3], modelRow, 4); // Lagerbestand
                 model.setValueAt(updatedRow[4], modelRow, 5); // Mindestbestand
-                model.setValueAt(updatedRow[5], modelRow, 6); // Verkaufspreis
-                model.setValueAt(updatedRow[6], modelRow, 7); // Einkaufspreis
+                model.setValueAt(parseDouble(updatedRow[5]), modelRow, 6); // Verkaufspreis
+                model.setValueAt(parseDouble(updatedRow[6]), modelRow, 7); // Einkaufspreis
                 model.setValueAt(updatedRow[7], modelRow, 8); // Lieferant
 
                 ArticleManager articleManager = ArticleManager.getInstance();
@@ -205,8 +193,8 @@ public class ArticleGUI extends JFrame {
                         (String) updatedRow[2], // Details
                         (Integer) updatedRow[3], // Lagerbestand
                         (Integer) updatedRow[4], // Mindestbestand
-                        (Double) updatedRow[5], // Verkaufspreis
-                        (Double) updatedRow[6], // Einkaufspreis
+                        parseDouble(updatedRow[5]), // Verkaufspreis
+                        parseDouble(updatedRow[6]), // Einkaufspreis
                         (String) updatedRow[7] // lieferant
                 );
 
@@ -693,7 +681,7 @@ public class ArticleGUI extends JFrame {
      * Uses landscape A3 format for maximum space and dynamically scales content to fit.
      */
     private void exportTableAsPDF() {
-        ArticlePdfExporter.exportTableAsPdf(this, articleTable, baseColumnWidths, Main.iconSmall);
+        ArticleExporter.exportTableAsPdf(this, articleTable, baseColumnWidths, Main.iconSmall);
     }
 
     private static DefaultTableModel getDefaultTableModel() {
@@ -957,6 +945,7 @@ public class ArticleGUI extends JFrame {
             return number.intValue();
         }
         if (value instanceof String str) {
+            str = str.replace(" CHF", "").trim();
             try {
                 return Integer.parseInt(str.trim());
             } catch (NumberFormatException ignored) {
@@ -971,6 +960,7 @@ public class ArticleGUI extends JFrame {
             return number.doubleValue();
         }
         if (value instanceof String str) {
+            str = str.replace(" CHF", "").trim();
             try {
                 return Double.parseDouble(str.trim().replace(" CHF", ""));
             } catch (NumberFormatException ignored) {
@@ -1151,158 +1141,18 @@ public class ArticleGUI extends JFrame {
     }
 
     private void exportArticlesToCsv(List<Article> articles) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("CSV Speichern");
-        fileChooser.setSelectedFile(new File("Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".csv"));
-        int userSelection = fileChooser.showSaveDialog(this);
-        if (userSelection != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
-        File fileToSave = fileChooser.getSelectedFile();
-        if (!fileToSave.getName().toLowerCase().endsWith(".csv")) {
-            fileToSave = new File(fileToSave.getAbsolutePath() + ".csv");
-        }
-
-        try (var writer = Files.newBufferedWriter(fileToSave.toPath(), StandardCharsets.UTF_8)) {
-            writer.write("Artikelnummer,Name,Details,Lagerbestand,Mindestbestand,Verkaufspreis,Einkaufspreis,Lieferant");
-            writer.write(System.lineSeparator());
-            for (Article article : articles) {
-                writer.write(escapeCsv(article.getArticleNumber()));
-                writer.write(",");
-                writer.write(escapeCsv(article.getName()));
-                writer.write(",");
-                writer.write(escapeCsv(article.getDetails()));
-                writer.write(",");
-                writer.write(String.valueOf(article.getStockQuantity()));
-                writer.write(",");
-                writer.write(String.valueOf(article.getMinStockLevel()));
-                writer.write(",");
-                writer.write(String.valueOf(article.getSellPrice()));
-                writer.write(",");
-                writer.write(String.valueOf(article.getPurchasePrice()));
-                writer.write(",");
-                writer.write(escapeCsv(article.getVendorName()));
-                writer.write(System.lineSeparator());
-            }
-            JOptionPane.showMessageDialog(this,
-                    "CSV erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
-                    "Export",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Fehler beim CSV-Export: " + ex.getMessage(),
-                    "Export",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
-        }
+        ArticleExporter.exportArticlesToCsv(articles);
     }
 
     private void exportArticlesToPdf(List<Article> articles) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("PDF Speichern");
-        fileChooser.setSelectedFile(new File("Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
-        int userSelection = fileChooser.showSaveDialog(this);
-        if (userSelection != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
-        File fileToSave = fileChooser.getSelectedFile();
-        if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
-            fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
-        }
-
-        try (PDDocument doc = new PDDocument()) {
-            PDFont regularFont = PDType1Font.HELVETICA;
-
-            PDRectangle pageSize = PDRectangle.A4;
-            float margin = 40f;
-            float fontSize = 10f;
-            float lineHeight = 14f;
-            float yStart = pageSize.getHeight() - margin;
-            float maxWidth = pageSize.getWidth() - 2 * margin;
-
-            PDPage page = new PDPage(pageSize);
-            doc.addPage(page);
-            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
-            contentStream.setFont(regularFont, fontSize);
-
-            float y = yStart;
-            for (Article article : articles) {
-                String line = article.getArticleNumber() + " | " + article.getName() + " | Lager: " +
-                        article.getStockQuantity() + " | Min: " + article.getMinStockLevel() +
-                        " | VK: " + article.getSellPrice() + " | EK: " + article.getPurchasePrice() +
-                        " | Lieferant: " + article.getVendorName();
-                List<String> wrapped = wrapLine(line, regularFont, fontSize, maxWidth);
-                for (String part : wrapped) {
-                    if (y - lineHeight < margin) {
-                        contentStream.close();
-                        page = new PDPage(pageSize);
-                        doc.addPage(page);
-                        contentStream = new PDPageContentStream(doc, page);
-                        contentStream.setFont(regularFont, fontSize);
-                        y = yStart;
-                    }
-                    contentStream.beginText();
-                    contentStream.newLineAtOffset(margin, y);
-                    contentStream.showText(part);
-                    contentStream.endText();
-                    y -= lineHeight;
-                }
-            }
-
-            contentStream.close();
-            doc.save(fileToSave);
-
-            JOptionPane.showMessageDialog(this,
-                    "PDF erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
-                    "Export",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Fehler beim PDF-Export: " + ex.getMessage(),
-                    "Export",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
-        }
+        ArticleExporter.exportArticlesToPdf(articles);
     }
 
-    private List<String> wrapLine(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
-        List<String> lines = new ArrayList<>();
-        if (text == null) {
-            return lines;
-        }
-        String[] words = text.split("\\s+");
-        StringBuilder current = new StringBuilder();
-        for (String word : words) {
-            String candidate = current.isEmpty() ? word : current + " " + word;
-            float width = font.getStringWidth(candidate) / 1000f * fontSize;
-            if (width > maxWidth && !current.isEmpty()) {
-                lines.add(current.toString());
-                current = new StringBuilder(word);
-            } else {
-                current = new StringBuilder(candidate);
-            }
-        }
-        if (!current.isEmpty()) {
-            lines.add(current.toString());
-        }
-        return lines;
-    }
-
-    private String escapeCsv(String value) {
-        if (value == null) {
-            return "";
-        }
-        String escaped = value.replace("\"", "\"\"");
-        if (escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n")) {
-            return "\"" + escaped + "\"";
-        }
-        return escaped;
-    }
-
+    /**
+     * This method retrieves the currently selected articles from the JTable, converting the selected rows into Article objects.
+     *
+     * @return A list of Article objects corresponding to the selected rows in the table. If no rows are selected, returns an empty list.
+     */
     public List<Article> getSelectedArticles() {
         int[] selectedRows = articleTable.getSelectedRows();
         if (selectedRows == null || selectedRows.length == 0) {
@@ -1319,7 +1169,13 @@ public class ArticleGUI extends JFrame {
             Object stockQuantity = model.getValueAt(modelRow, 4);
             Object minStockLevel = model.getValueAt(modelRow, 5);
             Object sellPrice = model.getValueAt(modelRow, 6);
+            if (sellPrice instanceof String str) {
+                sellPrice = str.replace(" CHF", "").trim();
+            }
             Object purchasePrice = model.getValueAt(modelRow, 7);
+            if (purchasePrice instanceof String str) {
+                purchasePrice = str.replace(" CHF", "").trim();
+            }
             Object vendorName = model.getValueAt(modelRow, 8);
 
             Article article = new Article(
@@ -1342,6 +1198,7 @@ public class ArticleGUI extends JFrame {
             return number.intValue();
         }
         if (value instanceof String str) {
+            str = str.replace(" CHF", "").trim();
             try {
                 return Integer.parseInt(str.trim());
             } catch (NumberFormatException ignored) {
@@ -1356,6 +1213,7 @@ public class ArticleGUI extends JFrame {
             return number.doubleValue();
         }
         if (value instanceof String str) {
+            str = str.replace(" CHF", "").trim();
             try {
                 return Double.parseDouble(str.trim());
             } catch (NumberFormatException ignored) {
@@ -1365,6 +1223,10 @@ public class ArticleGUI extends JFrame {
         return 0.0;
     }
 
+    /**
+     * Generate QR codes for the selected articles and save them to disk, showing a progress dialog during generation.
+     * Uses a SwingWorker to keep the UI responsive and handles errors gracefully.
+     */
     private void generateQrCodesForSelectedArticles() {
         List<Article> selectedArticles = getSelectedArticles();
         if (selectedArticles.isEmpty()) {
@@ -1441,6 +1303,9 @@ public class ArticleGUI extends JFrame {
         progressDialog.setVisible(true);
     }
 
+    /**
+     * Show a preview dialog for the QR codes of the selected articles, allowing users to see and print them without saving to disk.
+     */
     private void showQrCodePreviewDialog() {
         ArticleQrPreviewDialog.show(this, getSelectedArticles());
     }
@@ -1467,6 +1332,9 @@ public class ArticleGUI extends JFrame {
         }
     }
 
+    /**
+     * Set up mouse interactions for the article table, including double-click to add to order list and right-click context menu
+     */
     private void setupTableInteractions() {
         JPopupMenu popup = createTablePopup();
 
@@ -1556,6 +1424,9 @@ public class ArticleGUI extends JFrame {
         });
     }
 
+    /**
+     * Create a context menu for the article table with options to edit or delete the selected article
+     */
     private JPopupMenu createTablePopup() {
         JPopupMenu popup = new JPopupMenu();
         JMenuItem editItem = new JMenuItem(UnicodeSymbols.CODE + " Bearbeiten");
@@ -1591,7 +1462,7 @@ public class ArticleGUI extends JFrame {
     }
 
     /**
-     * Load categories from categories.json resource file
+     * Load categories from the categories.json resource file
      */
     private void loadCategories() {
         categories = new HashMap<>();
@@ -1637,7 +1508,7 @@ public class ArticleGUI extends JFrame {
     }
 
     /**
-     * Get category for an article based on its article number
+     * Get a category for an article based on its article number
      */
     private String getCategoryForArticle(String articleNumber) {
         if (categories == null || articleNumber == null) {
@@ -1645,7 +1516,7 @@ public class ArticleGUI extends JFrame {
         }
 
         try {
-            // Extract numeric part from article number (e.g., "1101" from "1101-ABC")
+            // Extract the numeric part from the article number (e.g., "1101" from "1101-ABC")
             String numericPart = articleNumber.replaceAll("[^0-9]", "");
             if (numericPart.isEmpty()) {
                 return "Unbekannt";
@@ -1664,13 +1535,6 @@ public class ArticleGUI extends JFrame {
         }
 
         return "Unbekannt";
-    }
-
-    /**
-     * Filter table by selected category
-     */
-    private void filterByCategory() {
-        applyAdvancedFilters();
     }
 
     private void applyAdvancedFilters() {
@@ -1815,7 +1679,7 @@ public class ArticleGUI extends JFrame {
      * Modern design with proper spacing, rounded borders, and theme support
      */
     private JPanel createCategoryFilterPanel() {
-        // Create rounded panel with card-like appearance
+        // Create a rounded panel with card-like appearance
         RoundedPanel categoryPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 8);
         categoryPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 12, 8));
         categoryPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -1854,6 +1718,7 @@ public class ArticleGUI extends JFrame {
         return panel;
     }
 
+    @SuppressWarnings("UnnecessaryUnicodeEscape")
     private JComponent createToolbarDivider() {
         JLabel divider = new JLabel("\u2022");
         divider.setForeground(ThemeManager.getTextSecondaryColor());

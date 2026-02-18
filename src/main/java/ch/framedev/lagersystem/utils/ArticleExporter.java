@@ -1,29 +1,33 @@
 package ch.framedev.lagersystem.utils;
 
 import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.guis.MainGUI;
+import ch.framedev.lagersystem.main.Main;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.List;
 
 /**
  * Utility to export a JTable with article data into a PDF file.
  */
-public final class ArticlePdfExporter {
+public final class ArticleExporter {
 
-    private ArticlePdfExporter() {
+    private ArticleExporter() {
     }
 
     public static void exportTableAsPdf(Component parent, JTable table, int[] baseColumnWidths, Icon icon) {
@@ -321,14 +325,14 @@ public final class ArticlePdfExporter {
         if (regular == null || bold == null) {
             try {
                 if (regular == null) {
-                    try (InputStream in = ArticlePdfExporter.class.getResourceAsStream("/fonts/DejaVuSans.ttf")) {
+                    try (InputStream in = ArticleExporter.class.getResourceAsStream("/fonts/DejaVuSans.ttf")) {
                         if (in != null) {
                             regular = PDType0Font.load(doc, in);
                         }
                     }
                 }
                 if (bold == null) {
-                    try (InputStream in = ArticlePdfExporter.class.getResourceAsStream("/fonts/DejaVuSans-Bold.ttf")) {
+                    try (InputStream in = ArticleExporter.class.getResourceAsStream("/fonts/DejaVuSans-Bold.ttf")) {
                         if (in != null) {
                             bold = PDType0Font.load(doc, in);
                         }
@@ -618,5 +622,158 @@ public final class ArticlePdfExporter {
             i += Character.charCount(cp);
         }
         return sb.toString();
+    }
+
+    public static void exportArticlesToPdf(java.util.List<Article> articles) {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("PDF Speichern");
+        fileChooser.setSelectedFile(new File("Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
+        int userSelection = fileChooser.showSaveDialog(MainGUI.articleGUI);
+        if (userSelection != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File fileToSave = fileChooser.getSelectedFile();
+        if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
+            fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
+        }
+
+        try (PDDocument doc = new PDDocument()) {
+            PDFont regularFont = PDType1Font.HELVETICA;
+
+            PDRectangle pageSize = PDRectangle.A4;
+            float margin = 40f;
+            float fontSize = 10f;
+            float lineHeight = 14f;
+            float yStart = pageSize.getHeight() - margin;
+            float maxWidth = pageSize.getWidth() - 2 * margin;
+
+            PDPage page = new PDPage(pageSize);
+            doc.addPage(page);
+            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
+            contentStream.setFont(regularFont, fontSize);
+
+            float y = yStart;
+            for (Article article : articles) {
+                String line = article.getArticleNumber() + " | " + article.getName() + " | Lager: " +
+                        article.getStockQuantity() + " | Min: " + article.getMinStockLevel() +
+                        " | VK: " + article.getSellPrice() + " | EK: " + article.getPurchasePrice() +
+                        " | Lieferant: " + article.getVendorName();
+                List<String> wrapped = wrapLine(line, regularFont, fontSize, maxWidth);
+                for (String part : wrapped) {
+                    if (y - lineHeight < margin) {
+                        contentStream.close();
+                        page = new PDPage(pageSize);
+                        doc.addPage(page);
+                        contentStream = new PDPageContentStream(doc, page);
+                        contentStream.setFont(regularFont, fontSize);
+                        y = yStart;
+                    }
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(margin, y);
+                    contentStream.showText(part);
+                    contentStream.endText();
+                    y -= lineHeight;
+                }
+            }
+
+            contentStream.close();
+            doc.save(fileToSave);
+
+            JOptionPane.showMessageDialog(MainGUI.articleGUI,
+                    "PDF erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
+                    "Export",
+                    JOptionPane.INFORMATION_MESSAGE,
+                    Main.iconSmall);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(MainGUI.articleGUI,
+                    "Fehler beim PDF-Export: " + ex.getMessage(),
+                    "Export",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+        }
+    }
+
+    private static List<String> wrapLine(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
+        List<String> lines = new ArrayList<>();
+        if (text == null) {
+            return lines;
+        }
+        String[] words = text.split("\\s+");
+        StringBuilder current = new StringBuilder();
+        for (String word : words) {
+            String candidate = current.isEmpty() ? word : current + " " + word;
+            float width = font.getStringWidth(candidate) / 1000f * fontSize;
+            if (width > maxWidth && !current.isEmpty()) {
+                lines.add(current.toString());
+                current = new StringBuilder(word);
+            } else {
+                current = new StringBuilder(candidate);
+            }
+        }
+        if (!current.isEmpty()) {
+            lines.add(current.toString());
+        }
+        return lines;
+    }
+
+    public static void exportArticlesToCsv(List<Article> articles) {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("CSV Speichern");
+        fileChooser.setSelectedFile(new File("Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".csv"));
+        int userSelection = fileChooser.showSaveDialog(MainGUI.articleGUI);
+        if (userSelection != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File fileToSave = fileChooser.getSelectedFile();
+        if (!fileToSave.getName().toLowerCase().endsWith(".csv")) {
+            fileToSave = new File(fileToSave.getAbsolutePath() + ".csv");
+        }
+
+        try (var writer = Files.newBufferedWriter(fileToSave.toPath(), StandardCharsets.UTF_8)) {
+            writer.write("Artikelnummer,Name,Details,Lagerbestand,Mindestbestand,Verkaufspreis,Einkaufspreis,Lieferant");
+            writer.write(System.lineSeparator());
+            for (Article article : articles) {
+                writer.write(escapeCsv(article.getArticleNumber()));
+                writer.write(",");
+                writer.write(escapeCsv(article.getName()));
+                writer.write(",");
+                writer.write(escapeCsv(article.getDetails()));
+                writer.write(",");
+                writer.write(String.valueOf(article.getStockQuantity()));
+                writer.write(",");
+                writer.write(String.valueOf(article.getMinStockLevel()));
+                writer.write(",");
+                writer.write(String.valueOf(article.getSellPrice()));
+                writer.write(",");
+                writer.write(String.valueOf(article.getPurchasePrice()));
+                writer.write(",");
+                writer.write(escapeCsv(article.getVendorName()));
+                writer.write(System.lineSeparator());
+            }
+            JOptionPane.showMessageDialog(MainGUI.articleGUI,
+                    "CSV erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
+                    "Export",
+                    JOptionPane.INFORMATION_MESSAGE,
+                    Main.iconSmall);
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(MainGUI.articleGUI,
+                    "Fehler beim CSV-Export: " + ex.getMessage(),
+                    "Export",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+        }
+    }
+
+    private static String escapeCsv(String value) {
+        if (value == null) {
+            return "";
+        }
+        String escaped = value.replace("\"", "\"\"");
+        if (escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n")) {
+            return "\"" + escaped + "\"";
+        }
+        return escaped;
     }
 }

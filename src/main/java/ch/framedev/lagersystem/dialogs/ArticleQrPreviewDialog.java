@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import static ch.framedev.lagersystem.utils.ArticlePdfExporter.sanitizeForWinAnsi;
+import static ch.framedev.lagersystem.utils.ArticleExporter.sanitizeForWinAnsi;
 
 /**
  * Dialog for previewing QR codes for selected articles and exporting them as a PDF.

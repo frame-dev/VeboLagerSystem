@@ -756,7 +756,7 @@ public class UpdateManager {
             // Parse JSON response
             JsonObject jsonObject = JsonParser.parseString(responseBody).getAsJsonObject();
 
-            // Check if assets array exists and has files
+            // Check if the assets array exists and has files
             if (jsonObject.has("assets")) {
                 JsonArray assetsArray = jsonObject.getAsJsonArray("assets");
                 if (!assetsArray.isEmpty()) {
@@ -785,7 +785,7 @@ public class UpdateManager {
      *
      * @param v1 First version string
      * @param v2 Second version string
-     * @return Comparison result (negative if v1 < v2, 0 if equal, positive if v1 > v2)
+     * @return Negative if v1 < v2, 0 if equal, positive if v1 > v2
      */
     public int testVersionComparison(String v1, String v2) {
         logger.info("=== Testing Version Comparison ===");

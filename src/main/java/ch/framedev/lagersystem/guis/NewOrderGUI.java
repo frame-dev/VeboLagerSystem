@@ -8,7 +8,7 @@ import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
-import ch.framedev.lagersystem.utils.ArticlePdfExporter;
+import ch.framedev.lagersystem.utils.ArticleExporter;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import static ch.framedev.lagersystem.utils.JFrameUtils.GradientPanel;
 import static ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
@@ -700,7 +700,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void exportOrderToPDF(File file) throws IOException {
-        ArticlePdfExporter.exportOrderToPDF(file, receiverNameCombobox,
+        ArticleExporter.exportOrderToPDF(file, receiverNameCombobox,
                 receiverKontoField,
                 senderNameCombobox,
                 senderKontoField,

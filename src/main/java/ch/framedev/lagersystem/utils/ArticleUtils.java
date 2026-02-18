@@ -78,7 +78,7 @@ public class ArticleUtils {
         }
 
         try {
-            // Extract numeric part from article number (e.g., "1101" from "1101-ABC")
+            // Extract the numeric part from the article number (e.g., "1101" from "1101-ABC")
             String numericPart = articleNumber.replaceAll("[^0-9]", "");
             if (numericPart.isEmpty()) {
                 return "Unbekannt";
@@ -115,11 +115,13 @@ public class ArticleUtils {
                         || category.contains("Seife");
 
         if (!allowed) {
+            JOptionPane.showMessageDialog(null, "Artikelkategorie '" + category + "' ist nicht für die Preisberechnung geeignet. Artikel: " + article.getName(), "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
             throw new IllegalArgumentException(
                     "Article category must be Reinigungsmittel, Geschirrreiniger or Seife for filling price calculation. Article category: " + category
             );
         }
         if(details == null || details.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Artikeldetails fehlen für Artikel: " + article.getName(), "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
             throw new IllegalArgumentException("Article details cannot be null or empty");
         }
         if(details.contains("lt.") || details.contains("l.") || details.contains("liter") || details.contains("l ")) {
@@ -129,10 +131,12 @@ public class ArticleUtils {
                     double liter = Double.parseDouble(parts[0].trim());
                     return calculatePriceForFilling(article.getSellPrice(), liter, fillingAmount, unit);
                 } catch (NumberFormatException e) {
+                    JOptionPane.showMessageDialog(null, "Konnte Literangabe aus Artikeldetails nicht parsen für Artikel: " + article.getName(), "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                     throw new IllegalArgumentException("Could not parse liter value from article details: " + details);
                 }
             }
         }
+        JOptionPane.showMessageDialog(null, "Artikeldetails enthalten keine gültige Literangabe für Artikel: " + article.getName(), "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
         throw new IllegalArgumentException("Article details do not contain valid liter information: " + details);
     }
 
