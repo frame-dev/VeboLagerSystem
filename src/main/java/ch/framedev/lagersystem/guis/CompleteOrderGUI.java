@@ -6,10 +6,10 @@ import ch.framedev.lagersystem.classes.User;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
+import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
-import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
@@ -172,9 +172,11 @@ public class CompleteOrderGUI extends JFrame {
 
         refreshButton = createThemeButton(UnicodeSymbols.UPDATE + " Aktualisieren", ThemeManager.getSecondaryColor());
         refreshButton.setToolTipText("Aktualisiert die Liste der offenen Bestellungen");
+
         completeButton = createThemeButton(UnicodeSymbols.CHECKMARK + " Abschließen", ThemeManager.getSuccessColor());
         completeButton.setToolTipText("Schließt die ausgewählte Bestellung ab");
         completeButton.setEnabled(false);
+
         closeButton = createThemeButton(UnicodeSymbols.CLOSE + " Schließen", ThemeManager.getDangerColor());
         closeButton.setToolTipText("Schließt dieses Fenster");
 
@@ -196,10 +198,9 @@ public class CompleteOrderGUI extends JFrame {
 
     private void attachListeners() {
         ordersList.addListSelectionListener(e -> {
-            int idx = ordersList.getSelectedIndex();
-            if (idx >= 0 && currentOrders != null && idx < currentOrders.size()) {
-                Order o = currentOrders.get(idx);
-                showOrderDetails(o);
+            OrderListItem item = ordersList.getSelectedValue();
+            if (item != null && item.order != null) {
+                showOrderDetails(item.order);
                 completeButton.setEnabled(true);
             } else {
                 showPlaceholder();
@@ -208,11 +209,13 @@ public class CompleteOrderGUI extends JFrame {
         });
 
         completeButton.addActionListener(e -> completeSelectedOrder());
+
         refreshButton.addActionListener(e -> {
             refreshList();
             JOptionPane.showMessageDialog(this, "Liste wurde aktualisiert.", "Aktualisiert",
                     JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
         });
+
         closeButton.addActionListener(e -> dispose());
     }
 
@@ -316,12 +319,12 @@ public class CompleteOrderGUI extends JFrame {
     }
 
     private void completeSelectedOrder() {
-        int idx = ordersList.getSelectedIndex();
-        if (idx < 0 || currentOrders == null || idx >= currentOrders.size()) return;
+        OrderListItem item = ordersList.getSelectedValue();
+        if (item == null || item.order == null) return;
 
-        Order selected = currentOrders.get(idx);
+        Order selected = item.order;
 
-        // Final confirmation FIRST
+        // Confirmation FIRST
         int res = JOptionPane.showConfirmDialog(this,
                 "Möchten Sie die Bestellung " + safe(selected.getOrderId()) + " abschließen?\n" +
                         "Der Lagerbestand wird entsprechend reduziert.",
@@ -329,9 +332,7 @@ public class CompleteOrderGUI extends JFrame {
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE, Main.iconSmall);
 
-        if (res != JOptionPane.YES_OPTION) {
-            return;
-        }
+        if (res != JOptionPane.YES_OPTION) return;
 
         // Resolve articles
         List<Article> articles = selected.getOrderedArticles().keySet().stream()
@@ -339,35 +340,66 @@ public class CompleteOrderGUI extends JFrame {
                 .filter(Objects::nonNull)
                 .toList();
 
-        // Validate stock availability first
+        // Build warnings + shortages (now includes "Wird geliefert")
         List<String> warnings = new ArrayList<>();
-        List<String> errors = new ArrayList<>();
+        List<String> shortages = new ArrayList<>();
 
         for (Article article : articles) {
-            int qty = selected.getOrderedArticles().get(article.getArticleNumber());
-            int currentStock = article.getStockQuantity();
-            int newStock = currentStock - qty;
+            int ordered = selected.getOrderedArticles().get(article.getArticleNumber());
+            int stock = article.getStockQuantity();
 
-            if (currentStock < qty) {
-                errors.add(String.format("- %s (%s): Lager=%d, Bestellt=%d (Fehlt: %d)",
-                        safe(article.getName()), safe(article.getArticleNumber()),
-                        currentStock, qty, qty - currentStock));
-            } else if (newStock < article.getMinStockLevel()) {
-                warnings.add(String.format("- %s (%s): Neuer Bestand=%d < Mindestbestand=%d",
-                        safe(article.getName()), safe(article.getArticleNumber()),
-                        newStock, article.getMinStockLevel()));
+            int willFulfill = Math.min(stock, ordered);
+            int missing = Math.max(0, ordered - stock);
+
+            if (missing > 0) {
+                shortages.add(String.format(
+                        "- %s (%s): Bestellt=%d, Lager=%d → Wird geliefert=%d, Fehlmenge=%d",
+                        safe(article.getName()),
+                        safe(article.getArticleNumber()),
+                        ordered,
+                        stock,
+                        willFulfill,
+                        missing
+                ));
+            } else {
+                int newStockAfterFull = stock - ordered;
+                if (newStockAfterFull < article.getMinStockLevel()) {
+                    warnings.add(String.format(
+                            "- %s (%s): Neuer Bestand=%d < Mindestbestand=%d",
+                            safe(article.getName()),
+                            safe(article.getArticleNumber()),
+                            newStockAfterFull,
+                            article.getMinStockLevel()
+                    ));
+                }
             }
         }
 
-        if (!errors.isEmpty()) {
-            StringBuilder msg = new StringBuilder("<html><b>FEHLER: Nicht genügend Lagerbestand!</b><br/><br/>");
-            errors.forEach(err -> msg.append(err).append("<br/>"));
-            msg.append("<br/>Die Bestellung kann nicht abgeschlossen werden.</html>");
-            JOptionPane.showMessageDialog(this, msg.toString(), "Lagerbestand unzureichend",
-                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+        // If shortages exist -> offer PARTIAL fulfillment
+        if (!shortages.isEmpty()) {
+            StringBuilder msg = new StringBuilder("<html><b>WARNUNG: Nicht genügend Lagerbestand!</b><br/><br/>");
+            msg.append("Folgende Artikel können nicht vollständig geliefert werden:<br/><br/>");
+            shortages.forEach(s -> msg.append(s).append("<br/>"));
+            msg.append("<br/><b>Optionen:</b><br/>");
+            msg.append("- <b>Ja</b>: Teil-Lieferung durchführen (Fehlmenge wird protokolliert)<br/>");
+            msg.append("- <b>Nein</b>: Vorgang abbrechen</html>");
+
+            int choice = JOptionPane.showConfirmDialog(this,
+                    msg.toString(),
+                    "Unzureichender Lagerbestand",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+
+            if (choice != JOptionPane.YES_OPTION) return;
+
+            // Partial fulfillment
+            completeOrderWithPartialStock(selected, articles);
+            refreshList();
             return;
         }
 
+        // No shortages -> but maybe warnings (min stock)
         if (!warnings.isEmpty()) {
             StringBuilder msg = new StringBuilder("<html><b>WARNUNG: Mindestbestand wird unterschritten!</b><br/><br/>");
             warnings.forEach(warn -> msg.append(warn).append("<br/>"));
@@ -377,53 +409,10 @@ public class CompleteOrderGUI extends JFrame {
             if (warnRes != JOptionPane.YES_OPTION) return;
         }
 
-        // Optional: partial fulfillment (if you want to keep it)
-        // Here we only check again if something changed (usually not needed),
-        // but you had the feature, so we keep it as a single controlled branch.
-        List<String> insufficientStockErrors = new ArrayList<>();
-        for (Article article : articles) {
-            int qty = selected.getOrderedArticles().get(article.getArticleNumber());
-            int currentStock = article.getStockQuantity();
-            if (currentStock < qty) {
-                insufficientStockErrors.add(String.format(
-                        "- %s (%s): Benötigt=%d, Verfügbar=%d (Fehlt: %d)",
-                        safe(article.getName()),
-                        safe(article.getArticleNumber()),
-                        qty,
-                        currentStock,
-                        qty - currentStock
-                ));
-            }
-        }
-
-        if (!insufficientStockErrors.isEmpty()) {
-            StringBuilder errorMsg = new StringBuilder("<html><b>WARNUNG: Nicht genügend Lagerbestand!</b><br/><br/>");
-            errorMsg.append("Folgende Artikel haben nicht ausreichend Lagerbestand:<br/><br/>");
-            insufficientStockErrors.forEach(err -> errorMsg.append(err).append("<br/>"));
-            errorMsg.append("<br/><b>Optionen:</b><br/>");
-            errorMsg.append("- <b>Ja</b>: Bestellung mit verfügbarem Bestand abschließen (Fehlmenge wird protokolliert)<br/>");
-            errorMsg.append("- <b>Nein</b>: Vorgang abbrechen</html>");
-
-            int choice = JOptionPane.showConfirmDialog(this,
-                    errorMsg.toString(),
-                    "Unzureichender Lagerbestand",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
-
-            if (choice != JOptionPane.YES_OPTION) {
-                return;
-            }
-
-            // Proceed with partial fulfillment
-            completeOrderWithPartialStock(selected, articles, idx);
-            return;
-        }
-
-        // Deduct stock & update order
+        // Full fulfillment
         ArticleManager articleManager = ArticleManager.getInstance();
-
         boolean allStockUpdated = true;
+
         for (Article article : articles) {
             int qty = selected.getOrderedArticles().get(article.getArticleNumber());
             if (!articleManager.removeFromStock(article.getArticleNumber(), qty)) {
@@ -432,13 +421,8 @@ public class CompleteOrderGUI extends JFrame {
             }
         }
 
-        // Update user
-        UserManager userManager = UserManager.getInstance();
-        User user = userManager.getUserByName(selected.getSenderName().toLowerCase());
-        if (user == null) user = createUser(selected.getSenderName().toLowerCase());
-        if (!user.getOrders().contains(selected.getOrderId())) user.getOrders().add(selected.getOrderId());
-        userManager.updateUser(user);
-        OrderLoggingUtils.getInstance().addLogEntry(selected, user);
+        // Update user + log
+        updateUserAndLog(selected);
 
         // Update order
         selected.setStatus("Abgeschlossen");
@@ -473,7 +457,7 @@ public class CompleteOrderGUI extends JFrame {
      * Completes an order with partial stock fulfillment.
      * Deducts available stock and logs items that need to be ordered.
      */
-    private void completeOrderWithPartialStock(Order selected, List<Article> articles, int idx) {
+    private void completeOrderWithPartialStock(Order selected, List<Article> articles) {
         ArticleManager articleManager = ArticleManager.getInstance();
 
         List<String> fulfilledItems = new ArrayList<>();
@@ -513,10 +497,12 @@ public class CompleteOrderGUI extends JFrame {
             }
         }
 
-        Order order = currentOrders.get(idx);
-        order.setStatus(hasPartialFulfillment ? "Teilweise abgeschlossen" : "Abgeschlossen");
+        // Update order status
+        selected.setStatus(hasPartialFulfillment ? "Teilweise abgeschlossen" : "Abgeschlossen");
+        boolean updatedOrder = OrderManager.getInstance().updateOrder(selected);
 
-        boolean updatedOrder = OrderManager.getInstance().updateOrder(order);
+        // Update user + log (still log partial completion)
+        updateUserAndLog(selected);
 
         StringBuilder resultMsg = new StringBuilder("<html><b>Bestellung verarbeitet!</b><br/><br/>");
         resultMsg.append("<b>Bestell-ID:</b> ").append(safe(selected.getOrderId())).append("<br/><br/>");
@@ -568,8 +554,21 @@ public class CompleteOrderGUI extends JFrame {
                     JOptionPane.WARNING_MESSAGE,
                     Main.iconSmall);
         }
+    }
 
-        refreshList();
+    private void updateUserAndLog(Order selected) {
+        UserManager userManager = UserManager.getInstance();
+        String sender = safe(selected.getSenderName()).toLowerCase();
+
+        User user = userManager.getUserByName(sender);
+        if (user == null) user = createUser(sender);
+
+        if (!user.getOrders().contains(selected.getOrderId())) {
+            user.getOrders().add(selected.getOrderId());
+        }
+
+        userManager.updateUser(user);
+        OrderLoggingUtils.getInstance().addLogEntry(selected, user);
     }
 
     public void display() {
@@ -589,7 +588,6 @@ public class CompleteOrderGUI extends JFrame {
         ordersList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         ordersList.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         ordersList.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        ordersList.setFixedCellHeight(60);
 
         ordersList.setCellRenderer(new OrderListCellRenderer());
 
@@ -671,12 +669,11 @@ public class CompleteOrderGUI extends JFrame {
     }
 
     private record OrderListItem(Order order) {
-
         @Override
-            public String toString() {
-                return order.getOrderId() + " - " + order.getReceiverName();
-            }
+        public String toString() {
+            return order.getOrderId() + " - " + order.getReceiverName();
         }
+    }
 
     private static class OrderListCellRenderer extends JPanel implements ListCellRenderer<OrderListItem> {
         private final JLabel idLabel;
@@ -747,7 +744,7 @@ public class CompleteOrderGUI extends JFrame {
             dateLabel.setForeground(muted);
 
             setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, divider),
+                    BorderFactory.createMatteBorder(1, 0, 1, 0, divider),
                     padding
             ));
 
@@ -760,7 +757,8 @@ public class CompleteOrderGUI extends JFrame {
             } else {
                 setBackground(bg);
             }
-
+            // ensure enough height, but still allows larger if needed
+            setPreferredSize(new Dimension(list.getWidth(), 72));
             return this;
         }
     }
