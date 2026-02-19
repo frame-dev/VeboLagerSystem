@@ -5,28 +5,24 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.sql.*;
+import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * Simple DatabaseManager for SQLite.
- * <p>
- * Note: executeQuery returns a ResultSet and keeps the creating Statement tracked.
- * Callers must call closeQuery(ResultSet) when finished to close both ResultSet and Statement.
- * TODO: Performance optimizations if needed.
+ *
+ * Performance notes:
+ * - Avoids ParameterMetaData() (slow/unreliable in SQLite)
+ * - Adds pragmatic SQLite PRAGMAs (WAL, NORMAL sync, cache_size, mmap_size, busy_timeout, etc.)
+ * - Uses a small LRU cache for PreparedStatements (huge win for repeated queries/updates)
+ * - clearDatabase() uses a transaction and a single Statement for speed
+ * - clearTable() uses a strict whitelist (safe + fast)
  */
 @SuppressWarnings({"UnusedReturnValue", "unused"})
 public class DatabaseManager {
 
-    private final Logger logger = LogManager.getLogger(DatabaseManager.class);
+    private static final Logger logger = LogManager.getLogger(DatabaseManager.class);
 
     public static final String TABLE_ARTICLES = "articles";
     public static final String TABLE_VENDORS = "vendors";
@@ -38,6 +34,18 @@ public class DatabaseManager {
     public static final String TABLE_LOGS = "logs";
     public static final String TABLE_NOTES = "notes";
 
+    private static final Set<String> ALLOWED_TABLES = Set.of(
+            TABLE_ARTICLES,
+            TABLE_VENDORS,
+            TABLE_ORDERS,
+            TABLE_CLIENTS,
+            TABLE_DEPARTMENTS,
+            TABLE_USERS,
+            TABLE_WARNINGS,
+            TABLE_LOGS,
+            TABLE_NOTES
+    );
+
     private final Connection connection;
 
     /**
@@ -48,13 +56,36 @@ public class DatabaseManager {
             Collections.synchronizedMap(new WeakHashMap<>());
 
     /**
+     * PreparedStatement LRU cache.
+     * Key includes SQL + "Q"/"U" so query/update statements don't collide.
+     */
+    private static final int STMT_CACHE_SIZE = 64;
+
+    private final Map<String, PreparedStatement> stmtCache =
+            Collections.synchronizedMap(new LinkedHashMap<>(STMT_CACHE_SIZE + 1, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, PreparedStatement> eldest) {
+                    if (size() <= STMT_CACHE_SIZE) return false;
+                    PreparedStatement ps = eldest.getValue();
+                    try {
+                        if (ps != null && !ps.isClosed()) ps.close();
+                    } catch (SQLException ignored) {
+                    }
+                    return true;
+                }
+            });
+
+    /**
      * Open (or create) the SQLite database at path/fileName.
      *
      * @param path     directory path (maybe null or empty)
      * @param fileName database file name
      */
     public DatabaseManager(String path, String fileName) {
-        String prefix = (path != null && !path.isEmpty()) ? (path.endsWith("/") ? path : path + "/") : "";
+        String prefix = (path != null && !path.isEmpty())
+                ? (path.endsWith("/") ? path : path + "/")
+                : "";
+
         File dir = new File(prefix);
         if (!dir.exists()) {
             if (!dir.mkdirs()) {
@@ -62,12 +93,48 @@ public class DatabaseManager {
                 throw new RuntimeException("Failed to create database directory: " + dir.getAbsolutePath());
             }
         }
+
         String url = "jdbc:sqlite:" + prefix + fileName;
         try {
             this.connection = DriverManager.getConnection(url);
+            applySQLitePragmas(); // performance + safety defaults
         } catch (SQLException e) {
             Main.logUtils.addLog("Fehler beim Öffnen der Datenbank: " + e.getMessage());
             throw new RuntimeException("Failed to open database: " + url, e);
+        }
+    }
+
+    /**
+     * Recommended SQLite pragmas for typical desktop apps.
+     * WAL improves concurrency and write throughput. NORMAL is a good perf/safety tradeoff.
+     */
+    private void applySQLitePragmas() {
+        execPragmaSafe("PRAGMA foreign_keys = ON;");
+        execPragmaSafe("PRAGMA journal_mode = WAL;");
+        execPragmaSafe("PRAGMA synchronous = NORMAL;");
+        execPragmaSafe("PRAGMA temp_store = MEMORY;");
+        // cache_size: negative means KB, so -20000 ~= 20MB cache
+        execPragmaSafe("PRAGMA cache_size = -20000;");
+
+        // Helps prevent "database is locked" under concurrent UI actions
+        execPragmaSafe("PRAGMA busy_timeout = 5000;"); // ms
+
+        // Memory map I/O can help on larger DBs / SSDs
+        // 256MB mapping (adjust if needed)
+        execPragmaSafe("PRAGMA mmap_size = 268435456;");
+
+        // Control WAL checkpointing frequency (pages); adjust to your workload
+        execPragmaSafe("PRAGMA wal_autocheckpoint = 1000;");
+
+        // Light maintenance hint (SQLite 3.18+)
+        execPragmaSafe("PRAGMA optimize;");
+    }
+
+    private void execPragmaSafe(String sql) {
+        try (Statement s = connection.createStatement()) {
+            s.execute(sql);
+        } catch (SQLException e) {
+            logger.debug("Pragma failed (ignored): {}", sql, e);
         }
     }
 
@@ -91,28 +158,98 @@ public class DatabaseManager {
     }
 
     /**
+     * Execute a prepared query and return the ResultSet.
+     * Caller must call closeQuery(rs).
+     *
+     * PreparedStatement is reused from an LRU cache.
+     */
+    public ResultSet executePreparedQuery(String sql, Object[] params) {
+        try {
+            PreparedStatement pstmt = getCachedPreparedStatement("Q", sql);
+
+            bindParams(pstmt, params);
+
+            ResultSet rs = pstmt.executeQuery();
+            // track rs->pstmt so closeQuery closes both if needed
+            openStatements.put(rs, pstmt);
+            return rs;
+        } catch (SQLException e) {
+            logger.error("SQL Exception during executePreparedQuery: ", e);
+            Main.logUtils.addLog("Fehler bei der vorbereiteten Abfrage: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Execute prepared update statement.
+     *
+     * PreparedStatement is reused from an LRU cache.
+     */
+    public boolean executePreparedUpdate(String sql, Object[] params) {
+        try {
+            PreparedStatement pstmt = getCachedPreparedStatement("U", sql);
+
+            bindParams(pstmt, params);
+
+            pstmt.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            logger.error("SQL Exception during executePreparedUpdate: ", e);
+            Main.logUtils.addLog("Fehler bei der vorbereiteten Aktualisierung: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private void bindParams(PreparedStatement ps, Object[] params) throws SQLException {
+        ps.clearParameters();
+        if (params == null) return;
+        for (int i = 0; i < params.length; i++) {
+            ps.setObject(i + 1, params[i]);
+        }
+    }
+
+    private PreparedStatement getCachedPreparedStatement(String type, String sql) throws SQLException {
+        String key = type + ":" + sql;
+        PreparedStatement ps = stmtCache.get(key);
+        if (ps != null && !ps.isClosed()) {
+            return ps;
+        }
+
+        // Create new and cache it
+        ps = connection.prepareStatement(sql);
+        stmtCache.put(key, ps);
+        return ps;
+    }
+
+    /**
      * Close the given ResultSet and its creating Statement (if tracked).
      *
      * @param rs ResultSet to close (may be null)
      */
     public void closeQuery(ResultSet rs) {
         if (rs == null) return;
+
         Statement stmt = null;
         try {
             stmt = openStatements.remove(rs);
         } catch (Exception ignored) {
         }
+
         try {
-            if (!rs.isClosed()) {
-                rs.close();
-            }
+            if (!rs.isClosed()) rs.close();
         } catch (SQLException ignored) {
         }
+
+        // IMPORTANT:
+        // If it's a cached PreparedStatement, we do NOT close it here (we keep it for reuse).
+        if (stmt instanceof PreparedStatement) {
+            // keep cached prepared statements alive
+            return;
+        }
+
         if (stmt != null) {
             try {
-                if (!stmt.isClosed()) {
-                    stmt.close();
-                }
+                if (!stmt.isClosed()) stmt.close();
             } catch (SQLException ignored) {
             }
         }
@@ -151,6 +288,9 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Execute update/DDL statement and return affected rows count (or -1 on error).
+     */
     public int executeUpdateWithCount(String sql) {
         try (Statement stmt = connection.createStatement()) {
             return stmt.executeUpdate(sql);
@@ -158,39 +298,6 @@ public class DatabaseManager {
             logger.error("SQL Exception during executeUpdateWithCount: ", e);
             Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
             return -1;
-        }
-    }
-
-    public boolean executePreparedUpdate(String sql, Object[] values) {
-        try (var pstmt = connection.prepareStatement(sql)) {
-            // No parameters to bind
-            if (values == null || values.length == 0) {
-                pstmt.executeUpdate();
-                return true;
-            }
-
-            try {
-                int bindCount = pstmt.getParameterMetaData().getParameterCount();
-                if (values.length < bindCount) {
-                    Main.logUtils.addLog("Fehler bei der vorbereiteten Aktualisierung: Nicht genügend Parameter: erwartet " + bindCount + " aber erhalten " + values.length);
-                    throw new IllegalArgumentException("Not enough parameters: expected " + bindCount + " but got " + values.length);
-                }
-                for (int i = 0; i < bindCount; i++) {
-                    pstmt.setObject(i + 1, values[i]);
-                }
-            } catch (SQLException metaEx) {
-                // Parameter metadata unavailable — fallback to binding all provided values.
-                for (int i = 0; i < values.length; i++) {
-                    pstmt.setObject(i + 1, values[i]);
-                }
-            }
-
-            pstmt.executeUpdate();
-            return true;
-        } catch (SQLException | IllegalArgumentException e) {
-            logger.error("SQL Exception during executeUpdate: ", e);
-            Main.logUtils.addLog("Fehler bei der vorbereiteten Aktualisierung: " + e.getMessage());
-            return false;
         }
     }
 
@@ -204,102 +311,70 @@ public class DatabaseManager {
     }
 
     /**
-     * Close manager: close tracked queries and connection.
+     * Close manager: close tracked queries, close cached statements, close connection.
      */
     public void close() {
         closeAllOpenQueries();
-        try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-            }
-        } catch (SQLException ignored) {
-        }
-    }
 
-    public ResultSet executePreparedQuery(String sql, Object[] objects) {
-        try {
-            var pstmt = connection.prepareStatement(sql);
-
-            // No parameters to bind
-            if (objects != null && objects.length > 0) {
+        synchronized (stmtCache) {
+            for (PreparedStatement ps : stmtCache.values()) {
                 try {
-                    int paramCount = pstmt.getParameterMetaData().getParameterCount();
-                    if (objects.length < paramCount) {
-                        Main.logUtils.addLog("Fehler bei der vorbereiteten Abfrage: Nicht genügend Parameter: erwartet " + paramCount + " aber erhalten " + objects.length);
-                        throw new IllegalArgumentException("Not enough parameters: expected " + paramCount + " but got " + objects.length);
-                    }
-                    for (int i = 0; i < paramCount; i++) {
-                        pstmt.setObject(i + 1, objects[i]);
-                    }
-                } catch (SQLException metaEx) {
-                    // Parameter metadata unavailable — fallback to binding all provided values.
-                    for (int i = 0; i < objects.length; i++) {
-                        pstmt.setObject(i + 1, objects[i]);
-                    }
+                    if (ps != null && !ps.isClosed()) ps.close();
+                } catch (SQLException ignored) {
                 }
             }
+            stmtCache.clear();
+        }
 
-            ResultSet rs = pstmt.executeQuery();
-            openStatements.put(rs, pstmt);
-            return rs;
-        } catch (SQLException | IllegalArgumentException e) {
-            logger.error("SQL Exception during executePreparedQuery: ", e);
-            Main.logUtils.addLog("Fehler bei der vorbereiteten Abfrage: " + e.getMessage());
-            return null;
+        try {
+            if (connection != null && !connection.isClosed()) connection.close();
+        } catch (SQLException ignored) {
         }
     }
 
     /**
      * Clear all data from the database.
-     * WARNING: This is a destructive operation that removes ALL data from ALL tables.
-     * This operation uses transactions to ensure atomicity (all or nothing).
-     *
-     * @return true if all tables were successfully cleared, false otherwise
+     * WARNING: destructive operation that removes ALL data from ALL tables.
+     * Uses a transaction to ensure atomicity (all or nothing).
      */
     public boolean clearDatabase() {
         logger.warn("clearDatabase() called - this will delete all data!");
 
-        // Define all tables to clear (in dependency order to avoid foreign key issues)
         String[] tablesToClear = {
-            TABLE_WARNINGS,      // No dependencies
-            TABLE_ORDERS,        // References users, articles
-            TABLE_USERS,         // References orders (but we clear orders first)
-            TABLE_CLIENTS,       // No dependencies
-            TABLE_DEPARTMENTS,   // No dependencies
-            TABLE_ARTICLES,      // References vendors
-            TABLE_VENDORS        // No dependencies
+                TABLE_WARNINGS,
+                TABLE_ORDERS,
+                TABLE_USERS,
+                TABLE_CLIENTS,
+                TABLE_DEPARTMENTS,
+                TABLE_ARTICLES,
+                TABLE_VENDORS,
+                TABLE_LOGS,
+                TABLE_NOTES
         };
 
         boolean autoCommit = true;
         try {
-            // Start transaction
             autoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
 
-            int clearedCount = 0;
-
-            // Clear each table
-            for (String table : tablesToClear) {
-                String sql = "DELETE FROM " + table;
-                try (Statement stmt = connection.createStatement()) {
-                    int rowsDeleted = stmt.executeUpdate(sql);
-                    logger.info("Cleared {} rows from table: {}", rowsDeleted, table);
+            try (Statement stmt = connection.createStatement()) {
+                int clearedCount = 0;
+                for (String table : tablesToClear) {
+                    int rowsDeleted = stmt.executeUpdate("DELETE FROM " + table);
+                    getClearedInfo(table, rowsDeleted);
                     Main.logUtils.addLog("Tabelle " + table + " gelöscht, " + rowsDeleted + " Zeilen entfernt.");
                     clearedCount++;
-                } catch (SQLException e) {
-                    logger.error("Failed to clear table: {}", table, e);
-                    // Rollback on any error
-                    connection.rollback();
-                    logger.warn("Transaction rolled back - no data was deleted");
-                    Main.logUtils.addLog("Fehler beim Löschen der Tabelle " + table + ": " + e.getMessage());
-                    return false;
                 }
+                connection.commit();
+                logger.info("Successfully cleared all {} tables", clearedCount);
+                return true;
+            } catch (SQLException e) {
+                logger.error("Failed during clearDatabase() statement loop", e);
+                connection.rollback();
+                logger.warn("Transaction rolled back - no data was deleted");
+                Main.logUtils.addLog("Fehler beim Löschen der Datenbank: " + e.getMessage());
+                return false;
             }
-
-            // Commit transaction
-            connection.commit();
-            logger.info("Successfully cleared all {} tables", clearedCount);
-            return true;
 
         } catch (SQLException e) {
             logger.error("Error during clearDatabase transaction", e);
@@ -312,10 +387,8 @@ public class DatabaseManager {
                 logger.error("Failed to rollback transaction", rollbackEx);
                 Main.logUtils.addLog("Fehler beim Zurücksetzen der Transaktion: " + rollbackEx.getMessage());
             }
-            Main.logUtils.addLog("Fehler beim Löschen der Datenbank: " + e.getMessage());
             return false;
         } finally {
-            // Restore auto-commit mode
             try {
                 connection.setAutoCommit(autoCommit);
             } catch (SQLException e) {
@@ -328,8 +401,8 @@ public class DatabaseManager {
     /**
      * Clear a specific table from the database.
      *
-     * @param tableName The name of the table to clear
-     * @return true if the table was successfully cleared, false otherwise
+     * IMPORTANT: You cannot bind table names with PreparedStatement placeholders.
+     * Therefore we whitelist table names and build SQL directly.
      */
     public boolean clearTable(String tableName) {
         if (tableName == null || tableName.trim().isEmpty()) {
@@ -338,16 +411,80 @@ public class DatabaseManager {
             return false;
         }
 
-        String sql = "DELETE FROM " + tableName;
+        String normalized = tableName.trim();
+        if (!ALLOWED_TABLES.contains(normalized)) {
+            logger.error("clearTable called with invalid/unauthorized table name: {}", normalized);
+            Main.logUtils.addLog("Invalid/unauthorized table name: " + normalized);
+            return false;
+        }
+
         try (Statement stmt = connection.createStatement()) {
-            int rowsDeleted = stmt.executeUpdate(sql);
-            logger.info("Cleared {} rows from table: {}", rowsDeleted, tableName);
-            Main.logUtils.addLog("Tabelle " + tableName + " gelöscht, " + rowsDeleted + " Zeilen entfernt.");
+            int rowsDeleted = stmt.executeUpdate("DELETE FROM " + normalized);
+            getClearedInfo(normalized, rowsDeleted);
+            Main.logUtils.addLog("Tabelle " + normalized + " gelöscht, " + rowsDeleted + " Zeilen entfernt.");
             return true;
         } catch (SQLException e) {
-            logger.error("Failed to clear table: {}", tableName, e);
-            Main.logUtils.addLog("Fehler beim Löschen der Tabelle " + tableName + ": " + e.getMessage());
+            logger.error("Failed to clear table: {}", normalized, e);
+            Main.logUtils.addLog("Fehler beim Löschen der Tabelle " + normalized + ": " + e.getMessage());
             return false;
+        }
+    }
+
+    private void getClearedInfo(String tableName, int rowsDeleted) {
+        logger.info("Cleared {} rows from table: {}", rowsDeleted, tableName);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Optional helper API (safe mapping) - prefer this over returning ResultSet long-term
+    // ---------------------------------------------------------------------------------------------
+
+    @FunctionalInterface
+    public interface ResultMapper<T> {
+        T map(ResultSet rs) throws SQLException;
+    }
+
+    public <T> List<T> queryList(String sql, Object[] params, ResultMapper<T> mapper) {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) ps.setObject(i + 1, params[i]);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                List<T> out = new ArrayList<>();
+                while (rs.next()) out.add(mapper.map(rs));
+                return out;
+            }
+        } catch (SQLException e) {
+            logger.error("queryList failed: {}", sql, e);
+            Main.logUtils.addLog("Fehler bei der Abfrage: " + e.getMessage());
+            return List.of();
+        }
+    }
+
+    public <T> T queryOne(String sql, Object[] params, ResultMapper<T> mapper) {
+        List<T> list = queryList(sql, params, mapper);
+        return list.isEmpty() ? null : list.getFirst();
+    }
+
+    public boolean inTransaction(Consumer<Connection> work) {
+        boolean autoCommit = true;
+        try {
+            autoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            work.accept(connection);
+            connection.commit();
+            return true;
+        } catch (Exception e) {
+            logger.error("Transaction failed", e);
+            try {
+                connection.rollback();
+            } catch (SQLException ignored) {
+            }
+            return false;
+        } finally {
+            try {
+                connection.setAutoCommit(autoCommit);
+            } catch (SQLException ignored) {
+            }
         }
     }
 }
