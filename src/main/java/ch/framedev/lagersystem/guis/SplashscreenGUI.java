@@ -2,233 +2,405 @@ package ch.framedev.lagersystem.guis;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.geom.RoundRectangle2D;
 import java.net.URL;
 
 @SuppressWarnings("unused")
 public class SplashscreenGUI extends JFrame {
 
+    // Palette (refined + slightly more premium)
     private static final Color ACCENT_BLUE = new Color(30, 136, 229);
-    private static final Color BACKGROUND_TOP = new Color(210, 232, 255);
-    private static final Color BACKGROUND_MID = new Color(232, 242, 255);
-    private static final Color BACKGROUND_BOTTOM = new Color(248, 250, 255);
-    private static final Color GLOW_BLUE = new Color(60, 155, 245);
+    private static final Color ACCENT_BLUE_DARK = new Color(20, 108, 190);
+
+    private static final Color BACKGROUND_TOP = new Color(206, 232, 255);
+    private static final Color BACKGROUND_MID = new Color(232, 244, 255);
+    private static final Color BACKGROUND_BOTTOM = new Color(249, 251, 255);
+
+    private static final Color GLOW_BLUE = new Color(72, 165, 255);
+
+    private static final Color TEXT_PRIMARY = new Color(26, 48, 74);
+    private static final Color TEXT_SECONDARY = new Color(86, 106, 128);
 
     private final AnimatedProgressBar progressBar;
     private final JLabel statusLabel;
     private final AnimatedLogoLabel logoLabel;
+
     private Timer animationTimer;
     private double phase = 0.0;
-    private final Particle[] particles = new Particle[32];
+    private final Particle[] particles = new Particle[34];
+
+    // Responsive padding + content references
+    private final JPanel contentPanel;
+    private final JLabel titleLabel;
+    private final JLabel subtitleLabel;
 
     public SplashscreenGUI() {
         setTitle("Lagersystem - Splashscreen");
-        setSize(760, 440);
+        setSize(920, 620);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setUndecorated(true);
 
         GradientPanel root = new GradientPanel();
         root.setLayout(new GridBagLayout());
+        root.setBorder(BorderFactory.createEmptyBorder(26, 26, 26, 26));
 
         GlassPanel card = new GlassPanel();
-        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
-        card.setBorder(BorderFactory.createEmptyBorder(36, 60, 40, 60));
+        card.setLayout(new BorderLayout());
 
+        // Inner content panel
+        contentPanel = new JPanel();
+        contentPanel.setOpaque(false);
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        card.add(contentPanel, BorderLayout.CENTER);
+
+        // Logo
         logoLabel = new AnimatedLogoLabel(loadLogo());
         logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        card.add(logoLabel);
+        contentPanel.add(logoLabel);
 
-        card.add(Box.createVerticalStrut(18));
+        contentPanel.add(Box.createVerticalStrut(18));
 
-        JLabel title = new JLabel("Vebo Lager System");
-        title.setAlignmentX(Component.CENTER_ALIGNMENT);
-        title.setFont(new Font("SansSerif", Font.BOLD, 48));
-        title.setForeground(ACCENT_BLUE);
-        card.add(title);
+        // Title
+        titleLabel = new JLabel("Vebo Lagersystem");
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 48));
+        titleLabel.setForeground(ACCENT_BLUE);
+        contentPanel.add(titleLabel);
 
-        JLabel subtitle = new JLabel("Inventory Management");
-        subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-        subtitle.setFont(new Font("SansSerif", Font.PLAIN, 19));
-        subtitle.setForeground(new Color(80, 105, 130));
-        card.add(subtitle);
+        // Subtitle
+        subtitleLabel = new JLabel("Inventory Management");
+        subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        subtitleLabel.setFont(new Font("SansSerif", Font.PLAIN, 19));
+        subtitleLabel.setForeground(TEXT_SECONDARY);
+        contentPanel.add(subtitleLabel);
 
-        card.add(Box.createVerticalStrut(26));
+        contentPanel.add(Box.createVerticalStrut(26));
 
+        // Status
         statusLabel = new JLabel("Initialisiere Programm...");
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 17));
-        statusLabel.setForeground(new Color(55, 75, 95));
-        card.add(statusLabel);
+        statusLabel.setForeground(TEXT_PRIMARY);
+        contentPanel.add(statusLabel);
 
-        card.add(Box.createVerticalStrut(14));
+        contentPanel.add(Box.createVerticalStrut(14));
 
+        // Progress
         progressBar = new AnimatedProgressBar(0, 100);
         progressBar.setValue(0);
         progressBar.setStringPainted(true);
         progressBar.setForeground(ACCENT_BLUE);
-        progressBar.setBackground(new Color(255, 255, 255, 200));
-        progressBar.setBorder(BorderFactory.createEmptyBorder(3, 3, 3, 3));
         progressBar.setPreferredSize(new Dimension(420, 22));
+        progressBar.setMaximumSize(new Dimension(560, 26));
         progressBar.setAlignmentX(Component.CENTER_ALIGNMENT);
-        card.add(progressBar);
+        contentPanel.add(progressBar);
 
-        root.add(card, new GridBagConstraints());
+        // Center card
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE;
+        root.add(card, gbc);
+
         setContentPane(root);
+
+        // Responsive tuning so everything always fits
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                updateResponsiveSizing();
+            }
+        });
+        updateResponsiveSizing();
+
         initParticles();
         startAnimation(root, card);
     }
 
+    private void updateResponsiveSizing() {
+        int w = Math.max(getWidth(), 1);
+        int h = Math.max(getHeight(), 1);
+
+        // Inner padding scales with window size (prevents clipping on small windows)
+        int padX = clamp((int) (w * 0.15), 52, 170);
+        int padY = clamp((int) (h * 0.13), 44, 130);
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(padY, padX, padY, padX));
+
+        // Scale typography a bit
+        int titleSize = clamp((int) (w * 0.052), 34, 52);
+        int subSize = clamp((int) (w * 0.021), 16, 20);
+        int statusSize = clamp((int) (w * 0.019), 14, 18);
+
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, titleSize));
+        subtitleLabel.setFont(new Font("SansSerif", Font.PLAIN, subSize));
+        statusLabel.setFont(new Font("SansSerif", Font.PLAIN, statusSize));
+
+        // Progress bar width adapts
+        int pbW = clamp((int) (w * 0.50), 300, 600);
+        int pbH = clamp((int) (h * 0.038), 20, 28);
+        progressBar.setPreferredSize(new Dimension(pbW, pbH));
+        progressBar.setMaximumSize(new Dimension(pbW, pbH));
+
+        revalidate();
+        repaint();
+    }
+
+    private static int clamp(int v, int min, int max) {
+        return Math.max(min, Math.min(max, v));
+    }
+
     public void updateProgress(int percent, String message) {
         progressBar.setValue(percent);
-        if (message != null && !message.isBlank()) {
-            statusLabel.setText(message);
-        }
+        if (message != null && !message.isBlank()) statusLabel.setText(message);
     }
 
     public void display() {
-        setVisible(true);
+        SwingUtilities.invokeLater(() -> setVisible(true));
     }
 
     public void close() {
-        setVisible(false);
-        stopAnimation();
-        dispose();
+        SwingUtilities.invokeLater(() -> {
+            setVisible(false);
+            stopAnimation();
+            dispose();
+        });
     }
 
     private static Icon loadLogo() {
         URL logoUrl = SplashscreenGUI.class.getResource("/logo-small.png");
-        if (logoUrl == null) {
-            return new EmptyIcon(96, 96);
-        }
+        if (logoUrl == null) return new EmptyIcon(96, 96);
+
         ImageIcon icon = new ImageIcon(logoUrl);
         Image scaled = icon.getImage().getScaledInstance(96, 96, Image.SCALE_SMOOTH);
         return new ImageIcon(scaled);
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // Background
+    // ---------------------------------------------------------------------------------------------
+
     private class GradientPanel extends JPanel {
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
+
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            GradientPaint gradientTop = new GradientPaint(
-                0, 0, BACKGROUND_TOP,
-                0, getHeight() * 0.6f, BACKGROUND_MID
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                GradientPaint gradientTop = new GradientPaint(
+                        0, 0, BACKGROUND_TOP,
+                        0, getHeight() * 0.65f, BACKGROUND_MID
+                );
+                GradientPaint gradientBottom = new GradientPaint(
+                        0, getHeight() * 0.35f, BACKGROUND_MID,
+                        0, getHeight(), BACKGROUND_BOTTOM
+                );
+
+                g2.setPaint(gradientTop);
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.setPaint(gradientBottom);
+                g2.fillRect(0, 0, getWidth(), getHeight());
+
+                double ph = SplashscreenGUI.this.getPhase();
+                int drift = (int) (Math.sin(ph) * 7);
+                int driftY = (int) (Math.cos(ph * 0.85) * 5);
+
+                // Big soft blobs for depth
+                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 52));
+                g2.fillOval(-220 + drift, -240 + driftY, 610, 610);
+
+                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 36));
+                g2.fillOval(getWidth() - 430 - drift, getHeight() - 380 + driftY, 640, 640);
+
+                // White haze
+                g2.setColor(new Color(255, 255, 255, 105));
+                g2.fillOval(getWidth() - 270 - drift, -35 + driftY, 340, 340);
+
+                g2.setColor(new Color(255, 255, 255, 75));
+                g2.fillOval(0 + drift, getHeight() - 280 + driftY, 320, 320);
+
+                paintAuroraBands(g2);
+                SplashscreenGUI.this.paintLightStreaks(g2);
+                SplashscreenGUI.this.paintParticles(g2);
+            } finally {
+                g2.dispose();
+            }
+        }
+
+        private void paintAuroraBands(Graphics2D g2) {
+            int w = getWidth();
+            int h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
+            double ph = SplashscreenGUI.this.getPhase();
+            float cx = (float) ((Math.sin(ph * 0.35) * 0.5 + 0.5) * w);
+
+            // Soft "aurora" band
+            GradientPaint aurora = new GradientPaint(
+                    cx - w * 0.45f, 0, new Color(255, 255, 255, 0),
+                    cx + w * 0.45f, h, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 38)
             );
-            GradientPaint gradientBottom = new GradientPaint(
-                0, getHeight() * 0.4f, BACKGROUND_MID,
-                0, getHeight(), BACKGROUND_BOTTOM
-            );
-            g2.setPaint(gradientTop);
-            g2.fillRect(0, 0, getWidth(), getHeight());
-            g2.setPaint(gradientBottom);
-            g2.fillRect(0, 0, getWidth(), getHeight());
-
-            double phase = SplashscreenGUI.this.getPhase();
-            int drift = (int) (Math.sin(phase) * 6);
-            int driftY = (int) (Math.cos(phase * 0.8) * 4);
-
-            g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 70));
-            g2.fillOval(-140 + drift, -160 + driftY, 420, 420);
-            g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 45));
-            g2.fillOval(getWidth() - 330 - drift, getHeight() - 290 + driftY, 460, 460);
-            g2.setColor(new Color(255, 255, 255, 130));
-            g2.fillOval(getWidth() - 190 - drift, driftY, 250, 250);
-            g2.setColor(new Color(255, 255, 255, 90));
-            g2.fillOval(30 + drift, getHeight() - 210 + driftY, 220, 220);
-
-            SplashscreenGUI.this.paintLightStreaks(g2);
-            SplashscreenGUI.this.paintParticles(g2);
-            g2.dispose();
+            g2.setPaint(aurora);
+            g2.fillRect(0, 0, w, h);
         }
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // Glass card (prettier + ensures content fits)
+    // ---------------------------------------------------------------------------------------------
+
     private class GlassPanel extends JPanel {
+        private static final int SHADOW = 14;
+        private static final int ARC = 30;
+        private static final float STROKE = 1.25f;
+
         GlassPanel() {
             setOpaque(false);
+            setDoubleBuffered(true);
+            setBorder(BorderFactory.createEmptyBorder(SHADOW, SHADOW, SHADOW, SHADOW));
         }
 
         @Override
         protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            int arc = 26;
-            int shadow = 8;
-            int w = getWidth() - shadow * 2;
-            int h = getHeight() - shadow * 2;
-
-            g2.setColor(new Color(0, 0, 0, 38));
-            g2.fillRoundRect(shadow, shadow, w, h, arc, arc);
-
-            g2.setColor(new Color(255, 255, 255, 155));
-            g2.fillRoundRect(0, 0, w, h, arc, arc);
-
-            g2.setStroke(new BasicStroke(1.2f));
-            g2.setColor(new Color(255, 255, 255, 220));
-            g2.drawRoundRect(0, 0, w, h, arc, arc);
-
-            g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 85));
-            g2.drawRoundRect(2, 2, w - 4, h - 4, arc - 2, arc - 2);
-
-            double phase = SplashscreenGUI.this.getPhase();
-            float sweepX = (float) ((Math.sin(phase * 0.8) * 0.5 + 0.5) * w);
-            GradientPaint sweep = new GradientPaint(
-                sweepX - w * 0.6f, 0, new Color(255, 255, 255, 0),
-                sweepX + w * 0.6f, h, new Color(255, 255, 255, 60)
-            );
-            g2.setPaint(sweep);
-            g2.fillRoundRect(0, 0, w, h, arc, arc);
-
-            GradientPaint innerGlow = new GradientPaint(
-                0, 0, new Color(255, 255, 255, 90),
-                0, h, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 28)
-            );
-            g2.setPaint(innerGlow);
-            g2.fillRoundRect(0, 0, w, h, arc, arc);
-            g2.dispose();
             super.paintComponent(g);
+
+            int width = getWidth();
+            int height = getHeight();
+            if (width <= 0 || height <= 0) return;
+
+            Graphics2D g2 = (Graphics2D) g.create();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+
+                int x = SHADOW;
+                int y = SHADOW;
+                int w = width - SHADOW * 2;
+                int h = height - SHADOW * 2;
+                if (w <= 0 || h <= 0) return;
+
+                int arc = Math.min(ARC, Math.min(w, h));
+                Shape glass = new RoundRectangle2D.Float(x, y, w, h, arc, arc);
+
+                // Shadow (layered, smoother)
+                for (int i = 0; i < SHADOW; i++) {
+                    float a = (float) (0.16 * (1.0 - (i / (double) SHADOW)));
+                    g2.setColor(new Color(0f, 0f, 0f, a));
+                    g2.fillRoundRect(
+                            x + i - SHADOW / 2,
+                            y + i - SHADOW / 2,
+                            w - i + SHADOW,
+                            h - i + SHADOW,
+                            arc + 2, arc + 2
+                    );
+                }
+
+                // Clip for fills
+                g2.setClip(glass);
+
+                // Base frosted glass
+                g2.setColor(new Color(255, 255, 255, 145));
+                g2.fill(glass);
+
+                // Inner gradient tint (top brighter, bottom slightly blue)
+                GradientPaint inner = new GradientPaint(
+                        x, y, new Color(255, 255, 255, 115),
+                        x, y + h, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 22)
+                );
+                g2.setPaint(inner);
+                g2.fill(glass);
+
+                // Subtle vignette for depth
+                GradientPaint vignette = new GradientPaint(
+                        x, y, new Color(0, 0, 0, 0),
+                        x, y + h, new Color(0, 0, 0, 18)
+                );
+                g2.setPaint(vignette);
+                g2.fill(glass);
+
+                // Animated sweep highlight
+                double ph = SplashscreenGUI.this.getPhase();
+                float sweepX = (float) (x + ((Math.sin(ph * 0.8) * 0.5 + 0.5) * w));
+                GradientPaint sweep = new GradientPaint(
+                        sweepX - w * 0.70f, y, new Color(255, 255, 255, 0),
+                        sweepX + w * 0.70f, y + h, new Color(255, 255, 255, 60)
+                );
+                g2.setPaint(sweep);
+                g2.fill(glass);
+
+                // Reset clip for strokes
+                g2.setClip(null);
+
+                // Border
+                g2.setStroke(new BasicStroke(scale(STROKE)));
+                g2.setColor(new Color(255, 255, 255, 210));
+                g2.drawRoundRect(x, y, w - 1, h - 1, arc, arc);
+
+                // Inner glow border
+                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 70));
+                g2.drawRoundRect(x + 2, y + 2, w - 5, h - 5, Math.max(arc - 2, 10), Math.max(arc - 2, 10));
+
+            } finally {
+                g2.dispose();
+            }
         }
 
         @Override
         public Insets getInsets() {
-            return new Insets(8, 8, 8, 8);
+            return new Insets(SHADOW, SHADOW, SHADOW, SHADOW);
+        }
+
+        @Override
+        public Insets getInsets(Insets insets) {
+            Insets i = getInsets();
+            insets.top = i.top;
+            insets.left = i.left;
+            insets.bottom = i.bottom;
+            insets.right = i.right;
+            return insets;
+        }
+
+        private float scale(float v) {
+            GraphicsConfiguration gc = getGraphicsConfiguration();
+            if (gc == null) return v;
+            double sx = gc.getDefaultTransform().getScaleX();
+            return (float) (v * sx);
         }
     }
 
     private record EmptyIcon(int width, int height) implements Icon {
-        @Override
-        public void paintIcon(Component c, Graphics g, int x, int y) {
-        }
-
-        @Override
-        public int getIconWidth() {
-            return width;
-        }
-
-        @Override
-        public int getIconHeight() {
-            return height;
-        }
+        @Override public void paintIcon(Component c, Graphics g, int x, int y) {}
+        @Override public int getIconWidth() { return width; }
+        @Override public int getIconHeight() { return height; }
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // Animation
+    // ---------------------------------------------------------------------------------------------
+
     private void startAnimation(JComponent... components) {
-        animationTimer = new Timer(15, event -> {
-            phase += 0.085;
+        animationTimer = new Timer(16, event -> {
+            phase += 0.072;
             advanceParticles();
+
+            // repaint only what’s needed
             logoLabel.repaint();
             statusLabel.repaint();
             progressBar.repaint();
-            for (JComponent component : components) {
-                component.repaint();
-            }
+            for (JComponent component : components) component.repaint();
         });
         animationTimer.start();
     }
 
     private void stopAnimation() {
-        if (animationTimer != null) {
-            animationTimer.stop();
-        }
+        if (animationTimer != null) animationTimer.stop();
     }
 
     private double getPhase() {
@@ -262,50 +434,121 @@ public class SplashscreenGUI extends JFrame {
         @Override
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            int bob = (int) (Math.sin(SplashscreenGUI.this.getPhase()) * 3);
-            g2.translate(0, bob);
-            super.paintComponent(g2);
-            g2.dispose();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int bob = (int) (Math.sin(SplashscreenGUI.this.getPhase()) * 3);
+                g2.translate(0, bob);
+
+                // Softer glow behind logo
+                int cx = getWidth() / 2;
+                int cy = getHeight() / 2;
+                int r = Math.max(getWidth(), getHeight());
+
+                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 36));
+                g2.fillOval(cx - r / 2, cy - r / 2, r, r);
+
+                g2.setColor(new Color(255, 255, 255, 70));
+                g2.fillOval(cx - r / 3, cy - r / 3, (r * 2) / 3, (r * 2) / 3);
+
+                super.paintComponent(g2);
+            } finally {
+                g2.dispose();
+            }
         }
     }
 
+    /**
+     * Rounded, glassy progress bar with animated specular highlight.
+     */
     private class AnimatedProgressBar extends JProgressBar {
         AnimatedProgressBar(int min, int max) {
             super(min, max);
             setOpaque(false);
+            setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+            setString(""); // we draw our own % text
         }
 
         @Override
         protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            double percent = getPercentComplete();
-            if (percent <= 0.0) {
-                return;
-            }
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            Insets insets = getInsets();
-            int w = getWidth() - insets.left - insets.right;
-            int h = getHeight() - insets.top - insets.bottom;
-            int fill = Math.max(1, (int) Math.round(w * percent));
-            int x = insets.left;
-            int y = insets.top;
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            double phase = SplashscreenGUI.this.getPhase();
-            float sweepX = (float) ((Math.sin(phase * 0.9) * 0.5 + 0.5) * fill);
-            GradientPaint sweep = new GradientPaint(
-                x + sweepX - fill * 0.5f, y, new Color(255, 255, 255, 0),
-                x + sweepX + fill * 0.5f, y + h, new Color(255, 255, 255, 120)
-            );
-            Shape oldClip = g2.getClip();
-            g2.setClip(x, y, fill, h);
-            g2.setPaint(sweep);
-            g2.fillRect(x, y, fill, h);
-            g2.setClip(oldClip);
-            g2.dispose();
+                Insets in = getInsets();
+                int x = in.left;
+                int y = in.top;
+                int w = getWidth() - in.left - in.right;
+                int h = getHeight() - in.top - in.bottom;
+                if (w <= 0 || h <= 0) return;
+
+                int arc = Math.min(16, h);
+
+                // Track (with subtle depth)
+                g2.setColor(new Color(255, 255, 255, 175));
+                g2.fillRoundRect(x, y, w, h, arc, arc);
+
+                GradientPaint trackShade = new GradientPaint(
+                        x, y, new Color(255, 255, 255, 140),
+                        x, y + h, new Color(0, 0, 0, 18)
+                );
+                g2.setPaint(trackShade);
+                g2.fillRoundRect(x, y, w, h, arc, arc);
+
+                // Fill
+                double pct = getPercentComplete();
+                int fillW = (int) Math.round(w * pct);
+                if (fillW > 0) {
+                    // base fill gradient
+                    GradientPaint fillGrad = new GradientPaint(
+                            x, y, getForeground(),
+                            x, y + h, ACCENT_BLUE_DARK
+                    );
+                    g2.setPaint(fillGrad);
+                    g2.fillRoundRect(x, y, fillW, h, arc, arc);
+
+                    // specular sweep
+                    double ph = SplashscreenGUI.this.getPhase();
+                    float sweepX = (float) (x + ((Math.sin(ph * 0.9) * 0.5 + 0.5) * fillW));
+                    GradientPaint sweep = new GradientPaint(
+                            sweepX - fillW * 0.55f, y, new Color(255, 255, 255, 0),
+                            sweepX + fillW * 0.55f, y + h, new Color(255, 255, 255, 120)
+                    );
+                    Shape oldClip = g2.getClip();
+                    g2.setClip(new RoundRectangle2D.Float(x, y, fillW, h, arc, arc));
+                    g2.setPaint(sweep);
+                    g2.fillRect(x, y, fillW, h);
+                    g2.setClip(oldClip);
+                }
+
+                // Border
+                g2.setColor(new Color(0, 0, 0, 28));
+                g2.setStroke(new BasicStroke(1f));
+                g2.drawRoundRect(x, y, w - 1, h - 1, arc, arc);
+
+                // Percent text (crisp + readable)
+                if (isStringPainted()) {
+                    String s = (int) Math.round(pct * 100) + "%";
+                    g2.setFont(new Font("SansSerif", Font.BOLD, 12));
+                    FontMetrics fm = g2.getFontMetrics();
+                    int tx = x + (w - fm.stringWidth(s)) / 2;
+                    int ty = y + (h + fm.getAscent() - fm.getDescent()) / 2;
+
+                    g2.setColor(new Color(0, 0, 0, 55));
+                    g2.drawString(s, tx + 1, ty + 1);
+
+                    g2.setColor(new Color(255, 255, 255, 235));
+                    g2.drawString(s, tx, ty);
+                }
+            } finally {
+                g2.dispose();
+            }
         }
     }
+
+    // ---------------------------------------------------------------------------------------------
+    // Particles
+    // ---------------------------------------------------------------------------------------------
 
     private static class Particle {
         private double x;
@@ -327,36 +570,33 @@ public class SplashscreenGUI extends JFrame {
         }
 
         static Particle random() {
-            double radius = 6 + Math.random() * 16;
-            double speed = 0.12 + Math.random() * 0.35;
+            double radius = 5 + Math.random() * 15;
+            double speed = 0.10 + Math.random() * 0.30;
             double drift = (Math.random() * 2.0) - 1.0;
-            int alpha = 30 + (int) (Math.random() * 70);
-            int tint = 200 + (int) (Math.random() * 55);
+            int alpha = 16 + (int) (Math.random() * 55);
+            int tint = 205 + (int) (Math.random() * 50);
             Color color = new Color(tint, tint, 255);
             return new Particle(
-                Math.random() * 800,
-                Math.random() * 500,
-                radius,
-                speed,
-                drift,
-                alpha,
-                color
+                    Math.random() * 900,
+                    Math.random() * 700,
+                    radius,
+                    speed,
+                    drift,
+                    alpha,
+                    color
             );
         }
 
         void advance(int width, int height) {
             y -= speed;
-            x += drift * 0.15;
+            x += drift * 0.12;
+
             if (y + radius < 0) {
                 y = height + radius;
                 x = Math.random() * Math.max(width, 1);
             }
-            if (x + radius < 0) {
-                x = width + radius;
-            }
-            if (x - radius > width) {
-                x = -radius;
-            }
+            if (x + radius < 0) x = width + radius;
+            if (x - radius > width) x = -radius;
         }
 
         void paint(Graphics2D g2) {
@@ -365,23 +605,28 @@ public class SplashscreenGUI extends JFrame {
         }
     }
 
+    // ---------------------------------------------------------------------------------------------
+    // Light streaks
+    // ---------------------------------------------------------------------------------------------
+
     private void paintLightStreaks(Graphics2D g2) {
-        double phase = getPhase();
+        double ph = getPhase();
         int w = getWidth();
         int h = getHeight();
-        float x1 = (float) ((Math.sin(phase * 0.6) * 0.5 + 0.5) * w);
-        float x2 = (float) ((Math.cos(phase * 0.5) * 0.5 + 0.5) * w);
+
+        float x1 = (float) ((Math.sin(ph * 0.6) * 0.5 + 0.5) * w);
+        float x2 = (float) ((Math.cos(ph * 0.5) * 0.5 + 0.5) * w);
 
         GradientPaint streak1 = new GradientPaint(
-            x1 - w * 0.3f, 0, new Color(255, 255, 255, 0),
-            x1 + w * 0.3f, h, new Color(255, 255, 255, 80)
+                x1 - w * 0.34f, 0, new Color(255, 255, 255, 0),
+                x1 + w * 0.34f, h, new Color(255, 255, 255, 66)
         );
         g2.setPaint(streak1);
         g2.fillRect(0, 0, w, h);
 
         GradientPaint streak2 = new GradientPaint(
-            x2 - w * 0.35f, 0, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 0),
-            x2 + w * 0.35f, h, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 55)
+                x2 - w * 0.38f, 0, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 0),
+                x2 + w * 0.38f, h, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 46)
         );
         g2.setPaint(streak2);
         g2.fillRect(0, 0, w, h);

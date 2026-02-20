@@ -498,7 +498,7 @@ public class Main {
     }
 
     /**
-     * Initialize default user for the application
+     * Initialize the default user for the application
      */
     private static void initializeDefaultUser() {
         User user = new User("marc", new ArrayList<>());
@@ -617,7 +617,7 @@ public class Main {
     }
 
     /**
-     * Load application settings from properties file
+     * Load application settings from a properties file
      */
     private static void loadSettings() {
         File settingsFile = ensureSettingsFile();

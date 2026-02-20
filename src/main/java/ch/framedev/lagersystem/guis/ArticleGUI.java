@@ -6,8 +6,6 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.utils.*;
 import ch.framedev.lagersystem.managers.ThemeManager;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -21,21 +19,19 @@ import javax.swing.text.NumberFormatter;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.text.NumberFormat;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import static ch.framedev.lagersystem.main.Main.articleListGUI;
+import static ch.framedev.lagersystem.utils.ArticleUtils.categories;
+import static ch.framedev.lagersystem.utils.ArticleUtils.loadCategories;
 
 /**
  * ArticleGUI with category support for better organization.
  * Categories are loaded from categories.json and mapped to articles based on article number ranges.
- * TODO: Performance Check
  */
 public class ArticleGUI extends JFrame {
 
@@ -54,7 +50,6 @@ public class ArticleGUI extends JFrame {
 
     // Category management
     private JComboBox<String> categoryFilter;
-    private Map<String, CategoryRange> categories; // category name -> range
 
     // Inner class to hold category range data
     public static class CategoryRange {
@@ -1459,48 +1454,6 @@ public class ArticleGUI extends JFrame {
     }
 
     /**
-     * Load categories from the categories.json resource file
-     */
-    private void loadCategories() {
-        categories = new HashMap<>();
-        try {
-            InputStream is = new FileInputStream(new File(Main.getAppDataDir(), "categories.json"));
-
-            Gson gson = new Gson();
-            java.lang.reflect.Type listType = new TypeToken<List<Map<String, String>>>() {
-            }.getType();
-            List<Map<String, String>> categoryList = gson.fromJson(
-                    new InputStreamReader(is, StandardCharsets.UTF_8),
-                    listType
-            );
-
-            for (Map<String, String> cat : categoryList) {
-                String categoryName = cat.get("category");
-                String fromTo = cat.get("fromTo");
-
-                if (categoryName != null && fromTo != null) {
-                    // Parse range like "1101 - 1116" or "1301"
-                    String[] parts = fromTo.split("-");
-                    int start, end;
-
-                    if (parts.length == 2) {
-                        start = Integer.parseInt(parts[0].trim());
-                        end = Integer.parseInt(parts[1].trim());
-                    } else {
-                        start = end = Integer.parseInt(parts[0].trim());
-                    }
-
-                    categories.put(categoryName, new CategoryRange(categoryName, start, end));
-                }
-            }
-
-        } catch (Exception e) {
-            System.err.println("Error loading categories: " + e.getMessage());
-            JOptionPane.showMessageDialog(null, "Fehler beim Laden der Kategorien: " + e.getMessage(), "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
-        }
-    }
-
-    /**
      * Get a category for an article based on its article number
      */
     private String getCategoryForArticle(String articleNumber) {
@@ -1672,7 +1625,8 @@ public class ArticleGUI extends JFrame {
      * Modern design with proper spacing, rounded borders, and theme support
      */
     private JPanel createCategoryFilterPanel() {
-        // Create a rounded panel with card-like appearance
+        loadCategories();
+        // Create a rounded panel with a card-like appearance
         RoundedPanel categoryPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 8);
         categoryPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 12, 8));
         categoryPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -1680,7 +1634,7 @@ public class ArticleGUI extends JFrame {
                 BorderFactory.createEmptyBorder(4, 8, 4, 8)
         ));
 
-        // Create and style label with icon
+        // Create and style a label with an icon
         JLabel categoryLabel = new JLabel(UnicodeSymbols.FOLDER + " Kategorie:");
         categoryLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         categoryLabel.setForeground(ThemeManager.getTextPrimaryColor());

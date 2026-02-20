@@ -6,7 +6,6 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
-import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
@@ -16,6 +15,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +27,13 @@ import java.util.Map;
  */
 @SuppressWarnings("SwitchStatementWithTooFewBranches")
 public class EditOrderGUI extends JFrame {
+
+    private static final int PAD = 12;
+    private static final int CARD_PAD = 14;
+    private static final int RADIUS_HEADER = 20;
+    private static final int RADIUS_CARD = 18;
+
+    private JTable articlesTable;
 
     private final Order order;
     private final JTextField receiverNameField;
@@ -50,42 +57,74 @@ public class EditOrderGUI extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(0, 0));
 
-        // Gradient header with icon
-        JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        headerWrapper.setBackground(ThemeManager.getBackgroundColor());
+        // Top area (VendorGUI style: header card + toolbar card)
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+        topPanel.setBackground(ThemeManager.getBackgroundColor());
+        topPanel.setBorder(BorderFactory.createEmptyBorder(PAD, PAD, 8, PAD));
 
-        JFrameUtils.GradientPanel header = new JFrameUtils.GradientPanel(
-                ThemeManager.getHeaderBackgroundColor(),
-                ThemeManager.getButtonHoverColor(ThemeManager.getHeaderBackgroundColor())
-        );
-        header.setPreferredSize(new Dimension(850, 80));
-        header.setLayout(new GridBagLayout());
+        // Header card
+        RoundedPanel headerCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), RADIUS_HEADER);
+        headerCard.setLayout(new BorderLayout());
+        headerCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)
+        ));
 
-        JLabel iconLabel = new JLabel(UnicodeSymbols.EDIT);
-        iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 36));
-        iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
+        JLabel titleLabel = new JLabel(UnicodeSymbols.EDIT + " Bestellung Bearbeiten");
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-        JLabel title = new JLabel(UnicodeSymbols.EDIT + " Bestellung Bearbeiten");
-        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 26));
-        title.setForeground(ThemeManager.getTextOnPrimaryColor());
+        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Empfänger/Absender, Abteilung und Artikelmengen anpassen");
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
-        headerContent.setOpaque(false);
-        headerContent.add(iconLabel);
-        headerContent.add(title);
-        header.add(headerContent);
+        JPanel titleBox = new JPanel();
+        titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
+        titleBox.setOpaque(false);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        titleBox.add(titleLabel);
+        titleBox.add(Box.createVerticalStrut(4));
+        titleBox.add(subtitleLabel);
 
-        headerWrapper.add(header);
-        add(headerWrapper, BorderLayout.NORTH);
+        headerCard.add(titleBox, BorderLayout.WEST);
+
+        // Toolbar card
+        RoundedPanel toolbarCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), RADIUS_CARD);
+        toolbarCard.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        toolbarCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)
+        ));
+
+        JButton saveButtonTop = createThemeButton(UnicodeSymbols.FLOPPY + " Speichern", ThemeManager.getSuccessColor());
+        saveButtonTop.setToolTipText("Änderungen speichern");
+        saveButtonTop.addActionListener(e -> saveChanges());
+
+        JButton cancelButtonTop = createThemeButton(UnicodeSymbols.CLOSE + " Abbrechen", ThemeManager.getErrorColor());
+        cancelButtonTop.setToolTipText("Abbrechen und ohne Änderungen schließen");
+        cancelButtonTop.addActionListener(e -> dispose());
+
+        toolbarCard.add(saveButtonTop);
+        toolbarCard.add(cancelButtonTop);
+
+        headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        toolbarCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        topPanel.add(headerCard);
+        topPanel.add(Box.createVerticalStrut(10));
+        topPanel.add(toolbarCard);
+
+        add(topPanel, BorderLayout.NORTH);
 
         // Main content area
-        JPanel mainContent = new JPanel(new BorderLayout(15, 15));
+        JPanel mainContent = new JPanel(new BorderLayout(10, 10));
         mainContent.setBackground(ThemeManager.getBackgroundColor());
-        mainContent.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        mainContent.setBorder(BorderFactory.createEmptyBorder(10, PAD, PAD, PAD));
 
         // Left panel - Order details form
-        RoundedPanel leftCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
-        leftCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        RoundedPanel leftCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), RADIUS_CARD);
+        leftCard.setBorder(BorderFactory.createEmptyBorder(CARD_PAD, CARD_PAD, CARD_PAD, CARD_PAD));
         leftCard.setLayout(new BorderLayout(10, 10));
 
         JLabel formTitle = new JLabel(UnicodeSymbols.CLIPBOARD + " Bestelldetails");
@@ -144,8 +183,8 @@ public class EditOrderGUI extends JFrame {
         leftCard.add(formScroll, BorderLayout.CENTER);
 
         // Right panel - Articles table
-        RoundedPanel rightCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
-        rightCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        RoundedPanel rightCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), RADIUS_CARD);
+        rightCard.setBorder(BorderFactory.createEmptyBorder(CARD_PAD, CARD_PAD, CARD_PAD, CARD_PAD));
         rightCard.setLayout(new BorderLayout(10, 10));
 
         JLabel tableTitle = new JLabel(UnicodeSymbols.PACKAGE + " Bestellte Artikel");
@@ -170,7 +209,7 @@ public class EditOrderGUI extends JFrame {
             }
         };
 
-        JTable articlesTable = new JTable(tableModel);
+        articlesTable = new JTable(tableModel);
         applyTableTheme(articlesTable);
 
         JScrollPane scrollPane = new JScrollPane(articlesTable);
@@ -179,7 +218,7 @@ public class EditOrderGUI extends JFrame {
         scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
         rightCard.add(scrollPane, BorderLayout.CENTER);
 
-        // Bottom action panel
+        // Bottom action panel (tip label only)
         JPanel actionPanel = new JPanel(new BorderLayout(10, 10));
         actionPanel.setOpaque(false);
         actionPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
@@ -189,27 +228,13 @@ public class EditOrderGUI extends JFrame {
         infoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         actionPanel.add(infoLabel, BorderLayout.WEST);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        buttonPanel.setOpaque(false);
-
-        JButton cancelButton = createThemeButton(UnicodeSymbols.CLOSE + " Abbrechen", ThemeManager.getDangerColor());
-        cancelButton.setToolTipText("Abbrechen und ohne Änderungen schließen");
-        cancelButton.addActionListener(e -> dispose());
-
-        JButton saveButton = createThemeButton(UnicodeSymbols.FLOPPY + " Speichern", ThemeManager.getSuccessColor());
-        saveButton.setToolTipText("Änderungen speichern");
-        saveButton.addActionListener(e -> saveChanges());
-
-        buttonPanel.add(cancelButton);
-        buttonPanel.add(saveButton);
-        actionPanel.add(buttonPanel, BorderLayout.EAST);
-
         rightCard.add(actionPanel, BorderLayout.SOUTH);
 
         // Add panels to split pane
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftCard, rightCard);
-        splitPane.setDividerLocation(400);
-        splitPane.setDividerSize(4);
+        splitPane.setDividerLocation(420);
+        splitPane.setDividerSize(6);
+        splitPane.setContinuousLayout(true);
         splitPane.setBorder(null);
         splitPane.setOpaque(false);
 
@@ -218,6 +243,12 @@ public class EditOrderGUI extends JFrame {
 
         // Load articles
         loadArticles();
+
+        getRootPane().registerKeyboardAction(
+                e -> dispose(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
     }
 
     @Override
@@ -240,8 +271,14 @@ public class EditOrderGUI extends JFrame {
         JTableHeader th = table.getTableHeader();
         th.setBackground(ThemeManager.getTableHeaderBackgroundColor());
         th.setForeground(ThemeManager.getTableHeaderForegroundColor());
-        th.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        th.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         th.setReorderingAllowed(false);
+
+        DefaultTableCellRenderer qtyRenderer = new DefaultTableCellRenderer();
+        qtyRenderer.setHorizontalAlignment(SwingConstants.CENTER);
+        if (table.getColumnModel().getColumnCount() > 1) {
+            table.getColumnModel().getColumn(1).setCellRenderer(qtyRenderer);
+        }
 
         // Alternating rows + proper selection + theme-safe colors
         DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
@@ -327,7 +364,7 @@ public class EditOrderGUI extends JFrame {
         }
 
         for (Article article : articles) {
-            int quantity = orderedArticles.get(article.getArticleNumber());
+            int quantity = orderedArticles.getOrDefault(article.getArticleNumber(), 0);
             Object[] rowData = {
                     article.getName() + " (" + article.getArticleNumber() + ")",
                     quantity,
@@ -394,6 +431,10 @@ public class EditOrderGUI extends JFrame {
                 continue;
             }
 
+            if (quantity <= 0) {
+                continue;
+            }
+
             if (articleNumber != null && !articleNumber.isEmpty()) {
                 data.put(articleNumber, quantity);
             } else {
@@ -434,6 +475,11 @@ public class EditOrderGUI extends JFrame {
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
+        for (var ml : button.getMouseListeners()) {
+            if (ml != null && ml.getClass().getName().contains("EditOrderGUI")) {
+                button.removeMouseListener(ml);
+            }
+        }
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {

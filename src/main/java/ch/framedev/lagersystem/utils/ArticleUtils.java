@@ -67,6 +67,12 @@ public class ArticleUtils {
         }
     }
 
+    /**
+     * Add a new category with a given name and range, then save it to the categories.json file
+     * @param categoryName Name of the category to add (e.g., "Reinigungsmittel")
+     * @param rangeStart Start of the article number range for this category (e.g., 1101)
+     * @param rangeEnd End of the article number range for this category (e.g., 1116). Can be the same as rangeStart for single numbers.
+     */
     public static void addNewCategory(String categoryName, int rangeStart, int rangeEnd) {
         if (categories == null) {
             loadCategories();

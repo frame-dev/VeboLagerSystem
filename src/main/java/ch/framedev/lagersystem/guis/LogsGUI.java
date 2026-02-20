@@ -120,30 +120,43 @@ public class LogsGUI extends JFrame {
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 12));
         filterPanel.setOpaque(false);
         JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche:");
-        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        styleLabel(searchLabel, Font.BOLD, 12, ThemeManager.getTextPrimaryColor());
         filterPanel.add(searchLabel);
         searchField.setToolTipText("Textsuche in Logs");
+        styleTextField(searchField);
         filterPanel.add(searchField);
         JLabel fromLabel = new JLabel("Von (dd.MM.yyyy):");
-        fromLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        styleLabel(fromLabel, Font.PLAIN, 12, ThemeManager.getTextPrimaryColor());
         filterPanel.add(fromLabel);
         fromDateField.setToolTipText("z.B. 01.01.2024");
+        styleTextField(fromDateField);
         filterPanel.add(fromDateField);
         JLabel toLabel = new JLabel("Bis (dd.MM.yyyy):");
-        toLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        styleLabel(toLabel, Font.PLAIN, 12, ThemeManager.getTextPrimaryColor());
         filterPanel.add(toLabel);
         toDateField.setToolTipText("z.B. 31.12.2024");
+        styleTextField(toDateField);
         filterPanel.add(toDateField);
 
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
         actionPanel.setOpaque(false);
-        JButton exportPdfButton = new JButton("PDF Export");
+        JButton exportPdfButton = new JButton(UnicodeSymbols.DOCUMENT + " PDF Export");
+        styleActionButton(exportPdfButton, ThemeManager.getAccentColor());
         exportPdfButton.addActionListener(e -> exportLogsToPdf(filteredLogs));
-        JButton exportCsvButton = new JButton("CSV Export");
+
+        JButton exportCsvButton = new JButton(UnicodeSymbols.DOWNLOAD + " CSV Export");
+        styleActionButton(exportCsvButton, ThemeManager.getPrimaryColor());
         exportCsvButton.addActionListener(e -> exportLogsToCsv(filteredLogs));
-        JButton clearButton = new JButton("Logs loeschen");
+
+        JButton clearButton = new JButton(UnicodeSymbols.TRASH + " Logs löschen");
+        styleActionButton(clearButton, ThemeManager.getErrorColor());
         clearButton.addActionListener(e -> clearCurrentLogs());
+
         autoRefreshCheckBox.setOpaque(false);
+        autoRefreshCheckBox.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        autoRefreshCheckBox.setForeground(ThemeManager.getTextPrimaryColor());
+        lastUpdatedLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        lastUpdatedLabel.setForeground(ThemeManager.getTextSecondaryColor());
         actionPanel.add(autoRefreshCheckBox);
         actionPanel.add(lastUpdatedLabel);
         actionPanel.add(exportPdfButton);
@@ -157,7 +170,9 @@ public class LogsGUI extends JFrame {
         toolbarPanel.add(filterPanel, BorderLayout.CENTER);
         toolbarPanel.add(actionPanel, BorderLayout.SOUTH);
 
-        topPanel.add(toolbarPanel, BorderLayout.SOUTH);
+        JPanel toolbarCard = createCardWrapper(toolbarPanel);
+        toolbarCard.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
+        topPanel.add(toolbarCard, BorderLayout.SOUTH);
         mainPanel.add(topPanel, BorderLayout.NORTH);
 
         // Card-like content panel for logs (fills all remaining space)
@@ -170,62 +185,15 @@ public class LogsGUI extends JFrame {
         JScrollPane scrollPane = new JScrollPane(logTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
+        scrollPane.getViewport().setOpaque(true);
+        scrollPane.getViewport().setBackground(ThemeManager.getInputBackgroundColor());
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         contentPanel.add(scrollPane, BorderLayout.CENTER);
         mainPanel.add(contentPanel, BorderLayout.CENTER);
 
         initPopupMenu();
 
-        searchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-        });
-
-        fromDateField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-        });
-
-        toDateField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-        });
+        attachFilterListeners();
 
         // Button hover effects with smooth color transitions
         for(JButton button : new JButton[]{orderLogsButton, supplierLogsButton, supplierOrderLogsButton, allLogsButton}) {
@@ -271,7 +239,7 @@ public class LogsGUI extends JFrame {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(Color.WHITE);
+                g2.setColor(ThemeManager.getCardBackgroundColor());
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
                 g2.setColor(new Color(0,0,0,10));
                 g2.fillRoundRect(4, getHeight()-8, getWidth()-8, 8, 8, 8); // subtle shadow
@@ -357,7 +325,79 @@ public class LogsGUI extends JFrame {
                 BorderFactory.createLineBorder(bgColor.darker(), 2),
                 BorderFactory.createEmptyBorder(14, 24, 14, 24)
         ));
-        button.setPreferredSize(new Dimension(290, 48));
+        button.setPreferredSize(new Dimension(260, 46));
+    }
+
+    // ---- ADDED HELPER METHODS ----
+    private void styleTextField(JTextField field) {
+        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+        field.setBackground(ThemeManager.getInputBackgroundColor());
+        field.setForeground(ThemeManager.getTextPrimaryColor());
+        field.setCaretColor(ThemeManager.getTextPrimaryColor());
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+    }
+
+    private void styleLabel(JLabel label, int style, int size, Color color) {
+        label.setFont(SettingsGUI.getFontByName(style, size));
+        label.setForeground(color);
+    }
+
+    private void styleActionButton(JButton button, Color bg) {
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
+        button.setBackground(bg);
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setOpaque(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(bg.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 14, 10, 14)
+        ));
+
+        Color hover = ThemeManager.getButtonHoverColor(bg);
+        button.addChangeListener(e -> button.setBackground(button.getModel().isRollover() ? hover : bg));
+    }
+
+    private JPanel createCardWrapper(JComponent inner) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setOpaque(false);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)
+        ));
+
+        JPanel painted = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(ThemeManager.getCardBackgroundColor());
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
+                g2.setColor(ThemeManager.withAlpha(Color.BLACK, 12));
+                g2.fillRoundRect(4, getHeight() - 8, getWidth() - 8, 8, 8, 8);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        painted.setOpaque(false);
+        painted.add(inner, BorderLayout.CENTER);
+        card.add(painted, BorderLayout.CENTER);
+        return card;
+    }
+
+    private void attachFilterListeners() {
+        DocumentListener dl = new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { applyFilters(); }
+            @Override public void removeUpdate(DocumentEvent e) { applyFilters(); }
+            @Override public void changedUpdate(DocumentEvent e) { applyFilters(); }
+        };
+        searchField.getDocument().addDocumentListener(dl);
+        fromDateField.getDocument().addDocumentListener(dl);
+        toDateField.getDocument().addDocumentListener(dl);
     }
 
     private void setCategory(LogCategory category) {

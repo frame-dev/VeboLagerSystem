@@ -19,17 +19,28 @@ import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 /**
- * TODO: Cache vendor list and refresh only on changes
+ * VendorGUI with GUI-level caching.
+ * - Caches vendor list for faster reloads (TTL-based)
+ * - Invalidates cache on add/edit/delete/refresh
  */
 public class VendorGUI extends JFrame {
 
     private final JTable vendorTable;
     private final JScrollPane tableScrollPane;
-    private final int[] baseColumnWidths = new int[]{120, 260, 160, 140, 220, 300};
+    private final int[] baseColumnWidths = new int[]{120, 260, 160, 140, 220, 300, 140}; // include min order value col
+
+    // ---- Vendor cache (GUI-level) ------------------------------------------
+    private static final long VENDOR_CACHE_TTL_MS = 30_000; // 30s GUI cache
+    private volatile List<Vendor> vendorsCache = null;
+    private volatile long vendorsCacheTime = 0L;
+
+    // Fast lookup by vendor name (optional but useful)
+    private final ConcurrentHashMap<String, Vendor> vendorByNameCache = new ConcurrentHashMap<>();
 
     public VendorGUI() {
         ThemeManager.applyUIDefaults();
@@ -39,21 +50,53 @@ public class VendorGUI extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // Header
-        JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        headerWrapper.setBackground(ThemeManager.getBackgroundColor());
+        // ===== Top area (Header + Toolbar) =====
+        JPanel topContainer = new JPanel();
+        topContainer.setBackground(ThemeManager.getBackgroundColor());
+        topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
+        topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
+
+        // Header card (no fixed height -> prevents clipping)
         RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-        headerPanel.setPreferredSize(new Dimension(680, 64));
-        JLabel titleLabel = new JLabel("Lieferant Verwaltung");
+        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)
+        ));
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel titleLabel = new JLabel(UnicodeSymbols.TRUCK + " Lieferant Verwaltung");
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
-        headerPanel.add(titleLabel);
-        headerWrapper.add(headerPanel);
-        add(headerWrapper, BorderLayout.NORTH);
 
-        // Toolbar
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 12));
-        toolbar.setBackground(ThemeManager.getBackgroundColor());
+        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Lieferanten verwalten, suchen und bearbeiten");
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerText.add(titleLabel);
+        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(subtitleLabel);
+
+        headerPanel.add(headerText, BorderLayout.WEST);
+
+        JPanel headerWrapper = new JPanel(new BorderLayout());
+        headerWrapper.setOpaque(false);
+        headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerWrapper.add(headerPanel, BorderLayout.CENTER);
+
+        // Toolbar card
+        RoundedPanel toolbar = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        toolbar.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        toolbar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)
+        ));
+
         JButton addVendorButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Lieferant hinzufügen");
         addVendorButton.setToolTipText("Neuen Lieferanten hinzufügen");
         JButton editVendorButton = createRoundedButton(UnicodeSymbols.CODE + " Lieferant bearbeiten");
@@ -62,14 +105,22 @@ public class VendorGUI extends JFrame {
         deleteVendorButton.setToolTipText("Ausgewählten Lieferanten löschen");
         JButton refreshButton = createRoundedButton(UnicodeSymbols.REFRESH + " Aktualisieren");
         refreshButton.setToolTipText("Lieferantenliste aktualisieren");
+
         toolbar.add(addVendorButton);
         toolbar.add(editVendorButton);
         toolbar.add(deleteVendorButton);
         toolbar.add(refreshButton);
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(ThemeManager.getBackgroundColor());
-        topPanel.add(toolbar, BorderLayout.SOUTH);
-        add(topPanel, BorderLayout.PAGE_START);
+
+        JPanel toolbarWrapper = new JPanel(new BorderLayout());
+        toolbarWrapper.setOpaque(false);
+        toolbarWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        toolbarWrapper.add(toolbar, BorderLayout.SOUTH);
+
+        topContainer.add(headerWrapper);
+        topContainer.add(Box.createVerticalStrut(10));
+        topContainer.add(toolbarWrapper);
+
+        add(topContainer, BorderLayout.NORTH);
 
         // Main card with table
         RoundedPanel card = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
@@ -94,30 +145,50 @@ public class VendorGUI extends JFrame {
         centerWrapper.add(card, gbc);
         add(centerWrapper, BorderLayout.CENTER);
 
-        // Bottom search bar
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        searchPanel.setBackground(ThemeManager.getBackgroundColor());
-        JLabel searchLabel = new JLabel("Suche (Name oder Kontakt):");
+        // ===== Bottom search bar (card – like ClientGUI) =====
+        RoundedPanel searchCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        searchCard.setLayout(new BorderLayout(10, 0));
+        searchCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
+
+        JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche (Name oder Kontakt):");
         searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        searchLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
 
-        JTextField searchField = new JTextField(28);
+        JTextField searchField = new JTextField(26);
         styleTextField(searchField);
+        searchField.setToolTipText("Tippen zum Filtern – Enter zum Suchen, ESC zum Leeren");
 
-        JButton searchBtn = new JButton(UnicodeSymbols.SEARCH + " Suchen");
+        JPanel leftSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        leftSearch.setOpaque(false);
+        leftSearch.add(searchLabel);
+        leftSearch.add(searchField);
+
+        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        rightActions.setOpaque(false);
+
+        JButton searchBtn = createSecondaryButton(UnicodeSymbols.SEARCH + " Suchen");
         searchBtn.setToolTipText("Nach Lieferanten suchen");
-        JButton clearBtn = new JButton(UnicodeSymbols.CLEAR + " Leeren");
+        JButton clearBtn = createSecondaryButton(UnicodeSymbols.CLEAR + " Leeren");
         clearBtn.setToolTipText("Suchfeld leeren");
-        styleFlatActionButton(searchBtn);
-        styleFlatActionButton(clearBtn);
 
-        searchPanel.add(searchLabel);
-        searchPanel.add(searchField);
-        searchPanel.add(searchBtn);
-        searchPanel.add(clearBtn);
-        add(searchPanel, BorderLayout.SOUTH);
+        rightActions.add(searchBtn);
+        rightActions.add(clearBtn);
 
-        // load vendors
-        loadVendors();
+        searchCard.add(leftSearch, BorderLayout.CENTER);
+        searchCard.add(rightActions, BorderLayout.EAST);
+
+        JPanel searchWrapper = new JPanel(new BorderLayout());
+        searchWrapper.setBackground(ThemeManager.getBackgroundColor());
+        searchWrapper.setBorder(BorderFactory.createEmptyBorder(10, 12, 12, 12));
+        searchWrapper.add(searchCard, BorderLayout.CENTER);
+
+        add(searchWrapper, BorderLayout.SOUTH);
+
+        // load vendors (cached)
+        loadVendors(false);
 
         // Setup interactions (context menu, double click)
         setupTableInteractions();
@@ -126,15 +197,17 @@ public class VendorGUI extends JFrame {
         addVendorButton.addActionListener(e -> {
             Object[] row = showAddVendorDialog();
             if (row != null) {
-                Vendor v = new Vendor((String) row[0], (String) row[1], (String) row[2], (String) row[3], (String) row[4], (double) row[6]);
-                v.setSuppliedArticles(java.util.Arrays.asList(((String) row[5]).split("\\s*,\\s*")));
+                Vendor v = vendorFromDialogRow(row);
+                if (v == null) return;
+
                 if (VendorManager.getInstance().insertVendor(v)) {
-                    loadVendors(); // Refresh table
-                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich hinzugefügt.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
+                    invalidateVendorsCache();
+                    loadVendors(true);
+                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich hinzugefügt.", "Erfolg",
+                            JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Fehler: Lieferant bereits vorhanden oder Insert fehlgeschlagen", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
+                    JOptionPane.showMessageDialog(this, "Fehler: Lieferant bereits vorhanden oder Insert fehlgeschlagen",
+                            "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 }
             }
         });
@@ -142,56 +215,39 @@ public class VendorGUI extends JFrame {
         editVendorButton.addActionListener(e -> {
             int sel = vendorTable.getSelectedRow();
             if (sel == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Lieferanten zum Bearbeiten aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Lieferanten zum Bearbeiten aus.",
+                        "Keine Auswahl", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                 return;
             }
             int modelRow = vendorTable.convertRowIndexToModel(sel);
             Object[] existing = ((DefaultTableModel) vendorTable.getModel()).getDataVector().elementAt(modelRow).toArray();
             Object[] updated = showUpdateVendorDialog(existing);
             if (updated != null) {
-                Vendor v = new Vendor((String) updated[0], (String) updated[1], (String) updated[2], (String) updated[3], (String) updated[4], (double) updated[6]);
-                v.setSuppliedArticles(Arrays.asList(((String) updated[5]).split("\\s*,\\s*")));
+                Vendor v = vendorFromDialogRow(updated);
+                if (v == null) return;
+
                 if (VendorManager.getInstance().updateVendor(v)) {
-                    loadVendors(); // Refresh table
-                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich aktualisiert.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
+                    invalidateVendorsCache();
+                    loadVendors(true);
+                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich aktualisiert.", "Erfolg",
+                            JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
                 } else {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Lieferanten.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
+                    JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Lieferanten.", "Fehler",
+                            JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 }
             }
         });
 
-        deleteVendorButton.addActionListener(e -> {
-            int sel = vendorTable.getSelectedRow();
-            if (sel == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Lieferanten zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
-                return;
-            }
-            int modelRow = vendorTable.convertRowIndexToModel(sel);
-            String name = (String) vendorTable.getModel().getValueAt(modelRow, 0);
-            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Lieferanten wirklich löschen?", "Löschen", JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE, Main.iconSmall);
-            if (confirm == JOptionPane.YES_OPTION) {
-                if (VendorManager.getInstance().deleteVendor(name)) {
-                    loadVendors(); // Refresh table
-                    JOptionPane.showMessageDialog(this, "Lieferant erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
-                } else {
-                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
-                }
-            }
-        });
+        deleteVendorButton.addActionListener(e -> deleteSelectedVendor());
 
         refreshButton.addActionListener(e -> {
-            loadVendors();
-            JOptionPane.showMessageDialog(this, "Lieferantenliste wurde aktualisiert.", "Aktualisiert", JOptionPane.INFORMATION_MESSAGE);
+            invalidateVendorsCache();
+            loadVendors(true);
+            JOptionPane.showMessageDialog(this, "Lieferantenliste wurde aktualisiert.", "Aktualisiert",
+                    JOptionPane.INFORMATION_MESSAGE);
         });
 
-        // search logic using TableRowSorter on columns 0 (Name) and 1 (Kontakt)
+        // ===== Sorting/Filtering (Vendor search) =====
         TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) vendorTable.getModel());
         vendorTable.setRowSorter(sorter);
 
@@ -200,14 +256,17 @@ public class VendorGUI extends JFrame {
             if (text.isEmpty()) {
                 sorter.setRowFilter(null);
             } else {
-                try {
-                    String regex = "(?i)" + Pattern.quote(text);
-                    sorter.setRowFilter(RowFilter.regexFilter(regex, 0, 1));
-                } catch (PatternSyntaxException ex) {
-                    sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(text), 0, 1));
-                }
+                String regex = "(?i)" + Pattern.quote(text);
+                sorter.setRowFilter(RowFilter.regexFilter(regex, 0, 1));
             }
         };
+
+        // Live filter while typing
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { doSearch.run(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { doSearch.run(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { doSearch.run(); }
+        });
 
         searchBtn.addActionListener(e -> doSearch.run());
         clearBtn.addActionListener(e -> {
@@ -215,6 +274,16 @@ public class VendorGUI extends JFrame {
             sorter.setRowFilter(null);
         });
         searchField.addActionListener(e -> doSearch.run());
+
+        // ESC clears
+        searchField.registerKeyboardAction(
+                e -> {
+                    searchField.setText("");
+                    sorter.setRowFilter(null);
+                },
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_FOCUSED
+        );
 
         // auto resize logic: adjust columns when visible or resized
         ComponentAdapter resizeListener = new ComponentAdapter() {
@@ -230,6 +299,43 @@ public class VendorGUI extends JFrame {
         // show frame
         setVisible(true);
     }
+
+    // -------------------- Cache helpers --------------------
+
+    private boolean isVendorsCacheValid() {
+        return vendorsCache != null && (System.currentTimeMillis() - vendorsCacheTime) < VENDOR_CACHE_TTL_MS;
+    }
+
+    private void invalidateVendorsCache() {
+        vendorsCache = null;
+        vendorsCacheTime = 0L;
+        vendorByNameCache.clear();
+    }
+
+    private List<Vendor> getVendorsCached(boolean forceReload) {
+        if (!forceReload && isVendorsCacheValid()) {
+            return vendorsCache;
+        }
+
+        List<Vendor> fresh = VendorManager.getInstance().getVendors();
+        if (fresh == null) {
+            return vendorsCache != null ? vendorsCache : java.util.Collections.emptyList();
+        }
+
+        vendorsCache = fresh;
+        vendorsCacheTime = System.currentTimeMillis();
+
+        vendorByNameCache.clear();
+        for (Vendor v : fresh) {
+            if (v != null && v.getName() != null) {
+                vendorByNameCache.put(v.getName(), v);
+            }
+        }
+
+        return fresh;
+    }
+
+    // -------------------- UI helpers --------------------
 
     private void styleTextField(JTextField tf) {
         tf.setBackground(ThemeManager.getInputBackgroundColor());
@@ -269,11 +375,14 @@ public class VendorGUI extends JFrame {
         });
     }
 
-    private void loadVendors() {
-        VendorManager vm = VendorManager.getInstance();
-        java.util.List<Vendor> vendors = vm.getVendors();
+    // -------------------- Data loading --------------------
+
+    private void loadVendors(boolean forceReload) {
+        List<Vendor> vendors = getVendorsCached(forceReload);
+
         DefaultTableModel model = (DefaultTableModel) vendorTable.getModel();
         model.setRowCount(0);
+
         for (Vendor v : vendors) {
             model.addRow(new Object[]{
                     v.getName(),
@@ -281,7 +390,7 @@ public class VendorGUI extends JFrame {
                     v.getPhoneNumber(),
                     v.getEmail(),
                     v.getAddress(),
-                    String.join(",", v.getSuppliedArticles()),
+                    v.getSuppliedArticles() != null ? String.join(",", v.getSuppliedArticles()) : "",
                     v.getMinOrderValue()
             });
         }
@@ -301,10 +410,8 @@ public class VendorGUI extends JFrame {
         return VendorDialog.showUpdateVendorDialog(this, existing);
     }
 
-    /**
-     * Adjusts column widths based on the current size of the table's viewport.
-     * Distributes extra space proportionally based on baseColumnWidths.
-     */
+    // -------------------- Interactions --------------------
+
     private void setupTableInteractions() {
         JPopupMenu popup = new JPopupMenu();
         JMenuItem edit = new JMenuItem(UnicodeSymbols.CODE + " Bearbeiten");
@@ -318,15 +425,21 @@ public class VendorGUI extends JFrame {
         edit.addActionListener(e -> {
             int sel = vendorTable.getSelectedRow();
             if (sel == -1) return;
+
             int modelRow = vendorTable.convertRowIndexToModel(sel);
             Object[] existing = ((DefaultTableModel) vendorTable.getModel()).getDataVector().elementAt(modelRow).toArray();
             Object[] updated = showUpdateVendorDialog(existing);
             if (updated != null) {
-                DefaultTableModel model = (DefaultTableModel) vendorTable.getModel();
-                for (int i = 0; i < updated.length; i++) model.setValueAt(updated[i], modelRow, i);
-                Vendor v = new Vendor((String) updated[0], (String) updated[1], (String) updated[2], (String) updated[3], (String) updated[4]);
-                v.setSuppliedArticles(java.util.Arrays.asList(((String) updated[5]).split("\\s*,\\s*")));
-                VendorManager.getInstance().updateVendor(v);
+                Vendor v = vendorFromDialogRow(updated);
+                if (v == null) return;
+
+                if (VendorManager.getInstance().updateVendor(v)) {
+                    invalidateVendorsCache();
+                    loadVendors(true);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Fehler beim Aktualisieren des Lieferanten.",
+                            "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                }
             }
         });
 
@@ -338,15 +451,21 @@ public class VendorGUI extends JFrame {
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
                     int row = vendorTable.rowAtPoint(e.getPoint());
                     if (row == -1) return;
+
                     int modelRow = vendorTable.convertRowIndexToModel(row);
                     Object[] existing = ((DefaultTableModel) vendorTable.getModel()).getDataVector().elementAt(modelRow).toArray();
                     Object[] updated = showUpdateVendorDialog(existing);
                     if (updated != null) {
-                        DefaultTableModel model = (DefaultTableModel) vendorTable.getModel();
-                        for (int i = 0; i < updated.length; i++) model.setValueAt(updated[i], modelRow, i);
-                        Vendor v = new Vendor((String) updated[0], (String) updated[1], (String) updated[2], (String) updated[3], (String) updated[4]);
-                        v.setSuppliedArticles(java.util.Arrays.asList(((String) updated[5]).split("\\s*,\\s*")));
-                        VendorManager.getInstance().updateVendor(v);
+                        Vendor v = vendorFromDialogRow(updated);
+                        if (v == null) return;
+
+                        if (VendorManager.getInstance().updateVendor(v)) {
+                            invalidateVendorsCache();
+                            loadVendors(true);
+                        } else {
+                            JOptionPane.showMessageDialog(VendorGUI.this, "Fehler beim Aktualisieren des Lieferanten.",
+                                    "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                        }
                     }
                 }
             }
@@ -376,22 +495,30 @@ public class VendorGUI extends JFrame {
     private void deleteSelectedVendor() {
         int sel = vendorTable.getSelectedRow();
         if (sel == -1) return;
+
         int modelRow = vendorTable.convertRowIndexToModel(sel);
         String name = (String) vendorTable.getModel().getValueAt(modelRow, 0);
-        int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Lieferanten wirklich löschen?", "Löschen",
-                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+
+        int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Lieferanten wirklich löschen?",
+                "Löschen", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+
         if (confirm == JOptionPane.YES_OPTION) {
             if (VendorManager.getInstance().deleteVendor(name)) {
-                ((DefaultTableModel) vendorTable.getModel()).removeRow(modelRow);
+                invalidateVendorsCache();
+                loadVendors(true);
+                JOptionPane.showMessageDialog(this, "Lieferant erfolgreich gelöscht.", "Erfolg",
+                        JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
             } else {
-                JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler",
+                        JOptionPane.ERROR_MESSAGE, Main.iconSmall);
             }
         }
     }
 
+    // -------------------- Table setup --------------------
+
     private void initializeVendorTable() {
         // Column names must match the row data order used in loadVendors()
-        // Add Unicode symbols to the column headers
         String[] cols = new String[]{
                 UnicodeSymbols.TRUCK + " Name",
                 UnicodeSymbols.PERSON + " Kontakt",
@@ -401,9 +528,11 @@ public class VendorGUI extends JFrame {
                 UnicodeSymbols.PACKAGE + " Gelieferte Artikel",
                 UnicodeSymbols.MONEY + " Mindestbestellwert"
         };
+
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
+                // keep String for sorter simplicity; min order value is still displayed fine
                 return String.class;
             }
 
@@ -428,6 +557,7 @@ public class VendorGUI extends JFrame {
 
         DefaultTableCellRenderer center = new DefaultTableCellRenderer();
         center.setHorizontalAlignment(SwingConstants.CENTER);
+
         TableColumnModel tcm = vendorTable.getColumnModel();
         if (tcm.getColumnCount() > 0) tcm.getColumn(0).setCellRenderer(center);
 
@@ -441,7 +571,8 @@ public class VendorGUI extends JFrame {
             private final Color ODD = ThemeManager.getTableRowOddColor();
 
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                           boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (!isSelected) {
                     c.setBackground(row % 2 == 0 ? EVEN : ODD);
@@ -517,5 +648,83 @@ public class VendorGUI extends JFrame {
         });
 
         return button;
+    }
+
+    // -------------------- Vendor mapping --------------------
+
+    /**
+     * Converts the VendorDialog Object[] into a Vendor instance.
+     * Expected row format (based on your usage):
+     * 0 name
+     * 1 contactPerson
+     * 2 phone
+     * 3 email
+     * 4 address
+     * 5 suppliedArticles (comma separated)
+     * 6 minOrderValue (double or string)
+     */
+    private Vendor vendorFromDialogRow(Object[] row) {
+        if (row == null || row.length < 7) return null;
+
+        String name = safeStr(row[0]);
+        String contact = safeStr(row[1]);
+        String phone = safeStr(row[2]);
+        String email = safeStr(row[3]);
+        String address = safeStr(row[4]);
+        String supplied = safeStr(row[5]);
+        double minOrder = safeDouble(row[6]);
+
+        Vendor v = new Vendor(name, contact, phone, email, address, minOrder);
+        v.setSuppliedArticles(Arrays.asList(supplied.split("\\s*,\\s*")));
+        return v;
+    }
+
+    private static String safeStr(Object o) {
+        return o == null ? "" : String.valueOf(o);
+    }
+
+    private static double safeDouble(Object o) {
+        if (o == null) return 0.0;
+        if (o instanceof Number n) return n.doubleValue();
+        try {
+            return Double.parseDouble(String.valueOf(o).trim().replace(",", "."));
+        } catch (Exception ex) {
+            return 0.0;
+        }
+    }
+
+    private JButton createSecondaryButton(String text) {
+        JButton btn = createRoundedButton(text);
+        applyButtonPalette(btn, ThemeManager.getPrimaryColor());
+        return btn;
+    }
+
+    private void applyButtonPalette(JButton button, Color base) {
+        Color hover = ThemeManager.getButtonHoverColor(base);
+        Color pressed = ThemeManager.getButtonPressedColor(base);
+
+        button.setBackground(base);
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(base.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 18, 10, 18)
+        ));
+
+        // Remove older mouse listeners added by createRoundedButton() for consistent palette behavior
+        for (MouseListener ml : button.getMouseListeners()) {
+            String n = ml.getClass().getName();
+            if (n.contains("VendorGUI")) {
+                button.removeMouseListener(ml);
+            }
+        }
+
+        button.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { button.setBackground(hover); }
+            @Override public void mouseExited(MouseEvent e) { button.setBackground(base); }
+            @Override public void mousePressed(MouseEvent e) { button.setBackground(pressed); }
+            @Override public void mouseReleased(MouseEvent e) {
+                button.setBackground(button.contains(e.getPoint()) ? hover : base);
+            }
+        });
     }
 }

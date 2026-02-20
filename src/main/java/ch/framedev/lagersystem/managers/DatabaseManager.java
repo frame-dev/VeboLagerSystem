@@ -34,7 +34,7 @@ public class DatabaseManager {
     public static final String TABLE_LOGS = "logs";
     public static final String TABLE_NOTES = "notes";
 
-    private static final Set<String> ALLOWED_TABLES = Set.of(
+    public static final Set<String> ALLOWED_TABLES = Set.of(
             TABLE_ARTICLES,
             TABLE_VENDORS,
             TABLE_ORDERS,

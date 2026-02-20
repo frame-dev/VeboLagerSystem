@@ -6,7 +6,11 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.util.List;
 
 /**
  * Notes manager window for viewing, creating, and updating personal notes.
@@ -21,6 +25,9 @@ public class NotesGUI extends JFrame {
     private final DefaultListModel<String> listModel = new DefaultListModel<>();
     private final JList<String> notesList = new JList<>(listModel);
     private final JTextArea noteContentArea = new JTextArea(20, 30);
+    private final JTextField searchField = new JTextField();
+    private final JLabel statusLabel = new JLabel();
+    private List<String> allTitles = List.of();
     private float fontScaleDelta = 0f;
 
     public NotesGUI() {
@@ -36,7 +43,20 @@ public class NotesGUI extends JFrame {
         root.setBackground(ThemeManager.getBackgroundColor());
         root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
-        root.add(createHeaderPanel(), BorderLayout.NORTH);
+        JPanel topPanel = new JPanel();
+        topPanel.setOpaque(false);
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+
+        JPanel headerPanel = createHeaderPanel();
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel searchBar = createSearchBar();
+        searchBar.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        topPanel.add(headerPanel);
+        topPanel.add(searchBar);
+
+        root.add(topPanel, BorderLayout.NORTH);
 
         JPanel contentPanel = createContentPanel();
         JScrollPane contentScroll = new JScrollPane(contentPanel,
@@ -53,6 +73,7 @@ public class NotesGUI extends JFrame {
 
         setContentPane(root);
         setupList();
+        setupKeyBindings();
     }
 
     @Override
@@ -66,7 +87,7 @@ public class NotesGUI extends JFrame {
         header.setBackground(ThemeManager.getHeaderBackgroundColor());
         header.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor()),
-                BorderFactory.createEmptyBorder(10, 16, 10, 16)
+                BorderFactory.createEmptyBorder(12, 18, 12, 18)
         ));
 
         JLabel title = new JLabel(UnicodeSymbols.MEMO + " Notizen");
@@ -116,20 +137,36 @@ public class NotesGUI extends JFrame {
     }
 
     private JPanel createFooterToolbar() {
-        JPanel toolBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 2));
+        JPanel toolBar = new JPanel(new BorderLayout());
         toolBar.setOpaque(false);
+        toolBar.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
-        JButton fontSizeBiggerButton = new JButton("Increase Font");
+        statusLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        statusLabel.setForeground(ThemeManager.getTextSecondaryColor());
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 0));
+
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        left.setOpaque(false);
+        left.add(statusLabel);
+
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        right.setOpaque(false);
+
+        JButton fontSizeBiggerButton = new JButton(UnicodeSymbols.PLUS + " Zoom");
+        fontSizeBiggerButton.setToolTipText("Schriftgröße erhöhen");
         fontSizeBiggerButton.addActionListener(listener -> bumpFontSize(2f));
 
-        JButton fontSizeSmallerButton = new JButton("Decrease Font");
+        JButton fontSizeSmallerButton = new JButton(UnicodeSymbols.MINUS + " Zoom");
+        fontSizeSmallerButton.setToolTipText("Schriftgröße verringern");
         fontSizeSmallerButton.addActionListener(listener -> bumpFontSize(-2f));
 
-        for (JButton button : new JButton[]{fontSizeBiggerButton, fontSizeSmallerButton}) {
+        for (JButton button : new JButton[]{fontSizeSmallerButton, fontSizeBiggerButton}) {
             styleToolbarButton(button);
-            toolBar.add(button);
+            right.add(button);
         }
 
+        toolBar.add(left, BorderLayout.WEST);
+        toolBar.add(right, BorderLayout.EAST);
         return toolBar;
     }
 
@@ -156,6 +193,7 @@ public class NotesGUI extends JFrame {
                     note.getContent();
             noteContentArea.setText(contentText);
             noteContentArea.setCaretPosition(0);
+            updateStatus();
         });
 
         noteContentArea.setEditable(false);
@@ -166,19 +204,37 @@ public class NotesGUI extends JFrame {
         noteContentArea.setLineWrap(true);
         noteContentArea.setWrapStyleWord(true);
 
-        // Scroll panes for list and content
+        // Scroll panes for list and content, wrapped in rounded cards
         JScrollPane listScroll = new JScrollPane(notesList);
-        listScroll.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
+        listScroll.setBorder(BorderFactory.createEmptyBorder());
         listScroll.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
+        listScroll.getVerticalScrollBar().setUnitIncrement(16);
 
         JScrollPane contentScroll = new JScrollPane(noteContentArea);
-        contentScroll.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
+        contentScroll.setBorder(BorderFactory.createEmptyBorder());
         contentScroll.getViewport().setBackground(ThemeManager.getInputBackgroundColor());
+        contentScroll.getVerticalScrollBar().setUnitIncrement(16);
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, listScroll, contentScroll);
-        splitPane.setDividerLocation(250);
-        splitPane.setDividerSize(6);
-        splitPane.setBorder(null);
+        RoundedPanel listCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
+        listCard.setLayout(new BorderLayout());
+        listCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
+        listCard.add(listScroll, BorderLayout.CENTER);
+
+        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
+        contentCard.setLayout(new BorderLayout());
+        contentCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
+        contentCard.add(contentScroll, BorderLayout.CENTER);
+
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, listCard, contentCard);
+        splitPane.setDividerLocation(260);
+        splitPane.setDividerSize(8);
+        splitPane.setBorder(BorderFactory.createEmptyBorder());
         splitPane.setOpaque(false);
 
         content.add(splitPane, BorderLayout.CENTER);
@@ -196,7 +252,7 @@ public class NotesGUI extends JFrame {
         button.setOpaque(true);
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(base.darker(), 1),
-                BorderFactory.createEmptyBorder(8, 14, 8, 14)
+                BorderFactory.createEmptyBorder(8, 12, 8, 12)
         ));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
@@ -635,16 +691,125 @@ public class NotesGUI extends JFrame {
     /**
      * Configures and populates the list model with note titles.
      * <p>
-     * Clears the current list model, retrieves all notes using the notes manager,
-     * extracts their titles, and updates the list model. Ensures that at least the
-     * first item is selected if the list is not empty and no item is currently selected.
+     * Caches all titles, applies search filter, updates status label, and shows placeholder text if needed.
      */
     private void setupList() {
-        listModel.clear();
-        listModel.addAll(notesManager.getAllNotes().stream().map(Note::getTitle).toList());
+        allTitles = notesManager.getAllNotes().stream().map(Note::getTitle).toList();
+        applySearchFilter();
+
         if (!listModel.isEmpty() && notesList.getSelectedIndex() == -1) {
             notesList.setSelectedIndex(0);
         }
+
+        if (listModel.isEmpty()) {
+            noteContentArea.setText("Keine Notizen vorhanden.\n\n" +
+                    "• Klicken Sie auf 'Notiz erstellen' um zu starten.\n" +
+                    "• Nutzen Sie die Suche, um Notizen schnell zu finden.");
+            noteContentArea.setCaretPosition(0);
+        }
+
+        updateStatus();
+    }
+
+    private JPanel createSearchBar() {
+        JPanel wrap = new JPanel(new BorderLayout(10, 0));
+        wrap.setOpaque(false);
+        wrap.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
+
+        JLabel label = new JLabel(UnicodeSymbols.SEARCH + " Suchen:");
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+
+        searchField.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        searchField.setBackground(ThemeManager.getInputBackgroundColor());
+        searchField.setForeground(ThemeManager.getTextPrimaryColor());
+        searchField.setCaretColor(ThemeManager.getTextPrimaryColor());
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+        searchField.setToolTipText("Titel durchsuchen (Strg/Cmd+F)");
+
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { applySearchFilter(); }
+            @Override public void removeUpdate(DocumentEvent e) { applySearchFilter(); }
+            @Override public void changedUpdate(DocumentEvent e) { applySearchFilter(); }
+        });
+
+        RoundedPanel card = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
+        card.setLayout(new BorderLayout(10, 0));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
+        card.add(label, BorderLayout.WEST);
+        card.add(searchField, BorderLayout.CENTER);
+
+        wrap.add(card, BorderLayout.CENTER);
+        return wrap;
+    }
+
+    private void applySearchFilter() {
+        String q = searchField.getText() == null ? "" : searchField.getText().trim().toLowerCase();
+        listModel.clear();
+        if (q.isEmpty()) {
+            listModel.addAll(allTitles);
+        } else {
+            for (String t : allTitles) {
+                if (t != null && t.toLowerCase().contains(q)) {
+                    listModel.addElement(t);
+                }
+            }
+        }
+
+        if (!listModel.isEmpty() && notesList.getSelectedIndex() == -1) {
+            notesList.setSelectedIndex(0);
+        }
+        updateStatus();
+    }
+
+    private void updateStatus() {
+        int total = allTitles == null ? 0 : allTitles.size();
+        int shown = listModel.getSize();
+        String q = searchField.getText() == null ? "" : searchField.getText().trim();
+        if (q.isEmpty()) {
+            statusLabel.setText(shown + " Notiz(en)");
+        } else {
+            statusLabel.setText(shown + " von " + total + " • Filter: \"" + q + "\"");
+        }
+    }
+
+    private void setupKeyBindings() {
+        JRootPane rp = getRootPane();
+        InputMap im = rp.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap am = rp.getActionMap();
+
+        // New note (Ctrl/Cmd+N)
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), "notes.new");
+        am.put("notes.new", new AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { createNoteDialog(); }
+        });
+
+        // Focus search (Ctrl/Cmd+F)
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), "notes.find");
+        am.put("notes.find", new AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+                searchField.requestFocusInWindow();
+                searchField.selectAll();
+            }
+        });
+
+        // Delete selected note (Delete)
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "notes.delete");
+        am.put("notes.delete", new AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { deleteNote(); }
+        });
+
+        // Refresh (F5)
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), "notes.refresh");
+        am.put("notes.refresh", new AbstractAction() {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { setupList(); }
+        });
     }
 
     /**
@@ -661,6 +826,7 @@ public class NotesGUI extends JFrame {
         applyFontDelta(getContentPane(), delta);
         revalidate();
         repaint();
+        updateStatus();
     }
 
     /**

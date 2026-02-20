@@ -10,10 +10,9 @@ import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.utils.ArticleExporter;
+import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
-import static ch.framedev.lagersystem.utils.JFrameUtils.GradientPanel;
-import static ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -29,6 +28,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -41,6 +41,17 @@ import java.util.List;
  * Features: Split panel layout, gradient header, styled components, and PDF export (PDFBox).
  */
 public class NewOrderGUI extends JFrame {
+
+    private static final int WINDOW_W = 1500;
+    private static final int WINDOW_H = 720;
+
+    private static final int PAD = 12;
+    private static final int CARD_PAD = 20;
+
+    private static final int RADIUS_CARD = 16;
+    private static final int RADIUS_SURFACE = 14;
+
+    private static final int MAX_ARTICLE_COMBO_RESULTS = 300;
 
     private final DefaultTableModel orderTableModel;
     // track Article -> qty so prices are available
@@ -75,46 +86,57 @@ public class NewOrderGUI extends JFrame {
 
         setTitle("Neue Bestellung erstellen");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(1500, 700);
+        setSize(WINDOW_W, WINDOW_H);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(0, 0));
 
-        // Header with gradient
-        JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        headerWrapper.setBackground(ThemeManager.getBackgroundColor());
+        // Top (header card)
+        JPanel topWrapper = new JPanel();
+        topWrapper.setLayout(new BoxLayout(topWrapper, BoxLayout.Y_AXIS));
+        topWrapper.setBackground(ThemeManager.getBackgroundColor());
+        topWrapper.setBorder(BorderFactory.createEmptyBorder(PAD, PAD, PAD, PAD));
 
-        GradientPanel header = new GradientPanel(
+        JFrameUtils.GradientPanel header = new JFrameUtils.GradientPanel(
                 ThemeManager.getPrimaryColor(),
                 ThemeManager.getAccentColor()
         );
-        header.setPreferredSize(new Dimension(900, 80));
-        header.setLayout(new GridBagLayout());
+        header.setLayout(new BorderLayout());
+        header.setPreferredSize(new Dimension(0, 92));
+        header.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(16, 18, 16, 18)
+        ));
 
-        JLabel iconLabel = new JLabel(UnicodeSymbols.CODE);
-        iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 36));
-        iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
-
-        JLabel title = new JLabel(UnicodeSymbols.HEAVY_PLUS + " Neue Bestellung Erstellen");
-        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 26));
+        JLabel title = new JLabel(UnicodeSymbols.HEAVY_PLUS + " Neue Bestellung erstellen");
+        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 24));
         title.setForeground(ThemeManager.getTextOnPrimaryColor());
 
-        JPanel headerContent = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
-        headerContent.setOpaque(false);
-        headerContent.add(iconLabel);
-        headerContent.add(title);
-        header.add(headerContent);
+        JLabel subtitle = new JLabel(UnicodeSymbols.INFO + " Empfänger wählen, Artikel hinzufügen und als PDF exportieren");
+        subtitle.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitle.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 230));
 
-        headerWrapper.add(header);
-        add(headerWrapper, BorderLayout.NORTH);
+        JPanel titleBox = new JPanel();
+        titleBox.setOpaque(false);
+        titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        titleBox.add(title);
+        titleBox.add(Box.createVerticalStrut(4));
+        titleBox.add(subtitle);
+
+        header.add(titleBox, BorderLayout.WEST);
+        topWrapper.add(header);
+
+        add(topWrapper, BorderLayout.NORTH);
 
         // Main content with split pane
-        JPanel mainContent = new JPanel(new BorderLayout(15, 15));
+        JPanel mainContent = new JPanel(new BorderLayout(PAD, PAD));
         mainContent.setBackground(ThemeManager.getBackgroundColor());
-        mainContent.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        mainContent.setBorder(BorderFactory.createEmptyBorder(PAD, PAD, PAD, PAD));
 
         // Left panel - Form details
-        RoundedPanel leftCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
-        leftCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        JFrameUtils.RoundedPanel leftCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), RADIUS_CARD);
+        leftCard.setBorder(BorderFactory.createEmptyBorder(CARD_PAD, CARD_PAD, CARD_PAD, CARD_PAD));
         leftCard.setLayout(new BorderLayout(10, 10));
 
         JLabel formTitle = new JLabel(UnicodeSymbols.CLIPBOARD + " Bestellinformationen");
@@ -213,8 +235,8 @@ public class NewOrderGUI extends JFrame {
         leftCard.add(formScroll, BorderLayout.CENTER);
 
         // Right panel - Order items
-        RoundedPanel rightCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
-        rightCard.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        JFrameUtils.RoundedPanel rightCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), RADIUS_CARD);
+        rightCard.setBorder(BorderFactory.createEmptyBorder(CARD_PAD, CARD_PAD, CARD_PAD, CARD_PAD));
         rightCard.setLayout(new BorderLayout(10, 10));
 
         JLabel tableTitle = new JLabel(UnicodeSymbols.SHOPPING_CART + " Bestellte Artikel");
@@ -244,6 +266,11 @@ public class NewOrderGUI extends JFrame {
 
         JTable orderTable = new JTable(orderTableModel);
         applyOrderTableTheme(orderTable);
+        DefaultTableCellRenderer right = new DefaultTableCellRenderer();
+        right.setHorizontalAlignment(SwingConstants.RIGHT);
+        orderTable.getColumnModel().getColumn(1).setCellRenderer(right);
+        orderTable.getColumnModel().getColumn(2).setCellRenderer(right);
+        orderTable.getColumnModel().getColumn(3).setCellRenderer(right);
 
         JScrollPane orderScroll = new JScrollPane(orderTable);
         orderScroll.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
@@ -301,8 +328,9 @@ public class NewOrderGUI extends JFrame {
         mainContent.add(createSummaryBar(), BorderLayout.NORTH);
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftCard, rightCard);
-        splitPane.setDividerLocation(450);
-        splitPane.setDividerSize(4);
+        splitPane.setDividerLocation(480);
+        splitPane.setDividerSize(6);
+        splitPane.setContinuousLayout(true);
         splitPane.setBorder(null);
         splitPane.setOpaque(false);
 
@@ -326,7 +354,7 @@ public class NewOrderGUI extends JFrame {
     // ---------------------------------------------------------------------
 
     private JComponent buildInlineArticleSearchPanel() {
-        RoundedPanel panel = new RoundedPanel(ThemeManager.getSurfaceColor(), 14);
+        JFrameUtils.RoundedPanel panel = new JFrameUtils.RoundedPanel(ThemeManager.getSurfaceColor(), RADIUS_SURFACE);
         panel.setOpaque(true);
         panel.setLayout(new GridBagLayout());
         panel.setBorder(BorderFactory.createCompoundBorder(
@@ -350,6 +378,17 @@ public class NewOrderGUI extends JFrame {
         articleSearchField = new JTextField();
         styleTextField(articleSearchField);
         articleSearchField.setToolTipText("Name oder Artikelnummer eingeben…");
+        // ESC to clear
+        articleSearchField.registerKeyboardAction(
+                e -> {
+                    articleSearchField.setText("");
+                    rebuildArticleComboModel("");
+                },
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_FOCUSED
+        );
+        // ENTER to add
+        articleSearchField.addActionListener(e -> addSelectedInlineArticle());
 
         gc.gridx = 1;
         gc.weightx = 0.35;
@@ -508,7 +547,7 @@ public class NewOrderGUI extends JFrame {
             if (match) {
                 model.addElement(a);
                 added++;
-                if (added >= 300) break;
+                if (added >= MAX_ARTICLE_COMBO_RESULTS) break;
             }
         }
 
@@ -833,6 +872,9 @@ public class NewOrderGUI extends JFrame {
 
     private void rebuildOrderTable() {
         orderTableModel.setRowCount(0);
+        if (orderArticles.isEmpty()) {
+            return;
+        }
         for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
             Article a = e.getKey();
             int qty = e.getValue();
@@ -865,7 +907,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private JPanel createSummaryBar() {
-        RoundedPanel bar = new RoundedPanel(ThemeManager.getSurfaceColor(), 14);
+        JFrameUtils.RoundedPanel bar = new JFrameUtils.RoundedPanel(ThemeManager.getSurfaceColor(), 14);
         bar.setLayout(new GridLayout(1, 4, 12, 0));
         bar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
@@ -879,7 +921,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private JPanel createSummaryChip(String title, JLabel valueLabel) {
-        RoundedPanel chip = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
+        JFrameUtils.RoundedPanel chip = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
         chip.setLayout(new BorderLayout(0, 4));
         chip.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
@@ -1134,29 +1176,40 @@ public class NewOrderGUI extends JFrame {
         button.setContentAreaFilled(true);
         button.setOpaque(true);
 
+        applyButtonPalette(button, baseBg);
+
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private void applyButtonPalette(JButton button, Color baseBg) {
         Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
         Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
 
         button.setBackground(baseBg);
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(baseBg.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 18, 10, 18)
         ));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Remove previous palette listeners (avoid stacking)
+        for (MouseListener ml : button.getMouseListeners()) {
+            if (ml instanceof MouseAdapter) {
+                button.removeMouseListener(ml);
+            }
+        }
 
         button.addMouseListener(new MouseAdapter() {
             @Override public void mouseEntered(MouseEvent e) { if (button.isEnabled()) button.setBackground(hoverBg); }
-            @Override public void mouseExited(MouseEvent e) { if (button.isEnabled()) button.setBackground(baseBg); }
+            @Override public void mouseExited(MouseEvent e)  { if (button.isEnabled()) button.setBackground(baseBg); }
             @Override public void mousePressed(MouseEvent e) { if (button.isEnabled()) button.setBackground(pressedBg); }
             @Override public void mouseReleased(MouseEvent e) {
                 if (!button.isEnabled()) return;
                 button.setBackground(button.contains(e.getPoint()) ? hoverBg : baseBg);
             }
         });
-
-        return button;
     }
 
     private void createOrder(Map<String, Integer> orderArticles, String receiverName, String receiverKontoNumber,

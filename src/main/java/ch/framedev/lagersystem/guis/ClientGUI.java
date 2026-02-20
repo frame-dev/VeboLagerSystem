@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import static ch.framedev.lagersystem.utils.JFrameUtils.createRoundedButton;
+
 @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
 public class ClientGUI extends JFrame {
 
@@ -31,6 +33,8 @@ public class ClientGUI extends JFrame {
     private JComboBox<String> departmentCombobox;
     private final JComboBox<String> filterDepartmentCombobox;
 
+    private static final String ALL_DEPARTMENTS_LABEL = UnicodeSymbols.DEPARTMENT + " Alle Abteilungen";
+
     public ClientGUI() {
         ThemeManager.getInstance().registerWindow(this);
 
@@ -40,34 +44,67 @@ public class ClientGUI extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // ===== Header =====
-        JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        headerWrapper.setBackground(ThemeManager.getBackgroundColor());
+        // ===== Top area (Header + Toolbar) =====
+        JPanel topContainer = new JPanel();
+        topContainer.setBackground(ThemeManager.getBackgroundColor());
+        topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
+        topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
 
+        // Header card (no fixed height -> prevents clipping)
         JFrameUtils.RoundedPanel headerPanel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-        headerPanel.setPreferredSize(new Dimension(680, 64));
-        headerPanel.setLayout(new GridBagLayout());
+        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)
+        ));
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel titleLabel = new JLabel(UnicodeSymbols.CLIENT + "Kunden Verwaltung");
+        JLabel titleLabel = new JLabel(UnicodeSymbols.CLIENT + " Kunden Verwaltung");
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-        headerPanel.add(titleLabel);
-        headerWrapper.add(headerPanel);
-        add(headerWrapper, BorderLayout.NORTH);
+        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Kunden verwalten, filtern und durchsuchen");
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        // ===== Toolbar =====
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 12));
-        toolbar.setBackground(ThemeManager.getBackgroundColor());
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerText.add(titleLabel);
+        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(subtitleLabel);
 
-        JLabel filterLabel = new JLabel(UnicodeSymbols.SEARCH + " Nach Abteilung filtern:");
+        headerPanel.add(headerText, BorderLayout.WEST);
+
+        JPanel headerWrapper = new JPanel(new BorderLayout());
+        headerWrapper.setOpaque(false);
+        headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerWrapper.add(headerPanel, BorderLayout.CENTER);
+
+        // Toolbar card
+        JFrameUtils.RoundedPanel toolbar = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        toolbar.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        toolbar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)
+        ));
+
+        JLabel filterLabel = new JLabel(UnicodeSymbols.SEARCH + " Nach Abteilung:");
         filterLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         filterLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
+        // Combo used in dialogs (create/edit)
+        departmentCombobox = new JComboBox<>();
+        fillDepartmentList(departmentCombobox, false);
+        styleComboBox(departmentCombobox);
+
+        // Combo used as filter
         filterDepartmentCombobox = new JComboBox<>();
         filterDepartmentCombobox.setPreferredSize(new Dimension(240, 40));
-        filterDepartmentCombobox.addItem(UnicodeSymbols.DEPARTMENT + " Alle Abteilungen");
-        fillFilterDepartmentList();
+        filterDepartmentCombobox.addItem(ALL_DEPARTMENTS_LABEL);
+        fillDepartmentList(filterDepartmentCombobox, true);
         styleComboBox(filterDepartmentCombobox);
 
         JButton addClientButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Kunde hinzufügen");
@@ -81,15 +118,22 @@ public class ClientGUI extends JFrame {
 
         toolbar.add(filterLabel);
         toolbar.add(filterDepartmentCombobox);
+        toolbar.add(Box.createHorizontalStrut(6));
         toolbar.add(addClientButton);
         toolbar.add(editClientButton);
         toolbar.add(deleteClientButton);
         toolbar.add(refreshButton);
 
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(ThemeManager.getBackgroundColor());
-        topPanel.add(toolbar, BorderLayout.SOUTH);
-        add(topPanel, BorderLayout.PAGE_START);
+        JPanel toolbarWrapper = new JPanel(new BorderLayout());
+        toolbarWrapper.setOpaque(false);
+        toolbarWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        toolbarWrapper.add(toolbar, BorderLayout.SOUTH);
+
+        topContainer.add(headerWrapper);
+        topContainer.add(Box.createVerticalStrut(10));
+        topContainer.add(toolbarWrapper);
+
+        add(topContainer, BorderLayout.NORTH);
 
         // ===== Main card with table =====
         JFrameUtils.RoundedPanel card = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
@@ -118,28 +162,47 @@ public class ClientGUI extends JFrame {
         centerWrapper.add(card, gbc);
         add(centerWrapper, BorderLayout.CENTER);
 
-        // ===== Bottom search bar =====
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        searchPanel.setBackground(ThemeManager.getBackgroundColor());
+        // ===== Bottom search bar (card – like VendorGUI) =====
+        JFrameUtils.RoundedPanel searchCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        searchCard.setLayout(new BorderLayout(10, 0));
+        searchCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
 
         JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche (Name oder Abteilung):");
         searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        searchLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
 
-        JTextField searchField = new JTextField(28);
-        styleSearchField(searchField);
+        JTextField searchField = new JTextField(26);
+        styleTextField(searchField);
+        searchField.setToolTipText("Tippen zum Filtern – Enter zum Suchen, ESC zum Leeren");
 
-        JButton searchBtn = new JButton(UnicodeSymbols.SEARCH + " Suchen");
-        searchBtn.setToolTipText("Suche nach Kunden basierend auf dem Suchbegriff");
-        JButton clearBtn = new JButton(UnicodeSymbols.CLEAR + " Leeren");
-        clearBtn.setToolTipText("Suchfeld leeren und Filter zurücksetzen");
-        styleFlatActionButton(searchBtn);
-        styleFlatActionButton(clearBtn);
+        JPanel leftSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        leftSearch.setOpaque(false);
+        leftSearch.add(searchLabel);
+        leftSearch.add(searchField);
 
-        searchPanel.add(searchLabel);
-        searchPanel.add(searchField);
-        searchPanel.add(searchBtn);
-        searchPanel.add(clearBtn);
-        add(searchPanel, BorderLayout.SOUTH);
+        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        rightActions.setOpaque(false);
+
+        JButton searchBtn = createSecondaryButton(UnicodeSymbols.SEARCH + " Suchen");
+        searchBtn.setToolTipText("Nach Kunden suchen");
+        JButton clearBtn = createSecondaryButton(UnicodeSymbols.CLEAR + " Leeren");
+        clearBtn.setToolTipText("Suchfeld leeren");
+
+        rightActions.add(searchBtn);
+        rightActions.add(clearBtn);
+
+        searchCard.add(leftSearch, BorderLayout.CENTER);
+        searchCard.add(rightActions, BorderLayout.EAST);
+
+        JPanel searchWrapper = new JPanel(new BorderLayout());
+        searchWrapper.setBackground(ThemeManager.getBackgroundColor());
+        searchWrapper.setBorder(BorderFactory.createEmptyBorder(10, 12, 12, 12));
+        searchWrapper.add(searchCard, BorderLayout.CENTER);
+
+        add(searchWrapper, BorderLayout.SOUTH);
 
         // ===== Load clients =====
         loadClients();
@@ -150,7 +213,7 @@ public class ClientGUI extends JFrame {
 
         filterDepartmentCombobox.addActionListener(listener -> {
             String selected = (String) filterDepartmentCombobox.getSelectedItem();
-            if (selected == null || selected.equals("Alle Abteilungen")) {
+            if (selected == null || ALL_DEPARTMENTS_LABEL.equals(selected)) {
                 sorter.setRowFilter(null);
             } else {
                 sorter.setRowFilter(RowFilter.regexFilter("^" + Pattern.quote(selected) + "$", 1));
@@ -171,12 +234,41 @@ public class ClientGUI extends JFrame {
             }
         };
 
+        // Live filter while typing
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                doSearch.run();
+            }
+
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                doSearch.run();
+            }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                doSearch.run();
+            }
+        });
+
         searchBtn.addActionListener(e -> doSearch.run());
         clearBtn.addActionListener(e -> {
             searchField.setText("");
+            filterDepartmentCombobox.setSelectedItem(ALL_DEPARTMENTS_LABEL);
             sorter.setRowFilter(null);
         });
         searchField.addActionListener(e -> doSearch.run());
+        // ESC clears
+        searchField.registerKeyboardAction(
+                e -> {
+                    searchField.setText("");
+                    filterDepartmentCombobox.setSelectedItem(ALL_DEPARTMENTS_LABEL);
+                    sorter.setRowFilter(null);
+                },
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_FOCUSED
+        );
 
         // ===== Table interactions =====
         setupTableInteractions();
@@ -253,12 +345,26 @@ public class ClientGUI extends JFrame {
         super.dispose();
     }
 
-    private void fillFilterDepartmentList() {
+
+    private void fillDepartmentList(JComboBox<String> target, boolean skipFirstItem) {
         DepartmentManager departmentManager = DepartmentManager.getInstance();
         for (var department : departmentManager.getAllDepartments()) {
             String dept = (String) department.get("department");
-            if (dept != null && !dept.trim().isEmpty()) {
-                filterDepartmentCombobox.addItem(dept.trim());
+            if (dept == null) continue;
+            String trimmed = dept.trim();
+            if (trimmed.isEmpty()) continue;
+
+            // Avoid duplicates (especially when called multiple times)
+            boolean exists = false;
+            int start = skipFirstItem ? 1 : 0;
+            for (int i = start; i < target.getItemCount(); i++) {
+                if (trimmed.equals(target.getItemAt(i))) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                target.addItem(trimmed);
             }
         }
     }
@@ -509,69 +615,14 @@ public class ClientGUI extends JFrame {
         return button;
     }
 
-    private void styleSearchField(JTextField field) {
-        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        field.setBackground(ThemeManager.getInputBackgroundColor());
-        field.setForeground(ThemeManager.getTextPrimaryColor());
-        field.setCaretColor(ThemeManager.getTextPrimaryColor());
-        field.setBorder(BorderFactory.createCompoundBorder(
+    private void styleTextField(JTextField tf) {
+        tf.setBackground(ThemeManager.getInputBackgroundColor());
+        tf.setForeground(ThemeManager.getTextPrimaryColor());
+        tf.setCaretColor(ThemeManager.getTextPrimaryColor());
+        tf.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getInputFocusBorderColor(), 2),
-                        BorderFactory.createEmptyBorder(7, 9, 7, 9)
-                ));
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(8, 10, 8, 10)
-                ));
-            }
-        });
-    }
-
-    private void styleFlatActionButton(JButton b) {
-        Color normalFg = ThemeManager.getTextPrimaryColor();
-        Color hoverFg = ThemeManager.getTextLinkColor();
-        Color border = ThemeManager.getBorderColor();
-
-        b.setOpaque(false);
-        b.setContentAreaFilled(false);
-        b.setBorderPainted(true);
-        b.setFocusPainted(false);
-        b.setForeground(normalFg);
-        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(border, 1),
-                BorderFactory.createEmptyBorder(8, 16, 8, 16)
-        ));
-
-        b.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                b.setForeground(hoverFg);
-                b.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getBorderFocusColor(), 1),
-                        BorderFactory.createEmptyBorder(8, 16, 8, 16)
-                ));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                b.setForeground(normalFg);
-                b.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(border, 1),
-                        BorderFactory.createEmptyBorder(8, 16, 8, 16)
-                ));
-            }
-        });
     }
 
     private void styleComboBox(JComboBox<String> combo) {
@@ -632,8 +683,15 @@ public class ClientGUI extends JFrame {
                 b.setForeground(fg);
                 b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 b.addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(surface); }
-                    @Override public void mouseExited(MouseEvent e)  { b.setBackground(bg); }
+                    @Override
+                    public void mouseEntered(MouseEvent e) {
+                        b.setBackground(surface);
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        b.setBackground(bg);
+                    }
                 });
                 return b;
             }
@@ -672,5 +730,53 @@ public class ClientGUI extends JFrame {
             this.name = name;
             this.department = department;
         }
+    }
+
+    private JButton createSecondaryButton(String text) {
+        JButton btn = createRoundedButton(text);
+        applyButtonPalette(btn, ThemeManager.getPrimaryColor());
+        return btn;
+    }
+
+    private void applyButtonPalette(JButton button, Color base) {
+        Color hover = ThemeManager.getButtonHoverColor(base);
+        Color pressed = ThemeManager.getButtonPressedColor(base);
+
+        button.setBackground(base);
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(base.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 18, 10, 18)
+        ));
+
+        // Remove older mouse listeners added by createRoundedButton() for consistent palette behavior
+        for (MouseListener ml : button.getMouseListeners()) {
+            String n = ml.getClass().getName();
+            if (n.contains("ClientGUI")) {
+                button.removeMouseListener(ml);
+            }
+        }
+
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(hover);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(base);
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                button.setBackground(pressed);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                button.setBackground(button.contains(e.getPoint()) ? hover : base);
+            }
+        });
     }
 }

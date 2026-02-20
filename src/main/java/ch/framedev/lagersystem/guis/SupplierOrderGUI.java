@@ -13,18 +13,18 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.GradientPanel;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.BufferedReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -45,7 +45,7 @@ public class SupplierOrderGUI extends JFrame {
         UnicodeSymbols.CLOCK + " Hinzugefügt"
     };
 
-    private static final File orderFile = new File(Main.getAppDataDir(), "supplier_orders.txt");
+    private static final Path ORDER_FILE = new File(Main.getAppDataDir(), "supplier_orders.txt").toPath();
     private final List<OrderItem> orderItems = new ArrayList<>();
     private final DefaultTableModel tableModel;
     private final JTable table;
@@ -67,10 +67,10 @@ public class SupplierOrderGUI extends JFrame {
         mainContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
         // Modern gradient header
-        GradientPanel header = getGradientPanel();
+        JPanel header = getHeaderPanel();
 
         // Title section with icon
-        JPanel titleSection = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
+        JPanel titleSection = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 2));
         titleSection.setOpaque(false);
 
         JLabel iconLabel = new JLabel(UnicodeSymbols.TRUCK);
@@ -117,28 +117,49 @@ public class SupplierOrderGUI extends JFrame {
         table.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
 
         // Header styling
-        JTableHeader headerTable = table.getTableHeader();
-        headerTable.setBackground(ThemeManager.getTableHeaderBackground());
-        headerTable.setForeground(ThemeManager.getTableHeaderForeground());
-        headerTable.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
+        table.getTableHeader().setBackground(ThemeManager.getTableHeaderBackground());
+        table.getTableHeader().setForeground(ThemeManager.getTableHeaderForeground());
+        table.getTableHeader().setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
 
+        // Table wrapper card
+        JPanel tableCard = createCardPanel();
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor()));
-        add(scrollPane, BorderLayout.CENTER);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        tableCard.add(scrollPane, BorderLayout.CENTER);
 
-        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
-        actionPanel.setBackground(ThemeManager.getBackgroundColor());
+        // Bottom action bar card
+        JPanel actionCard = createCardPanel();
+        actionCard.setLayout(new BorderLayout());
+        actionCard.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
 
-        JButton removeBtn = createButton(UnicodeSymbols.TRASH + " Entfernen", ThemeManager.getErrorColor(), e -> removeSelected());
-        JButton clearBtn = createButton(UnicodeSymbols.BROOM + " Alle löschen", ThemeManager.getWarningColor(), e -> clearAll());
-        JButton saveBtn = createButton(UnicodeSymbols.FLOPPY + " Speichern", ThemeManager.getAccentColor(), e -> persist());
-        JButton refreshBtn = createButton(UnicodeSymbols.REFRESH + " Aktualisieren", ThemeManager.getSuccessColor(), e -> refreshTable());
+        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        actionPanel.setOpaque(false);
+
+        JButton removeBtn = createPrimaryButton(UnicodeSymbols.TRASH + " Entfernen", ThemeManager.getErrorColor(), e -> removeSelected());
+        JButton clearBtn = createPrimaryButton(UnicodeSymbols.BROOM + " Alle löschen", ThemeManager.getWarningColor(), e -> clearAll());
+        JButton saveBtn = createPrimaryButton(UnicodeSymbols.FLOPPY + " Speichern", ThemeManager.getAccentColor(), e -> persist());
+        JButton refreshBtn = createSecondaryButton(UnicodeSymbols.REFRESH + " Aktualisieren", e -> refreshTable());
 
         actionPanel.add(removeBtn);
         actionPanel.add(clearBtn);
         actionPanel.add(saveBtn);
         actionPanel.add(refreshBtn);
-        add(actionPanel, BorderLayout.SOUTH);
+
+        actionCard.add(actionPanel, BorderLayout.EAST);
+
+        JPanel centerWrapper = new JPanel(new BorderLayout(0, 12));
+        centerWrapper.setOpaque(false);
+        centerWrapper.setBorder(BorderFactory.createEmptyBorder(16, 18, 18, 18));
+        centerWrapper.add(tableCard, BorderLayout.CENTER);
+        centerWrapper.add(actionCard, BorderLayout.SOUTH);
+
+        mainContainer.add(centerWrapper, BorderLayout.CENTER);
+        setContentPane(mainContainer);
+
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setAutoCreateRowSorter(true);
 
         loadFromFile();
         refreshTable();
@@ -150,10 +171,10 @@ public class SupplierOrderGUI extends JFrame {
                 ThemeManager.getHeaderGradientColor()
         );
         header.setLayout(new BorderLayout());
-        header.setPreferredSize(new Dimension(0, 100));
+        header.setPreferredSize(new Dimension(0, 120));
         header.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 0, 0, 30)),
-                BorderFactory.createEmptyBorder(25, 40, 25, 40)
+                BorderFactory.createEmptyBorder(22, 40, 22, 40)
         ));
         return header;
     }
@@ -178,21 +199,22 @@ public class SupplierOrderGUI extends JFrame {
     }
 
     private void loadFromFile() {
-        if (!orderFile.exists()) {
-            try {
-                if(!orderFile.createNewFile()) {
-                    logger.error("Konnte die Lieferanten-Bestelldatei nicht erstellen: {}", orderFile.getAbsolutePath());
-                    Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler: Konnte die Lieferanten-Bestelldatei nicht erstellen: " + orderFile.getAbsolutePath());
-                }
-            } catch (Exception ignored) {}
-            return;
-        }
-        try (BufferedReader reader = new BufferedReader(new FileReader(orderFile))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split("\\" + SEPARATOR);
-                if (parts.length >= 5) {
-                    orderItems.add(new OrderItem(parts[0], parts[1], parts[2], Integer.parseInt(parts[3]), Integer.parseInt(parts[4]), parts[5]));
+        ensureOrderFileExists();
+        orderItems.clear();
+        try {
+            List<String> lines = Files.readAllLines(ORDER_FILE, StandardCharsets.UTF_8);
+            for (String line : lines) {
+                if (line == null || line.isBlank()) continue;
+                String[] parts = line.split("\\" + SEPARATOR, -1);
+                if (parts.length >= 6) {
+                    orderItems.add(new OrderItem(
+                            parts[0],
+                            parts[1],
+                            parts[2],
+                            safeInt(parts[3]),
+                            safeInt(parts[4]),
+                            parts[5]
+                    ));
                 }
             }
         } catch (Exception e) {
@@ -202,38 +224,59 @@ public class SupplierOrderGUI extends JFrame {
     }
 
     private void persist() {
-        try (FileWriter writer = new FileWriter(orderFile, false)) {
-            for (OrderItem item : orderItems) {
-                writer.write(String.join(SEPARATOR,
-                        item.articleNumber(),
-                        item.name(),
-                        item.vendor(),
-                        String.valueOf(item.quantity()),
-                        String.valueOf(ArticleManager.getInstance().getArticleByNumber(item.articleNumber()).getStockQuantity()),
-                        item.addedAt()) + System.lineSeparator());
-                VendorOrderLogging.getInstance().addLog("Bestellposten gespeichert: Artikelnummer " + item.articleNumber() + ", Menge: " + item.quantity());
-            }
-        } catch (Exception e) {
-            logger.error("Fehler beim Laden der Lieferanten: {}", e.getMessage(), e);
-            Main.logUtils.addLog("Fehler beim laden der Lieferanten: " + e.getMessage());
+        ensureOrderFileExists();
+        List<String> lines = new ArrayList<>();
 
+        for (OrderItem item : orderItems) {
+            int stock = item.stock();
+            Article a = ArticleManager.getInstance().getArticleByNumber(item.articleNumber());
+            if (a != null) {
+                stock = a.getStockQuantity();
+            }
+
+            lines.add(String.join(SEPARATOR,
+                    item.articleNumber(),
+                    item.name(),
+                    item.vendor(),
+                    String.valueOf(item.quantity()),
+                    String.valueOf(stock),
+                    item.addedAt()
+            ));
+
+            VendorOrderLogging.getInstance().addLog(
+                    "Bestellposten gespeichert: Artikelnummer " + item.articleNumber() + ", Menge: " + item.quantity()
+            );
+        }
+
+        try {
+            Files.write(ORDER_FILE, lines, StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            logger.error("Fehler beim Speichern der Lieferanten-Bestellungen: {}", e.getMessage(), e);
+            Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler beim Speichern der Lieferanten-Bestellungen: " + e.getMessage());
         }
     }
 
     private void refreshTable() {
         tableModel.setRowCount(0);
-        for (OrderItem item : orderItems) {
-            tableModel.addRow(new Object[]{item.articleNumber(), item.name(), item.vendor(), item.quantity(), ArticleManager.getInstance().getArticleByNumber(item.articleNumber()).getStockQuantity(), item.addedAt()});
-        }
+        orderItems.stream()
+                .sorted(Comparator.comparing(OrderItem::addedAt).reversed())
+                .forEach(item -> tableModel.addRow(new Object[]{
+                        item.articleNumber(),
+                        item.name(),
+                        item.vendor(),
+                        item.quantity(),
+                        item.stock(),
+                        item.addedAt()
+                }));
     }
 
     private void removeSelected() {
-        int[] rows = table.getSelectedRows();
-        if (rows.length == 0) return;
-        // remove from bottom to top to keep indices valid
-        for (int i = rows.length - 1; i >= 0; i--) {
-            orderItems.remove(rows[i]);
-        }
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) return;
+        int modelRow = table.convertRowIndexToModel(viewRow);
+        if (modelRow < 0 || modelRow >= orderItems.size()) return;
+
+        orderItems.remove(modelRow);
         persist();
         refreshTable();
     }
@@ -284,16 +327,82 @@ public class SupplierOrderGUI extends JFrame {
         });
     }
 
+    private static void ensureOrderFileExists() {
+        try {
+            File parent = ORDER_FILE.toFile().getParentFile();
+            if (parent != null && !parent.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                parent.mkdirs();
+            }
+            if (!Files.exists(ORDER_FILE)) {
+                Files.createFile(ORDER_FILE);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static int safeInt(String s) {
+        try {
+            return Integer.parseInt(s == null ? "0" : s.trim());
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private JPanel createCardPanel() {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(ThemeManager.getCardBackgroundColor());
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        return card;
+    }
+
+    private JButton createPrimaryButton(String text, Color color, ActionListener action) {
+        JButton btn = new JButton(text);
+        btn.addActionListener(action);
+        btn.setBackground(color);
+        btn.setForeground(ThemeManager.getTextOnPrimaryColor());
+        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        btn.setFocusPainted(false);
+        btn.setOpaque(true);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(color.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)
+        ));
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        Color hover = ThemeManager.getButtonHoverColor(color);
+        btn.addChangeListener(e -> btn.setBackground(btn.getModel().isRollover() ? hover : color));
+        return btn;
+    }
+
+    private JButton createSecondaryButton(String text, ActionListener action) {
+        JButton btn = new JButton(text);
+        btn.addActionListener(action);
+        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(false);
+        btn.setForeground(ThemeManager.getTextPrimaryColor());
+        btn.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        Color fg = ThemeManager.getTextPrimaryColor();
+        Color hover = ThemeManager.getButtonHoverColor(fg);
+        btn.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { btn.setForeground(hover); }
+            @Override public void mouseExited(MouseEvent e) { btn.setForeground(fg); }
+        });
+        return btn;
+    }
+
     public static List<String> getAllSupplierOrders() {
         List<String> orders = new ArrayList<>();
-        if (!orderFile.exists()) {
-            return orders;
-        }
-        try (BufferedReader reader = new BufferedReader(new FileReader(orderFile))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                orders.add(line);
-            }
+        ensureOrderFileExists();
+        try {
+            orders.addAll(Files.readAllLines(ORDER_FILE, StandardCharsets.UTF_8));
         } catch (Exception e) {
             LogManager.getLogger(SupplierOrderGUI.class).error("Fehler beim Lesen der Lieferanten-Bestelldatei: {}", e.getMessage(), e);
             Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler beim Lesen der Lieferanten-Bestelldatei: " + e.getMessage());
@@ -312,5 +421,24 @@ public class SupplierOrderGUI extends JFrame {
     public void dispose() {
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
+    }
+
+    private static JPanel getHeaderPanel() {
+        JPanel headerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                GradientPaint gp = new GradientPaint(0, 0, ThemeManager.getHeaderBackgroundColor(), getWidth(), 0, ThemeManager.getHeaderGradientColor());
+                g2.setPaint(gp);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 22, 22);
+                g2.setColor(new Color(0,0,0,30));
+                g2.fillRoundRect(4, getHeight()-8, getWidth()-8, 8, 8, 8); // subtle shadow
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(18, 32, 18, 32));
+        return headerPanel;
     }
 }
