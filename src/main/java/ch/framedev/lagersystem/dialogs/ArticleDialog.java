@@ -8,6 +8,7 @@ import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
 import javax.swing.text.NumberFormatter;
+import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -40,87 +41,67 @@ public class ArticleDialog {
         JDialog dialog = new JDialog(frame, "Artikel Bearbeiten", true);
         dialog.setUndecorated(true);
 
-        // Main container with shadow effect
-        JPanel mainContainer = new JPanel(new BorderLayout());
-        mainContainer.setBackground(ThemeManager.getBackgroundColor());
-        mainContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 2),
-                BorderFactory.createEmptyBorder(0, 0, 0, 0)
-        ));
+        JPanel mainContainer = createDialogMainContainer();
 
-        // Header panel with theme colors
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(ThemeManager.getPrimaryColor());
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+        // Header (same look as Add-Dialog)
+        JPanel headerPanel = getHeaderPanel();
+        JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
+        titlePanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel(UnicodeSymbols.EDIT + "  Artikel Bearbeiten");
+        JLabel iconLabel = new JLabel(UnicodeSymbols.EDIT);
+        iconLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 24));
+        iconLabel.setForeground(Color.WHITE);
+
+        JLabel titleLabel = new JLabel(UnicodeSymbols.CHECKMARK + "  Artikel Bearbeiten");
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-        titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
-        headerPanel.add(titleLabel, BorderLayout.WEST);
+        titleLabel.setForeground(Color.WHITE);
 
-        // Styled close button
-        JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
-        closeBtn.setToolTipText("Schließen");
-        closeBtn.setForeground(ThemeManager.getTextOnPrimaryColor());
-        closeBtn.setBackground(ThemeManager.getPrimaryColor());
-        closeBtn.setBorderPainted(false);
-        closeBtn.setFocusPainted(false);
-        closeBtn.setContentAreaFilled(true);
-        closeBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 24));
-        closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        closeBtn.setPreferredSize(new Dimension(40, 40));
-        closeBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                closeBtn.setForeground(ThemeManager.getErrorColor());
-            }
+        titlePanel.add(iconLabel);
+        titlePanel.add(titleLabel);
+        headerPanel.add(titlePanel, BorderLayout.WEST);
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                closeBtn.setForeground(ThemeManager.getTextOnPrimaryColor());
-            }
-        });
-        closeBtn.addActionListener(e -> {
-            resultHolder[0] = null;
-            dialog.dispose();
-        });
+        JButton closeBtn = createDialogCloseButton(dialog, resultHolder);
         headerPanel.add(closeBtn, BorderLayout.EAST);
         mainContainer.add(headerPanel, BorderLayout.NORTH);
 
-        // Scrollable content card
+        // Content card
         ArticleGUI.RoundedPanel contentCard = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
-        contentCard.setBorder(BorderFactory.createEmptyBorder(32, 40, 32, 40));
+        contentCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(22, 24, 22, 24)
+        ));
         contentCard.setLayout(new GridBagLayout());
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.insets = new Insets(8, 8, 8, 8);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
+        gbc.gridx = 0;
+        gbc.gridwidth = 1;
 
-        // Helper method for creating styled labels with icons
-        Function<String, JLabel> createLabel = text -> {
-            JLabel label = new JLabel(text);
-            label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-            label.setForeground(ThemeManager.getTextPrimaryColor());
-            return label;
-        };
-
-        // Helper method for styling text fields with a hover effect
+        // Helpers
+        Function<String, JLabel> createLabel = ArticleDialog::createDialogLabel;
         Consumer<JTextField> styleTextField = field -> {
+            // Reuse the same look as createDialogTextField(), but allow custom columns/value
             field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
             field.setBackground(ThemeManager.getInputBackgroundColor());
             field.setForeground(ThemeManager.getTextPrimaryColor());
-            field.setCaretColor(ThemeManager.getTextPrimaryColor());
+            field.setCaretColor(ThemeManager.getAccentColor());
+
+            Color normalBorder = ThemeManager.getBorderColor();
+            Color focusBorder = ThemeManager.getAccentColor();
+
             field.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1, true),
+                    BorderFactory.createLineBorder(normalBorder, 1, true),
                     BorderFactory.createEmptyBorder(10, 12, 10, 12)
             ));
+
             field.addFocusListener(new FocusAdapter() {
                 @Override
                 public void focusGained(FocusEvent e) {
                     field.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(ThemeManager.getInputFocusBorderColor(), 2, true),
+                            BorderFactory.createLineBorder(focusBorder, 2, true),
                             BorderFactory.createEmptyBorder(9, 11, 9, 11)
                     ));
                 }
@@ -128,7 +109,7 @@ public class ArticleDialog {
                 @Override
                 public void focusLost(FocusEvent e) {
                     field.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1, true),
+                            BorderFactory.createLineBorder(normalBorder, 1, true),
                             BorderFactory.createEmptyBorder(10, 12, 10, 12)
                     ));
                 }
@@ -137,259 +118,153 @@ public class ArticleDialog {
 
         int row = 0;
 
-        // Artikelnummer with icon
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.gridwidth = 1;
-        JLabel nummerLabel = createLabel.apply(UnicodeSymbols.NUMBERS + " Artikelnummer *");
-        contentCard.add(nummerLabel, gbc);
-        row++;
-        gbc.gridy = row;
-        gbc.insets = new Insets(2, 6, 16, 6);
-        JTextField nummerField = new JTextField(existingData[0] == null ? "" : existingData[0].toString(), 30);
+        // Artikelnummer
+        gbc.gridy = row++;
+        contentCard.add(createLabel.apply(UnicodeSymbols.NUMBERS + " Artikelnummer *"), gbc);
+        gbc.gridy = row++;
+        JTextField nummerField = new JTextField(existingData != null && existingData.length > 0 && existingData[0] != null ? existingData[0].toString() : "", 25);
         styleTextField.accept(nummerField);
         contentCard.add(nummerField, gbc);
 
-        row++;
-        gbc.insets = new Insets(6, 6, 6, 6);
-        // Name with icon
-        gbc.gridy = row;
-        JLabel nameLabel = createLabel.apply(UnicodeSymbols.PENCIL + " Name *");
-        contentCard.add(nameLabel, gbc);
-        row++;
-        gbc.gridy = row;
-        gbc.insets = new Insets(2, 6, 16, 6);
-        JTextField nameField = new JTextField(existingData[1] == null ? "" : existingData[1].toString(), 30);
+        // Name
+        gbc.gridy = row++;
+        contentCard.add(createLabel.apply(UnicodeSymbols.PENCIL + " Name *"), gbc);
+        gbc.gridy = row++;
+        JTextField nameField = new JTextField(existingData != null && existingData.length > 1 && existingData[1] != null ? existingData[1].toString() : "", 25);
         styleTextField.accept(nameField);
         contentCard.add(nameField, gbc);
 
-        row++;
-        gbc.insets = new Insets(6, 6, 6, 6);
-        // Details with icon
-        gbc.gridy = row;
-        JLabel detailsLabel = createLabel.apply(UnicodeSymbols.CLIPBOARD + " Details");
-        contentCard.add(detailsLabel, gbc);
-        row++;
-        gbc.gridy = row;
-        gbc.insets = new Insets(2, 6, 16, 6);
-        JTextField detailsField = new JTextField(existingData[3] == null ? "" : existingData[3].toString(), 30);
+        // Details
+        gbc.gridy = row++;
+        contentCard.add(createLabel.apply(UnicodeSymbols.CLIPBOARD + " Details"), gbc);
+        gbc.gridy = row++;
+        JTextField detailsField = new JTextField(existingData != null && existingData.length > 3 && existingData[3] != null ? existingData[3].toString() : "", 25);
         styleTextField.accept(detailsField);
         contentCard.add(detailsField, gbc);
 
-        // Parse integer values robustly (account for category at index 2)
-        // existingData structure: [0:artikelNr, 1:name, 2:category, 3:details, 4:lager, 5:mindest, 6:verkauf, 7:einkauf, 8:lieferant]
+        // Existing numeric values (account for category at index 2)
         int existingLager = 0;
         int existingMindest = 0;
+        double existingVerkauf = 0.0;
+        double existingEinkauf = 0.0;
+
         try {
-            Object o = existingData[4]; // Lagerbestand at index 4
+            Object o = existingData != null && existingData.length > 4 ? existingData[4] : null;
             if (o instanceof Number) existingLager = ((Number) o).intValue();
-            else existingLager = Integer.parseInt(o.toString());
-        } catch (Exception ignored) {
-        }
+            else if (o != null) existingLager = Integer.parseInt(o.toString());
+        } catch (Exception ignored) {}
+
         try {
-            Object o = existingData[5]; // Mindestbestand at index 5
+            Object o = existingData != null && existingData.length > 5 ? existingData[5] : null;
             if (o instanceof Number) existingMindest = ((Number) o).intValue();
-            else existingMindest = Integer.parseInt(o.toString());
-        } catch (Exception ignored) {
-        }
+            else if (o != null) existingMindest = Integer.parseInt(o.toString());
+        } catch (Exception ignored) {}
 
-        row++;
-        gbc.insets = new Insets(12, 6, 6, 6);
-        // Stock fields with improved layout
-        gbc.gridy = row;
-        JLabel stockSectionLabel = createLabel.apply(UnicodeSymbols.PACKAGE + " Lagerbestand");
-        stockSectionLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        contentCard.add(stockSectionLabel, gbc);
+        try {
+            Object o = existingData != null && existingData.length > 6 ? existingData[6] : null;
+            if (o instanceof Number) existingVerkauf = ((Number) o).doubleValue();
+            else if (o != null) existingVerkauf = Double.parseDouble(o.toString());
+        } catch (Exception ignored) {}
 
-        row++;
-        gbc.gridy = row;
-        gbc.insets = new Insets(8, 6, 16, 6);
-        JPanel stockPanel = new JPanel(new GridLayout(1, 2, 20, 0));
+        try {
+            Object o = existingData != null && existingData.length > 7 ? existingData[7] : null;
+            if (o instanceof Number) existingEinkauf = ((Number) o).doubleValue();
+            else if (o != null) existingEinkauf = Double.parseDouble(o.toString());
+        } catch (Exception ignored) {}
+
+        // Stock section
+        gbc.gridy = row++;
+        JLabel stockSection = createLabel.apply(UnicodeSymbols.PACKAGE + " Lagerbestand");
+        stockSection.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        contentCard.add(stockSection, gbc);
+
+        gbc.gridy = row++;
+        JPanel stockPanel = new JPanel(new GridLayout(1, 2, 16, 0));
         stockPanel.setOpaque(false);
 
-        JPanel lagerPanel = new JPanel(new BorderLayout(0, 6));
+        JPanel lagerPanel = new JPanel(new BorderLayout(0, 4));
         lagerPanel.setOpaque(false);
         JLabel lagerLabel = new JLabel("Aktuell");
         lagerLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         lagerLabel.setForeground(ThemeManager.getTextSecondaryColor());
         lagerPanel.add(lagerLabel, BorderLayout.NORTH);
+
         JSpinner lagerSpinner = new JSpinner(new SpinnerNumberModel(existingLager, 0, Integer.MAX_VALUE, 1));
         lagerSpinner.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField().setColumns(10);
-        JTextField lagerField = ((JSpinner.DefaultEditor) lagerSpinner.getEditor()).getTextField();
-        lagerField.setBackground(ThemeManager.getInputBackgroundColor());
-        lagerField.setForeground(ThemeManager.getTextPrimaryColor());
-        lagerField.setCaretColor(ThemeManager.getTextPrimaryColor());
-        lagerField.setBorder(
-                BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(8, 10, 8, 10)
-                )
-        );
+        styleDialogSpinner(lagerSpinner);
         lagerPanel.add(lagerSpinner, BorderLayout.CENTER);
 
-        JPanel mindestPanel = new JPanel(new BorderLayout(0, 6));
+        JPanel mindestPanel = new JPanel(new BorderLayout(0, 4));
         mindestPanel.setOpaque(false);
         JLabel mindestLabel = new JLabel("Mindestbestand");
         mindestLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         mindestLabel.setForeground(ThemeManager.getTextSecondaryColor());
         mindestPanel.add(mindestLabel, BorderLayout.NORTH);
+
         JSpinner mindestSpinner = new JSpinner(new SpinnerNumberModel(existingMindest, 0, Integer.MAX_VALUE, 1));
         mindestSpinner.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField().setColumns(10);
-        JTextField mindestField = ((JSpinner.DefaultEditor) mindestSpinner.getEditor()).getTextField();
-        mindestField.setBackground(ThemeManager.getInputBackgroundColor());
-        mindestField.setForeground(ThemeManager.getTextPrimaryColor());
-        mindestField.setCaretColor(ThemeManager.getTextPrimaryColor());
-        mindestField.setBorder(
-                BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(8, 10, 8, 10)
-                )
-        );
+        styleDialogSpinner(mindestSpinner);
         mindestPanel.add(mindestSpinner, BorderLayout.CENTER);
 
         stockPanel.add(lagerPanel);
         stockPanel.add(mindestPanel);
         contentCard.add(stockPanel, gbc);
 
-        // Price fields with formatter
-        NumberFormat priceFormat = NumberFormat.getNumberInstance();
-        priceFormat.setMinimumFractionDigits(2);
-        priceFormat.setMaximumFractionDigits(2);
-        NumberFormatter priceFormatter = new NumberFormatter(priceFormat);
-        priceFormatter.setValueClass(Double.class);
-        priceFormatter.setAllowsInvalid(false);
-        priceFormatter.setMinimum(0.0);
-
-        double existingVerkauf = 0.0;
-        double existingEinkauf = 0.0;
-        try {
-            Object o = existingData[6]; // Verkaufspreis at index 6
-            if (o instanceof Number) existingVerkauf = ((Number) o).doubleValue();
-            else existingVerkauf = Double.parseDouble(o.toString());
-        } catch (Exception ignored) {
-        }
-        try {
-            Object o = existingData[7]; // Einkaufspreis at index 7
-            if (o instanceof Number) existingEinkauf = ((Number) o).doubleValue();
-            else existingEinkauf = Double.parseDouble(o.toString());
-        } catch (Exception ignored) {
-        }
-
-        row++;
-        gbc.insets = new Insets(12, 6, 6, 6);
         // Price section
-        gbc.gridy = row;
-        JLabel priceSectionLabel = createLabel.apply(UnicodeSymbols.MONEY + " Preise");
-        priceSectionLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        contentCard.add(priceSectionLabel, gbc);
+        gbc.gridy = row++;
+        JLabel priceSection = createLabel.apply(UnicodeSymbols.MONEY + " Preise");
+        priceSection.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        contentCard.add(priceSection, gbc);
 
-        row++;
-        gbc.gridy = row;
-        gbc.insets = new Insets(8, 6, 16, 6);
-        JPanel pricePanel = new JPanel(new GridLayout(1, 2, 20, 0));
+        gbc.gridy = row++;
+        JPanel pricePanel = new JPanel(new GridLayout(1, 2, 16, 0));
         pricePanel.setOpaque(false);
 
-        JPanel verkaufPanel = new JPanel(new BorderLayout(0, 6));
-        verkaufPanel.setOpaque(false);
-        JLabel verkaufLabel = new JLabel("Verkaufspreis (CHF)");
-        verkaufLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        verkaufLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        verkaufPanel.add(verkaufLabel, BorderLayout.NORTH);
-        JFormattedTextField verkaufField = getVerkaufField(priceFormatter, existingVerkauf);
-        verkaufPanel.add(verkaufField, BorderLayout.CENTER);
+        NumberFormatter priceFormatter = createPriceFormatter();
 
-        JPanel einkaufPanel = new JPanel(new BorderLayout(0, 6));
-        einkaufPanel.setOpaque(false);
-        JLabel einkaufLabel = new JLabel("Einkaufspreis (CHF)");
-        einkaufLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        einkaufLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        einkaufPanel.add(einkaufLabel, BorderLayout.NORTH);
-        JFormattedTextField einkaufField = getVerkaufField(priceFormatter, existingEinkauf);
-        einkaufPanel.add(einkaufField, BorderLayout.CENTER);
+        JPanel verkaufPanel = createLabeledPriceField("Verkaufspreis (CHF)", priceFormatter);
+        JFormattedTextField verkaufField = findFormattedField(verkaufPanel);
+        if (verkaufField == null) {
+            verkaufField = new JFormattedTextField(priceFormatter);
+            verkaufField.setColumns(10);
+            verkaufPanel.add(verkaufField, BorderLayout.CENTER);
+        }
+        verkaufField.setValue(existingVerkauf);
+
+        JPanel einkaufPanel = createLabeledPriceField("Einkaufspreis (CHF)", priceFormatter);
+        JFormattedTextField einkaufField = findFormattedField(einkaufPanel);
+        if (einkaufField == null) {
+            einkaufField = new JFormattedTextField(priceFormatter);
+            einkaufField.setColumns(10);
+            einkaufPanel.add(einkaufField, BorderLayout.CENTER);
+        }
+        einkaufField.setValue(existingEinkauf);
 
         pricePanel.add(verkaufPanel);
         pricePanel.add(einkaufPanel);
         contentCard.add(pricePanel, gbc);
 
-        row++;
-        gbc.insets = new Insets(6, 6, 6, 6);
-        // Lieferant with icon
-        gbc.gridy = row;
-        JLabel lieferantLabel = createLabel.apply(UnicodeSymbols.TRUCK + " Lieferant");
-        contentCard.add(lieferantLabel, gbc);
-        row++;
-        gbc.gridy = row;
-        gbc.insets = new Insets(2, 6, 6, 6);
-        JTextField lieferantField = new JTextField(existingData[8] == null ? "" : existingData[8].toString(), 30);
+        // Lieferant
+        gbc.gridy = row++;
+        contentCard.add(createLabel.apply(UnicodeSymbols.TRUCK + " Lieferant"), gbc);
+        gbc.gridy = row++;
+        JTextField lieferantField = new JTextField(existingData != null && existingData.length > 8 && existingData[8] != null ? existingData[8].toString() : "", 25);
         styleTextField.accept(lieferantField);
         contentCard.add(lieferantField, gbc);
 
-        // Wrap content in scroll pane
-        JScrollPane scrollPane = new JScrollPane(contentCard);
-        scrollPane.setBorder(null);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        JScrollPane scrollPane = createDialogScrollPane(contentCard);
         mainContainer.add(scrollPane, BorderLayout.CENTER);
 
-        // Button panel with improved styling
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 16));
-        buttonPanel.setBackground(ThemeManager.getBackgroundColor());
-        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
-
-        Color cancelBtnColor = ThemeManager.getErrorColor();
-        JButton cancelBtn = new JButton(UnicodeSymbols.CLOSE + "  Abbrechen");
-        cancelBtn.setToolTipText("Abbrechen und Änderungen verwerfen");
-        cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        cancelBtn.setForeground(Color.WHITE);
-        cancelBtn.setBackground(cancelBtnColor);
-        cancelBtn.setOpaque(true);
-        cancelBtn.setContentAreaFilled(true);
-        cancelBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(cancelBtnColor.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 20, 10, 20)
+        // Buttons (rounded card bar)
+        ArticleGUI.RoundedPanel buttonPanel = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 12, 10));
+        buttonPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
-        cancelBtn.setFocusPainted(false);
-        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        cancelBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                cancelBtn.setBackground(ThemeManager.getButtonHoverColor(cancelBtnColor));
-            }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                cancelBtn.setBackground(cancelBtnColor);
-            }
-        });
-
-        Color okBtnColor = ThemeManager.getSuccessColor();
-        JButton okBtn = new JButton(UnicodeSymbols.CHECK + "  Speichern");
-        okBtn.setToolTipText("Änderungen speichern");
-        okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        okBtn.setForeground(Color.WHITE);
-        okBtn.setBackground(okBtnColor);
-        okBtn.setOpaque(true);
-        okBtn.setContentAreaFilled(true);
-        okBtn.setBorderPainted(true);
-        okBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(okBtnColor.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 27, 10, 27)
-        ));
-        okBtn.setFocusPainted(false);
-        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        okBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                okBtn.setBackground(ThemeManager.getButtonHoverColor(okBtnColor));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                okBtn.setBackground(okBtnColor);
-            }
-        });
-
+        JButton cancelBtn = createDialogDangerActionButton(UnicodeSymbols.CLOSE + " Abbrechen");
+        JButton okBtn = createDialogPrimaryActionButton(UnicodeSymbols.CHECKMARK + " Speichern");
         buttonPanel.add(cancelBtn);
         buttonPanel.add(okBtn);
         mainContainer.add(buttonPanel, BorderLayout.SOUTH);
@@ -397,12 +272,13 @@ public class ArticleDialog {
         dialog.getContentPane().add(mainContainer);
         dialog.getRootPane().setDefaultButton(okBtn);
 
-        // Actions
         cancelBtn.addActionListener(ae -> {
             resultHolder[0] = null;
             dialog.dispose();
         });
 
+        JFormattedTextField finalVerkaufField = verkaufField;
+        JFormattedTextField finalEinkaufField = einkaufField;
         okBtn.addActionListener(ae -> {
             String nummer = nummerField.getText().trim();
             String name = nameField.getText().trim();
@@ -420,13 +296,14 @@ public class ArticleDialog {
 
             int lagerbestand = ((Number) lagerSpinner.getValue()).intValue();
             int mindestbestand = ((Number) mindestSpinner.getValue()).intValue();
+
             double verkaufspreis;
             double einkaufspreis;
             try {
-                verkaufField.commitEdit();
-                einkaufField.commitEdit();
-                verkaufspreis = ((Number) verkaufField.getValue()).doubleValue();
-                einkaufspreis = ((Number) einkaufField.getValue()).doubleValue();
+                finalVerkaufField.commitEdit();
+                finalEinkaufField.commitEdit();
+                verkaufspreis = ((Number) finalVerkaufField.getValue()).doubleValue();
+                einkaufspreis = ((Number) finalEinkaufField.getValue()).doubleValue();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(dialog,
                         "Bitte gültige Preise eingeben.",
@@ -436,40 +313,93 @@ public class ArticleDialog {
                 return;
             }
 
+            // IMPORTANT: return format expected by ArticleGUI update flow (no category)
             resultHolder[0] = new Object[]{nummer, name, details, lagerbestand, mindestbestand,
                     verkaufspreis, einkaufspreis, lieferant};
             dialog.dispose();
         });
 
-        // Show dialog
-        dialog.setSize(700, 750);
+        dialog.setSize(720, 760);
         dialog.setLocationRelativeTo(frame);
         SwingUtilities.invokeLater(nummerField::requestFocusInWindow);
         dialog.setVisible(true);
 
         return resultHolder[0];
     }
+    private static JButton createDialogPrimaryActionButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        btn.setForeground(Color.WHITE);
 
-    /**
-     * Creates and configures a JFormattedTextField for displaying and editing a Verkaufs value.
-     *
-     * @param priceFormatter the NumberFormatter to format the input and ensure valid numeric values.
-     * @param existingVerkauf the initial value to set in the field.
-     * @return a configured JFormattedTextField with appropriate font, color, and border settings.
-     */
-    private static JFormattedTextField getVerkaufField(NumberFormatter priceFormatter, double existingVerkauf) {
-        JFormattedTextField verkaufField = new JFormattedTextField(priceFormatter);
-        verkaufField.setColumns(12);
-        verkaufField.setValue(existingVerkauf);
-        verkaufField.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        verkaufField.setBackground(ThemeManager.getInputBackgroundColor());
-        verkaufField.setForeground(ThemeManager.getTextPrimaryColor());
-        verkaufField.setCaretColor(ThemeManager.getTextPrimaryColor());
-        verkaufField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        Color base = ThemeManager.getButtonBackgroundColor();
+        applyDialogActionButtonPalette(btn, base, ThemeManager.getButtonHoverColor(base), ThemeManager.getButtonPressedColor(base));
+        return btn;
+    }
+
+    private static JButton createDialogDangerActionButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        btn.setForeground(Color.WHITE);
+
+        Color base = ThemeManager.getErrorColor();
+        applyDialogActionButtonPalette(btn, base, ThemeManager.getButtonHoverColor(base), ThemeManager.getButtonPressedColor(base));
+        return btn;
+    }
+
+    private static void applyDialogActionButtonPalette(JButton btn, Color base, Color hover, Color pressed) {
+        btn.setBackground(base);
+        btn.setOpaque(true);
+        btn.setContentAreaFilled(true);
+        btn.setBorderPainted(true);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(base.darker(), 1, true),
+                BorderFactory.createEmptyBorder(12, 24, 12, 24)
         ));
-        return verkaufField;
+
+        btn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btn.setBackground(hover);
+                btn.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(hover.darker(), 1, true),
+                        BorderFactory.createEmptyBorder(12, 24, 12, 24)
+                ));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btn.setBackground(base);
+                btn.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(base.darker(), 1, true),
+                        BorderFactory.createEmptyBorder(12, 24, 12, 24)
+                ));
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                btn.setBackground(pressed);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                btn.setBackground(btn.contains(e.getPoint()) ? hover : base);
+            }
+        });
+    }
+
+    private static JScrollPane createDialogScrollPane(JComponent content) {
+        JScrollPane sp = new JScrollPane(content);
+        sp.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        sp.setOpaque(false);
+        sp.getViewport().setOpaque(false);
+        sp.getVerticalScrollBar().setUnitIncrement(16);
+
+        // Optional: make scrollbars feel less harsh on light theme
+        sp.getVerticalScrollBar().setBackground(ThemeManager.getBackgroundColor());
+        sp.getHorizontalScrollBar().setBackground(ThemeManager.getBackgroundColor());
+        return sp;
     }
 
     /**
@@ -535,11 +465,17 @@ public class ArticleDialog {
         JPanel mainContainer = new JPanel(new BorderLayout());
         mainContainer.setBackground(ThemeManager.getBackgroundColor());
 
-        // Add subtle shadow border
-        Color shadowColor = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 80 : 30);
+        // Outer padding so the dialog doesn't hug the screen edge
+        Border outerPadding = BorderFactory.createEmptyBorder(12, 12, 12, 12);
+
+        // Subtle shadow + crisp border for a modern floating-card look
+        Color shadowColor = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 90 : 35);
+        Border shadow = BorderFactory.createLineBorder(shadowColor, 1, true);
+        Border crisp = BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true);
+
         mainContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(shadowColor, 1, true),
-                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+                outerPadding,
+                BorderFactory.createCompoundBorder(shadow, crisp)
         ));
 
         return mainContainer;
@@ -633,7 +569,10 @@ public class ArticleDialog {
      */
     public static ArticleFormFields createArticleFormFields() {
         ArticleGUI.RoundedPanel contentCard = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
-        contentCard.setBorder(BorderFactory.createEmptyBorder(28, 32, 28, 32));
+        contentCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(22, 24, 22, 24)
+        ));
         contentCard.setLayout(new GridBagLayout());
 
         GridBagConstraints gbc = createDefaultGridBagConstraints();
@@ -660,8 +599,16 @@ public class ArticleDialog {
         gbc.gridy = row++;
         JPanel pricePanel = createPriceFieldsPanel();
         contentCard.add(pricePanel, gbc);
-        JFormattedTextField verkaufField = (JFormattedTextField) ((JPanel) pricePanel.getComponent(0)).getComponent(1);
-        JFormattedTextField einkaufField = (JFormattedTextField) ((JPanel) pricePanel.getComponent(1)).getComponent(1);
+        JFormattedTextField verkaufField = findFormattedField((JPanel) pricePanel.getComponent(0));
+        JFormattedTextField einkaufField = findFormattedField((JPanel) pricePanel.getComponent(1));
+        if (verkaufField == null) {
+            verkaufField = new JFormattedTextField(createPriceFormatter());
+            verkaufField.setColumns(10);
+        }
+        if (einkaufField == null) {
+            einkaufField = new JFormattedTextField(createPriceFormatter());
+            einkaufField.setColumns(10);
+        }
 
         // Supplier field
         gbc.insets = new Insets(6, 6, 6, 6);
@@ -822,6 +769,23 @@ public class ArticleDialog {
     }
 
     /**
+     * Helper to recursively find a JFormattedTextField in a container (for price field extraction)
+     */
+    private static JFormattedTextField findFormattedField(Container root) {
+        if (root == null) return null;
+        for (Component c : root.getComponents()) {
+            if (c instanceof JFormattedTextField f) {
+                return f;
+            }
+            if (c instanceof Container child) {
+                JFormattedTextField nested = findFormattedField(child);
+                if (nested != null) return nested;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Creates the panel with price input fields
      */
     private static JPanel createPriceFieldsPanel() {
@@ -903,14 +867,25 @@ public class ArticleDialog {
      * Creates the button panel for the dialog
      */
     private static DialogButtons createDialogButtons(JDialog dialog, Object[][] resultHolder, ArticleFormFields formFields) {
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 12));
-        buttonPanel.setBackground(ThemeManager.getBackgroundColor());
+        ArticleGUI.RoundedPanel buttonPanel = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 12, 10));
+        buttonPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
 
-        JButton cancelBtn = createDialogCancelButton(dialog, resultHolder);
-        JButton okBtn = createDialogOkButton(dialog, resultHolder, formFields);
+        JButton cancelBtn = createDialogDangerActionButton(UnicodeSymbols.CLOSE + " Abbrechen");
+        JButton okBtn = createDialogPrimaryActionButton(UnicodeSymbols.CHECKMARK + " Hinzufügen");
 
         buttonPanel.add(cancelBtn);
         buttonPanel.add(okBtn);
+
+        cancelBtn.addActionListener(ae -> {
+            resultHolder[0] = null;
+            dialog.dispose();
+        });
+
+        okBtn.addActionListener(ae -> handleAddArticleConfirm(dialog, resultHolder, formFields));
 
         return new DialogButtons(buttonPanel, okBtn);
     }
@@ -1011,9 +986,6 @@ public class ArticleDialog {
         return okBtn;
     }
 
-    /**
-     * Handles the confirmation of adding a new article
-     */
     private static void handleAddArticleConfirm(JDialog dialog, Object[][] resultHolder, ArticleFormFields fields) {
         String nummer = fields.nummerField().getText().trim();
         String name = fields.nameField().getText().trim();

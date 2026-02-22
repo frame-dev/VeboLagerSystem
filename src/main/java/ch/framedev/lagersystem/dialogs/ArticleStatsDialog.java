@@ -6,8 +6,14 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,16 +34,18 @@ public final class ArticleStatsDialog {
 
         JPanel mainContainer = new JPanel(new BorderLayout());
         mainContainer.setBackground(ThemeManager.getBackgroundColor());
+        // Subtle dialog shadow / outline
+        Color shadow = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 90 : 45);
         mainContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 2),
-                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+                new LineBorder(shadow, 1, true),
+                new EmptyBorder(0, 0, 0, 0)
         ));
 
         JPanel headerPanel = getStatsHeaderPanel(dialog);
         mainContainer.add(headerPanel, BorderLayout.NORTH);
 
         ArticleGUI.RoundedPanel contentCard = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
-        contentCard.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        contentCard.setBorder(BorderFactory.createEmptyBorder(18, 22, 22, 22));
         contentCard.setLayout(new GridBagLayout());
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -65,9 +73,9 @@ public final class ArticleStatsDialog {
         gbc.gridy = row++;
         gbc.gridwidth = 2;
         JLabel overviewLabel = new JLabel(UnicodeSymbols.CLIPBOARD + " Bestandsübersicht");
-        overviewLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
+        overviewLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
         overviewLabel.setForeground(ThemeManager.getTextPrimaryColor());
-        overviewLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        overviewLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
         contentCard.add(overviewLabel, gbc);
 
         gbc.gridwidth = 1;
@@ -111,7 +119,7 @@ public final class ArticleStatsDialog {
         gbc.gridwidth = 2;
         gbc.insets = new Insets(20, 8, 10, 8);
         JLabel financialLabel = new JLabel(UnicodeSymbols.MONEY + " Finanzübersicht");
-        financialLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
+        financialLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
         financialLabel.setForeground(ThemeManager.getTextPrimaryColor());
         financialLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
         contentCard.add(financialLabel, gbc);
@@ -170,7 +178,7 @@ public final class ArticleStatsDialog {
         gbc.gridwidth = 2;
         gbc.insets = new Insets(20, 8, 10, 8);
         JLabel healthLabel = new JLabel(UnicodeSymbols.HEALTH + " Lagerstatus");
-        healthLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
+        healthLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
         healthLabel.setForeground(ThemeManager.getTextPrimaryColor());
         healthLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
         contentCard.add(healthLabel, gbc);
@@ -214,9 +222,12 @@ public final class ArticleStatsDialog {
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         mainContainer.add(scrollPane, BorderLayout.CENTER);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 16));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 14));
         buttonPanel.setBackground(ThemeManager.getBackgroundColor());
-        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
+        buttonPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
+                BorderFactory.createEmptyBorder(8, 16, 8, 16)
+        ));
 
         Color okBtnColor = ThemeManager.getAccentColor();
         JButton okBtn = new JButton(UnicodeSymbols.CHECK + " Schließen");
@@ -227,8 +238,8 @@ public final class ArticleStatsDialog {
         okBtn.setOpaque(true);
         okBtn.setContentAreaFilled(true);
         okBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(okBtnColor.darker(), 1, true),
-                BorderFactory.createEmptyBorder(12, 28, 12, 28)
+                BorderFactory.createLineBorder(ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 120 : 60), 1, true),
+                BorderFactory.createEmptyBorder(12, 26, 12, 26)
         ));
         okBtn.setFocusPainted(false);
         okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -333,25 +344,82 @@ public final class ArticleStatsDialog {
     }
 
     private static JPanel createStatPanel(String label, String value, Color accentColor) {
-        ArticleGUI.RoundedPanel panel = new ArticleGUI.RoundedPanel(ThemeManager.getSurfaceColor(), 12);
-        panel.setLayout(new BorderLayout(16, 0));
-        panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(accentColor.brighter(), 2),
-                BorderFactory.createEmptyBorder(20, 24, 20, 24)
-        ));
+        // Base + hover borders (subtle shadow via alpha outline)
+        Color outline = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 70 : 35);
+        Color outlineHover = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 120 : 65);
+
+        Border baseBorder = new CompoundBorder(
+                new LineBorder(outline, 1, true),
+                new EmptyBorder(14, 14, 14, 16)
+        );
+        Border hoverBorder = new CompoundBorder(
+                new LineBorder(outlineHover, 1, true),
+                // Top a touch smaller + bottom a touch larger -> optical "lift"
+                new EmptyBorder(12, 14, 16, 16)
+        );
+
+        ArticleGUI.RoundedPanel tile = new ArticleGUI.RoundedPanel(ThemeManager.getSurfaceColor(), 14);
+        tile.setLayout(new BorderLayout(12, 0));
+        tile.setBorder(baseBorder);
+        tile.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        // Accent stripe
+        JPanel stripe = new JPanel();
+        stripe.setOpaque(true);
+        stripe.setBackground(accentColor);
+        stripe.setPreferredSize(new Dimension(6, 1));
+        stripe.setBorder(new EmptyBorder(0, 0, 0, 0));
+        tile.add(stripe, BorderLayout.WEST);
+
+        // Text stack
+        JPanel text = new JPanel();
+        text.setOpaque(false);
+        text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
 
         JLabel labelComp = new JLabel(label);
-        labelComp.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
-        labelComp.setForeground(ThemeManager.getTextPrimaryColor());
-        panel.add(labelComp, BorderLayout.WEST);
+        labelComp.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        labelComp.setForeground(ThemeManager.getTextSecondaryColor());
+        labelComp.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel valueComp = new JLabel(value);
-        valueComp.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
-        valueComp.setForeground(accentColor);
-        valueComp.setHorizontalAlignment(SwingConstants.RIGHT);
-        panel.add(valueComp, BorderLayout.EAST);
+        valueComp.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        valueComp.setForeground(ThemeManager.isDarkMode() ? accentColor.brighter() : accentColor.darker());
+        valueComp.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        return panel;
+        text.add(labelComp);
+        text.add(Box.createVerticalStrut(6));
+        text.add(valueComp);
+
+        tile.add(text, BorderLayout.CENTER);
+
+        // Hover lift effect must work over children too
+        MouseAdapter hover = new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                tile.setBorder(hoverBorder);
+                tile.repaint();
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                // Avoid flicker when moving between child components inside the tile
+                Point p = MouseInfo.getPointerInfo().getLocation();
+                SwingUtilities.convertPointFromScreen(p, tile);
+                if (p.x >= 0 && p.y >= 0 && p.x < tile.getWidth() && p.y < tile.getHeight()) {
+                    return;
+                }
+                tile.setBorder(baseBorder);
+                tile.repaint();
+            }
+        };
+
+        tile.addMouseListener(hover);
+        stripe.addMouseListener(hover);
+        labelComp.addMouseListener(hover);
+        valueComp.addMouseListener(hover);
+        text.addMouseListener(hover);
+
+        return tile;
     }
 
     private static double calculateValueInStock(JTable table) {

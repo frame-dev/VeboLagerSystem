@@ -149,7 +149,7 @@ public class UpdateManager {
                     Main.logUtils.addLog("GitHub API error: HTTP " + responseCode + " - " + errorMessage);
                 }
                 connection.disconnect();
-                return cachedLatestVersion; // Return cached version if available
+                return cachedLatestVersion; // Return the cached version if available
             }
 
             // Read response
@@ -393,7 +393,7 @@ public class UpdateManager {
 
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
-                logger.warn("Failed to get release info: HTTP {}", responseCode);
+                getWarmMessageReleaseInfo(responseCode);
                 Main.logUtils.addLog(String.format("Failed to get release info: HTTP %d", responseCode));
                 connection.disconnect();
                 return null;
@@ -432,20 +432,20 @@ public class UpdateManager {
     }
 
     /**
-         * Container class for release information.
-         */
-        public record ReleaseInfo(String version, String releaseNotes, String downloadUrl) {
+     * Container class for release information.
+     */
+    public record ReleaseInfo(String version, String releaseNotes, String downloadUrl) {
 
         public boolean hasDownloadUrl() {
-                return downloadUrl != null && !downloadUrl.isEmpty();
-            }
-
-            @Override
-            public String toString() {
-                return String.format("ReleaseInfo{version='%s', hasNotes=%s, hasDownload=%s}",
-                        version, releaseNotes != null, hasDownloadUrl());
-            }
+            return downloadUrl != null && !downloadUrl.isEmpty();
         }
+
+        @Override
+        public String toString() {
+            return String.format("ReleaseInfo{version='%s', hasNotes=%s, hasDownload=%s}",
+                    version, releaseNotes != null, hasDownloadUrl());
+        }
+    }
 
     /**
      * Checks if a newer version is available compared to the current version.
@@ -563,45 +563,45 @@ public class UpdateManager {
     }
 
     /**
-         * Result of checking all release channels
-         */
-        public record ChannelUpdateResult(String currentVersion, ReleaseChannel currentChannel, String stableVersion,
-                                          String betaVersion, String alphaVersion, String testingVersion) {
+     * Result of checking all release channels
+     */
+    public record ChannelUpdateResult(String currentVersion, ReleaseChannel currentChannel, String stableVersion,
+                                      String betaVersion, String alphaVersion, String testingVersion) {
 
         public boolean hasStableUpdate() {
-                return stableVersion != null && isNewer(currentVersion, stableVersion);
-            }
+            return stableVersion != null && isNewer(currentVersion, stableVersion);
+        }
 
-            public boolean hasBetaUpdate() {
-                return betaVersion != null && isNewer(currentVersion, betaVersion);
-            }
+        public boolean hasBetaUpdate() {
+            return betaVersion != null && isNewer(currentVersion, betaVersion);
+        }
 
-            public boolean hasAlphaUpdate() {
-                return alphaVersion != null && isNewer(currentVersion, alphaVersion);
-            }
+        public boolean hasAlphaUpdate() {
+            return alphaVersion != null && isNewer(currentVersion, alphaVersion);
+        }
 
-            public boolean hasTestingUpdate() {
-                return testingVersion != null && isNewer(currentVersion, testingVersion);
-            }
+        public boolean hasTestingUpdate() {
+            return testingVersion != null && isNewer(currentVersion, testingVersion);
+        }
 
-            private boolean isNewer(String current, String latest) {
-                try {
-                    UpdateManager manager = UpdateManager.getInstance();
-                    String c = manager.normalizeVersion(current);
-                    String l = manager.normalizeVersion(latest);
+        private boolean isNewer(String current, String latest) {
+            try {
+                UpdateManager manager = UpdateManager.getInstance();
+                String c = manager.normalizeVersion(current);
+                String l = manager.normalizeVersion(latest);
 
-                    return manager.compareVersions(c, l) < 0;
-                } catch (Exception e) {
-                    return false;
-                }
-            }
-
-            @Override
-            public String toString() {
-                return String.format("ChannelUpdateResult{current='%s' (%s), stable='%s', beta='%s', alpha='%s', testing='%s'}",
-                        currentVersion, currentChannel, stableVersion, betaVersion, alphaVersion, testingVersion);
+                return manager.compareVersions(c, l) < 0;
+            } catch (Exception e) {
+                return false;
             }
         }
+
+        @Override
+        public String toString() {
+            return String.format("ChannelUpdateResult{current='%s' (%s), stable='%s', beta='%s', alpha='%s', testing='%s'}",
+                    currentVersion, currentChannel, stableVersion, betaVersion, alphaVersion, testingVersion);
+        }
+    }
 
     /**
      * Gets a detailed comparison between the current version and the latest version.
@@ -631,31 +631,31 @@ public class UpdateManager {
     }
 
     /**
-         * Result of version comparison
-         */
-        public record VersionComparisonResult(String currentVersion, String latestVersion, boolean updateAvailable,
-                                              boolean isCurrent, boolean isNewer) {
+     * Result of version comparison
+     */
+    public record VersionComparisonResult(String currentVersion, String latestVersion, boolean updateAvailable,
+                                          boolean isCurrent, boolean isNewer) {
 
         @Override
-            public String toString() {
-                String status;
-                if (updateAvailable) {
-                    status = "Update available";
-                } else if (isCurrent) {
-                    status = "Up to date";
-                } else {
-                    status = "Development version";
-                }
-                return String.format("VersionComparison{current='%s', latest='%s', status='%s'}",
-                        currentVersion, latestVersion, status);
+        public String toString() {
+            String status;
+            if (updateAvailable) {
+                status = "Update available";
+            } else if (isCurrent) {
+                status = "Up to date";
+            } else {
+                status = "Development version";
             }
+            return String.format("VersionComparison{current='%s', latest='%s', status='%s'}",
+                    currentVersion, latestVersion, status);
         }
+    }
 
 
     /**
      * Compares two version strings.
      * Returns: negative if v1 < v2, 0 if equal, positive if v1 > v2
-     *
+     * <p>
      * Examples:
      * - "0.2-testing" vs "0.2" -> -1 (testing is older)
      * - "0.2" vs "1.0" -> -1 (0.2 is older)
@@ -675,9 +675,9 @@ public class UpdateManager {
             int num2 = (i < parts2.length) ? parseVersionPart(parts2[i]) : 0;
 
             logger.debug("Comparing part {}: {} ({}) vs {} ({})",
-                         i,
-                         (i < parts1.length ? parts1[i] : "missing"), num1,
-                         (i < parts2.length ? parts2[i] : "missing"), num2);
+                    i,
+                    (i < parts1.length ? parts1[i] : "missing"), num1,
+                    (i < parts2.length ? parts2[i] : "missing"), num2);
 
             if (num1 != num2) {
                 int result = Integer.compare(num1, num2);
@@ -694,7 +694,7 @@ public class UpdateManager {
      * Parse a version part to integer, handling both numbers and text.
      * For text parts like "TESTING", "SNAPSHOT", etc., we treat them as pre-release versions
      * by assigning them a negative value, so they're always considered older than numeric versions.
-     *
+     * <p>
      * Examples:
      * - "2" -> 2
      * - "testing" -> -1
@@ -713,10 +713,10 @@ public class UpdateManager {
             // For known pre-release identifiers, treat as pre-release (negative value)
             // This ensures "0.2-TESTING" < "0.2" < "1.0"
             if (lowerPart.equals("testing") ||
-                lowerPart.equals("snapshot") ||
-                lowerPart.equals("alpha") ||
-                lowerPart.equals("beta") ||
-                lowerPart.equals("rc")) {
+                    lowerPart.equals("snapshot") ||
+                    lowerPart.equals("alpha") ||
+                    lowerPart.equals("beta") ||
+                    lowerPart.equals("rc")) {
                 logger.debug("Parsed '{}' as pre-release: -1", part);
                 return -1;
             }
@@ -743,7 +743,7 @@ public class UpdateManager {
             // Check response code
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
-                logger.warn("Failed to get release info: HTTP {}", responseCode);
+                getWarmMessageReleaseInfo(responseCode);
                 Main.logUtils.addLog(String.format("Failed to get release info: HTTP %d", responseCode));
                 connection.disconnect();
                 return null;
@@ -777,6 +777,10 @@ public class UpdateManager {
             Main.logUtils.addLog(String.format("Error getting JAR download URL: %s", e.getMessage()));
             return null;
         }
+    }
+
+    private static void getWarmMessageReleaseInfo(int responseCode) {
+        logger.warn("Failed to get release info: HTTP {}", responseCode);
     }
 
     /**

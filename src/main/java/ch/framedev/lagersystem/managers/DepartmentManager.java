@@ -36,6 +36,10 @@ public class DepartmentManager {
         return instance;
     }
 
+    /**
+     * This method creates the table if it does not exist yet.
+     * With columns departmentName and kontoNumber.
+     */
     private void createTable() {
         String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_DEPARTMENTS + " (" +
                 "departmentName TEXT," +
@@ -44,6 +48,12 @@ public class DepartmentManager {
         databaseManager.executeUpdate(sql);
     }
 
+    /**
+     * Inserts a new department into the database.
+     * @param departmentName The name of the department.
+     * @param kontoNumber The konto number of the department.
+     * @return true if successful, false otherwise.
+     */
     public boolean insertDepartment(String departmentName, String kontoNumber) {
         if (existsDepartment(departmentName)) {
             return false;
@@ -64,6 +74,11 @@ public class DepartmentManager {
         return result;
     }
 
+    /**
+     * Checks if a department with the given name exists.
+     * @param departmentName The name of the department.
+     * @return true if the department exists, false otherwise.
+     */
     public boolean existsDepartment(String departmentName) {
         if (departmentName == null) return false;
         // prefer cache

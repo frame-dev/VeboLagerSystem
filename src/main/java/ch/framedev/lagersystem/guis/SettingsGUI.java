@@ -44,17 +44,17 @@ public class SettingsGUI extends JFrame {
 
     private final Logger logger = LogManager.getLogger(SettingsGUI.class);
 
-    private final JSpinner stockCheckIntervalSpinner;
-    private final JSpinner warningDisplayIntervalSpinner;
-    private final JCheckBox enableWarningDisplayCheckbox;
-    private final JCheckBox enableAutoStockCheckCheckbox;
-    private final JCheckBox automaticImportCheckBox;
-    private final JCheckBox darkModeCheckbox;
-    private final JSpinner qrCodeImportIntervalSpinner;
-    private final JSpinner fontSizeTableSpinner;
-    private final JSpinner fontSizeTabSpinner;
-    private final JTextField serverUrlField;
-    private final JComboBox<String> themeComboBox;
+    private JSpinner stockCheckIntervalSpinner;
+    private JSpinner warningDisplayIntervalSpinner;
+    private JCheckBox enableWarningDisplayCheckbox;
+    private JCheckBox enableAutoStockCheckCheckbox;
+    private JCheckBox automaticImportCheckBox;
+    private JCheckBox darkModeCheckbox;
+    private JSpinner qrCodeImportIntervalSpinner;
+    private JSpinner fontSizeTableSpinner;
+    private JSpinner fontSizeTabSpinner;
+    private JTextField serverUrlField;
+    private JComboBox<String> themeComboBox;
     private static JComboBox<String> fontComboBox;
     private final JTextField settingsSearchField = new JTextField(24);
     private static final String SEARCH_PLACEHOLDER = "Suche nach Einstellungen…";
@@ -129,1315 +129,1233 @@ public class SettingsGUI extends JFrame {
         }
     }
 
-    public SettingsGUI() {
-        setTitle("Einstellungen");
-        setSize(1200, 850);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setLocationRelativeTo(null);
-        setLayout(new BorderLayout());
+public SettingsGUI() {
+    initFrame();
 
-        // Set window icon if available
-        if (Main.iconSmall != null) {
-            setIconImage(Main.iconSmall.getImage());
+    JPanel mainContainer = new JPanel(new BorderLayout());
+    mainContainer.setBackground(ThemeManager.getBackgroundColor());
+
+    mainContainer.add(createHeaderPanel(), BorderLayout.NORTH);
+    mainContainer.add(createContentWrapper(), BorderLayout.CENTER);
+    mainContainer.add(createBottomButtonPanel(), BorderLayout.SOUTH);
+
+    setContentPane(mainContainer);
+
+    installGlobalShortcuts();
+    wireSearchFiltering();
+
+    // Load current settings
+    loadSettings();
+}
+
+private void initFrame() {
+    setTitle("Einstellungen");
+    setSize(1200, 850);
+    setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    setLocationRelativeTo(null);
+    setLayout(new BorderLayout());
+
+    // Set window icon if available
+    if (Main.iconSmall != null) {
+        setIconImage(Main.iconSmall.getImage());
+    }
+}
+
+private JPanel createHeaderPanel() {
+    // Header Panel with enhanced gradient effect
+    JPanel headerPanel = new JPanel(new BorderLayout()) {
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (g instanceof Graphics2D g2d) {
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                Color color1 = ThemeManager.getPrimaryColor();
+                Color color2 = new Color(
+                        Math.max(0, color1.getRed() - 10),
+                        Math.max(0, color1.getGreen() - 10),
+                        Math.max(0, color1.getBlue() - 10)
+                );
+                GradientPaint gradient = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+            }
+        }
+    };
+    headerPanel.setOpaque(false);
+    headerPanel.setPreferredSize(new Dimension(0, 140));
+    headerPanel.setBorder(BorderFactory.createEmptyBorder(25, 35, 25, 35));
+
+    JLabel titleLabel = new JLabel(UnicodeSymbols.BETTER_GEAR + "  Einstellungen");
+    titleLabel.setFont(getFontByName(Font.BOLD, 28));
+    titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
+
+    JLabel subtitleLabel = new JLabel("Konfiguration und Verwaltung des Lagersystems");
+    subtitleLabel.setFont(getFontByName(Font.PLAIN, 14));
+    subtitleLabel.setForeground(new Color(255, 255, 255, 200));
+
+    JPanel headerTextPanel = new JPanel();
+    headerTextPanel.setLayout(new BoxLayout(headerTextPanel, BoxLayout.Y_AXIS));
+    headerTextPanel.setOpaque(false);
+    titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    headerTextPanel.add(titleLabel);
+    headerTextPanel.add(Box.createVerticalStrut(5));
+    headerTextPanel.add(subtitleLabel);
+
+    headerPanel.add(headerTextPanel, BorderLayout.WEST);
+    return headerPanel;
+}
+
+private JPanel createContentWrapper() {
+    JPanel contentWrapper = new JPanel(new BorderLayout());
+    contentWrapper.setBackground(ThemeManager.getBackgroundColor());
+    contentWrapper.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+
+    JPanel searchPanel = createSearchPanel();
+    JTabbedPane tabbedPane = createTabbedPane();
+
+    contentWrapper.add(searchPanel, BorderLayout.NORTH);
+    contentWrapper.add(tabbedPane, BorderLayout.CENTER);
+
+    return contentWrapper;
+}
+
+private JPanel createSearchPanel() {
+    JPanel searchPanel = new JPanel(new BorderLayout(12, 0));
+    searchPanel.setOpaque(false);
+
+    JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Einstellungen durchsuchen:");
+    searchLabel.setFont(getFontByName(Font.BOLD, 13));
+    searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+    // Search input (with placeholder + clear button)
+    settingsSearchField.setToolTipText("Suche nach Einstellungen...");
+    settingsSearchField.setFont(getFontByName(Font.PLAIN, 13));
+    settingsSearchField.setBackground(ThemeManager.getInputBackgroundColor());
+    settingsSearchField.setForeground(ThemeManager.getTextSecondaryColor());
+    settingsSearchField.setCaretColor(ThemeManager.getTextPrimaryColor());
+    settingsSearchField.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+
+    // Placeholder handling
+    searchPlaceholderActive = true;
+    settingsSearchField.setText(SEARCH_PLACEHOLDER);
+    settingsSearchField.setFont(settingsSearchField.getFont().deriveFont(Font.ITALIC));
+    settingsSearchField.addFocusListener(new FocusAdapter() {
+        @Override
+        public void focusGained(FocusEvent e) {
+            if (searchPlaceholderActive) {
+                searchPlaceholderActive = false;
+                settingsSearchField.setText("");
+                settingsSearchField.setForeground(ThemeManager.getTextPrimaryColor());
+                settingsSearchField.setFont(getFontByName(Font.PLAIN, 13));
+            }
+            settingsSearchField.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ThemeManager.getPrimaryColor(), 2, true),
+                    BorderFactory.createEmptyBorder(7, 9, 7, 9)
+            ));
         }
 
-        // Background color
-        JPanel mainContainer = new JPanel(new BorderLayout());
-        mainContainer.setBackground(ThemeManager.getBackgroundColor());
-
-        // Header Panel with enhanced gradient effect
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                if (g instanceof Graphics2D g2d) {
-                    g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                    Color color1 = ThemeManager.getPrimaryColor();
-                    Color color2 = new Color(
-                            Math.max(0, color1.getRed() - 10),
-                            Math.max(0, color1.getGreen() - 10),
-                            Math.max(0, color1.getBlue() - 10)
-                    );
-                    GradientPaint gradient = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
-                    g2d.setPaint(gradient);
-                    g2d.fillRect(0, 0, getWidth(), getHeight());
-                }
+        @Override
+        public void focusLost(FocusEvent e) {
+            String txt = settingsSearchField.getText() == null ? "" : settingsSearchField.getText().trim();
+            if (txt.isEmpty()) {
+                searchPlaceholderActive = true;
+                settingsSearchField.setText(SEARCH_PLACEHOLDER);
+                settingsSearchField.setForeground(ThemeManager.getTextSecondaryColor());
+                settingsSearchField.setFont(getFontByName(Font.PLAIN, 13).deriveFont(Font.ITALIC));
             }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setPreferredSize(new Dimension(0, 140));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(25, 35, 25, 35));
+            settingsSearchField.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                    BorderFactory.createEmptyBorder(8, 10, 8, 10)
+            ));
+        }
+    });
 
-        JLabel titleLabel = new JLabel(UnicodeSymbols.BETTER_GEAR + "  Einstellungen");
-        titleLabel.setFont(getFontByName(Font.BOLD, 28));
-        titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
+    JButton clearSearchButton = new JButton("✕");
+    clearSearchButton.setToolTipText("Suche löschen");
+    clearSearchButton.setFont(getFontByName(Font.BOLD, 12));
+    clearSearchButton.setForeground(ThemeManager.getTextSecondaryColor());
+    clearSearchButton.setBackground(ThemeManager.getInputBackgroundColor());
+    clearSearchButton.setFocusPainted(false);
+    clearSearchButton.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+    clearSearchButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    clearSearchButton.addActionListener(e -> {
+        searchPlaceholderActive = false;
+        settingsSearchField.setText("");
+        settingsSearchField.requestFocusInWindow();
+        applySearchFilter();
+    });
+    clearSearchButton.addMouseListener(new MouseAdapter() {
+        @Override
+        public void mouseEntered(MouseEvent e) {
+            clearSearchButton.setForeground(ThemeManager.getTextPrimaryColor());
+        }
 
-        JLabel subtitleLabel = new JLabel("Konfiguration und Verwaltung des Lagersystems");
-        subtitleLabel.setFont(getFontByName(Font.PLAIN, 14));
-        subtitleLabel.setForeground(new Color(255, 255, 255, 200));
+        @Override
+        public void mouseExited(MouseEvent e) {
+            clearSearchButton.setForeground(ThemeManager.getTextSecondaryColor());
+        }
+    });
 
-        JPanel headerTextPanel = new JPanel();
-        headerTextPanel.setLayout(new BoxLayout(headerTextPanel, BoxLayout.Y_AXIS));
-        headerTextPanel.setOpaque(false);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerTextPanel.add(titleLabel);
-        headerTextPanel.add(Box.createVerticalStrut(5));
-        headerTextPanel.add(subtitleLabel);
+    JPanel searchFieldWrapper = new JPanel(new BorderLayout());
+    searchFieldWrapper.setOpaque(true);
+    searchFieldWrapper.setBackground(ThemeManager.getInputBackgroundColor());
+    searchFieldWrapper.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(0, 0, 0, 0)
+    ));
+    searchFieldWrapper.add(settingsSearchField, BorderLayout.CENTER);
+    searchFieldWrapper.add(clearSearchButton, BorderLayout.EAST);
 
-        headerPanel.add(headerTextPanel, BorderLayout.WEST);
-        mainContainer.add(headerPanel, BorderLayout.NORTH);
+    searchPanel.add(searchLabel, BorderLayout.WEST);
+    searchPanel.add(searchFieldWrapper, BorderLayout.CENTER);
+    searchPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 16, 0));
 
-        // Content Area with Tabbed Categories
-        JPanel contentWrapper = new JPanel(new BorderLayout());
-        contentWrapper.setBackground(ThemeManager.getBackgroundColor());
-        contentWrapper.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+    return searchPanel;
+}
 
-        // Create tabbed pane for categories
-        JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.LEFT);
-        tabbedPane.setFont(getFontByName(Font.BOLD, 14));
-        tabbedPane.setBackground(ThemeManager.getCardBackgroundColor());
-        tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
-        tabbedPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
+private JTabbedPane createTabbedPane() {
+    JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.LEFT);
+    tabbedPane.setFont(getFontByName(Font.BOLD, 14));
+    tabbedPane.setBackground(ThemeManager.getCardBackgroundColor());
+    tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
+    tabbedPane.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+    ));
 
-        JPanel searchPanel = new JPanel(new BorderLayout(12, 0));
-        searchPanel.setOpaque(false);
+    buildTabs(tabbedPane);
+    return tabbedPane;
+}
 
-        JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Einstellungen durchsuchen:");
-        searchLabel.setFont(getFontByName(Font.BOLD, 13));
-        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+private JPanel createBottomButtonPanel() {
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 18, 18));
+    buttonPanel.setBackground(ThemeManager.getCardBackgroundColor());
+    buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
-        // Search input (with placeholder + clear button)
-        settingsSearchField.setToolTipText("Suche nach Einstellungen...");
-        settingsSearchField.setFont(getFontByName(Font.PLAIN, 13));
-        settingsSearchField.setBackground(ThemeManager.getInputBackgroundColor());
-        settingsSearchField.setForeground(ThemeManager.getTextSecondaryColor());
-        settingsSearchField.setCaretColor(ThemeManager.getTextPrimaryColor());
-        settingsSearchField.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+    JButton resetAllButton = createStyledButton(UnicodeSymbols.REFRESH + " Alles zurücksetzen", new Color(231, 76, 60));
+    resetAllButton.addActionListener(e -> resetAllDefaults());
 
-        // Placeholder handling
-        searchPlaceholderActive = true;
-        settingsSearchField.setText(SEARCH_PLACEHOLDER);
-        settingsSearchField.setFont(settingsSearchField.getFont().deriveFont(Font.ITALIC));
-        settingsSearchField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                if (searchPlaceholderActive) {
-                    searchPlaceholderActive = false;
-                    settingsSearchField.setText("");
-                    settingsSearchField.setForeground(ThemeManager.getTextPrimaryColor());
-                    settingsSearchField.setFont(getFontByName(Font.PLAIN, 13));
-                }
-                settingsSearchField.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getPrimaryColor(), 2, true),
-                        BorderFactory.createEmptyBorder(7, 9, 7, 9)
-                ));
+    JButton cancelButton = createStyledButton(UnicodeSymbols.CLOSE + " Abbrechen", new Color(155, 89, 182));
+    cancelButton.addActionListener(e -> dispose());
+
+    JButton saveButton = createStyledButton(UnicodeSymbols.FLOPPY + " Speichern", new Color(46, 204, 113));
+    saveButton.addActionListener(e -> saveSettings());
+
+    buttonPanel.add(resetAllButton);
+    buttonPanel.add(cancelButton);
+    buttonPanel.add(saveButton);
+
+    return buttonPanel;
+}
+
+private void installGlobalShortcuts() {
+    InputMap im = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+    ActionMap am = getRootPane().getActionMap();
+
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), "focusSearch");
+    am.put("focusSearch", new AbstractAction() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (searchPlaceholderActive) {
+                searchPlaceholderActive = false;
+                settingsSearchField.setText("");
+                settingsSearchField.setForeground(ThemeManager.getTextPrimaryColor());
+                settingsSearchField.setFont(getFontByName(Font.PLAIN, 13));
             }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                String txt = settingsSearchField.getText() == null ? "" : settingsSearchField.getText().trim();
-                if (txt.isEmpty()) {
-                    searchPlaceholderActive = true;
-                    settingsSearchField.setText(SEARCH_PLACEHOLDER);
-                    settingsSearchField.setForeground(ThemeManager.getTextSecondaryColor());
-                    settingsSearchField.setFont(getFontByName(Font.PLAIN, 13).deriveFont(Font.ITALIC));
-                }
-                settingsSearchField.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                        BorderFactory.createEmptyBorder(8, 10, 8, 10)
-                ));
-            }
-        });
-
-        JButton clearSearchButton = new JButton("✕");
-        clearSearchButton.setToolTipText("Suche löschen");
-        clearSearchButton.setFont(getFontByName(Font.BOLD, 12));
-        clearSearchButton.setForeground(ThemeManager.getTextSecondaryColor());
-        clearSearchButton.setBackground(ThemeManager.getInputBackgroundColor());
-        clearSearchButton.setFocusPainted(false);
-        clearSearchButton.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-        clearSearchButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        clearSearchButton.addActionListener(e -> {
-            searchPlaceholderActive = false;
-            settingsSearchField.setText("");
             settingsSearchField.requestFocusInWindow();
+            settingsSearchField.selectAll();
+        }
+    });
+
+    im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeSettings");
+    am.put("closeSettings", new AbstractAction() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            dispose();
+        }
+    });
+}
+
+private void wireSearchFiltering() {
+    settingsSearchField.getDocument().addDocumentListener(new DocumentListener() {
+        @Override
+        public void insertUpdate(DocumentEvent e) {
             applySearchFilter();
-        });
-        clearSearchButton.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                clearSearchButton.setForeground(ThemeManager.getTextPrimaryColor());
-            }
+        }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                clearSearchButton.setForeground(ThemeManager.getTextSecondaryColor());
-            }
-        });
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+            applySearchFilter();
+        }
 
-        JPanel searchFieldWrapper = new JPanel(new BorderLayout());
-        searchFieldWrapper.setOpaque(true);
-        searchFieldWrapper.setBackground(ThemeManager.getInputBackgroundColor());
-        searchFieldWrapper.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(0, 0, 0, 0)
-        ));
-        searchFieldWrapper.add(settingsSearchField, BorderLayout.CENTER);
-        searchFieldWrapper.add(clearSearchButton, BorderLayout.EAST);
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+            applySearchFilter();
+        }
+    });
+}
 
-        searchPanel.add(searchLabel, BorderLayout.WEST);
-        searchPanel.add(searchFieldWrapper, BorderLayout.CENTER);
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 16, 0));
+private void buildTabs(JTabbedPane tabbedPane) {
+    // This method now contains all the tab creation code that previously lived in the constructor.
 
-        // === CATEGORY 1: System & Automatisierung ===
-        JPanel systemPanel = createCategoryPanel();
-        JScrollPane systemScroll = createScrollablePanel(systemPanel);
+    // === CATEGORY 1: System & Automatisierung ===
+    JPanel systemPanel = createCategoryPanel();
+    JScrollPane systemScroll = createScrollablePanel(systemPanel);
+    // Stock Check Section
+    JPanel stockCheckSection = createSectionPanel(UnicodeSymbols.PACKAGE + " Lagerbestandsprüfung",
+            "Automatische Überprüfung des Lagerbestands und Warnerstellung");
+    addSectionResetButton(stockCheckSection, this::resetStockCheckDefaults);
 
-        // Stock Check Section
-        JPanel stockCheckSection = createSectionPanel(UnicodeSymbols.PACKAGE + " Lagerbestandsprüfung",
-                "Automatische Überprüfung des Lagerbestands und Warnerstellung");
-        addSectionResetButton(stockCheckSection, this::resetStockCheckDefaults);
+    enableAutoStockCheckCheckbox = new JCheckBox("Automatische Lagerbestandsprüfung aktivieren");
+    styleCheckbox(enableAutoStockCheckCheckbox);
+    enableAutoStockCheckCheckbox.setSelected(true);
 
-        enableAutoStockCheckCheckbox = new JCheckBox("Automatische Lagerbestandsprüfung aktivieren");
-        styleCheckbox(enableAutoStockCheckCheckbox);
-        enableAutoStockCheckCheckbox.setSelected(true);
+    stockCheckIntervalSpinner = new JSpinner(new SpinnerNumberModel(30, 5, 1440, 5));
+    JPanel intervalPanel = createLabeledSpinnerPanel("Prüfintervall:", stockCheckIntervalSpinner, "Minuten", 6);
 
-        stockCheckIntervalSpinner = new JSpinner(new SpinnerNumberModel(30, 5, 1440, 5));
-        JPanel intervalPanel = createLabeledSpinnerPanel("Prüfintervall:", stockCheckIntervalSpinner, "Minuten", 6);
+    stockCheckSection.add(Box.createVerticalStrut(18));
+    stockCheckSection.add(enableAutoStockCheckCheckbox);
+    stockCheckSection.add(Box.createVerticalStrut(15));
+    stockCheckSection.add(intervalPanel);
 
-        stockCheckSection.add(Box.createVerticalStrut(18));
-        stockCheckSection.add(enableAutoStockCheckCheckbox);
-        stockCheckSection.add(Box.createVerticalStrut(15));
-        stockCheckSection.add(intervalPanel);
+    systemPanel.add(stockCheckSection);
+    systemPanel.add(Box.createVerticalStrut(25));
 
-        systemPanel.add(stockCheckSection);
-        systemPanel.add(Box.createVerticalStrut(25));
+    // === SECTION 2: Warnungen ===
+    JPanel warningSection = createSectionPanel(UnicodeSymbols.WARNING + " Warnungsanzeige",
+            "Konfiguration der automatischen Warnanzeige");
+    addSectionResetButton(warningSection, this::resetWarningDefaults);
 
-        // === SECTION 2: Warnungen ===
-        JPanel warningSection = createSectionPanel(UnicodeSymbols.WARNING + " Warnungsanzeige",
-                "Konfiguration der automatischen Warnanzeige");
-        addSectionResetButton(warningSection, this::resetWarningDefaults);
+    enableWarningDisplayCheckbox = new JCheckBox("Automatische Anzeige ungelesener Warnungen aktivieren");
+    styleCheckbox(enableWarningDisplayCheckbox);
+    enableWarningDisplayCheckbox.setSelected(true);
 
-        enableWarningDisplayCheckbox = new JCheckBox("Automatische Anzeige ungelesener Warnungen aktivieren");
-        styleCheckbox(enableWarningDisplayCheckbox);
-        enableWarningDisplayCheckbox.setSelected(true);
+    warningDisplayIntervalSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 24, 1));
+    JPanel warningIntervalPanel = createLabeledSpinnerPanel("Anzeigeintervall:", warningDisplayIntervalSpinner, "Stunde(n)", 6);
 
-        warningDisplayIntervalSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 24, 1));
-        JPanel warningIntervalPanel = createLabeledSpinnerPanel("Anzeigeintervall:", warningDisplayIntervalSpinner, "Stunde(n)", 6);
+    JLabel warningInfoLabel = getWarningInfoLabel();
 
-        JLabel warningInfoLabel = getWarningInfoLabel();
+    warningSection.add(Box.createVerticalStrut(18));
+    warningSection.add(enableWarningDisplayCheckbox);
+    warningSection.add(Box.createVerticalStrut(15));
+    warningSection.add(warningIntervalPanel);
+    warningSection.add(Box.createVerticalStrut(10));
+    warningSection.add(warningInfoLabel);
 
-        warningSection.add(Box.createVerticalStrut(18));
-        warningSection.add(enableWarningDisplayCheckbox);
-        warningSection.add(Box.createVerticalStrut(15));
-        warningSection.add(warningIntervalPanel);
-        warningSection.add(Box.createVerticalStrut(10));
-        warningSection.add(warningInfoLabel);
+    systemPanel.add(warningSection);
 
-        systemPanel.add(warningSection);
+    systemPanel.add(Box.createVerticalStrut(25));
 
-        systemPanel.add(Box.createVerticalStrut(25));
+    // QR-Code Section
+    JPanel qrCodeOptionsPanel = createSectionPanel(UnicodeSymbols.PHONE + " QR-Code Import",
+            "Automatischer Import von QR-Code Scans");
+    addSectionResetButton(qrCodeOptionsPanel, this::resetQrCodeDefaults);
 
-        // QR-Code Section
-        JPanel qrCodeOptionsPanel = createSectionPanel(UnicodeSymbols.PHONE + " QR-Code Import",
-                "Automatischer Import von QR-Code Scans");
-        addSectionResetButton(qrCodeOptionsPanel, this::resetQrCodeDefaults);
+    automaticImportCheckBox = new JCheckBox("Automatisches Importieren von QR-Codes aktivieren");
+    styleCheckbox(automaticImportCheckBox);
+    automaticImportCheckBox.setSelected(false);
 
-        automaticImportCheckBox = new JCheckBox("Automatisches Importieren von QR-Codes aktivieren");
-        styleCheckbox(automaticImportCheckBox);
-        automaticImportCheckBox.setSelected(false);
+    qrCodeOptionsPanel.add(Box.createVerticalStrut(18));
+    qrCodeOptionsPanel.add(automaticImportCheckBox);
+    qrCodeOptionsPanel.add(Box.createVerticalStrut(15));
 
-        qrCodeOptionsPanel.add(Box.createVerticalStrut(18));
-        qrCodeOptionsPanel.add(automaticImportCheckBox);
-        qrCodeOptionsPanel.add(Box.createVerticalStrut(15));
+    qrCodeImportIntervalSpinner = new JSpinner(new SpinnerNumberModel(10, 1, 60, 5));
+    JPanel qrIntervalPanel = createLabeledSpinnerPanel("Import-Intervall:", qrCodeImportIntervalSpinner, "Minuten", 6);
 
-        qrCodeImportIntervalSpinner = new JSpinner(new SpinnerNumberModel(10, 1, 60, 5));
-        JPanel qrIntervalPanel = createLabeledSpinnerPanel("Import-Intervall:", qrCodeImportIntervalSpinner, "Minuten", 6);
+    qrCodeOptionsPanel.add(qrIntervalPanel);
 
-        qrCodeOptionsPanel.add(qrIntervalPanel);
+    systemPanel.add(qrCodeOptionsPanel);
+    systemPanel.add(Box.createVerticalStrut(25));
 
-        systemPanel.add(qrCodeOptionsPanel);
-        systemPanel.add(Box.createVerticalStrut(25));
+    JPanel categoryPanel = createSectionPanel(UnicodeSymbols.FOLDER + " Kategorien", "Einstellungen zu verschiedenen Kategorien");
 
-        JPanel categoryPanel = createSectionPanel(UnicodeSymbols.FOLDER + " Kategorien", "Einstellungen zu verschiedenen Kategorien");
+    JLabel categoryInfoLabel = createInfoLabel(
+            "Hier können Sie Kategorien hinzufügen oder die Datei direkt bearbeiten. " +
+                    "Optional können Sie einen Nummernbereich (Von/Bis) angeben."
+    );
 
-        JLabel categoryInfoLabel = createInfoLabel(
-                "Hier können Sie Kategorien hinzufügen oder die Datei direkt bearbeiten. " +
-                        "Optional können Sie einen Nummernbereich (Von/Bis) angeben."
-        );
+    // Top actions row
+    JPanel categoryActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+    categoryActions.setOpaque(false);
+    categoryActions.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Top actions row
-        JPanel categoryActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        categoryActions.setOpaque(false);
-        categoryActions.setAlignmentX(Component.LEFT_ALIGNMENT);
+    JButton categorySettingsFileButton = createStyledButton(
+            UnicodeSymbols.FOLDER + " Kategorien-Datei öffnen",
+            new Color(52, 152, 219)
+    );
+    categorySettingsFileButton.setToolTipText("Öffnet categories.json im Standard-Editor");
+    categorySettingsFileButton.addActionListener(e -> openCategorySettingsFile());
 
-        JButton categorySettingsFileButton = createStyledButton(
-                UnicodeSymbols.FOLDER + " Kategorien-Datei öffnen",
-                new Color(52, 152, 219)
-        );
-        categorySettingsFileButton.setToolTipText("Öffnet categories.json im Standard-Editor");
-        categorySettingsFileButton.addActionListener(e -> openCategorySettingsFile());
+    JButton reloadCategoriesButton = createStyledButton(
+            UnicodeSymbols.REFRESH + " Kategorien neu laden",
+            new Color(155, 89, 182)
+    );
+    reloadCategoriesButton.setToolTipText("Lädt categories.json neu ein (ohne Neustart)");
+    reloadCategoriesButton.addActionListener(e -> {
+        loadCategories();
+        JOptionPane.showMessageDialog(this,
+                "Kategorien wurden neu geladen.",
+                "Kategorien",
+                JOptionPane.INFORMATION_MESSAGE,
+                Main.iconSmall);
+    });
 
-        JButton reloadCategoriesButton = createStyledButton(
-                UnicodeSymbols.REFRESH + " Kategorien neu laden",
-                new Color(155, 89, 182)
-        );
-        reloadCategoriesButton.setToolTipText("Lädt categories.json neu ein (ohne Neustart)");
-        reloadCategoriesButton.addActionListener(e -> {
-            loadCategories();
+    categoryActions.add(categorySettingsFileButton);
+    categoryActions.add(reloadCategoriesButton);
+
+    categoryPanel.add(categoryInfoLabel);
+    categoryPanel.add(Box.createVerticalStrut(10));
+    categoryPanel.add(categoryActions);
+    categoryPanel.add(Box.createVerticalStrut(14));
+
+    JSeparator catSep = new JSeparator();
+    catSep.setForeground(ThemeManager.getBorderColor());
+    catSep.setAlignmentX(Component.LEFT_ALIGNMENT);
+    categoryPanel.add(catSep);
+    categoryPanel.add(Box.createVerticalStrut(14));
+
+    // ---- Add Category Form (improved layout) ---------------------------------
+
+    JLabel categoryFormTitle = new JLabel("Neue Kategorie hinzufügen");
+    categoryFormTitle.setFont(getFontByName(Font.BOLD, 14));
+    categoryFormTitle.setForeground(ThemeManager.getTextPrimaryColor());
+    categoryFormTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+    JLabel categoryFormHint = new JLabel(
+            "<html><div style='padding-top:2px;'>" +
+                    "<span style='font-size:11px;'>Tipp: Drücken Sie Enter im Namen-Feld, um hinzuzufügen. Z.b von 1000 bis 1999</span>" +
+                    "</div></html>"
+    );
+    categoryFormHint.setFont(getFontByName(Font.PLAIN, 12));
+    categoryFormHint.setForeground(ThemeManager.getTextSecondaryColor());
+    categoryFormHint.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+    JTextField categoryNameField = new JTextField();
+    styleInputField(categoryNameField);
+    categoryNameField.setToolTipText("Kategoriename (z.B. 'Elektronik')");
+
+    NumberFormat intFormat = NumberFormat.getIntegerInstance();
+    intFormat.setGroupingUsed(false);
+
+    NumberFormatter intFormatter = new NumberFormatter(intFormat);
+    intFormatter.setValueClass(Integer.class);
+    intFormatter.setAllowsInvalid(true);
+    intFormatter.setCommitsOnValidEdit(true);
+    intFormatter.setMinimum(Integer.MIN_VALUE);
+    intFormatter.setMaximum(Integer.MAX_VALUE);
+
+    JFormattedTextField fromRange = new JFormattedTextField(intFormatter);
+    fromRange.setColumns(6);
+    fromRange.setToolTipText("Von (z.B. 1000)");
+    fromRange.setFont(getFontByName(Font.PLAIN, 13));
+    fromRange.setBackground(ThemeManager.getInputBackgroundColor());
+    fromRange.setForeground(ThemeManager.getTextPrimaryColor());
+    fromRange.setCaretColor(ThemeManager.getTextPrimaryColor());
+    fromRange.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+    ));
+
+    JFormattedTextField toRange = new JFormattedTextField(intFormatter);
+    toRange.setColumns(6);
+    toRange.setToolTipText("Bis (z.B. 1999)");
+    toRange.setFont(getFontByName(Font.PLAIN, 13));
+    toRange.setBackground(ThemeManager.getInputBackgroundColor());
+    toRange.setForeground(ThemeManager.getTextPrimaryColor());
+    toRange.setCaretColor(ThemeManager.getTextPrimaryColor());
+    toRange.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)
+    ));
+
+    JButton addCategoryButton = createStyledButton(
+            UnicodeSymbols.PLUS + " Hinzufügen",
+            new Color(46, 204, 113)
+    );
+    addCategoryButton.setToolTipText("Fügt die Kategorie hinzu");
+    addCategoryButton.setEnabled(false);
+
+    Runnable doAddCategory = () -> {
+        String newCategory = categoryNameField.getText() == null ? "" : categoryNameField.getText().trim();
+        String fromTxt = fromRange.getText() == null ? "" : fromRange.getText().trim();
+        String toTxt = toRange.getText() == null ? "" : toRange.getText().trim();
+
+        if (newCategory.isEmpty()) {
             JOptionPane.showMessageDialog(this,
-                    "Kategorien wurden neu geladen.",
-                    "Kategorien",
-                    JOptionPane.INFORMATION_MESSAGE,
+                    "Bitte einen Kategorienamen eingeben.",
+                    "Hinweis",
+                    JOptionPane.WARNING_MESSAGE,
                     Main.iconSmall);
-        });
-
-        categoryActions.add(categorySettingsFileButton);
-        categoryActions.add(reloadCategoriesButton);
-
-        categoryPanel.add(categoryInfoLabel);
-        categoryPanel.add(Box.createVerticalStrut(10));
-        categoryPanel.add(categoryActions);
-        categoryPanel.add(Box.createVerticalStrut(14));
-
-        JSeparator catSep = new JSeparator();
-        catSep.setForeground(ThemeManager.getBorderColor());
-        catSep.setAlignmentX(Component.LEFT_ALIGNMENT);
-        categoryPanel.add(catSep);
-        categoryPanel.add(Box.createVerticalStrut(14));
-
-        // ---- Add Category Form (improved layout) ---------------------------------
-
-        JLabel categoryFormTitle = new JLabel("Neue Kategorie hinzufügen");
-        categoryFormTitle.setFont(getFontByName(Font.BOLD, 14));
-        categoryFormTitle.setForeground(ThemeManager.getTextPrimaryColor());
-        categoryFormTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel categoryFormHint = new JLabel(
-                "<html><div style='padding-top:2px;'>" +
-                        "<span style='font-size:11px;'>Tipp: Lassen Sie Von/Bis leer, um keinen Bereich festzulegen. " +
-                        "Drücken Sie Enter im Namen-Feld, um hinzuzufügen.</span>" +
-                        "</div></html>"
-        );
-        categoryFormHint.setFont(getFontByName(Font.PLAIN, 12));
-        categoryFormHint.setForeground(ThemeManager.getTextSecondaryColor());
-        categoryFormHint.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JTextField categoryNameField = new JTextField();
-        styleInputField(categoryNameField);
-        categoryNameField.setToolTipText("Kategoriename (z.B. 'Elektronik')");
-
-        NumberFormat intFormat = NumberFormat.getIntegerInstance();
-        intFormat.setGroupingUsed(false);
-
-        NumberFormatter intFormatter = new NumberFormatter(intFormat);
-        intFormatter.setValueClass(Integer.class);
-        intFormatter.setAllowsInvalid(true);
-        intFormatter.setCommitsOnValidEdit(true);
-        intFormatter.setMinimum(Integer.MIN_VALUE);
-        intFormatter.setMaximum(Integer.MAX_VALUE);
-
-        JFormattedTextField fromRange = new JFormattedTextField(intFormatter);
-        fromRange.setColumns(6);
-        fromRange.setToolTipText("Von (optional, z.B. 1000)");
-        fromRange.setFont(getFontByName(Font.PLAIN, 13));
-        fromRange.setBackground(ThemeManager.getInputBackgroundColor());
-        fromRange.setForeground(ThemeManager.getTextPrimaryColor());
-        fromRange.setCaretColor(ThemeManager.getTextPrimaryColor());
-        fromRange.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-
-        JFormattedTextField toRange = new JFormattedTextField(intFormatter);
-        toRange.setColumns(6);
-        toRange.setToolTipText("Bis (optional, z.B. 1999)");
-        toRange.setFont(getFontByName(Font.PLAIN, 13));
-        toRange.setBackground(ThemeManager.getInputBackgroundColor());
-        toRange.setForeground(ThemeManager.getTextPrimaryColor());
-        toRange.setCaretColor(ThemeManager.getTextPrimaryColor());
-        toRange.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-
-        JButton addCategoryButton = createStyledButton(
-                UnicodeSymbols.PLUS + " Hinzufügen",
-                new Color(46, 204, 113)
-        );
-        addCategoryButton.setToolTipText("Fügt die Kategorie hinzu");
-        addCategoryButton.setEnabled(false);
-
-        Runnable doAddCategory = () -> {
-            String newCategory = categoryNameField.getText() == null ? "" : categoryNameField.getText().trim();
-            String fromTxt = fromRange.getText() == null ? "" : fromRange.getText().trim();
-            String toTxt = toRange.getText() == null ? "" : toRange.getText().trim();
-
-            if (newCategory.isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "Bitte einen Kategorienamen eingeben.",
-                        "Hinweis",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
-                categoryNameField.requestFocusInWindow();
-                return;
-            }
-
-            // Only validate if either range is present
-            if (!fromTxt.isEmpty() || !toTxt.isEmpty()) {
-                try {
-                    int f = fromTxt.isEmpty() ? Integer.MIN_VALUE : Integer.parseInt(fromTxt);
-                    int t = toTxt.isEmpty() ? Integer.MAX_VALUE : Integer.parseInt(toTxt);
-                    if (f > t) throw new NumberFormatException();
-                    addNewCategory(newCategory, f, t);
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(this,
-                            "Ungültiger Bereich (Von/Bis). Bitte ganze Zahlen eingeben und Von ≤ Bis.",
-                            "Fehler",
-                            JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
-                    return;
-                }
-            } else {
-                // No range specified
-                addNewCategory(newCategory, Integer.MIN_VALUE, Integer.MAX_VALUE);
-            }
-
-            categoryNameField.setText("");
-            fromRange.setValue(null);
-            toRange.setValue(null);
-            addCategoryButton.setEnabled(false);
             categoryNameField.requestFocusInWindow();
-        };
+            return;
+        }
 
-        addCategoryButton.addActionListener(e -> doAddCategory.run());
+        // Only validate if either range is present
+        if (!fromTxt.isEmpty() || !toTxt.isEmpty()) {
+            try {
+                int f = fromTxt.isEmpty() ? Integer.MIN_VALUE : Integer.parseInt(fromTxt);
+                int t = toTxt.isEmpty() ? Integer.MAX_VALUE : Integer.parseInt(toTxt);
+                if (f > t) throw new NumberFormatException();
+                addNewCategory(newCategory, f, t);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this,
+                        "Ungültiger Bereich (Von/Bis). Bitte ganze Zahlen eingeben und Von ≤ Bis.",
+                        "Fehler",
+                        JOptionPane.ERROR_MESSAGE,
+                        Main.iconSmall);
+                return;
+            }
+        }
 
-        // Enable button only when name is not empty
-        categoryNameField.getDocument().addDocumentListener(new DocumentListener() {
-            private void update() {
-                String v = categoryNameField.getText() == null ? "" : categoryNameField.getText().trim();
-                addCategoryButton.setEnabled(!v.isEmpty());
+        categoryNameField.setText("");
+        fromRange.setValue(null);
+        toRange.setValue(null);
+        addCategoryButton.setEnabled(false);
+        categoryNameField.requestFocusInWindow();
+    };
+
+    addCategoryButton.addActionListener(e -> doAddCategory.run());
+
+    // Enable button only when name is not empty
+    categoryNameField.getDocument().addDocumentListener(new DocumentListener() {
+        private void update() {
+            String name = categoryNameField.getText() == null
+                    ? ""
+                    : categoryNameField.getText().trim();
+
+            Object fromObj = fromRange.getValue();
+            Object toObj   = toRange.getValue();
+
+            boolean validRange = true;
+
+            // Only validate range if BOTH values are present
+            if (fromObj instanceof Number && toObj instanceof Number) {
+                int from = ((Number) fromObj).intValue();
+                int to   = ((Number) toObj).intValue();
+                validRange = from <= to;
             }
 
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                update();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                update();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                update();
-            }
-        });
-
-        // Enter in name field triggers add
-        categoryNameField.addActionListener(e -> {
-            if (addCategoryButton.isEnabled()) {
-                doAddCategory.run();
-            }
-        });
-
-        // Layout panel
-        JPanel addCategoryPanel = new JPanel(new GridBagLayout());
-        addCategoryPanel.setOpaque(false);
-        addCategoryPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(0, 0, 8, 12);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weighty = 0;
-
-        // Row 0: Title + hint (full width)
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 4;
-        gbc.weightx = 1.0;
-        gbc.insets = new Insets(0, 0, 4, 0);
-        addCategoryPanel.add(categoryFormTitle, gbc);
-
-        gbc.gridy = 1;
-        gbc.insets = new Insets(0, 0, 12, 0);
-        addCategoryPanel.add(categoryFormHint, gbc);
-
-        // Row 2: Labels
-        gbc.gridwidth = 1;
-        gbc.gridy = 2;
-        gbc.insets = new Insets(0, 0, 6, 12);
-
-        JLabel categoryNameLabel = new JLabel("Kategoriename");
-        categoryNameLabel.setFont(getFontByName(Font.BOLD, 13));
-        categoryNameLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
-        JLabel fromLabel = new JLabel("Von");
-        fromLabel.setFont(getFontByName(Font.PLAIN, 11));
-        fromLabel.setForeground(ThemeManager.getTextSecondaryColor());
-
-        JLabel toLabel = new JLabel("Bis");
-        toLabel.setFont(getFontByName(Font.PLAIN, 11));
-        toLabel.setForeground(ThemeManager.getTextSecondaryColor());
-
-        gbc.gridx = 0;
-        gbc.weightx = 1.0;
-        addCategoryPanel.add(categoryNameLabel, gbc);
-
-        gbc.gridx = 1;
-        gbc.weightx = 0.0;
-        addCategoryPanel.add(fromLabel, gbc);
-
-        gbc.gridx = 2;
-        addCategoryPanel.add(toLabel, gbc);
-
-        // Row 3: Fields + button
-        gbc.gridy = 3;
-        gbc.insets = new Insets(0, 0, 0, 12);
-
-        gbc.gridx = 0;
-        gbc.weightx = 1.0;
-        addCategoryPanel.add(categoryNameField, gbc);
-
-        gbc.gridx = 1;
-        gbc.weightx = 0.0;
-        fromRange.setPreferredSize(new Dimension(120, 36));
-        addCategoryPanel.add(fromRange, gbc);
-
-        gbc.gridx = 2;
-        toRange.setPreferredSize(new Dimension(120, 36));
-        addCategoryPanel.add(toRange, gbc);
-
-        gbc.gridx = 3;
-        gbc.insets = new Insets(0, 0, 0, 0);
-        addCategoryButton.setPreferredSize(new Dimension(160, 36));
-        addCategoryPanel.add(addCategoryButton, gbc);
-
-        categoryPanel.add(addCategoryPanel);
-
-        // finally add to system panel
-        systemPanel.add(categoryPanel);
-
-
-        // === CATEGORY 1b: Darstellung ===
-// One-page layout (no right-side sticky panel). Everything scrolls together.
-        JPanel appearancePanel = createCategoryPanel();
-        JScrollPane appearanceScroll = createScrollablePanel(appearancePanel);
-
-        JLabel appearanceIntro = new JLabel(
-                "<html><div style='padding:2px 0;'><b>Darstellung</b><br/>" +
-                        "<span style='font-size:11px;'>Änderungen werden nach dem Speichern übernommen. " +
-                        "Die Vorschau aktualisiert sich automatisch.</span></div></html>"
-        );
-        appearanceIntro.setFont(getFontByName(Font.PLAIN, 12));
-        appearanceIntro.setForeground(ThemeManager.getTextSecondaryColor());
-        appearanceIntro.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-// ---- Schriftart --------------------------------------------------------
-        JPanel fontSettingsPanel = createSectionPanel(UnicodeSymbols.ABC + " Schriftart",
-                "Schriftart für die Anwendung festlegen");
-        addSectionResetButton(fontSettingsPanel, this::resetFontDefaults);
-
-        fontSettingsPanel.add(Box.createVerticalStrut(12));
-        fontSettingsPanel.add(appearanceIntro);
-        fontSettingsPanel.add(Box.createVerticalStrut(12));
-
-        JLabel fontInfoLabel = new JLabel(
-                "<html><div><span style='font-size: 11px;'>" +
-                        "Wählen Sie eine Schriftart. Die Vorschau unten zeigt das Ergebnis.</span></div></html>"
-        );
-        fontInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
-        fontInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        fontInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fontSettingsPanel.add(fontInfoLabel);
-        fontSettingsPanel.add(Box.createVerticalStrut(10));
-
-        fontComboBox = new JComboBox<>();
-        getAllFonts().forEach(fontComboBox::addItem);
-        styleComboBox(fontComboBox);
-        fontComboBox.addActionListener(e -> updatePreview());
-        JPanel fontSelectionPanel = createLabeledComboBoxPanel("Schriftart auswählen:", fontComboBox);
-        fontSettingsPanel.add(fontSelectionPanel);
-
-        fontSample.setFont(getFontByName(Font.PLAIN, 16));
-        fontSample.setForeground(ThemeManager.getTextPrimaryColor());
-        fontSample.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fontSettingsPanel.add(Box.createVerticalStrut(12));
-        fontSettingsPanel.add(fontSample);
-
-// ---- Tabellen & Tabs ---------------------------------------------------
-        JPanel tableSettingsPanel = createSectionPanel(UnicodeSymbols.CLIPBOARD + " Tabellen & Tabs",
-                "Schriftgröße für Tabellen und Tabs anpassen");
-        addSectionResetButton(tableSettingsPanel, this::resetTableDefaults);
-
-        fontSizeTableSpinner = new JSpinner(new SpinnerNumberModel(16, 10, 44, 1));
-        JPanel fontSizePanel = createLabeledSpinnerPanel("Tabellen-Schriftgröße:", fontSizeTableSpinner, "px", 4);
-        tableSettingsPanel.add(Box.createVerticalStrut(12));
-        tableSettingsPanel.add(fontSizePanel);
-        tableSettingsPanel.add(Box.createVerticalStrut(8));
-        configureSlider(tableFontSlider, fontSizeTableSpinner, tableFontSample);
-        tableSettingsPanel.add(tableFontSlider);
-        tableSettingsPanel.add(Box.createVerticalStrut(6));
-        tableSettingsPanel.add(tableFontSample);
-
-        fontSizeTabSpinner = new JSpinner(new SpinnerNumberModel(15, 10, 40, 1));
-        JPanel fontTabSizePanel = createLabeledSpinnerPanel("Tabs-Schriftgröße:", fontSizeTabSpinner, "px", 4);
-        tableSettingsPanel.add(Box.createVerticalStrut(14));
-        tableSettingsPanel.add(fontTabSizePanel);
-        tableSettingsPanel.add(Box.createVerticalStrut(8));
-        configureSlider(tabFontSlider, fontSizeTabSpinner, tabFontSample);
-        tableSettingsPanel.add(tabFontSlider);
-        tableSettingsPanel.add(Box.createVerticalStrut(6));
-        tableSettingsPanel.add(tabFontSample);
-
-// Keep preview in sync even if user types into spinners
-        fontSizeTableSpinner.addChangeListener(e -> updatePreview());
-        fontSizeTabSpinner.addChangeListener(e -> updatePreview());
-
-// ---- Design / Theme ----------------------------------------------------
-        JPanel themeSection = createSectionPanel(UnicodeSymbols.COLOR_PALETTE + " Design & Darstellung",
-                "Passen Sie das Erscheinungsbild der Anwendung an");
-        addSectionResetButton(themeSection, this::resetThemeDefaults);
-
-        darkModeCheckbox = new JCheckBox("Dark Mode aktivieren");
-        styleCheckbox(darkModeCheckbox);
-        darkModeCheckbox.setSelected(ThemeManager.isDarkMode());
-
-        themeSection.add(Box.createVerticalStrut(16));
-        themeSection.add(darkModeCheckbox);
-        themeSection.add(Box.createVerticalStrut(12));
-
-        String[] themes = {"Light", "Dark"};
-        themeComboBox = new JComboBox<>(themes);
-        styleComboBox(themeComboBox);
-        themeComboBox.setSelectedItem(ThemeManager.isDarkMode() ? "Dark" : "Light");
-
-        JPanel themeSelectionPanel = createLabeledComboBoxPanel("Design-Schema:", themeComboBox);
-
-        darkModeCheckbox.addActionListener(e -> {
-            boolean isDark = darkModeCheckbox.isSelected();
-            themeComboBox.setEnabled(!isDark);
-            themeComboBox.setToolTipText(isDark
-                    ? "Deaktiviert, weil Dark Mode aktiviert ist"
-                    : "Wählen Sie ein Design-Schema");
-            if (isDark) {
-                themeComboBox.setSelectedItem("Dark");
-            }
-            updatePreview();
-        });
-
-        themeComboBox.addActionListener(e -> {
-            String selected = (String) themeComboBox.getSelectedItem();
-            darkModeCheckbox.setSelected("Dark".equals(selected));
-            updatePreview();
-        });
-
-        themeSection.add(themeSelectionPanel);
-        themeSection.add(Box.createVerticalStrut(12));
-
-        JLabel themeInfoLabel = new JLabel("<html><div style='padding: 6px 0;'>" +
-                "<i>Hinweis: Nach dem Speichern werden alle Fenster mit dem neuen Design aktualisiert.<br/>" +
-                "Der Dark Mode schont die Augen bei Arbeiten in dunkler Umgebung.</i>" +
-                "</div></html>");
-        themeInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
-        themeInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        themeInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        themeSection.add(themeInfoLabel);
-
-// ---- Farben ------------------------------------------------------------
-        JPanel colorSection = createSectionPanel(UnicodeSymbols.COLOR_PALETTE + " Farbthemen",
-                "Akzent-, Header- und Buttonfarbe anpassen");
-        addSectionResetButton(colorSection, this::resetColorDefaults);
-        colorSection.add(Box.createVerticalStrut(12));
-        colorSection.add(createColorRow("Akzentfarbe:", "theme_accent_color"));
-        colorSection.add(Box.createVerticalStrut(10));
-        colorSection.add(createColorRow("Headerfarbe:", "theme_header_color"));
-        colorSection.add(Box.createVerticalStrut(10));
-        colorSection.add(createColorRow("Buttonfarbe:", "theme_button_color"));
-
-// ---- Vorschau ----------------------------------------------------------
-        JPanel previewSection = createSectionPanel(UnicodeSymbols.BULB + " Live Vorschau",
-                "Vorschau auf Schrift und Farben basierend auf Ihren Einstellungen");
-        previewSection.add(Box.createVerticalStrut(12));
-        previewSection.add(createPreviewPanel());
-
-// ---- Assemble ----------------------------------------------------------
-        appearancePanel.add(fontSettingsPanel);
-        appearancePanel.add(Box.createVerticalStrut(22));
-        appearancePanel.add(tableSettingsPanel);
-        appearancePanel.add(Box.createVerticalStrut(22));
-        appearancePanel.add(themeSection);
-        appearancePanel.add(Box.createVerticalStrut(22));
-        appearancePanel.add(colorSection);
-        appearancePanel.add(Box.createVerticalStrut(22));
-        appearancePanel.add(previewSection);
-        appearancePanel.add(Box.createVerticalGlue());
-
-// Add appearance panel to tabbed pane
-        tabbedPane.addTab(UnicodeSymbols.COLOR_PALETTE + " Darstellung", appearanceScroll);
-
-        systemPanel.add(Box.createVerticalGlue());
-        systemPanel.add(Box.createVerticalStrut(25));
-
-        JPanel otherSection = createSectionPanel("Sonstiges", "Allgemeine Einstellungen");
-        otherSection.add(Box.createVerticalStrut(18));
-
-        JLabel openSettingsLabel = createInfoLabel("Öffnet den Ordner, in dem die Einstellungsdateien gespeichert sind.");
-        otherSection.add(openSettingsLabel);
-        otherSection.add(Box.createVerticalStrut(10));
-        JButton openSettingsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Einstellungen-Ordner öffnen", new Color(52, 152, 219));
-        openSettingsFolderButton.addActionListener(e -> openSettingsFolder());
-        otherSection.add(openSettingsFolderButton);
-
-        JLabel logsLabel = createInfoLabel("Öffnet den Ordner, in dem die Anwendungsprotokolle gespeichert sind.");
-        otherSection.add(Box.createVerticalStrut(15));
-        otherSection.add(logsLabel);
-        otherSection.add(Box.createVerticalStrut(10));
-        JButton openLogsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Protokolle-Ordner öffnen", new Color(52, 152, 219));
-        openLogsFolderButton.addActionListener(e -> openLogsFolder());
-        otherSection.add(openLogsFolderButton);
-        otherSection.add(Box.createVerticalStrut(15));
-
-        JLabel logsDelete = createInfoLabel("Löscht alle Anwendungsprotokolle aus dem Protokolle-Ordner. So wie in der Datenbank.");
-        otherSection.add(Box.createVerticalStrut(15));
-        otherSection.add(logsDelete);
-        JButton deleteLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alle Protokolle löschen", new Color(220, 53, 69));
-        deleteLogsButton.addActionListener(e -> deleteAllLogs());
-        otherSection.add(Box.createVerticalStrut(10));
-        otherSection.add(deleteLogsButton);
-
-        otherSection.add(Box.createVerticalStrut(15));
-        JLabel logsDeleteTime = createInfoLabel("Löscht alle Anwendungsprotokolle, die älter als 30 Tage sind, aus dem Protokolle-Ordner. So wie in der Datenbank.");
-        otherSection.add(Box.createVerticalStrut(15));
-        otherSection.add(logsDeleteTime);
-        JCheckBox deleteOldLogsCheckBox = new JCheckBox("Alte Protokolle (älter als 30 Tage) löschen");
-        styleCheckbox(deleteOldLogsCheckBox);
-        otherSection.add(Box.createVerticalStrut(10));
-        otherSection.add(deleteOldLogsCheckBox);
-        JButton deleteOldLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alte Protokolle löschen", new Color(220, 53, 69));
-        deleteOldLogsButton.addActionListener(e -> deleteOldLogs());
-        otherSection.add(Box.createVerticalStrut(10));
-        otherSection.add(deleteOldLogsButton);
-
-
-        systemPanel.add(otherSection);
-
-
-        // Add system panel to tabbed pane
-        tabbedPane.addTab(UnicodeSymbols.WRENCH + " System", systemScroll);
-
-        // === CATEGORY 2: Verbindung ===
-        JPanel connectionPanel = createCategoryPanel();
-        JScrollPane connectionScroll = createScrollablePanel(connectionPanel);
-
-        // Server-Einstellungen
-        JPanel serverSection = createSectionPanel(UnicodeSymbols.GLOBE + " Server-Verbindung",
-                "URL des QR-Code Scan-Servers");
-        addSectionResetButton(serverSection, this::resetServerDefaults);
-
-        JLabel serverHint = createInfoLabel(
-                "Tipp: Nutzen Sie https (wenn möglich). Mit den Aktionen können Sie die URL testen oder kopieren."
-        );
-        serverHint.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        // Actions row
-        JPanel serverActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        serverActions.setOpaque(false);
-        serverActions.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JButton openUrlButton = createStyledButton(UnicodeSymbols.GLOBE + " Öffnen", new Color(52, 152, 219));
-        openUrlButton.setToolTipText("Öffnet die URL im Browser");
-
-        JButton copyUrlButton = createStyledButton(UnicodeSymbols.CLIPBOARD + " Kopieren", new Color(155, 89, 182));
-        copyUrlButton.setToolTipText("Kopiert die URL in die Zwischenablage");
-
-        JButton testUrlButton = createStyledButton(UnicodeSymbols.BULB + " Prüfen", new Color(46, 204, 113));
-        testUrlButton.setToolTipText("Prüft, ob die URL syntaktisch gültig ist");
-
-        serverActions.add(openUrlButton);
-        serverActions.add(copyUrlButton);
-        serverActions.add(testUrlButton);
-
-        // URL field
-        JPanel serverUrlPanel = new JPanel(new BorderLayout(0, 10));
-        serverUrlPanel.setOpaque(false);
-        serverUrlPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
-        serverUrlPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel serverUrlLabel = new JLabel("Server URL:");
-        serverUrlLabel.setFont(getFontByName(Font.BOLD, 13));
-        serverUrlLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
-        serverUrlField = new JTextField(DEFAULT_SERVER_URL);
-        styleInputField(serverUrlField);
-        serverUrlField.setToolTipText("z.B. https://example.com/scans.json");
-        serverUrlField.setPreferredSize(new Dimension(600, 40));
-        serverUrlField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-
-        // Small validation badge
-        JLabel urlStatusLabel = new JLabel(" ");
-        urlStatusLabel.setFont(getFontByName(Font.PLAIN, 12));
-        urlStatusLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        urlStatusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        Runnable validateUrl = () -> {
-            String raw = serverUrlField.getText() == null ? "" : serverUrlField.getText().trim();
-            if (raw.isEmpty()) {
-                urlStatusLabel.setText("Bitte eine URL eingeben.");
+            boolean validName = !name.isEmpty();
+            addCategoryButton.setEnabled(validName && validRange);
+        }
+
+        @Override
+        public void insertUpdate(DocumentEvent e) {
+            update();
+        }
+
+        @Override
+        public void removeUpdate(DocumentEvent e) {
+            update();
+        }
+
+        @Override
+        public void changedUpdate(DocumentEvent e) {
+            update();
+        }
+    });
+
+    // Enter in name field triggers add
+    categoryNameField.addActionListener(e -> {
+        if (addCategoryButton.isEnabled()) {
+            doAddCategory.run();
+        }
+    });
+
+    // Layout panel
+    JPanel addCategoryPanel = new JPanel(new GridBagLayout());
+    addCategoryPanel.setOpaque(false);
+    addCategoryPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(0, 0, 8, 12);
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.weighty = 0;
+
+    // Row 0: Title + hint (full width)
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    gbc.gridwidth = 4;
+    gbc.weightx = 1.0;
+    gbc.insets = new Insets(0, 0, 4, 0);
+    addCategoryPanel.add(categoryFormTitle, gbc);
+
+    gbc.gridy = 1;
+    gbc.insets = new Insets(0, 0, 12, 0);
+    addCategoryPanel.add(categoryFormHint, gbc);
+
+    // Row 2: Labels
+    gbc.gridwidth = 1;
+    gbc.gridy = 2;
+    gbc.insets = new Insets(0, 0, 6, 12);
+
+    JLabel categoryNameLabel = new JLabel("Kategoriename");
+    categoryNameLabel.setFont(getFontByName(Font.BOLD, 13));
+    categoryNameLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+    JLabel fromLabel = new JLabel("Von");
+    fromLabel.setFont(getFontByName(Font.PLAIN, 11));
+    fromLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+    JLabel toLabel = new JLabel("Bis");
+    toLabel.setFont(getFontByName(Font.PLAIN, 11));
+    toLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+    gbc.gridx = 0;
+    gbc.weightx = 1.0;
+    addCategoryPanel.add(categoryNameLabel, gbc);
+
+    gbc.gridx = 1;
+    gbc.weightx = 0.0;
+    addCategoryPanel.add(fromLabel, gbc);
+
+    gbc.gridx = 2;
+    addCategoryPanel.add(toLabel, gbc);
+
+    // Row 3: Fields + button
+    gbc.gridy = 3;
+    gbc.insets = new Insets(0, 0, 0, 12);
+
+    gbc.gridx = 0;
+    gbc.weightx = 1.0;
+    addCategoryPanel.add(categoryNameField, gbc);
+
+    gbc.gridx = 1;
+    gbc.weightx = 0.0;
+    fromRange.setPreferredSize(new Dimension(120, 36));
+    addCategoryPanel.add(fromRange, gbc);
+
+    gbc.gridx = 2;
+    toRange.setPreferredSize(new Dimension(120, 36));
+    addCategoryPanel.add(toRange, gbc);
+
+    gbc.gridx = 3;
+    gbc.insets = new Insets(0, 0, 0, 0);
+    addCategoryButton.setPreferredSize(new Dimension(160, 36));
+    addCategoryPanel.add(addCategoryButton, gbc);
+
+    categoryPanel.add(addCategoryPanel);
+
+    // finally add to system panel
+    systemPanel.add(categoryPanel);
+
+    // === CATEGORY 1b: Darstellung ===
+    // One-page layout (no right-side sticky panel). Everything scrolls together.
+    JPanel appearancePanel = createCategoryPanel();
+    JScrollPane appearanceScroll = createScrollablePanel(appearancePanel);
+    JLabel appearanceIntro = new JLabel(
+            "<html><div style='padding:2px 0;'><b>Darstellung</b><br/>" +
+                    "<span style='font-size:11px;'>Änderungen werden nach dem Speichern übernommen. " +
+                    "Die Vorschau aktualisiert sich automatisch.</span></div></html>"
+    );
+    appearanceIntro.setFont(getFontByName(Font.PLAIN, 12));
+    appearanceIntro.setForeground(ThemeManager.getTextSecondaryColor());
+    appearanceIntro.setAlignmentX(Component.LEFT_ALIGNMENT);
+    // ---- Schriftart --------------------------------------------------------
+    JPanel fontSettingsPanel = createSectionPanel(UnicodeSymbols.ABC + " Schriftart",
+            "Schriftart für die Anwendung festlegen");
+    addSectionResetButton(fontSettingsPanel, this::resetFontDefaults);
+    fontSettingsPanel.add(Box.createVerticalStrut(12));
+    fontSettingsPanel.add(appearanceIntro);
+    fontSettingsPanel.add(Box.createVerticalStrut(12));
+    JLabel fontInfoLabel = new JLabel(
+            "<html><div><span style='font-size: 11px;'>" +
+                    "Wählen Sie eine Schriftart. Die Vorschau unten zeigt das Ergebnis.</span></div></html>"
+    );
+    fontInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
+    fontInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
+    fontInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    fontSettingsPanel.add(fontInfoLabel);
+    fontSettingsPanel.add(Box.createVerticalStrut(10));
+    fontComboBox = new JComboBox<>();
+    getAllFonts().forEach(fontComboBox::addItem);
+    styleComboBox(fontComboBox);
+    fontComboBox.addActionListener(e -> updatePreview());
+    JPanel fontSelectionPanel = createLabeledComboBoxPanel("Schriftart auswählen:", fontComboBox);
+    fontSettingsPanel.add(fontSelectionPanel);
+    fontSample.setFont(getFontByName(Font.PLAIN, 16));
+    fontSample.setForeground(ThemeManager.getTextPrimaryColor());
+    fontSample.setAlignmentX(Component.LEFT_ALIGNMENT);
+    fontSettingsPanel.add(Box.createVerticalStrut(12));
+    fontSettingsPanel.add(fontSample);
+    // ---- Tabellen & Tabs ---------------------------------------------------
+    JPanel tableSettingsPanel = createSectionPanel(UnicodeSymbols.CLIPBOARD + " Tabellen & Tabs",
+            "Schriftgröße für Tabellen und Tabs anpassen");
+    addSectionResetButton(tableSettingsPanel, this::resetTableDefaults);
+    fontSizeTableSpinner = new JSpinner(new SpinnerNumberModel(16, 10, 44, 1));
+    JPanel fontSizePanel = createLabeledSpinnerPanel("Tabellen-Schriftgröße:", fontSizeTableSpinner, "px", 4);
+    tableSettingsPanel.add(Box.createVerticalStrut(12));
+    tableSettingsPanel.add(fontSizePanel);
+    tableSettingsPanel.add(Box.createVerticalStrut(8));
+    configureSlider(tableFontSlider, fontSizeTableSpinner, tableFontSample);
+    tableSettingsPanel.add(tableFontSlider);
+    tableSettingsPanel.add(Box.createVerticalStrut(6));
+    tableSettingsPanel.add(tableFontSample);
+    fontSizeTabSpinner = new JSpinner(new SpinnerNumberModel(15, 10, 40, 1));
+    JPanel fontTabSizePanel = createLabeledSpinnerPanel("Tabs-Schriftgröße:", fontSizeTabSpinner, "px", 4);
+    tableSettingsPanel.add(Box.createVerticalStrut(14));
+    tableSettingsPanel.add(fontTabSizePanel);
+    tableSettingsPanel.add(Box.createVerticalStrut(8));
+    configureSlider(tabFontSlider, fontSizeTabSpinner, tabFontSample);
+    tableSettingsPanel.add(tabFontSlider);
+    tableSettingsPanel.add(Box.createVerticalStrut(6));
+    tableSettingsPanel.add(tabFontSample);
+    // Keep preview in sync even if user types into spinners
+    fontSizeTableSpinner.addChangeListener(e -> updatePreview());
+    fontSizeTabSpinner.addChangeListener(e -> updatePreview());
+    // ---- Design / Theme ----------------------------------------------------
+    JPanel themeSection = createSectionPanel(UnicodeSymbols.COLOR_PALETTE + " Design & Darstellung",
+            "Passen Sie das Erscheinungsbild der Anwendung an");
+    addSectionResetButton(themeSection, this::resetThemeDefaults);
+    darkModeCheckbox = new JCheckBox("Dark Mode aktivieren");
+    styleCheckbox(darkModeCheckbox);
+    darkModeCheckbox.setSelected(ThemeManager.isDarkMode());
+    themeSection.add(Box.createVerticalStrut(16));
+    themeSection.add(darkModeCheckbox);
+    themeSection.add(Box.createVerticalStrut(12));
+    String[] themes = {"Light", "Dark"};
+    themeComboBox = new JComboBox<>(themes);
+    styleComboBox(themeComboBox);
+    themeComboBox.setSelectedItem(ThemeManager.isDarkMode() ? "Dark" : "Light");
+    JPanel themeSelectionPanel = createLabeledComboBoxPanel("Design-Schema:", themeComboBox);
+    darkModeCheckbox.addActionListener(e -> {
+        boolean isDark = darkModeCheckbox.isSelected();
+        themeComboBox.setEnabled(!isDark);
+        themeComboBox.setToolTipText(isDark
+                ? "Deaktiviert, weil Dark Mode aktiviert ist"
+                : "Wählen Sie ein Design-Schema");
+        if (isDark) {
+            themeComboBox.setSelectedItem("Dark");
+        }
+        updatePreview();
+    });
+    themeComboBox.addActionListener(e -> {
+        String selected = (String) themeComboBox.getSelectedItem();
+        darkModeCheckbox.setSelected("Dark".equals(selected));
+        updatePreview();
+    });
+    themeSection.add(themeSelectionPanel);
+    themeSection.add(Box.createVerticalStrut(12));
+    JLabel themeInfoLabel = new JLabel("<html><div style='padding: 6px 0;'>" +
+            "<i>Hinweis: Nach dem Speichern werden alle Fenster mit dem neuen Design aktualisiert.<br/>" +
+            "Der Dark Mode schont die Augen bei Arbeiten in dunkler Umgebung.</i>" +
+            "</div></html>");
+    themeInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
+    themeInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
+    themeInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    themeSection.add(themeInfoLabel);
+    // ---- Farben ------------------------------------------------------------
+    JPanel colorSection = createSectionPanel(UnicodeSymbols.COLOR_PALETTE + " Farbthemen",
+            "Akzent-, Header- und Buttonfarbe anpassen");
+    addSectionResetButton(colorSection, this::resetColorDefaults);
+    colorSection.add(Box.createVerticalStrut(12));
+    colorSection.add(createColorRow("Akzentfarbe:", "theme_accent_color"));
+    colorSection.add(Box.createVerticalStrut(10));
+    colorSection.add(createColorRow("Headerfarbe:", "theme_header_color"));
+    colorSection.add(Box.createVerticalStrut(10));
+    colorSection.add(createColorRow("Buttonfarbe:", "theme_button_color"));
+    // ---- Vorschau ----------------------------------------------------------
+    JPanel previewSection = createSectionPanel(UnicodeSymbols.BULB + " Live Vorschau",
+            "Vorschau auf Schrift und Farben basierend auf Ihren Einstellungen");
+    previewSection.add(Box.createVerticalStrut(12));
+    previewSection.add(createPreviewPanel());
+    // ---- Assemble ----------------------------------------------------------
+    appearancePanel.add(fontSettingsPanel);
+    appearancePanel.add(Box.createVerticalStrut(22));
+    appearancePanel.add(tableSettingsPanel);
+    appearancePanel.add(Box.createVerticalStrut(22));
+    appearancePanel.add(themeSection);
+    appearancePanel.add(Box.createVerticalStrut(22));
+    appearancePanel.add(colorSection);
+    appearancePanel.add(Box.createVerticalStrut(22));
+    appearancePanel.add(previewSection);
+    appearancePanel.add(Box.createVerticalGlue());
+    // Add appearance panel to tabbed pane
+    tabbedPane.addTab(UnicodeSymbols.COLOR_PALETTE + " Darstellung", appearanceScroll);
+    systemPanel.add(Box.createVerticalGlue());
+    systemPanel.add(Box.createVerticalStrut(25));
+    JPanel otherSection = createSectionPanel("Sonstiges", "Allgemeine Einstellungen");
+    otherSection.add(Box.createVerticalStrut(18));
+    JLabel openSettingsLabel = createInfoLabel("Öffnet den Ordner, in dem die Einstellungsdateien gespeichert sind.");
+    otherSection.add(openSettingsLabel);
+    otherSection.add(Box.createVerticalStrut(10));
+    JButton openSettingsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Einstellungen-Ordner öffnen", new Color(52, 152, 219));
+    openSettingsFolderButton.addActionListener(e -> openSettingsFolder());
+    otherSection.add(openSettingsFolderButton);
+    JLabel logsLabel = createInfoLabel("Öffnet den Ordner, in dem die Anwendungsprotokolle gespeichert sind.");
+    otherSection.add(Box.createVerticalStrut(15));
+    otherSection.add(logsLabel);
+    otherSection.add(Box.createVerticalStrut(10));
+    JButton openLogsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Protokolle-Ordner öffnen", new Color(52, 152, 219));
+    openLogsFolderButton.addActionListener(e -> openLogsFolder());
+    otherSection.add(openLogsFolderButton);
+    otherSection.add(Box.createVerticalStrut(15));
+    JLabel logsDelete = createInfoLabel("Löscht alle Anwendungsprotokolle aus dem Protokolle-Ordner. So wie in der Datenbank.");
+    otherSection.add(Box.createVerticalStrut(15));
+    otherSection.add(logsDelete);
+    JButton deleteLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alle Protokolle löschen", new Color(220, 53, 69));
+    deleteLogsButton.addActionListener(e -> deleteAllLogs());
+    otherSection.add(Box.createVerticalStrut(10));
+    otherSection.add(deleteLogsButton);
+    otherSection.add(Box.createVerticalStrut(15));
+    JLabel logsDeleteTime = createInfoLabel("Löscht alle Anwendungsprotokolle, die älter als 30 Tage sind, aus dem Protokolle-Ordner. So wie in der Datenbank.");
+    otherSection.add(Box.createVerticalStrut(15));
+    otherSection.add(logsDeleteTime);
+    JCheckBox deleteOldLogsCheckBox = new JCheckBox("Alte Protokolle (älter als 30 Tage) löschen");
+    styleCheckbox(deleteOldLogsCheckBox);
+    otherSection.add(Box.createVerticalStrut(10));
+    otherSection.add(deleteOldLogsCheckBox);
+    JButton deleteOldLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alte Protokolle löschen", new Color(220, 53, 69));
+    deleteOldLogsButton.addActionListener(e -> deleteOldLogs());
+    otherSection.add(Box.createVerticalStrut(10));
+    otherSection.add(deleteOldLogsButton);
+    systemPanel.add(otherSection);
+    // Add system panel to tabbed pane
+    tabbedPane.addTab(UnicodeSymbols.WRENCH + " System", systemScroll);
+    // === CATEGORY 2: Verbindung ===
+    JPanel connectionPanel = createCategoryPanel();
+    JScrollPane connectionScroll = createScrollablePanel(connectionPanel);
+    // Server-Einstellungen
+    JPanel serverSection = createSectionPanel(UnicodeSymbols.GLOBE + " Server-Verbindung",
+            "URL des QR-Code Scan-Servers");
+    addSectionResetButton(serverSection, this::resetServerDefaults);
+    JLabel serverHint = createInfoLabel(
+            "Tipp: Nutzen Sie https (wenn möglich). Mit den Aktionen können Sie die URL testen oder kopieren."
+    );
+    serverHint.setAlignmentX(Component.LEFT_ALIGNMENT);
+    // Actions row
+    JPanel serverActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+    serverActions.setOpaque(false);
+    serverActions.setAlignmentX(Component.LEFT_ALIGNMENT);
+    JButton openUrlButton = createStyledButton(UnicodeSymbols.GLOBE + " Öffnen", new Color(52, 152, 219));
+    openUrlButton.setToolTipText("Öffnet die URL im Browser");
+    JButton copyUrlButton = createStyledButton(UnicodeSymbols.CLIPBOARD + " Kopieren", new Color(155, 89, 182));
+    copyUrlButton.setToolTipText("Kopiert die URL in die Zwischenablage");
+    JButton testUrlButton = createStyledButton(UnicodeSymbols.BULB + " Prüfen", new Color(46, 204, 113));
+    testUrlButton.setToolTipText("Prüft, ob die URL syntaktisch gültig ist");
+    serverActions.add(openUrlButton);
+    serverActions.add(copyUrlButton);
+    serverActions.add(testUrlButton);
+    // URL field
+    JPanel serverUrlPanel = new JPanel(new BorderLayout(0, 10));
+    serverUrlPanel.setOpaque(false);
+    serverUrlPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+    serverUrlPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    JLabel serverUrlLabel = new JLabel("Server URL:");
+    serverUrlLabel.setFont(getFontByName(Font.BOLD, 13));
+    serverUrlLabel.setForeground(ThemeManager.getTextPrimaryColor());
+    serverUrlField = new JTextField(DEFAULT_SERVER_URL);
+    styleInputField(serverUrlField);
+    serverUrlField.setToolTipText("z.B. https://example.com/scans.json");
+    serverUrlField.setPreferredSize(new Dimension(600, 40));
+    serverUrlField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+    // Small validation badge
+    JLabel urlStatusLabel = new JLabel(" ");
+    urlStatusLabel.setFont(getFontByName(Font.PLAIN, 12));
+    urlStatusLabel.setForeground(ThemeManager.getTextSecondaryColor());
+    urlStatusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    Runnable validateUrl = () -> {
+        String raw = serverUrlField.getText() == null ? "" : serverUrlField.getText().trim();
+        if (raw.isEmpty()) {
+            urlStatusLabel.setText("Bitte eine URL eingeben.");
+            urlStatusLabel.setForeground(new Color(231, 76, 60));
+            return;
+        }
+        try {
+            URI uri = new URI(raw);
+            String scheme = uri.getScheme();
+            if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
+                urlStatusLabel.setText("Ungültiges Schema (nur http/https).");
                 urlStatusLabel.setForeground(new Color(231, 76, 60));
                 return;
             }
-            try {
-                URI uri = new URI(raw);
-                String scheme = uri.getScheme();
-                if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
-                    urlStatusLabel.setText("Ungültiges Schema (nur http/https).");
-                    urlStatusLabel.setForeground(new Color(231, 76, 60));
-                    return;
-                }
-                if (uri.getHost() == null || uri.getHost().trim().isEmpty()) {
-                    urlStatusLabel.setText("Ungültige URL (Host fehlt).");
-                    urlStatusLabel.setForeground(new Color(231, 76, 60));
-                    return;
-                }
-                urlStatusLabel.setText("URL sieht gültig aus.");
-                urlStatusLabel.setForeground(new Color(46, 204, 113));
-            } catch (Exception ex) {
-                urlStatusLabel.setText("Ungültige URL (Syntaxfehler).");
+            if (uri.getHost() == null || uri.getHost().trim().isEmpty()) {
+                urlStatusLabel.setText("Ungültige URL (Host fehlt).");
                 urlStatusLabel.setForeground(new Color(231, 76, 60));
+                return;
             }
-        };
-
-        // Wire actions
-        openUrlButton.addActionListener(e -> {
-            validateUrl.run();
+            urlStatusLabel.setText("URL sieht gültig aus.");
+            urlStatusLabel.setForeground(new Color(46, 204, 113));
+        } catch (Exception ex) {
+            urlStatusLabel.setText("Ungültige URL (Syntaxfehler).");
+            urlStatusLabel.setForeground(new Color(231, 76, 60));
+        }
+    };
+    // Wire actions
+    openUrlButton.addActionListener(e -> {
+        validateUrl.run();
+        try {
+            String raw = serverUrlField.getText() == null ? "" : serverUrlField.getText().trim();
+            if (!raw.isEmpty()) {
+                Desktop.getDesktop().browse(new URI(raw));
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Fehler beim Öffnen der URL:\n" + ex.getMessage(),
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+        }
+    });
+    copyUrlButton.addActionListener(e -> {
+        String raw = serverUrlField.getText() == null ? "" : serverUrlField.getText().trim();
+        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(raw), null);
+        JOptionPane.showMessageDialog(this,
+                "URL wurde kopiert.",
+                "Zwischenablage",
+                JOptionPane.INFORMATION_MESSAGE,
+                Main.iconSmall);
+    });
+    testUrlButton.addActionListener(e -> {
+        validateUrl.run();
+        // Keep it lightweight: only syntax check here.
+        // A real network ping would be added in a dedicated background worker.
+    });
+    // Live validate while typing
+    serverUrlField.getDocument().addDocumentListener(new DocumentListener() {
+        private void u() { validateUrl.run(); }
+        @Override public void insertUpdate(DocumentEvent e) { u(); }
+        @Override public void removeUpdate(DocumentEvent e) { u(); }
+        @Override public void changedUpdate(DocumentEvent e) { u(); }
+    });
+    serverUrlPanel.add(serverUrlLabel, BorderLayout.NORTH);
+    serverUrlPanel.add(serverUrlField, BorderLayout.CENTER);
+    serverSection.add(Box.createVerticalStrut(14));
+    serverSection.add(serverHint);
+    serverSection.add(Box.createVerticalStrut(10));
+    serverSection.add(serverActions);
+    serverSection.add(Box.createVerticalStrut(14));
+    serverSection.add(serverUrlPanel);
+    serverSection.add(Box.createVerticalStrut(8));
+    serverSection.add(urlStatusLabel);
+    // initial status
+    validateUrl.run();
+    connectionPanel.add(serverSection);
+    connectionPanel.add(Box.createVerticalGlue());
+    // Add connection panel to tabbed pane
+    tabbedPane.addTab(UnicodeSymbols.GLOBE + " Verbindung", connectionScroll);
+    // === CATEGORY 3: Datenbank ===
+    JPanel databasePanel = createCategoryPanel();
+    JScrollPane databaseScroll = createScrollablePanel(databasePanel);
+    // Datenbank-Bereinigung Section
+    JPanel databaseSection = createSectionPanel(UnicodeSymbols.FLOPPY + " Datenbank-Verwaltung",
+            "Datenbank bereinigen und Tabellen verwalten");
+    JLabel databaseClearLabel = getDatabaseClearLabel();
+    JPanel databaseButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    databaseButtonPanel.setOpaque(false);
+    databaseButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    databaseButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+    JButton clearDatabaseButton = createStyledButton(UnicodeSymbols.TRASH + " Datenbank Bereinigen", new Color(220, 53, 69));
+    clearDatabaseButton.addActionListener(e -> clearDatabase());
+    databaseButtonPanel.add(clearDatabaseButton);
+    databaseSection.add(Box.createVerticalStrut(18));
+    databaseSection.add(databaseClearLabel);
+    databaseSection.add(Box.createVerticalStrut(15));
+    databaseSection.add(databaseButtonPanel);
+    JLabel selectedDatabaseClear = getSelectedDatabaseClear();
+    databaseSection.add(Box.createVerticalStrut(10));
+    databaseSection.add(selectedDatabaseClear);
+    List<String> tableNames = new ArrayList<>(DatabaseManager.ALLOWED_TABLES);
+    JComboBox<String> tableComboBox = new JComboBox<>(tableNames.toArray(new String[0]));
+    styleComboBox(tableComboBox);
+    JPanel tableSelectionPanel = createLabeledComboBoxPanel("Tabelle auswählen:", tableComboBox);
+    databaseSection.add(Box.createVerticalStrut(15));
+    databaseSection.add(tableSelectionPanel);
+    JButton deleteSelectedTableButton = createStyledButton(UnicodeSymbols.TRASH + " Ausgewählte Tabelle Löschen", new Color(230, 126, 34));
+    deleteSelectedTableButton.addActionListener(e -> {
+        String selectedTable = (String) tableComboBox.getSelectedItem();
+        if (selectedTable == null || selectedTable.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Bitte wählen Sie eine Tabelle aus.",
+                    "Keine Tabelle ausgewählt",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        int confirm = JOptionPane.showConfirmDialog(this,
+                String.format("<html><b>WARNUNG: Tabelle '%s' wirklich löschen?</b><br/><br/>" +
+                        "Diese Aktion kann <b>NICHT</b> rückgängig gemacht werden!<br/>" +
+                        "Alle Daten in der Tabelle '%s' werden permanent gelöscht.<br/><br/>" +
+                        "Möchten Sie fortfahren?</html>", selectedTable, selectedTable),
+                "Tabelle löschen bestätigen",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (confirm == JOptionPane.YES_OPTION) {
+            // Second confirmation for safety
+            String userInput = JOptionPane.showInputDialog(this,
+                    String.format("<html>Bitte geben Sie den Tabellennamen '<b>%s</b>' ein,<br/>" +
+                            "um die Löschung zu bestätigen:</html>", selectedTable),
+                    "Löschung bestätigen",
+                    JOptionPane.WARNING_MESSAGE);
+            if (userInput != null && userInput.trim().equals(selectedTable)) {
+                deleteTable(selectedTable);
+            } else if (userInput != null) {
+                JOptionPane.showMessageDialog(this,
+                        "Der eingegebene Tabellenname stimmt nicht überein.\nLöschung abgebrochen.",
+                        "Abgebrochen",
+                        JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    });
+    JPanel deleteTableButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    deleteTableButtonPanel.setOpaque(false);
+    deleteTableButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    deleteTableButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+    deleteTableButtonPanel.add(deleteSelectedTableButton);
+    databaseSection.add(Box.createVerticalStrut(15));
+    databaseSection.add(deleteTableButtonPanel);
+    databasePanel.add(databaseSection);
+    databasePanel.add(Box.createVerticalGlue());
+    // Add database panel to tabbed pane
+    tabbedPane.addTab(UnicodeSymbols.FLOPPY + " Datenbank", databaseScroll);
+    // === CATEGORY 4: Import & Export ===
+    JPanel importExportPanel = createCategoryPanel();
+    JScrollPane importExportScroll = createScrollablePanel(importExportPanel);
+    JPanel importExportSection = createSectionPanel(UnicodeSymbols.ARROW_UP + UnicodeSymbols.ARROW_DOWN + "️ Import & Export",
+            "Datenimport und -export Funktionen");
+    importExportSection.add(Box.createVerticalStrut(15));
+    importExportSection.add(createStyledLabel("Import:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+    importExportSection.add(Box.createVerticalStrut(5));
+    importExportSection.add(createInfoLabel("<html><div style='width:650px;'>" +
+            "Importieren Sie Artikel, Lieferanten oder andere Daten aus CSV-Dateien.<br/>" +
+            "Stellen Sie sicher, dass die CSV-Dateien das richtige Format haben.</div></html>"));
+    importExportSection.add(Box.createVerticalStrut(10));
+    JButton importButton = createStyledButton(UnicodeSymbols.ARROW_UP + " Datenbank Importieren", new Color(39, 174, 96));
+    importButton.addActionListener(e -> importFromCsv());
+    importExportSection.add(importButton);
+    importExportSection.add(Box.createVerticalStrut(20));
+    importExportSection.add(Box.createVerticalStrut(15));
+    importExportSection.add(createStyledLabel("Export:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+    importExportSection.add(Box.createVerticalStrut(5));
+    importExportSection.add(createInfoLabel("<html><div style='width:650px;'>" +
+            "Exportieren Sie Ihre Datenbankinhalte in CSV-Dateien zur Sicherung oder Weiterverarbeitung.</div></html>"));
+    importExportSection.add(Box.createVerticalStrut(10));
+    JButton exportButton = createStyledButton(UnicodeSymbols.ARROW_DOWN + " Datenbank Exportieren", new Color(52, 152, 219));
+    exportButton.addActionListener(e -> {
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "<html><b>Datenbank nach CSV exportieren?</b><br/><br/>" +
+                        "Dies erstellt CSV-Dateien für:<br/>" +
+                        "- Artikel (articles_export.csv)<br/>" +
+                        "- Lieferanten (vendors_export.csv)<br/>" +
+                        "- Kunden (clients_export.csv)<br/>" +
+                        "- Bestellungen (orders_export.csv)<br/><br/>" +
+                        "Speicherort: " + Main.getAppDataDir().getAbsolutePath() + "</html>",
+                "Exportieren bestätigen",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                Main.iconSmall);
+        if (confirm == JOptionPane.YES_OPTION) {
             try {
-                String raw = serverUrlField.getText() == null ? "" : serverUrlField.getText().trim();
-                if (!raw.isEmpty()) {
-                    Desktop.getDesktop().browse(new URI(raw));
-                }
+                exportToCsv();
+                JOptionPane.showMessageDialog(this,
+                        "<html><b>OK Export erfolgreich!</b><br/><br/>" +
+                                "Alle Tabellen wurden erfolgreich exportiert.<br/>" +
+                                "Speicherort: <br/>" +
+                                Main.getAppDataDir().getAbsolutePath() + "</html>",
+                        "Export erfolgreich",
+                        JOptionPane.INFORMATION_MESSAGE,
+                        Main.iconSmall);
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this,
-                        "Fehler beim Öffnen der URL:\n" + ex.getMessage(),
+                        "<html><b>X Fehler beim Export!</b><br/><br/>" +
+                                ex.getMessage() + "</html>",
                         "Fehler",
                         JOptionPane.ERROR_MESSAGE,
                         Main.iconSmall);
             }
-        });
-
-        copyUrlButton.addActionListener(e -> {
-            String raw = serverUrlField.getText() == null ? "" : serverUrlField.getText().trim();
-            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(raw), null);
-            JOptionPane.showMessageDialog(this,
-                    "URL wurde kopiert.",
-                    "Zwischenablage",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
-        });
-
-        testUrlButton.addActionListener(e -> {
-            validateUrl.run();
-            // Keep it lightweight: only syntax check here.
-            // A real network ping would be added in a dedicated background worker.
-        });
-
-        // Live validate while typing
-        serverUrlField.getDocument().addDocumentListener(new DocumentListener() {
-            private void u() { validateUrl.run(); }
-            @Override public void insertUpdate(DocumentEvent e) { u(); }
-            @Override public void removeUpdate(DocumentEvent e) { u(); }
-            @Override public void changedUpdate(DocumentEvent e) { u(); }
-        });
-
-        serverUrlPanel.add(serverUrlLabel, BorderLayout.NORTH);
-        serverUrlPanel.add(serverUrlField, BorderLayout.CENTER);
-
-        serverSection.add(Box.createVerticalStrut(14));
-        serverSection.add(serverHint);
-        serverSection.add(Box.createVerticalStrut(10));
-        serverSection.add(serverActions);
-        serverSection.add(Box.createVerticalStrut(14));
-        serverSection.add(serverUrlPanel);
-        serverSection.add(Box.createVerticalStrut(8));
-        serverSection.add(urlStatusLabel);
-
-        // initial status
-        validateUrl.run();
-
-        connectionPanel.add(serverSection);
-        connectionPanel.add(Box.createVerticalGlue());
-
-        // Add connection panel to tabbed pane
-        tabbedPane.addTab(UnicodeSymbols.GLOBE + " Verbindung", connectionScroll);
-
-        // === CATEGORY 3: Datenbank ===
-        JPanel databasePanel = createCategoryPanel();
-        JScrollPane databaseScroll = createScrollablePanel(databasePanel);
-        // Datenbank-Bereinigung Section
-        JPanel databaseSection = createSectionPanel(UnicodeSymbols.FLOPPY + " Datenbank-Verwaltung",
-                "Datenbank bereinigen und Tabellen verwalten");
-        JLabel databaseClearLabel = getDatabaseClearLabel();
-
-        JPanel databaseButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        databaseButtonPanel.setOpaque(false);
-        databaseButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        databaseButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-
-        JButton clearDatabaseButton = createStyledButton(UnicodeSymbols.TRASH + " Datenbank Bereinigen", new Color(220, 53, 69));
-        clearDatabaseButton.addActionListener(e -> clearDatabase());
-
-        databaseButtonPanel.add(clearDatabaseButton);
-
-        databaseSection.add(Box.createVerticalStrut(18));
-        databaseSection.add(databaseClearLabel);
-        databaseSection.add(Box.createVerticalStrut(15));
-        databaseSection.add(databaseButtonPanel);
-
-        JLabel selectedDatabaseClear = getSelectedDatabaseClear();
-        databaseSection.add(Box.createVerticalStrut(10));
-        databaseSection.add(selectedDatabaseClear);
-
-        List<String> tableNames = new ArrayList<>(DatabaseManager.ALLOWED_TABLES);
-        JComboBox<String> tableComboBox = new JComboBox<>(tableNames.toArray(new String[0]));
-        styleComboBox(tableComboBox);
-
-        JPanel tableSelectionPanel = createLabeledComboBoxPanel("Tabelle auswählen:", tableComboBox);
-
-        databaseSection.add(Box.createVerticalStrut(15));
-        databaseSection.add(tableSelectionPanel);
-
-        JButton deleteSelectedTableButton = createStyledButton(UnicodeSymbols.TRASH + " Ausgewählte Tabelle Löschen", new Color(230, 126, 34));
-        deleteSelectedTableButton.addActionListener(e -> {
-            String selectedTable = (String) tableComboBox.getSelectedItem();
-            if (selectedTable == null || selectedTable.trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "Bitte wählen Sie eine Tabelle aus.",
-                        "Keine Tabelle ausgewählt",
-                        JOptionPane.WARNING_MESSAGE);
-                return;
+        }
+    });
+    importExportSection.add(exportButton);
+    importExportPanel.add(importExportSection);
+    importExportPanel.add(Box.createVerticalStrut(25));
+    JPanel settingsProfileSection = createSectionPanel(UnicodeSymbols.FLOPPY + " Einstellungen Profil",
+            "Importieren oder exportieren Sie Ihre Einstellungen als Profil-Datei");
+    settingsProfileSection.add(Box.createVerticalStrut(15));
+    JButton exportSettingsButton = createStyledButton(UnicodeSymbols.DOWNLOAD + " Einstellungen exportieren", new Color(52, 152, 219));
+    exportSettingsButton.addActionListener(e -> exportSettingsProfile());
+    JButton importSettingsButton = createStyledButton(UnicodeSymbols.UPLOAD + " Einstellungen importieren", new Color(39, 174, 96));
+    importSettingsButton.addActionListener(e -> importSettingsProfile());
+    settingsProfileSection.add(exportSettingsButton);
+    settingsProfileSection.add(Box.createVerticalStrut(10));
+    settingsProfileSection.add(importSettingsButton);
+    importExportPanel.add(settingsProfileSection);
+    importExportPanel.add(Box.createVerticalGlue());
+    // Add import/export panel to tabbed pane
+    tabbedPane.addTab(UnicodeSymbols.DOWNLOAD + " Import/Export", importExportScroll);
+    // === CATEGORY 5: About ===
+    JPanel aboutPanel = createCategoryPanel();
+    JScrollPane aboutScroll = createScrollablePanel(aboutPanel);
+    JPanel aboutSection = createSectionPanel(UnicodeSymbols.INFO + " Über VEBO Lagersystem",
+            "Informationen über die Anwendung");
+    // Application Info
+    JPanel appInfoPanel = new JPanel();
+    appInfoPanel.setLayout(new BoxLayout(appInfoPanel, BoxLayout.Y_AXIS));
+    appInfoPanel.setOpaque(false);
+    appInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    appInfoPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
+    // Logo/Title
+    JLabel appNameLabel = new JLabel("VEBO Lagersystem");
+    appNameLabel.setFont(getFontByName(Font.BOLD, 28));
+    appNameLabel.setForeground(ThemeManager.getTitleTextColor());
+    appNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    appNameLabel.addMouseListener(new MouseAdapter() {
+        @Override
+        public void mouseClicked(MouseEvent e) {
+            try {
+                Desktop.getDesktop().browse(new URI("https://vebo.ch"));
+            } catch (Exception ex) {
+                logger.error("Fehler beim Öffnen der VEBO-Website: {}", ex.getMessage());
             }
-
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    String.format("<html><b>WARNUNG: Tabelle '%s' wirklich löschen?</b><br/><br/>" +
-                            "Diese Aktion kann <b>NICHT</b> rückgängig gemacht werden!<br/>" +
-                            "Alle Daten in der Tabelle '%s' werden permanent gelöscht.<br/><br/>" +
-                            "Möchten Sie fortfahren?</html>", selectedTable, selectedTable),
-                    "Tabelle löschen bestätigen",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE);
-
-            if (confirm == JOptionPane.YES_OPTION) {
-                // Second confirmation for safety
-                String userInput = JOptionPane.showInputDialog(this,
-                        String.format("<html>Bitte geben Sie den Tabellennamen '<b>%s</b>' ein,<br/>" +
-                                "um die Löschung zu bestätigen:</html>", selectedTable),
-                        "Löschung bestätigen",
-                        JOptionPane.WARNING_MESSAGE);
-
-                if (userInput != null && userInput.trim().equals(selectedTable)) {
-                    deleteTable(selectedTable);
-                } else if (userInput != null) {
-                    JOptionPane.showMessageDialog(this,
-                            "Der eingegebene Tabellenname stimmt nicht überein.\nLöschung abgebrochen.",
-                            "Abgebrochen",
-                            JOptionPane.INFORMATION_MESSAGE);
-                }
-            }
-        });
-
-        JPanel deleteTableButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        deleteTableButtonPanel.setOpaque(false);
-        deleteTableButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        deleteTableButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-        deleteTableButtonPanel.add(deleteSelectedTableButton);
-
-        databaseSection.add(Box.createVerticalStrut(15));
-        databaseSection.add(deleteTableButtonPanel);
-
-        databasePanel.add(databaseSection);
-        databasePanel.add(Box.createVerticalGlue());
-
-        // Add database panel to tabbed pane
-        tabbedPane.addTab(UnicodeSymbols.FLOPPY + " Datenbank", databaseScroll);
-
-        // === CATEGORY 4: Import & Export ===
-        JPanel importExportPanel = createCategoryPanel();
-        JScrollPane importExportScroll = createScrollablePanel(importExportPanel);
-
-        JPanel importExportSection = createSectionPanel(UnicodeSymbols.ARROW_UP + UnicodeSymbols.ARROW_DOWN + "️ Import & Export",
-                "Datenimport und -export Funktionen");
-        importExportSection.add(Box.createVerticalStrut(15));
-
-        importExportSection.add(createStyledLabel("Import:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
-        importExportSection.add(Box.createVerticalStrut(5));
-
-        importExportSection.add(createInfoLabel("<html><div style='width:650px;'>" +
-                "Importieren Sie Artikel, Lieferanten oder andere Daten aus CSV-Dateien.<br/>" +
-                "Stellen Sie sicher, dass die CSV-Dateien das richtige Format haben.</div></html>"));
-        importExportSection.add(Box.createVerticalStrut(10));
-
-        JButton importButton = createStyledButton(UnicodeSymbols.ARROW_UP + " Datenbank Importieren", new Color(39, 174, 96));
-        importButton.addActionListener(e -> importFromCsv());
-        importExportSection.add(importButton);
-        importExportSection.add(Box.createVerticalStrut(20));
-
-        importExportSection.add(Box.createVerticalStrut(15));
-        importExportSection.add(createStyledLabel("Export:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
-        importExportSection.add(Box.createVerticalStrut(5));
-
-        importExportSection.add(createInfoLabel("<html><div style='width:650px;'>" +
-                "Exportieren Sie Ihre Datenbankinhalte in CSV-Dateien zur Sicherung oder Weiterverarbeitung.</div></html>"));
-        importExportSection.add(Box.createVerticalStrut(10));
-        JButton exportButton = createStyledButton(UnicodeSymbols.ARROW_DOWN + " Datenbank Exportieren", new Color(52, 152, 219));
-        exportButton.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    "<html><b>Datenbank nach CSV exportieren?</b><br/><br/>" +
-                            "Dies erstellt CSV-Dateien für:<br/>" +
-                            "- Artikel (articles_export.csv)<br/>" +
-                            "- Lieferanten (vendors_export.csv)<br/>" +
-                            "- Kunden (clients_export.csv)<br/>" +
-                            "- Bestellungen (orders_export.csv)<br/><br/>" +
-                            "Speicherort: " + Main.getAppDataDir().getAbsolutePath() + "</html>",
-                    "Exportieren bestätigen",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    Main.iconSmall);
-
-            if (confirm == JOptionPane.YES_OPTION) {
-                try {
-                    exportToCsv();
-                    JOptionPane.showMessageDialog(this,
-                            "<html><b>OK Export erfolgreich!</b><br/><br/>" +
-                                    "Alle Tabellen wurden erfolgreich exportiert.<br/>" +
-                                    "Speicherort: <br/>" +
-                                    Main.getAppDataDir().getAbsolutePath() + "</html>",
-                            "Export erfolgreich",
-                            JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this,
-                            "<html><b>X Fehler beim Export!</b><br/><br/>" +
-                                    ex.getMessage() + "</html>",
-                            "Fehler",
-                            JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
-                }
-            }
-        });
-        importExportSection.add(exportButton);
-
-        importExportPanel.add(importExportSection);
-        importExportPanel.add(Box.createVerticalStrut(25));
-
-        JPanel settingsProfileSection = createSectionPanel(UnicodeSymbols.FLOPPY + " Einstellungen Profil",
-                "Importieren oder exportieren Sie Ihre Einstellungen als Profil-Datei");
-        settingsProfileSection.add(Box.createVerticalStrut(15));
-        JButton exportSettingsButton = createStyledButton(UnicodeSymbols.DOWNLOAD + " Einstellungen exportieren", new Color(52, 152, 219));
-        exportSettingsButton.addActionListener(e -> exportSettingsProfile());
-        JButton importSettingsButton = createStyledButton(UnicodeSymbols.UPLOAD + " Einstellungen importieren", new Color(39, 174, 96));
-        importSettingsButton.addActionListener(e -> importSettingsProfile());
-        settingsProfileSection.add(exportSettingsButton);
-        settingsProfileSection.add(Box.createVerticalStrut(10));
-        settingsProfileSection.add(importSettingsButton);
-        importExportPanel.add(settingsProfileSection);
-        importExportPanel.add(Box.createVerticalGlue());
-
-        // Add import/export panel to tabbed pane
-        tabbedPane.addTab(UnicodeSymbols.DOWNLOAD + " Import/Export", importExportScroll);
-
-        // === CATEGORY 5: About ===
-        JPanel aboutPanel = createCategoryPanel();
-        JScrollPane aboutScroll = createScrollablePanel(aboutPanel);
-
-        JPanel aboutSection = createSectionPanel(UnicodeSymbols.INFO + " Über VEBO Lagersystem",
-                "Informationen über die Anwendung");
-
-        // Application Info
-        JPanel appInfoPanel = new JPanel();
-        appInfoPanel.setLayout(new BoxLayout(appInfoPanel, BoxLayout.Y_AXIS));
-        appInfoPanel.setOpaque(false);
-        appInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        appInfoPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-
-        // Logo/Title
-        JLabel appNameLabel = new JLabel("VEBO Lagersystem");
-        appNameLabel.setFont(getFontByName(Font.BOLD, 28));
-        appNameLabel.setForeground(ThemeManager.getTitleTextColor());
-        appNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        appNameLabel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                try {
-                    Desktop.getDesktop().browse(new URI("https://vebo.ch"));
-                } catch (Exception ex) {
-                    logger.error("Fehler beim Öffnen der VEBO-Website: {}", ex.getMessage());
-                }
-            }
-
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                appNameLabel.setForeground(ThemeManager.getTitleTextHighlightColor());
-                appNameLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                appNameLabel.setForeground(ThemeManager.getTitleTextColor());
-                appNameLabel.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
-            }
-        });
-        appNameLabel.setToolTipText("Besuchen Sie unsere Website: https://vebo.ch");
-
-        JLabel versionLabel = new JLabel("Version " + Main.VERSION);
-        versionLabel.setFont(getFontByName(Font.PLAIN, 14));
-        versionLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        versionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        appInfoPanel.add(appNameLabel);
-        appInfoPanel.add(Box.createVerticalStrut(5));
-        appInfoPanel.add(versionLabel);
-
-        aboutSection.add(Box.createVerticalStrut(18));
-        aboutSection.add(appInfoPanel);
-
-        // Description
-        JPanel descriptionPanel = new JPanel(new BorderLayout(0, 10));
-        descriptionPanel.setOpaque(false);
-        descriptionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
-        descriptionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel descTitle = new JLabel("Beschreibung:");
-        descTitle.setFont(getFontByName(Font.PLAIN, 14));
-        descTitle.setForeground(ThemeManager.getTextPrimaryColor());
-
-        JTextArea descriptionArea = new JTextArea(
-                "VEBO Lagersystem ist eine moderne Lagerverwaltungssoftware für die effiziente " +
-                        "Verwaltung von Artikeln, Bestellungen, Lieferanten und Kunden. Die Anwendung " +
-                        "bietet umfangreiche Funktionen für die Bestandsverwaltung, automatische Warnungen " +
-                        "bei niedrigem Lagerbestand und QR-Code-basierte Artikelerfassung."
-        );
-        descriptionArea.setWrapStyleWord(true);
-        descriptionArea.setLineWrap(true);
-        descriptionArea.setEditable(false);
-        descriptionArea.setFont(getFontByName(Font.PLAIN, 13));
-        descriptionArea.setForeground(ThemeManager.getTextPrimaryColor());
-        descriptionArea.setBackground(ThemeManager.getInputBackgroundColor());
-        descriptionArea.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-        descriptionArea.setRows(4);
-
-        descriptionPanel.add(descTitle, BorderLayout.NORTH);
-        descriptionPanel.add(descriptionArea, BorderLayout.CENTER);
-
-        aboutSection.add(Box.createVerticalStrut(15));
-        aboutSection.add(descriptionPanel);
-
-        // Developer Info
-        JPanel developerPanel = new JPanel();
-        developerPanel.setLayout(new BoxLayout(developerPanel, BoxLayout.Y_AXIS));
-        developerPanel.setOpaque(false);
-        developerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        developerPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-
-        developerPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " Entwickler:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
-        developerPanel.add(Box.createVerticalStrut(8));
-        developerPanel.add(createStyledLabel("Darryl Huber", 13, Font.PLAIN, ThemeManager.getTextPrimaryColor()));
-        developerPanel.add(Box.createVerticalStrut(5));
-        developerPanel.add(createStyledLabel("Organisation: VEBO Oensingen", 13, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
-
-        aboutSection.add(Box.createVerticalStrut(15));
-        aboutSection.add(developerPanel);
-
-        // System Info
-        JPanel systemInfoPanel = new JPanel();
-        systemInfoPanel.setLayout(new BoxLayout(systemInfoPanel, BoxLayout.Y_AXIS));
-        systemInfoPanel.setOpaque(false);
-        systemInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        systemInfoPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-
-        systemInfoPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " System-Information:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
-        systemInfoPanel.add(Box.createVerticalStrut(8));
-        systemInfoPanel.add(createStyledLabel("Java Version: " + System.getProperty("java.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
-        systemInfoPanel.add(Box.createVerticalStrut(5));
-        systemInfoPanel.add(createStyledLabel("Betriebssystem: " + System.getProperty("os.name") + " " + System.getProperty("os.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
-        systemInfoPanel.add(Box.createVerticalStrut(5));
-        systemInfoPanel.add(createStyledLabel("Datenverzeichnis: " + Main.getAppDataDir().getAbsolutePath(), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
-
-        aboutSection.add(Box.createVerticalStrut(15));
-        aboutSection.add(systemInfoPanel);
-
-        // Update Manager Section
-        JPanel updatePanel = new JPanel();
-        updatePanel.setLayout(new BoxLayout(updatePanel, BoxLayout.Y_AXIS));
-        updatePanel.setOpaque(false);
-        updatePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        updatePanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-
-        updatePanel.add(createStyledLabel(UnicodeSymbols.DOWNLOAD + " Update-Verwaltung:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
-        updatePanel.add(Box.createVerticalStrut(12));
-
-        // Create update button rows with better layout
-        JPanel updateRow1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        updateRow1.setOpaque(false);
-        updateRow1.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
-        updateRow1.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JButton checkStableUpdateBtn = createStyledButton("Stable-Updates", new Color(52, 152, 219));
-        checkStableUpdateBtn.setToolTipText("Prüft auf neue stabile Versionen");
-        checkStableUpdateBtn.addActionListener(e -> checkForUpdates("stable"));
-        checkStableUpdateBtn.setPreferredSize(new Dimension(180, 40));
-
-        JButton checkBetaUpdateBtn = createStyledButton("Beta-Updates", new Color(243, 156, 18));
-        checkBetaUpdateBtn.setToolTipText("Prüft auf neue Beta-Versionen");
-        checkBetaUpdateBtn.addActionListener(e -> checkForUpdates("beta"));
-        checkBetaUpdateBtn.setPreferredSize(new Dimension(180, 40));
-
-        updateRow1.add(checkStableUpdateBtn);
-        updateRow1.add(checkBetaUpdateBtn);
-
-        updatePanel.add(updateRow1);
-        updatePanel.add(Box.createVerticalStrut(8));
-
-        JPanel updateRow2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        updateRow2.setOpaque(false);
-        updateRow2.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
-        updateRow2.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JButton checkAlphaUpdateBtn = createStyledButton("Alpha-Updates", new Color(231, 76, 60));
-        checkAlphaUpdateBtn.setToolTipText("Prüft auf neue Alpha-Versionen (experimentell)");
-        checkAlphaUpdateBtn.addActionListener(e -> checkForUpdates("alpha"));
-        checkAlphaUpdateBtn.setPreferredSize(new Dimension(180, 40));
-
-        JButton checkTestingUpdateBtn = createStyledButton("Testing-Updates", new Color(155, 89, 182));
-        checkTestingUpdateBtn.setToolTipText("Prüft auf neue Testing-Versionen (Entwicklung)");
-        checkTestingUpdateBtn.addActionListener(e -> checkForUpdates("testing"));
-        checkTestingUpdateBtn.setPreferredSize(new Dimension(180, 40));
-
-        updateRow2.add(checkAlphaUpdateBtn);
-        updateRow2.add(checkTestingUpdateBtn);
-
-        updatePanel.add(updateRow2);
-        updatePanel.add(Box.createVerticalStrut(12));
-
-        // Add info text about version
-        JLabel versionInfoLabel = new JLabel("<html><div style='padding: 8px; background: " + toHexColor(ThemeManager.getInputBackgroundColor()) + "; border-radius: 6px;'>" +
-                "<b>Aktuelle Version:</b> " + Main.VERSION + "<br/>" +
-                "<span style='font-size: 11px; color: #666;'>Kanal: " + UpdateManager.detectChannel(Main.VERSION) + "</span>" +
-                "</div></html>");
-        versionInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
-        versionInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        updatePanel.add(versionInfoLabel);
-
-        aboutSection.add(Box.createVerticalStrut(15));
-        aboutSection.add(updatePanel);
-
-        // Copyright
-        JPanel copyrightPanel = new JPanel();
-        copyrightPanel.setLayout(new BoxLayout(copyrightPanel, BoxLayout.Y_AXIS));
-        copyrightPanel.setOpaque(false);
-        copyrightPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        copyrightPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
-                BorderFactory.createEmptyBorder(15, 0, 0, 0)
-        ));
-
-        copyrightPanel.add(createStyledLabel("© 2026 VEBO Oensingen. Alle Rechte vorbehalten.", 11, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
-        copyrightPanel.add(Box.createVerticalStrut(5));
-
-        JLabel licenseLabel = createStyledLabel("Diese Software wird bereitgestellt \"wie sie ist\", ohne jegliche Garantie.", 11, Font.ITALIC, ThemeManager.getTextSecondaryColor());
-        copyrightPanel.add(licenseLabel);
-
-        aboutSection.add(Box.createVerticalStrut(20));
-        aboutSection.add(copyrightPanel);
-
-        aboutPanel.add(aboutSection);
-        aboutPanel.add(Box.createVerticalGlue());
-
-        // Add about panel to tabbed pane
-        tabbedPane.addTab(UnicodeSymbols.INFO + " Über", aboutScroll);
-
-        // Add search + tabs to content wrapper
-        contentWrapper.add(searchPanel, BorderLayout.NORTH);
-        contentWrapper.add(tabbedPane, BorderLayout.CENTER);
-
-        mainContainer.add(contentWrapper, BorderLayout.CENTER);
-
-        // Button Panel with enhanced styling
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 18, 18));
-        buttonPanel.setBackground(ThemeManager.getCardBackgroundColor());
-        buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
-
-        JButton resetAllButton = createStyledButton(UnicodeSymbols.REFRESH + " Alles zurücksetzen", new Color(231, 76, 60));
-        resetAllButton.addActionListener(e -> resetAllDefaults());
-
-        JButton cancelButton = createStyledButton(UnicodeSymbols.CLOSE + " Abbrechen", new Color(155, 89, 182));
-        cancelButton.addActionListener(e -> dispose());
-
-        JButton saveButton = createStyledButton(UnicodeSymbols.FLOPPY + " Speichern", new Color(46, 204, 113));
-        saveButton.addActionListener(e -> saveSettings());
-
-        buttonPanel.add(resetAllButton);
-        buttonPanel.add(cancelButton);
-        buttonPanel.add(saveButton);
-
-        mainContainer.add(buttonPanel, BorderLayout.SOUTH);
-
-        add(mainContainer);
-
-        // Keyboard shortcuts: Ctrl+F focuses search, ESC closes
-        InputMap im = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-        ActionMap am = getRootPane().getActionMap();
-
-        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), "focusSearch");
-        am.put("focusSearch", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (searchPlaceholderActive) {
-                    searchPlaceholderActive = false;
-                    settingsSearchField.setText("");
-                    settingsSearchField.setForeground(ThemeManager.getTextPrimaryColor());
-                    settingsSearchField.setFont(getFontByName(Font.PLAIN, 13));
-                }
-                settingsSearchField.requestFocusInWindow();
-                settingsSearchField.selectAll();
-            }
-        });
-
-        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeSettings");
-        am.put("closeSettings", new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                dispose();
-            }
-        });
-
-        settingsSearchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                applySearchFilter();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                applySearchFilter();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                applySearchFilter();
-            }
-        });
-
-        // Load current settings
-        loadSettings();
-    }
+        }
+        @Override
+        public void mouseEntered(MouseEvent e) {
+            appNameLabel.setForeground(ThemeManager.getTitleTextHighlightColor());
+            appNameLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        }
+        @Override
+        public void mouseExited(MouseEvent e) {
+            appNameLabel.setForeground(ThemeManager.getTitleTextColor());
+            appNameLabel.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+        }
+    });
+    appNameLabel.setToolTipText("Besuchen Sie unsere Website: https://vebo.ch");
+    JLabel versionLabel = new JLabel("Version " + Main.VERSION);
+    versionLabel.setFont(getFontByName(Font.PLAIN, 14));
+    versionLabel.setForeground(ThemeManager.getTextSecondaryColor());
+    versionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    appInfoPanel.add(appNameLabel);
+    appInfoPanel.add(Box.createVerticalStrut(5));
+    appInfoPanel.add(versionLabel);
+    aboutSection.add(Box.createVerticalStrut(18));
+    aboutSection.add(appInfoPanel);
+    // Description
+    JPanel descriptionPanel = new JPanel(new BorderLayout(0, 10));
+    descriptionPanel.setOpaque(false);
+    descriptionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
+    descriptionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    JLabel descTitle = new JLabel("Beschreibung:");
+    descTitle.setFont(getFontByName(Font.PLAIN, 14));
+    descTitle.setForeground(ThemeManager.getTextPrimaryColor());
+    JTextArea descriptionArea = new JTextArea(
+            "VEBO Lagersystem ist eine moderne Lagerverwaltungssoftware für die effiziente " +
+                    "Verwaltung von Artikeln, Bestellungen, Lieferanten und Kunden. Die Anwendung " +
+                    "bietet umfangreiche Funktionen für die Bestandsverwaltung, automatische Warnungen " +
+                    "bei niedrigem Lagerbestand und QR-Code-basierte Artikelerfassung."
+    );
+    descriptionArea.setWrapStyleWord(true);
+    descriptionArea.setLineWrap(true);
+    descriptionArea.setEditable(false);
+    descriptionArea.setFont(getFontByName(Font.PLAIN, 13));
+    descriptionArea.setForeground(ThemeManager.getTextPrimaryColor());
+    descriptionArea.setBackground(ThemeManager.getInputBackgroundColor());
+    descriptionArea.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+            BorderFactory.createEmptyBorder(10, 12, 10, 12)
+    ));
+    descriptionArea.setRows(4);
+    descriptionPanel.add(descTitle, BorderLayout.NORTH);
+    descriptionPanel.add(descriptionArea, BorderLayout.CENTER);
+    aboutSection.add(Box.createVerticalStrut(15));
+    aboutSection.add(descriptionPanel);
+    // Developer Info
+    JPanel developerPanel = new JPanel();
+    developerPanel.setLayout(new BoxLayout(developerPanel, BoxLayout.Y_AXIS));
+    developerPanel.setOpaque(false);
+    developerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    developerPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
+    developerPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " Entwickler:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+    developerPanel.add(Box.createVerticalStrut(8));
+    developerPanel.add(createStyledLabel("Darryl Huber", 13, Font.PLAIN, ThemeManager.getTextPrimaryColor()));
+    developerPanel.add(Box.createVerticalStrut(5));
+    developerPanel.add(createStyledLabel("Organisation: VEBO Oensingen", 13, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
+    aboutSection.add(Box.createVerticalStrut(15));
+    aboutSection.add(developerPanel);
+    // System Info
+    JPanel systemInfoPanel = new JPanel();
+    systemInfoPanel.setLayout(new BoxLayout(systemInfoPanel, BoxLayout.Y_AXIS));
+    systemInfoPanel.setOpaque(false);
+    systemInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    systemInfoPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
+    systemInfoPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " System-Information:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+    systemInfoPanel.add(Box.createVerticalStrut(8));
+    systemInfoPanel.add(createStyledLabel("Java Version: " + System.getProperty("java.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
+    systemInfoPanel.add(Box.createVerticalStrut(5));
+    systemInfoPanel.add(createStyledLabel("Betriebssystem: " + System.getProperty("os.name") + " " + System.getProperty("os.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
+    systemInfoPanel.add(Box.createVerticalStrut(5));
+    systemInfoPanel.add(createStyledLabel("Datenverzeichnis: " + Main.getAppDataDir().getAbsolutePath(), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
+    aboutSection.add(Box.createVerticalStrut(15));
+    aboutSection.add(systemInfoPanel);
+    // Update Manager Section
+    JPanel updatePanel = new JPanel();
+    updatePanel.setLayout(new BoxLayout(updatePanel, BoxLayout.Y_AXIS));
+    updatePanel.setOpaque(false);
+    updatePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    updatePanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
+    updatePanel.add(createStyledLabel(UnicodeSymbols.DOWNLOAD + " Update-Verwaltung:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+    updatePanel.add(Box.createVerticalStrut(12));
+    // Create update button rows with better layout
+    JPanel updateRow1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+    updateRow1.setOpaque(false);
+    updateRow1.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
+    updateRow1.setAlignmentX(Component.LEFT_ALIGNMENT);
+    JButton checkStableUpdateBtn = createStyledButton("Stable-Updates", new Color(52, 152, 219));
+    checkStableUpdateBtn.setToolTipText("Prüft auf neue stabile Versionen");
+    checkStableUpdateBtn.addActionListener(e -> checkForUpdates("stable"));
+    checkStableUpdateBtn.setPreferredSize(new Dimension(180, 40));
+    JButton checkBetaUpdateBtn = createStyledButton("Beta-Updates", new Color(243, 156, 18));
+    checkBetaUpdateBtn.setToolTipText("Prüft auf neue Beta-Versionen");
+    checkBetaUpdateBtn.addActionListener(e -> checkForUpdates("beta"));
+    checkBetaUpdateBtn.setPreferredSize(new Dimension(180, 40));
+    updateRow1.add(checkStableUpdateBtn);
+    updateRow1.add(checkBetaUpdateBtn);
+    updatePanel.add(updateRow1);
+    updatePanel.add(Box.createVerticalStrut(8));
+    JPanel updateRow2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+    updateRow2.setOpaque(false);
+    updateRow2.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
+    updateRow2.setAlignmentX(Component.LEFT_ALIGNMENT);
+    JButton checkAlphaUpdateBtn = createStyledButton("Alpha-Updates", new Color(231, 76, 60));
+    checkAlphaUpdateBtn.setToolTipText("Prüft auf neue Alpha-Versionen (experimentell)");
+    checkAlphaUpdateBtn.addActionListener(e -> checkForUpdates("alpha"));
+    checkAlphaUpdateBtn.setPreferredSize(new Dimension(180, 40));
+    JButton checkTestingUpdateBtn = createStyledButton("Testing-Updates", new Color(155, 89, 182));
+    checkTestingUpdateBtn.setToolTipText("Prüft auf neue Testing-Versionen (Entwicklung)");
+    checkTestingUpdateBtn.addActionListener(e -> checkForUpdates("testing"));
+    checkTestingUpdateBtn.setPreferredSize(new Dimension(180, 40));
+    updateRow2.add(checkAlphaUpdateBtn);
+    updateRow2.add(checkTestingUpdateBtn);
+    updatePanel.add(updateRow2);
+    updatePanel.add(Box.createVerticalStrut(12));
+    // Add info text about version
+    JLabel versionInfoLabel = new JLabel("<html><div style='padding: 8px; background: " + toHexColor(ThemeManager.getInputBackgroundColor()) + "; border-radius: 6px;'>" +
+            "<b>Aktuelle Version:</b> " + Main.VERSION + "<br/>" +
+            "<span style='font-size: 11px; color: #666;'>Kanal: " + UpdateManager.detectChannel(Main.VERSION) + "</span>" +
+            "</div></html>");
+    versionInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
+    versionInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    updatePanel.add(versionInfoLabel);
+    aboutSection.add(Box.createVerticalStrut(15));
+    aboutSection.add(updatePanel);
+    // Copyright
+    JPanel copyrightPanel = new JPanel();
+    copyrightPanel.setLayout(new BoxLayout(copyrightPanel, BoxLayout.Y_AXIS));
+    copyrightPanel.setOpaque(false);
+    copyrightPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    copyrightPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
+            BorderFactory.createEmptyBorder(15, 0, 0, 0)
+    ));
+    copyrightPanel.add(createStyledLabel("© 2026 VEBO Oensingen. Alle Rechte vorbehalten.", 11, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
+    copyrightPanel.add(Box.createVerticalStrut(5));
+    JLabel licenseLabel = createStyledLabel("Diese Software wird bereitgestellt \"wie sie ist\", ohne jegliche Garantie.", 11, Font.ITALIC, ThemeManager.getTextSecondaryColor());
+    copyrightPanel.add(licenseLabel);
+    aboutSection.add(Box.createVerticalStrut(20));
+    aboutSection.add(copyrightPanel);
+    aboutPanel.add(aboutSection);
+    aboutPanel.add(Box.createVerticalGlue());
+    // Add about panel to tabbed pane
+    tabbedPane.addTab(UnicodeSymbols.INFO + " Über", aboutScroll);
+}
 
     private void styleInputField(JTextField field) {
         field.setFont(getFontByName(Font.PLAIN, 13));
@@ -1479,7 +1397,8 @@ public class SettingsGUI extends JFrame {
         File file = new File(Main.getAppDataDir(), "categories.json");
         try {
             if (!file.exists()) {
-                file.createNewFile();
+                if(!file.createNewFile())
+                    throw new IOException("Datei konnte nicht erstellt werden.");
                 try (FileWriter writer = new FileWriter(file)) {
                     writer.write("{}");
                 }

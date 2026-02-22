@@ -10,6 +10,7 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
+import ch.framedev.lagersystem.managers.ThemeManager;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -30,15 +31,16 @@ public final class ArticleQrCodeDialog {
     }
 
     public static void show(Component parent) {
+        ThemeManager.applyUIDefaults();
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent), "QR-Code Daten vom Server", Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setSize(1150, 750);
         dialog.setLocationRelativeTo(parent);
         dialog.setLayout(new BorderLayout(0, 0));
         dialog.setMinimumSize(new Dimension(900, 600));
 
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(new Color(30, 58, 95));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 30, 24, 30));
+        // ===== Header (gradient like other dialogs) =====
+        JPanel headerPanel = ArticleGUI.getHeaderPanel();
+        headerPanel.setLayout(new BorderLayout());
 
         JPanel headerLeft = new JPanel();
         headerLeft.setLayout(new BoxLayout(headerLeft, BoxLayout.Y_AXIS));
@@ -46,39 +48,68 @@ public final class ArticleQrCodeDialog {
 
         JLabel titleLabel = new JLabel(UnicodeSymbols.PHONE + " QR-Code Daten von Server");
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-        titleLabel.setForeground(Color.WHITE);
+        titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel subtitleLabel = new JLabel("Gescannte Artikel vom mobilen Scanner importieren");
         subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
-        subtitleLabel.setForeground(new Color(200, 220, 240));
+        subtitleLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
         subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         headerLeft.add(titleLabel);
         headerLeft.add(Box.createVerticalStrut(5));
         headerLeft.add(subtitleLabel);
 
-        headerPanel.add(headerLeft, BorderLayout.WEST);
+        // Close button (top-right)
+        JButton closeHeaderBtn = new JButton(UnicodeSymbols.CLOSE);
+        closeHeaderBtn.setToolTipText("Schließen");
+        closeHeaderBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
+        closeHeaderBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
+        closeHeaderBtn.setBorderPainted(false);
+        closeHeaderBtn.setFocusPainted(false);
+        closeHeaderBtn.setContentAreaFilled(false);
+        closeHeaderBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
+        closeHeaderBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        closeHeaderBtn.setPreferredSize(new Dimension(44, 44));
+        closeHeaderBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+                closeHeaderBtn.setForeground(ThemeManager.getTextOnPrimaryColor());
+                closeHeaderBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 120));
+                closeHeaderBtn.setContentAreaFilled(true);
+                closeHeaderBtn.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+            }
+            @Override public void mouseExited(java.awt.event.MouseEvent e) {
+                closeHeaderBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
+                closeHeaderBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
+                closeHeaderBtn.setContentAreaFilled(false);
+                closeHeaderBtn.setBorder(null);
+            }
+        });
+        closeHeaderBtn.addActionListener(e -> dialog.dispose());
 
+        headerPanel.add(headerLeft, BorderLayout.WEST);
+        headerPanel.add(closeHeaderBtn, BorderLayout.EAST);
         dialog.add(headerPanel, BorderLayout.NORTH);
 
+        // ===== Content area =====
         JPanel mainPanel = new JPanel(new BorderLayout(0, 12));
-        mainPanel.setBackground(new Color(248, 249, 250));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        mainPanel.setBackground(ThemeManager.getBackgroundColor());
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
 
-        ArticleGUI.RoundedPanel infoPanel = new ArticleGUI.RoundedPanel(new Color(240, 248, 255), 8);
+        // Info banner (rounded card)
+        ArticleGUI.RoundedPanel infoPanel = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
         infoPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(100, 181, 246), 2),
-                BorderFactory.createEmptyBorder(12, 18, 12, 18)
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 14, 10, 14)
         ));
-        infoPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        infoPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 4));
 
-        JLabel infoIcon = new JLabel("ℹ️");
+        JLabel infoIcon = new JLabel(UnicodeSymbols.INFO);
         infoIcon.setFont(SettingsGUI.getFontByName(Font.PLAIN, 18));
 
         JLabel infoLabel = new JLabel("Lädt QR-Code Scan-Daten vom Server. Bitte warten...");
         infoLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        infoLabel.setForeground(new Color(52, 73, 94));
+        infoLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         infoPanel.add(infoIcon);
         infoPanel.add(infoLabel);
@@ -97,20 +128,26 @@ public final class ArticleQrCodeDialog {
         qrTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         qrTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         qrTable.setShowGrid(true);
-        qrTable.setGridColor(new Color(230, 235, 240));
+        qrTable.setGridColor(ThemeManager.getTableGridColor());
         qrTable.setIntercellSpacing(new Dimension(1, 1));
-        qrTable.setSelectionBackground(new Color(100, 181, 246));
-        qrTable.setSelectionForeground(Color.WHITE);
+        qrTable.setSelectionBackground(ThemeManager.getTableSelectionColor());
+        qrTable.setSelectionForeground(ThemeManager.getTextOnPrimaryColor());
 
         qrTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            private final Color EVEN = ThemeManager.getTableRowEvenColor();
+            private final Color ODD = ThemeManager.getTableRowOddColor();
+
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (!isSelected) {
-                    c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(248, 249, 250));
-                    setForeground(new Color(52, 73, 94));
+                    c.setBackground(row % 2 == 0 ? EVEN : ODD);
+                    c.setForeground(ThemeManager.getTextPrimaryColor());
+                } else {
+                    c.setBackground(ThemeManager.getTableSelectionColor());
+                    c.setForeground(ThemeManager.getTextOnPrimaryColor());
                 }
-                setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
                 return c;
             }
         });
@@ -123,27 +160,32 @@ public final class ArticleQrCodeDialog {
         qrTable.getColumnModel().getColumn(5).setPreferredWidth(220);
 
         JTableHeader header = qrTable.getTableHeader();
-        header.setBackground(new Color(30, 58, 95));
-        header.setForeground(Color.WHITE);
+        header.setBackground(ThemeManager.getTableHeaderColor());
+        header.setForeground(ThemeManager.getTextOnPrimaryColor());
         header.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         header.setPreferredSize(new Dimension(header.getWidth(), 40));
 
-        JScrollPane scrollPane = new JScrollPane(qrTable);
-        scrollPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(220, 225, 230), 1),
-                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ArticleGUI.RoundedPanel tableCard = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
+        tableCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
-        scrollPane.getViewport().setBackground(Color.WHITE);
+        tableCard.setLayout(new BorderLayout());
 
-        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        JScrollPane scrollPane = new JScrollPane(qrTable);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
+        tableCard.add(scrollPane, BorderLayout.CENTER);
 
+        mainPanel.add(tableCard, BorderLayout.CENTER);
         dialog.add(mainPanel, BorderLayout.CENTER);
 
-        JPanel actionPanel = new JPanel(new BorderLayout(10, 0));
-        actionPanel.setBackground(Color.WHITE);
+        // ===== Bottom action bar (rounded card) =====
+        ArticleGUI.RoundedPanel actionPanel = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
+        actionPanel.setLayout(new BorderLayout(10, 0));
         actionPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(220, 225, 230)),
-                BorderFactory.createEmptyBorder(15, 20, 15, 20)
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(12, 14, 12, 14)
         ));
 
         JPanel statusArea = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
@@ -151,11 +193,11 @@ public final class ArticleQrCodeDialog {
 
         JLabel statusIcon = new JLabel(UnicodeSymbols.CIRCLE);
         statusIcon.setFont(SettingsGUI.getFontByName(Font.PLAIN, 16));
-        statusIcon.setForeground(new Color(100, 200, 100));
+        statusIcon.setForeground(ThemeManager.getSuccessColor());
 
         JLabel statusLabel = new JLabel("Bereit zum Importieren");
         statusLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        statusLabel.setForeground(new Color(70, 80, 90));
+        statusLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         statusArea.add(statusIcon);
         statusArea.add(statusLabel);
@@ -216,7 +258,7 @@ public final class ArticleQrCodeDialog {
                 }
 
                 statusLabel.setText(added + " Artikel zur Bestellliste hinzugefügt");
-                statusIcon.setForeground(new Color(52, 152, 219));
+                statusIcon.setForeground(ThemeManager.getAccentColor());
             }
         });
 
@@ -251,7 +293,7 @@ public final class ArticleQrCodeDialog {
                     }
 
                     statusLabel.setText(menge + " Stück von \"" + article.getName() + "\" entfernt");
-                    statusIcon.setForeground(new Color(231, 76, 60));
+                    statusIcon.setForeground(ThemeManager.getErrorColor());
 
                     ImportUtils.addToOwnUseList(data);
                 }
@@ -300,7 +342,7 @@ public final class ArticleQrCodeDialog {
             }
             if (added > 0) {
                 statusLabel.setText(added + " Artikel zur Lieferantenbestellung hinzugefügt");
-                statusIcon.setForeground(new Color(52, 152, 219));
+                statusIcon.setForeground(ThemeManager.getAccentColor());
             }
         });
 
@@ -332,7 +374,7 @@ public final class ArticleQrCodeDialog {
                     deleted++;
                 }
                 statusLabel.setText(deleted + " Datensätze gelöscht");
-                statusIcon.setForeground(new Color(231, 76, 60));
+                statusIcon.setForeground(ThemeManager.getErrorColor());
             }
         });
 
@@ -372,13 +414,13 @@ public final class ArticleQrCodeDialog {
                     if (qrCodeDataList == null || qrCodeDataList.isEmpty()) {
                         infoIcon.setText(UnicodeSymbols.WARNING);
                         infoLabel.setText("Keine QR-Code Daten vom Server erhalten");
-                        infoPanel.setBackground(new Color(255, 245, 230));
+                        infoPanel.setBackground(ThemeManager.withAlpha(ThemeManager.getWarningColor(), 30));
                         infoPanel.setBorder(BorderFactory.createCompoundBorder(
-                                BorderFactory.createLineBorder(new Color(255, 193, 7), 2),
+                                BorderFactory.createLineBorder(ThemeManager.getWarningColor(), 2),
                                 BorderFactory.createEmptyBorder(12, 18, 12, 18)
                         ));
                         statusLabel.setText("Keine Daten verfügbar");
-                        statusIcon.setForeground(new Color(255, 193, 7));
+                        statusIcon.setForeground(ThemeManager.getWarningColor());
                         return;
                     }
 
@@ -398,25 +440,25 @@ public final class ArticleQrCodeDialog {
 
                     infoIcon.setText(UnicodeSymbols.CHECKMARK);
                     infoLabel.setText(availableCount + " QR-Code Datensätze erfolgreich geladen");
-                    infoPanel.setBackground(new Color(230, 255, 240));
+                    infoPanel.setBackground(ThemeManager.withAlpha(ThemeManager.getSuccessColor(), 30));
                     infoPanel.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(new Color(46, 204, 113), 2),
+                            BorderFactory.createLineBorder(ThemeManager.getSuccessColor(), 2),
                             BorderFactory.createEmptyBorder(12, 18, 12, 18)
                     ));
                     statusLabel.setText(availableCount + " Datensätze bereit");
-                    statusIcon.setForeground(new Color(46, 204, 113));
+                    statusIcon.setForeground(ThemeManager.getSuccessColor());
                     importAllBtn.setEnabled(true);
 
                 } catch (Exception ex) {
                     infoIcon.setText(UnicodeSymbols.CLOSE);
                     infoLabel.setText("Fehler beim Laden: " + ex.getMessage());
-                    infoPanel.setBackground(new Color(255, 235, 238));
+                    infoPanel.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 30));
                     infoPanel.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(new Color(231, 76, 60), 2),
+                            BorderFactory.createLineBorder(ThemeManager.getErrorColor(), 2),
                             BorderFactory.createEmptyBorder(12, 18, 12, 18)
                     ));
                     statusLabel.setText("Fehler beim Laden");
-                    statusIcon.setForeground(new Color(231, 76, 60));
+                    statusIcon.setForeground(ThemeManager.getErrorColor());
                 }
             }
         };
@@ -508,13 +550,13 @@ public final class ArticleQrCodeDialog {
             tableModel.setRowCount(0);
             infoIcon.setText(UnicodeSymbols.INFO);
             infoLabel.setText("Lädt QR-Code Scan-Daten vom Server. Bitte warten...");
-            infoPanel.setBackground(new Color(240, 248, 255));
+            infoPanel.setBackground(ThemeManager.getCardBackgroundColor());
             infoPanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(100, 181, 246), 2),
+                    BorderFactory.createLineBorder(ThemeManager.getAccentColor(), 2),
                     BorderFactory.createEmptyBorder(12, 18, 12, 18)
             ));
             statusLabel.setText("Aktualisiere Daten...");
-            statusIcon.setForeground(new Color(100, 181, 246));
+            statusIcon.setForeground(ThemeManager.getAccentColor());
             importBtn.setEnabled(false);
             importAllBtn.setEnabled(false);
             removeFromInventoryBtn.setEnabled(false);
@@ -547,25 +589,25 @@ public final class ArticleQrCodeDialog {
                             }
                             infoIcon.setText(UnicodeSymbols.CHECKMARK);
                             infoLabel.setText(availableCount + " QR-Code Datensätze aktualisiert");
-                            infoPanel.setBackground(new Color(230, 255, 240));
+                            infoPanel.setBackground(ThemeManager.withAlpha(ThemeManager.getSuccessColor(), 30));
                             infoPanel.setBorder(BorderFactory.createCompoundBorder(
-                                    BorderFactory.createLineBorder(new Color(46, 204, 113), 2),
+                                    BorderFactory.createLineBorder(ThemeManager.getSuccessColor(), 2),
                                     BorderFactory.createEmptyBorder(12, 18, 12, 18)
                             ));
                             statusLabel.setText(availableCount + " Datensätze bereit");
-                            statusIcon.setForeground(new Color(46, 204, 113));
+                            statusIcon.setForeground(ThemeManager.getSuccessColor());
                             importAllBtn.setEnabled(true);
                         }
                     } catch (Exception ex) {
                         infoIcon.setText(UnicodeSymbols.CLOSE);
                         infoLabel.setText("Fehler beim Aktualisieren: " + ex.getMessage());
-                        infoPanel.setBackground(new Color(255, 235, 238));
+                        infoPanel.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 30));
                         infoPanel.setBorder(BorderFactory.createCompoundBorder(
-                                BorderFactory.createLineBorder(new Color(231, 76, 60), 2),
+                                BorderFactory.createLineBorder(ThemeManager.getErrorColor(), 2),
                                 BorderFactory.createEmptyBorder(12, 18, 12, 18)
                         ));
                         statusLabel.setText("Fehler beim Laden");
-                        statusIcon.setForeground(new Color(231, 76, 60));
+                        statusIcon.setForeground(ThemeManager.getErrorColor());
                     }
                 }
             };
@@ -638,7 +680,7 @@ public final class ArticleQrCodeDialog {
                         Main.iconSmall);
 
                 statusLabel.setText(imported + " Datensätze importiert" + (errors > 0 ? " (" + errors + " Fehler)" : ""));
-                statusIcon.setForeground(errors > 0 ? new Color(255, 193, 7) : new Color(46, 204, 113));
+                statusIcon.setForeground(errors > 0 ? ThemeManager.getWarningColor() : ThemeManager.getSuccessColor());
             }
         });
 
@@ -656,7 +698,7 @@ public final class ArticleQrCodeDialog {
 
             if (confirm == JOptionPane.YES_OPTION) {
                 statusLabel.setText("Importiere " + rowCount + " Datensätze...");
-                statusIcon.setForeground(new Color(100, 181, 246));
+                statusIcon.setForeground(ThemeManager.getAccentColor());
                 importAllBtn.setEnabled(false);
                 importBtn.setEnabled(false);
                 refreshBtn.setEnabled(false);
@@ -741,7 +783,7 @@ public final class ArticleQrCodeDialog {
                         statusLabel.setText(String.format("%d importiert%s",
                                 imported,
                                 (errors > 0 ? " (" + errors + " Fehler)" : "")));
-                        statusIcon.setForeground(errors > 0 ? new Color(255, 193, 7) : new Color(46, 204, 113));
+                        statusIcon.setForeground(errors > 0 ? ThemeManager.getWarningColor() : ThemeManager.getSuccessColor());
 
                         importAllBtn.setEnabled(true);
                         refreshBtn.setEnabled(true);
@@ -771,16 +813,50 @@ public final class ArticleQrCodeDialog {
     }
 
     private static void styleButton(JButton button, Color bgColor, Color fgColor) {
+        Color hoverBg = ThemeManager.getButtonHoverColor(bgColor);
+        Color pressedBg = ThemeManager.getButtonPressedColor(bgColor);
+
         button.setBackground(bgColor);
         button.setForeground(fgColor);
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setFocusPainted(false);
-        button.setBorderPainted(false);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
         button.setOpaque(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(bgColor.darker(), 2),
+                BorderFactory.createLineBorder(bgColor.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 16, 10, 16)
         ));
+
+        // remove previous listeners to avoid stacking styles
+        for (java.awt.event.MouseListener ml : button.getMouseListeners()) {
+            if (ml.getClass().getName().contains("ArticleQrCodeDialog")) {
+                button.removeMouseListener(ml);
+            }
+        }
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+                button.setBackground(hoverBg);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(hoverBg.darker(), 1),
+                        BorderFactory.createEmptyBorder(10, 16, 10, 16)
+                ));
+            }
+            @Override public void mouseExited(java.awt.event.MouseEvent e) {
+                button.setBackground(bgColor);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(bgColor.darker(), 1),
+                        BorderFactory.createEmptyBorder(10, 16, 10, 16)
+                ));
+            }
+            @Override public void mousePressed(java.awt.event.MouseEvent e) {
+                button.setBackground(pressedBg);
+            }
+            @Override public void mouseReleased(java.awt.event.MouseEvent e) {
+                button.setBackground(button.contains(e.getPoint()) ? hoverBg : bgColor);
+            }
+        });
     }
 }

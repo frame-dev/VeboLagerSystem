@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 import static ch.framedev.lagersystem.utils.JFrameUtils.createRoundedButton;
+import static ch.framedev.lagersystem.utils.JFrameUtils.createSecondaryButton;
 
 @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
 public class ClientGUI extends JFrame {
@@ -497,7 +498,26 @@ public class ClientGUI extends JFrame {
         clientTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
 
         // Alternating row colors
-        DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
+        JTableHeader header = getJTableHeader();
+        header.setBackground(ThemeManager.getTableHeaderBackgroundColor());
+        header.setForeground(ThemeManager.getTableHeaderForegroundColor());
+        header.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
+
+        TableColumnModel tcm = clientTable.getColumnModel();
+        for (int i = 0; i < baseColumnWidths.length && i < tcm.getColumnCount(); i++) {
+            tcm.getColumn(i).setPreferredWidth(baseColumnWidths[i]);
+        }
+    }
+
+    private JTableHeader getJTableHeader() {
+        DefaultTableCellRenderer alternatingRenderer = getDefaultTableCellRenderer();
+        clientTable.setDefaultRenderer(Object.class, alternatingRenderer);
+
+        return clientTable.getTableHeader();
+    }
+
+    private static DefaultTableCellRenderer getDefaultTableCellRenderer() {
+        return new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
@@ -508,17 +528,6 @@ public class ClientGUI extends JFrame {
                 return c;
             }
         };
-        clientTable.setDefaultRenderer(Object.class, alternatingRenderer);
-
-        JTableHeader header = clientTable.getTableHeader();
-        header.setBackground(ThemeManager.getTableHeaderBackgroundColor());
-        header.setForeground(ThemeManager.getTableHeaderForegroundColor());
-        header.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
-
-        TableColumnModel tcm = clientTable.getColumnModel();
-        for (int i = 0; i < baseColumnWidths.length && i < tcm.getColumnCount(); i++) {
-            tcm.getColumn(i).setPreferredWidth(baseColumnWidths[i]);
-        }
     }
 
     private void adjustColumnWidths() {
@@ -730,53 +739,5 @@ public class ClientGUI extends JFrame {
             this.name = name;
             this.department = department;
         }
-    }
-
-    private JButton createSecondaryButton(String text) {
-        JButton btn = createRoundedButton(text);
-        applyButtonPalette(btn, ThemeManager.getPrimaryColor());
-        return btn;
-    }
-
-    private void applyButtonPalette(JButton button, Color base) {
-        Color hover = ThemeManager.getButtonHoverColor(base);
-        Color pressed = ThemeManager.getButtonPressedColor(base);
-
-        button.setBackground(base);
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(base.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 18, 10, 18)
-        ));
-
-        // Remove older mouse listeners added by createRoundedButton() for consistent palette behavior
-        for (MouseListener ml : button.getMouseListeners()) {
-            String n = ml.getClass().getName();
-            if (n.contains("ClientGUI")) {
-                button.removeMouseListener(ml);
-            }
-        }
-
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(hover);
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(base);
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                button.setBackground(pressed);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                button.setBackground(button.contains(e.getPoint()) ? hover : base);
-            }
-        });
     }
 }

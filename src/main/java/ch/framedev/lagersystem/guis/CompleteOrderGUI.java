@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static ch.framedev.lagersystem.utils.JFrameUtils.createThemeButton;
+
 public class CompleteOrderGUI extends JFrame {
 
     private JList<OrderListItem> ordersList;
@@ -522,44 +524,6 @@ public class CompleteOrderGUI extends JFrame {
     private void updateOrderCount() {
         int count = currentOrders != null ? currentOrders.size() : 0;
         orderCountLabel.setText("Anzahl Bestellungen: " + count);
-    }
-
-    private JButton createThemeButton(String text, Color baseBg) {
-        JButton button = new JButton(text);
-        button.setFocusPainted(false);
-        button.setBorderPainted(true);
-        button.setContentAreaFilled(true);
-        button.setOpaque(true);
-
-        Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
-        Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
-
-        button.setBackground(baseBg);
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(baseBg.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 20, 10, 20)
-        ));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                if (button.isEnabled()) button.setBackground(hoverBg);
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                if (button.isEnabled()) button.setBackground(baseBg);
-            }
-            public void mousePressed(java.awt.event.MouseEvent evt) {
-                if (button.isEnabled()) button.setBackground(pressedBg);
-            }
-            public void mouseReleased(java.awt.event.MouseEvent evt) {
-                if (!button.isEnabled()) return;
-                button.setBackground(button.contains(evt.getPoint()) ? hoverBg : baseBg);
-            }
-        });
-
-        return button;
     }
 
     private static String safe(String s) {

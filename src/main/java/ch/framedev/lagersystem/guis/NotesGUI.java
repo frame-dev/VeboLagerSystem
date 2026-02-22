@@ -1,5 +1,6 @@
 package ch.framedev.lagersystem.guis;
 
+import ch.framedev.lagersystem.managers.LogManager;
 import ch.framedev.lagersystem.managers.NotesManager;
 import ch.framedev.lagersystem.classes.Note;
 import ch.framedev.lagersystem.managers.ThemeManager;
@@ -316,6 +317,7 @@ public class NotesGUI extends JFrame {
             }
             boolean success = notesManager.updateNote(note.getTitle(), newContent);
             if (success) {
+                LogManager.getInstance().createLog(LogManager.LogLevel.INFO, "Notiz '" + note.getTitle() + "' aktualisiert.");
                 dialog.dispose();
                 setupList();
             } else {
@@ -375,6 +377,7 @@ public class NotesGUI extends JFrame {
             if (success) {
                 setupList();
                 noteContentArea.setText("");
+                LogManager.getInstance().createLog(LogManager.LogLevel.INFO, "Notiz '" + selectedTitle + "' geloescht.");
             } else {
                 JOptionPane.showMessageDialog(this, "Fehler beim Löschen der Notiz.",
                         "Fehler", JOptionPane.ERROR_MESSAGE);
@@ -438,6 +441,7 @@ public class NotesGUI extends JFrame {
             if (success) {
                 dialog.dispose();
                 setupList();
+                LogManager.getInstance().createLog(LogManager.LogLevel.INFO, "Notiz '" + title + "' erstellt.");
             } else {
                 JOptionPane.showMessageDialog(dialog, "Notiz mit diesem Titel existiert bereits.",
                         "Fehler", JOptionPane.ERROR_MESSAGE);

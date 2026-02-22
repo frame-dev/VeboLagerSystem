@@ -36,6 +36,9 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 
+import static ch.framedev.lagersystem.utils.JFrameUtils.applyButtonPalette;
+import static ch.framedev.lagersystem.utils.JFrameUtils.createThemeButton;
+
 /**
  * Modern new order GUI with improved visual design and user experience.
  * Features: Split panel layout, gradient header, styled components, and PDF export (PDFBox).
@@ -1167,49 +1170,6 @@ public class NewOrderGUI extends JFrame {
                 "Version: " + Main.VERSION + " | © 2026 VEBO Lagersystem" +
                 "</p>" +
                 "</div></html>";
-    }
-
-    private JButton createThemeButton(String text, Color baseBg) {
-        JButton button = new JButton(text);
-        button.setFocusPainted(false);
-        button.setBorderPainted(true);
-        button.setContentAreaFilled(true);
-        button.setOpaque(true);
-
-        applyButtonPalette(button, baseBg);
-
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        return button;
-    }
-
-    private void applyButtonPalette(JButton button, Color baseBg) {
-        Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
-        Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
-
-        button.setBackground(baseBg);
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(baseBg.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 18, 10, 18)
-        ));
-
-        // Remove previous palette listeners (avoid stacking)
-        for (MouseListener ml : button.getMouseListeners()) {
-            if (ml instanceof MouseAdapter) {
-                button.removeMouseListener(ml);
-            }
-        }
-
-        button.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { if (button.isEnabled()) button.setBackground(hoverBg); }
-            @Override public void mouseExited(MouseEvent e)  { if (button.isEnabled()) button.setBackground(baseBg); }
-            @Override public void mousePressed(MouseEvent e) { if (button.isEnabled()) button.setBackground(pressedBg); }
-            @Override public void mouseReleased(MouseEvent e) {
-                if (!button.isEnabled()) return;
-                button.setBackground(button.contains(e.getPoint()) ? hoverBg : baseBg);
-            }
-        });
     }
 
     private void createOrder(Map<String, Integer> orderArticles, String receiverName, String receiverKontoNumber,

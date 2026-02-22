@@ -23,11 +23,12 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 import static ch.framedev.lagersystem.main.Main.articleListGUI;
 import static ch.framedev.lagersystem.utils.ArticleUtils.categories;
 import static ch.framedev.lagersystem.utils.ArticleUtils.loadCategories;
+import static ch.framedev.lagersystem.utils.JFrameUtils.applyButtonPalette;
+import static ch.framedev.lagersystem.utils.JFrameUtils.createSecondaryButton;
 
 /**
  * ArticleGUI with category support for better organization.
@@ -84,15 +85,44 @@ public class ArticleGUI extends JFrame {
         articleTable = new JTable();
         initializeTable();
 
-        // =========================
-        // Header
-        // =========================
-        JPanel headerWrapper = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        headerWrapper.setBackground(ThemeManager.getBackgroundColor());
+        // ===== Top area (Header + Toolbar) =====
+        JPanel topContainer = new JPanel();
+        topContainer.setBackground(ThemeManager.getBackgroundColor());
+        topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
+        topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
 
+        // Header card (no fixed height -> prevents clipping)
         RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-        headerPanel.setLayout(new GridBagLayout());
-        headerPanel.setPreferredSize(new Dimension(760, 64));
+        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)
+        ));
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel titleLabel = new JLabel(UnicodeSymbols.ARTICLE_NAME + " Artikel Verwaltung");
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Artikel verwalten, filtern und durchsuchen");
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerText.add(titleLabel);
+        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(subtitleLabel);
+
+        headerPanel.add(headerText, BorderLayout.WEST);
+
+        JPanel headerWrapper = new JPanel(new BorderLayout());
+        headerWrapper.setOpaque(false);
+        headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerWrapper.add(headerPanel, BorderLayout.CENTER);
 
         // =========================
         // Toolbar
@@ -280,11 +310,10 @@ public class ArticleGUI extends JFrame {
         toolbarScrollPane.getHorizontalScrollBar().setUnitIncrement(16);
 
         // Top area: header + toolbar stacked
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setBackground(ThemeManager.getBackgroundColor());
-        topPanel.add(headerWrapper, BorderLayout.NORTH);
-        topPanel.add(toolbarScrollPane, BorderLayout.SOUTH);
-        add(topPanel, BorderLayout.NORTH);
+        topContainer.add(headerWrapper);
+        topContainer.add(Box.createVerticalStrut(10));
+        topContainer.add(toolbarScrollPane);
+        add(topContainer, BorderLayout.NORTH);
 
         // =========================
         // Main card/table area
@@ -295,10 +324,12 @@ public class ArticleGUI extends JFrame {
 
         articleTable.setPreferredScrollableViewportSize(new Dimension(920, 420));
         tableScrollPane = new JScrollPane(articleTable);
-        tableScrollPane.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        tableScrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
         tableScrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
-        tableScrollPane.setBackground(ThemeManager.getScrollbarBackgroundColor());
-        tableScrollPane.setForeground(ThemeManager.getScrollbarForegroundColor());
+        tableScrollPane.setBackground(ThemeManager.getCardBackgroundColor());
         card.add(tableScrollPane, BorderLayout.CENTER);
 
         JPanel centerWrapper = new JPanel(new GridBagLayout());
@@ -320,68 +351,85 @@ public class ArticleGUI extends JFrame {
         // Setup table interactions (context menu, double-click)
         setupTableInteractions();
 
-        // =========================
-        // Bottom search bar
-        // =========================
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 12));
-        searchPanel.setBackground(ThemeManager.getBackgroundColor());
-
-        JLabel searchLabel = new JLabel("Suche:");
-        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
-        JTextField searchField = new JTextField(30);
-        searchField.setBackground(ThemeManager.getInputBackgroundColor());
-        searchField.setForeground(ThemeManager.getTextPrimaryColor());
-        searchField.setCaretColor(ThemeManager.getTextPrimaryColor());
-        searchField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        // ===== Bottom search bar (card – like VendorGUI/ClientGUI) =====
+        RoundedPanel searchCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        searchCard.setLayout(new BorderLayout(10, 0));
+        searchCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
 
-        JButton searchBtn = new JButton(UnicodeSymbols.SEARCH + " Suchen");
+        JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche:");
+        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        searchLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+
+        JTextField searchField = new JTextField(30);
+        styleTextField(searchField);
+        searchField.setToolTipText("Tippen zum Filtern – Enter zum Suchen, ESC zum Leeren");
+
+        JPanel leftSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        leftSearch.setOpaque(false);
+        leftSearch.add(searchLabel);
+        leftSearch.add(searchField);
+
+        // Right-side actions (prettier grouping)
+        JPanel rightActions = new JPanel();
+        rightActions.setOpaque(false);
+        rightActions.setLayout(new BoxLayout(rightActions, BoxLayout.X_AXIS));
+
+        // Count badge
+        countLabel = new JLabel();
+        styleCountBadge(countLabel);
+        updateCountLabel();
+
+        // Actions (use secondary palette to keep bottom bar light)
+        JButton addToClientOrder = createSecondaryButton(UnicodeSymbols.SHOPPING_CART + " Zur Kundenbestellung");
+        addToClientOrder.setToolTipText("Fügt die ausgewählten Artikel zur aktuellen Kundenbestellung hinzu");
+        addToClientOrder.addActionListener(e -> addSelectedArticlesToClientOrder());
+
+        JButton exportTableAsPdfBtn = createSecondaryButton(UnicodeSymbols.DOWNLOAD + " Tabelle als PDF");
+        exportTableAsPdfBtn.setToolTipText("Exportiert die Tabelle als PDF");
+        exportTableAsPdfBtn.addActionListener(e -> exportTableAsPDF());
+
+        JButton showWarningsBottomBtn = createSecondaryButton(UnicodeSymbols.WARNING + " Warnungen");
+        applyButtonPalette(showWarningsBottomBtn, ThemeManager.getWarningColor());
+        showWarningsBottomBtn.setToolTipText("Zeigt alle Lagerwarnungen an");
+        showWarningsBottomBtn.addActionListener(e -> showAllWarnings());
+
+        JButton searchBtn = createSecondaryButton(UnicodeSymbols.SEARCH + " Suchen");
         searchBtn.setToolTipText("Sucht nach Artikeln basierend auf dem eingegebenen Text");
-        JButton clearBtn = new JButton(UnicodeSymbols.BROOM + " Leeren");
+        JButton clearBtn = createSecondaryButton(UnicodeSymbols.BROOM + " Leeren");
         clearBtn.setToolTipText("Löscht die Suchfilter und zeigt alle Artikel an");
 
-// base colors
-        Color normalFg = ThemeManager.getTextPrimaryColor();
-        Color hoverFg = ThemeManager.getTextLinkColor();      // good hover text color
-        Color border = ThemeManager.getBorderColor();
+        // Assemble right side with spacing + subtle separators
+        rightActions.add(countLabel);
+        rightActions.add(Box.createHorizontalStrut(10));
+        rightActions.add(createMiniDivider());
+        rightActions.add(Box.createHorizontalStrut(10));
 
-        for (JButton b : new JButton[]{searchBtn, clearBtn}) {
-            b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            b.setOpaque(false);
-            b.setContentAreaFilled(false);
-            b.setBorderPainted(true);
-            b.setFocusPainted(false);
+        rightActions.add(addToClientOrder);
+        rightActions.add(Box.createHorizontalStrut(8));
+        rightActions.add(exportTableAsPdfBtn);
+        rightActions.add(Box.createHorizontalStrut(8));
+        rightActions.add(showWarningsBottomBtn);
 
-            b.setForeground(normalFg);
-            b.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(border, 1),
-                    BorderFactory.createEmptyBorder(8, 16, 8, 16)
-            ));
+        rightActions.add(Box.createHorizontalStrut(10));
+        rightActions.add(createMiniDivider());
+        rightActions.add(Box.createHorizontalStrut(10));
 
-            b.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    b.setForeground(hoverFg);
-                    // optional: slightly stronger border on hover
-                    b.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(ThemeManager.getBorderFocusColor(), 1),
-                            BorderFactory.createEmptyBorder(8, 16, 8, 16)
-                    ));
-                }
+        rightActions.add(searchBtn);
+        rightActions.add(Box.createHorizontalStrut(8));
+        rightActions.add(clearBtn);
 
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    b.setForeground(normalFg);
-                    b.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(border, 1),
-                            BorderFactory.createEmptyBorder(8, 16, 8, 16)
-                    ));
-                }
-            });
-        }
+        searchCard.add(leftSearch, BorderLayout.CENTER);
+        searchCard.add(rightActions, BorderLayout.EAST);
+
+        JPanel searchWrapper = new JPanel(new BorderLayout());
+        searchWrapper.setBackground(ThemeManager.getBackgroundColor());
+        searchWrapper.setBorder(BorderFactory.createEmptyBorder(10, 12, 12, 12));
+        searchWrapper.add(searchCard, BorderLayout.CENTER);
+
+        add(searchWrapper, BorderLayout.SOUTH);
 
         Runnable doSearch = () -> {
             String text = searchField.getText().trim();
@@ -396,15 +444,29 @@ public class ArticleGUI extends JFrame {
             if (text.isEmpty()) {
                 sorter.setRowFilter(null);
             } else {
-                try {
-                    String regex = "(?i)" + Pattern.quote(text);
-                    sorter.setRowFilter(RowFilter.regexFilter(regex, 0, 1));
-                } catch (PatternSyntaxException ex) {
-                    sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(text), 0, 1));
-                }
+                String regex = "(?i)" + Pattern.quote(text);
+                sorter.setRowFilter(RowFilter.regexFilter(regex));
             }
             updateCountLabel();
         };
+
+        // Live filter while typing
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                doSearch.run();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                doSearch.run();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                doSearch.run();
+            }
+        });
 
         searchBtn.addActionListener(e -> doSearch.run());
         clearBtn.addActionListener(e -> {
@@ -416,58 +478,18 @@ public class ArticleGUI extends JFrame {
         });
 
         searchField.addActionListener(e -> doSearch.run());
-        searchField.setForeground(ThemeManager.getTextPrimaryColor());
-        searchField.setBackground(ThemeManager.getInputBackgroundColor());
-
-        JButton addToClientOrder = createRoundedButton(UnicodeSymbols.SHOPPING_CART + " Zur Kundenbestellung hinzufügen");
-        addToClientOrder.setToolTipText("Fügt die ausgewählten Artikel zur aktuellen Kundenbestellung hinzu");
-        addToClientOrder.addActionListener(e -> addSelectedArticlesToClientOrder());
-        searchPanel.add(addToClientOrder);
-
-        JButton exportTableAsPdfBtn = createRoundedButton(UnicodeSymbols.DOWNLOAD + " Tabelle als PDF exportieren");
-        exportTableAsPdfBtn.addActionListener(e -> exportTableAsPDF());
-        searchPanel.add(exportTableAsPdfBtn);
-
-        countLabel = new JLabel("Anzahl Artikel: " + articleTable.getRowCount());
-        countLabel.setForeground(ThemeManager.getTextPrimaryColor());
-        countLabel.setBackground(ThemeManager.getTextSecondaryColor());
-        searchPanel.add(countLabel);
-
-        searchPanel.add(searchLabel);
-        searchPanel.add(searchField);
-        searchPanel.add(searchBtn);
-        searchPanel.add(clearBtn);
-
-        // Add warnings button to bottom panel
-        JButton showWarningsBottomBtn = new JButton(UnicodeSymbols.WARNING + " Warnungen");
-        showWarningsBottomBtn.setToolTipText("Zeigt alle Lagerwarnungen an");
-        showWarningsBottomBtn.setFocusPainted(false);
-        showWarningsBottomBtn.setBorderPainted(false);
-        showWarningsBottomBtn.setContentAreaFilled(false);
-        showWarningsBottomBtn.setOpaque(true);
-        showWarningsBottomBtn.setBackground(ThemeManager.getWarningColor());
-        showWarningsBottomBtn.setForeground(Color.WHITE);
-        showWarningsBottomBtn.setFont(showWarningsBottomBtn.getFont().deriveFont(Font.BOLD, 13f));
-        showWarningsBottomBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(showWarningsBottomBtn.getBackground().darker(), 2),
-                BorderFactory.createEmptyBorder(8, 16, 8, 16)
-        ));
-        showWarningsBottomBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        showWarningsBottomBtn.addActionListener(e -> showAllWarnings());
-        showWarningsBottomBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                showWarningsBottomBtn.setBackground(showWarningsBottomBtn.getBackground().darker());
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                showWarningsBottomBtn.setBackground(ThemeManager.getWarningColor());
-            }
-        });
-        searchPanel.add(showWarningsBottomBtn);
-
-        add(searchPanel, BorderLayout.SOUTH);
+        // ESC clears
+        searchField.registerKeyboardAction(
+                e -> {
+                    searchField.setText("");
+                    if (articleTable.getRowSorter() instanceof TableRowSorter) {
+                        ((TableRowSorter<?>) articleTable.getRowSorter()).setRowFilter(null);
+                    }
+                    updateCountLabel();
+                },
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_FOCUSED
+        );
 
         // Auto-resize columns when the window or viewport changes size
         ComponentAdapter resizeListener = new ComponentAdapter() {
@@ -815,6 +837,16 @@ public class ArticleGUI extends JFrame {
         return button;
     }
 
+    private void styleTextField(JTextField tf) {
+        tf.setBackground(ThemeManager.getInputBackgroundColor());
+        tf.setForeground(ThemeManager.getTextPrimaryColor());
+        tf.setCaretColor(ThemeManager.getTextPrimaryColor());
+        tf.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+    }
+
     private void loadArticles() {
         ArticleManager articleManager = ArticleManager.getInstance();
         List<Article> articles = articleManager.getAllArticles();
@@ -841,8 +873,13 @@ public class ArticleGUI extends JFrame {
     }
 
     private void updateCountLabel() {
-        if (countLabel != null) {
-            countLabel.setText("Anzahl Artikel: " + articleTable.getRowCount());
+        if (countLabel != null && articleTable != null) {
+            int filtered = articleTable.getRowCount();
+            int total = 0;
+            if (articleTable.getModel() instanceof DefaultTableModel model) {
+                total = model.getRowCount();
+            }
+            countLabel.setText("Artikel: " + filtered + " / " + total);
         }
     }
 
@@ -1863,5 +1900,26 @@ public class ArticleGUI extends JFrame {
      */
     private void showDetails() {
         ArticleStatsDialog.show(this, articleTable);
+    }
+
+    private void styleCountBadge(JLabel label) {
+        label.setOpaque(true);
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        label.setBackground(ThemeManager.getSurfaceColor());
+        label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
+    }
+
+    private JComponent createMiniDivider() {
+        JPanel p = new JPanel();
+        p.setOpaque(true);
+        p.setBackground(ThemeManager.getBorderColor());
+        p.setPreferredSize(new Dimension(1, 22));
+        p.setMinimumSize(new Dimension(1, 22));
+        p.setMaximumSize(new Dimension(1, 22));
+        return p;
     }
 }

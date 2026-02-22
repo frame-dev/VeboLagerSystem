@@ -192,13 +192,4 @@ public class ArticleUtils {
         JOptionPane.showMessageDialog(null, "Artikeldetails enthalten keine gültige Literangabe für Artikel: " + article.getName(), "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
         throw new IllegalArgumentException("Article details do not contain valid liter information: " + details);
     }
-
-    public static void main(String[] args) {
-        double price = calculatePriceForFilling(25.54, 10, 750, VolumeUnit.MILLILITER);
-        System.out.println("Price for filling: " + price + " CHF");
-
-        Article article = new Article("3301", "Cola", "10 lt.", 1, 0, 25.54, 0, "ZVG");
-        double priceFromArticle = calculatePriceForFilling(article, 750, VolumeUnit.MILLILITER);
-        System.out.println("Price for filling from article: " + priceFromArticle + " CHF");
-    }
 }

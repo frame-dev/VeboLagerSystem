@@ -1,5 +1,6 @@
 package ch.framedev.lagersystem.utils;
 
+import ch.framedev.lagersystem.guis.OrderGUI;
 import ch.framedev.lagersystem.guis.SettingsGUI;
 import ch.framedev.lagersystem.managers.ThemeManager;
 
@@ -9,8 +10,10 @@ import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.plaf.basic.ComboPopup;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 
 public class JFrameUtils {
 
@@ -75,59 +78,6 @@ public class JFrameUtils {
         table.repaint();
         tableScrollPane.revalidate();
         tableScrollPane.repaint();
-    }
-
-    public static JButton createRoundedButton(String text) {
-        JButton button = new JButton(text);
-        button.setFocusPainted(false);
-        button.setBorderPainted(true);
-        button.setContentAreaFilled(true);
-        button.setOpaque(true);
-
-        Color defaultBg = ThemeManager.getAccentColor();
-        Color hoverBg = ThemeManager.getButtonHoverColor(defaultBg);
-        Color pressedBg = ThemeManager.getButtonPressedColor(defaultBg);
-
-        button.setBackground(defaultBg);
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(defaultBg.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 20, 10, 20)
-        ));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                button.setBackground(hoverBg);
-                button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(hoverBg.darker(), 2),
-                        BorderFactory.createEmptyBorder(9, 19, 9, 19)
-                ));
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                button.setBackground(defaultBg);
-                button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(defaultBg.darker(), 1),
-                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
-                ));
-            }
-
-            @Override
-            public void mousePressed(java.awt.event.MouseEvent e) {
-                button.setBackground(pressedBg);
-            }
-
-            @Override
-            public void mouseReleased(java.awt.event.MouseEvent e) {
-                button.setBackground(button.contains(e.getPoint()) ? hoverBg : defaultBg);
-            }
-        });
-
-        return button;
     }
 
     public static void styleTextField(JTextField field) {
@@ -250,5 +200,183 @@ public class JFrameUtils {
             g2.dispose();
             super.paintComponent(g);
         }
+    }
+
+    public static JButton createRoundedButton(String text) {
+        JButton button = new JButton(text);
+        button.setFocusPainted(false);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
+        button.setOpaque(true);
+
+        Color defaultBg = ThemeManager.getAccentColor();
+        Color hoverBg = ThemeManager.getButtonHoverColor(defaultBg);
+        Color pressedBg = ThemeManager.getButtonPressedColor(defaultBg);
+
+        button.setBackground(defaultBg);
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(defaultBg.darker(), 1),
+                BorderFactory.createEmptyBorder(9, 16, 9, 16)
+        ));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(hoverBg);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(hoverBg.darker(), 2),
+                        BorderFactory.createEmptyBorder(8, 15, 8, 15)
+                ));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(defaultBg);
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(defaultBg.darker(), 1),
+                        BorderFactory.createEmptyBorder(9, 16, 9, 16)
+                ));
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                button.setBackground(pressedBg);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                button.setBackground(button.contains(e.getPoint()) ? hoverBg : defaultBg);
+            }
+        });
+
+        return button;
+    }
+
+    public static JButton createThemeButton(String text, Color baseBg) {
+        JButton button = new JButton(text);
+        button.setFocusPainted(false);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
+        button.setOpaque(true);
+
+        Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
+        Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
+
+        button.setBackground(baseBg);
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(baseBg.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)
+        ));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                if (button.isEnabled()) button.setBackground(hoverBg);
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                if (button.isEnabled()) button.setBackground(baseBg);
+            }
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                if (button.isEnabled()) button.setBackground(pressedBg);
+            }
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                if (!button.isEnabled()) return;
+                button.setBackground(button.contains(evt.getPoint()) ? hoverBg : baseBg);
+            }
+        });
+
+        return button;
+    }
+
+    public static void applyButtonPalette(JButton button, Color baseBg) {
+        Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
+        Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
+
+        button.setBackground(baseBg);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(baseBg.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 18, 10, 18)
+        ));
+
+        // Remove previous palette listeners (avoid stacking)
+        for (MouseListener ml : button.getMouseListeners()) {
+            if (ml instanceof MouseAdapter) {
+                button.removeMouseListener(ml);
+            }
+        }
+
+        button.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { if (button.isEnabled()) button.setBackground(hoverBg); }
+            @Override public void mouseExited(MouseEvent e)  { if (button.isEnabled()) button.setBackground(baseBg); }
+            @Override public void mousePressed(MouseEvent e) { if (button.isEnabled()) button.setBackground(pressedBg); }
+            @Override public void mouseReleased(MouseEvent e) {
+                if (!button.isEnabled()) return;
+                button.setBackground(button.contains(e.getPoint()) ? hoverBg : baseBg);
+            }
+        });
+    }
+
+    public static JButton createPrimaryButton(String text) {
+        JButton btn = createRoundedButton(text);
+        applyButtonPalette(btn, ThemeManager.getAccentColor());
+        return btn;
+    }
+
+    public static JButton createSecondaryButton(String text) {
+        JButton btn = createRoundedButton(text);
+        applyButtonPalette(btn, ThemeManager.getPrimaryColor());
+        return btn;
+    }
+
+    public static JButton createDangerButton(String text) {
+        JButton btn = createRoundedButton(text);
+        applyButtonPalette(btn, ThemeManager.getErrorColor());
+        return btn;
+    }
+
+
+
+    public static JButton createSecondaryButton(String text, ActionListener action) {
+        JButton btn = new JButton(text);
+        btn.addActionListener(action);
+        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        btn.setFocusPainted(false);
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(false);
+        btn.setForeground(ThemeManager.getTextPrimaryColor());
+        btn.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        Color fg = ThemeManager.getTextPrimaryColor();
+        Color hover = ThemeManager.getButtonHoverColor(fg);
+        btn.addMouseListener(new MouseAdapter() {
+            @Override public void mouseEntered(MouseEvent e) { btn.setForeground(hover); }
+            @Override public void mouseExited(MouseEvent e) { btn.setForeground(fg); }
+        });
+        return btn;
+    }
+
+    public static JButton createPrimaryButton(String text, Color color, ActionListener action) {
+        JButton btn = new JButton(text);
+        btn.addActionListener(action);
+        btn.setBackground(color);
+        btn.setForeground(ThemeManager.getTextOnPrimaryColor());
+        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        btn.setFocusPainted(false);
+        btn.setOpaque(true);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(color.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)
+        ));
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        Color hover = ThemeManager.getButtonHoverColor(color);
+        btn.addChangeListener(e -> btn.setBackground(btn.getModel().isRollover() ? hover : color));
+        return btn;
     }
 }

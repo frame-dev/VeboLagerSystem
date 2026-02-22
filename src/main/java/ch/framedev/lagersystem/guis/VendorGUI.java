@@ -8,8 +8,6 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
-import static ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
@@ -22,6 +20,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
+
+import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 
 /**
  * VendorGUI with GUI-level caching.
@@ -347,34 +347,6 @@ public class VendorGUI extends JFrame {
         ));
     }
 
-    /**
-     * Makes small "action" buttons (Search/Clear) display consistently in dark/light.
-     * (Your big buttons already use createRoundedButton().)
-     */
-    private void styleFlatActionButton(JButton btn) {
-        Color fg = ThemeManager.getTextPrimaryColor();
-        Color hover = ThemeManager.getButtonHoverColor(fg);
-
-        btn.setFocusPainted(false);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(false);
-        btn.setForeground(fg);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        btn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                btn.setForeground(hover);
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btn.setForeground(fg);
-            }
-        });
-    }
-
     // -------------------- Data loading --------------------
 
     private void loadVendors(boolean forceReload) {
@@ -494,7 +466,10 @@ public class VendorGUI extends JFrame {
 
     private void deleteSelectedVendor() {
         int sel = vendorTable.getSelectedRow();
-        if (sel == -1) return;
+        if (sel == -1) {
+            JOptionPane.showMessageDialog(null, "Wählen sie einen Lieferanten in der Tabelle zum löschen aus.");
+            return;
+        }
 
         int modelRow = vendorTable.convertRowIndexToModel(sel);
         String name = (String) vendorTable.getModel().getValueAt(modelRow, 0);
@@ -597,59 +572,6 @@ public class VendorGUI extends JFrame {
         JFrameUtils.adjustColumnWidths(vendorTable, tableScrollPane, baseColumnWidths);
     }
 
-    private JButton createRoundedButton(String text) {
-        JButton button = new JButton(text);
-        button.setFocusPainted(false);
-        button.setBorderPainted(true);
-        button.setContentAreaFilled(true);
-        button.setOpaque(true);
-
-        Color defaultBg = ThemeManager.getAccentColor();
-        Color hoverBg = ThemeManager.getButtonHoverColor(defaultBg);
-        Color pressedBg = ThemeManager.getButtonPressedColor(defaultBg);
-
-        button.setBackground(defaultBg);
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(defaultBg.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 20, 10, 20)
-        ));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(hoverBg);
-                button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(hoverBg.darker(), 2),
-                        BorderFactory.createEmptyBorder(9, 19, 9, 19)
-                ));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(defaultBg);
-                button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(defaultBg.darker(), 1),
-                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
-                ));
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                button.setBackground(pressedBg);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                button.setBackground(button.contains(e.getPoint()) ? hoverBg : defaultBg);
-            }
-        });
-
-        return button;
-    }
-
     // -------------------- Vendor mapping --------------------
 
     /**
@@ -691,40 +613,5 @@ public class VendorGUI extends JFrame {
         } catch (Exception ex) {
             return 0.0;
         }
-    }
-
-    private JButton createSecondaryButton(String text) {
-        JButton btn = createRoundedButton(text);
-        applyButtonPalette(btn, ThemeManager.getPrimaryColor());
-        return btn;
-    }
-
-    private void applyButtonPalette(JButton button, Color base) {
-        Color hover = ThemeManager.getButtonHoverColor(base);
-        Color pressed = ThemeManager.getButtonPressedColor(base);
-
-        button.setBackground(base);
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(base.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 18, 10, 18)
-        ));
-
-        // Remove older mouse listeners added by createRoundedButton() for consistent palette behavior
-        for (MouseListener ml : button.getMouseListeners()) {
-            String n = ml.getClass().getName();
-            if (n.contains("VendorGUI")) {
-                button.removeMouseListener(ml);
-            }
-        }
-
-        button.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { button.setBackground(hover); }
-            @Override public void mouseExited(MouseEvent e) { button.setBackground(base); }
-            @Override public void mousePressed(MouseEvent e) { button.setBackground(pressed); }
-            @Override public void mouseReleased(MouseEvent e) {
-                button.setBackground(button.contains(e.getPoint()) ? hover : base);
-            }
-        });
     }
 }

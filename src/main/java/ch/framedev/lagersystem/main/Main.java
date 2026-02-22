@@ -26,6 +26,7 @@ import java.util.Map;
 /**
  * Main entry point for VEBO Lagersystem application.
  * Handles initialization, data import, and GUI startup.
+ *
  * @author FrameDev
  */
 public class Main {
@@ -111,20 +112,15 @@ public class Main {
         // Setup for initialization steps with progress updates
         updateProgress(progressListener, 3, "Starte Initialisierung...");
         updateProgress(progressListener, 4, "Überprüfen ob mit Internet verbunden...");
-        if(NetUtils.hasNetwork()) {
-            updateProgress(progressListener, 5, "Initialisiere Datenbank...");
-            initializeDatabase();
-            updateProgress(progressListener, 8, "Datenbank initialisiert...");
-            updateProgress(progressListener, 10, "Lade Einstellungen...");
-            loadSettings();
-            updateProgress(progressListener, 15, "Einstellungen geladen...");
-            updateProgress(progressListener, 17, "Prüfe auf Updates...");
-            checkForUpdatesOnce();
-            updateProgress(progressListener, 19, "Update-Prüfung abgeschlossen...");
-        } else {
-            sleepQuietly();
-            logger.warn("Keine Internetverbindung - Update-Prüfung übersprungen");
-        }
+        updateProgress(progressListener, 5, "Initialisiere Datenbank...");
+        initializeDatabase();
+        updateProgress(progressListener, 8, "Datenbank initialisiert...");
+        updateProgress(progressListener, 10, "Lade Einstellungen...");
+        loadSettings();
+        updateProgress(progressListener, 15, "Einstellungen geladen...");
+        updateProgress(progressListener, 17, "Prüfe auf Updates...");
+        checkForUpdatesOnce();
+        updateProgress(progressListener, 19, "Update-Prüfung abgeschlossen...");
         updateProgress(progressListener, 20, "Lade Icons...");
         loadApplicationIcons();
         updateProgress(progressListener, 25, "Icons geladen...");
@@ -622,7 +618,7 @@ public class Main {
     private static void loadSettings() {
         File settingsFile = ensureSettingsFile();
         settings = new Settings("settings.properties", Main.class, settingsFile);
-        if(!settings.contains("first-time")) {
+        if (!settings.contains("first-time")) {
             settings.setProperty("first-time", "false");
             settings.save();
         }
@@ -633,7 +629,7 @@ public class Main {
         loadGitHubToken();
         SimpleJavaUtils utils = new SimpleJavaUtils();
         try {
-            if(!new File(getAppDataDir(), "categories.json").exists()) {
+            if (!new File(getAppDataDir(), "categories.json").exists()) {
                 Files.copy(utils.getFromResourceFile("categories.json", Main.class).toPath(),
                         new File(getAppDataDir(), "categories.json").toPath(),
                         java.nio.file.StandardCopyOption.REPLACE_EXISTING);
@@ -761,7 +757,7 @@ public class Main {
             if (channelResult.alphaVersion() != null) {
                 System.out.println("  → Alpha: " + channelResult.alphaVersion());
             }
-            if(channelResult.testingVersion() != null) {
+            if (channelResult.testingVersion() != null) {
                 System.out.println("  → Testing: " + channelResult.testingVersion());
             }
 
@@ -784,10 +780,10 @@ public class Main {
             messageBuilder.append("<html><body style='width: 450px; padding: 10px;'>");
             messageBuilder.append("<h2 style='color: #2c3e50; margin-bottom: 10px;'>🎉 Updates verfügbar!</h2>");
             messageBuilder.append("<p style='margin: 10px 0;'><b>Aktuelle Version:</b> ")
-                .append(VERSION)
-                .append(" (")
-                .append(channelResult.currentChannel())
-                .append(")</p>");
+                    .append(VERSION)
+                    .append(" (")
+                    .append(channelResult.currentChannel())
+                    .append(")</p>");
 
             messageBuilder.append("<hr style='margin: 15px 0; border: none; border-top: 1px solid #ccc;'>");
             messageBuilder.append("<h3 style='color: #34495e; margin: 10px 0;'>Verfügbare Versionen:</h3>");
@@ -797,33 +793,33 @@ public class Main {
 
             if (channelResult.hasStableUpdate()) {
                 messageBuilder.append("<p style='margin: 8px 0; padding-left: 10px;'>")
-                    .append("<b style='color: #27ae60;'>✓ Stable:</b> ")
-                    .append(channelResult.stableVersion())
-                    .append(" <i style='color: #7f8c8d;'>(empfohlen)</i></p>");
+                        .append("<b style='color: #27ae60;'>✓ Stable:</b> ")
+                        .append(channelResult.stableVersion())
+                        .append(" <i style='color: #7f8c8d;'>(empfohlen)</i></p>");
                 hasUpdates = true;
             }
 
             if (channelResult.hasBetaUpdate()) {
                 messageBuilder.append("<p style='margin: 8px 0; padding-left: 10px;'>")
-                    .append("<b style='color: #f39c12;'>⚠ Beta:</b> ")
-                    .append(channelResult.betaVersion())
-                    .append(" <i style='color: #7f8c8d;'>(testing)</i></p>");
+                        .append("<b style='color: #f39c12;'>⚠ Beta:</b> ")
+                        .append(channelResult.betaVersion())
+                        .append(" <i style='color: #7f8c8d;'>(testing)</i></p>");
                 hasUpdates = true;
             }
 
             if (channelResult.hasAlphaUpdate()) {
                 messageBuilder.append("<p style='margin: 8px 0; padding-left: 10px;'>")
-                    .append("<b style='color: #e74c3c;'>⚡ Alpha:</b> ")
-                    .append(channelResult.alphaVersion())
-                    .append(" <i style='color: #7f8c8d;'>(experimental)</i></p>");
+                        .append("<b style='color: #e74c3c;'>⚡ Alpha:</b> ")
+                        .append(channelResult.alphaVersion())
+                        .append(" <i style='color: #7f8c8d;'>(experimental)</i></p>");
                 hasUpdates = true;
             }
 
-            if(channelResult.hasTestingUpdate()) {
+            if (channelResult.hasTestingUpdate()) {
                 messageBuilder.append("<p style='margin: 8px 0; padding-left: 10px;'>")
-                    .append("<b style='color: #8e44ad;'>🔧 Testing:</b> ")
-                    .append(channelResult.testingVersion())
-                    .append(" <i style='color: #7f8c8d;'>(für Entwickler)</i></p>");
+                        .append("<b style='color: #8e44ad;'>🔧 Testing:</b> ")
+                        .append(channelResult.testingVersion())
+                        .append(" <i style='color: #7f8c8d;'>(für Entwickler)</i></p>");
                 hasUpdates = true;
             }
 
@@ -833,16 +829,16 @@ public class Main {
 
             messageBuilder.append("<hr style='margin: 15px 0; border: none; border-top: 1px solid #ccc;'>");
             messageBuilder.append("<p style='margin-top: 15px; color: #555;'>")
-                .append("Möchten Sie die Download-Seite öffnen, um die gewünschte Version herunterzuladen?</p>");
+                    .append("Möchten Sie die Download-Seite öffnen, um die gewünschte Version herunterzuladen?</p>");
             messageBuilder.append("</body></html>");
 
             int option = JOptionPane.showConfirmDialog(
-                null,
-                messageBuilder.toString(),
-                "Updates verfügbar",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.INFORMATION_MESSAGE,
-                iconSmall
+                    null,
+                    messageBuilder.toString(),
+                    "Updates verfügbar",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.INFORMATION_MESSAGE,
+                    iconSmall
             );
 
             if (option == JOptionPane.YES_OPTION) {
@@ -864,25 +860,25 @@ public class Main {
             } else {
                 // Fallback: show URL in a dialog
                 JOptionPane.showMessageDialog(
-                    null,
-                    "Bitte öffnen Sie diesen Link in Ihrem Browser:\n" + downloadUrl,
-                    "Download-Link",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    iconSmall
+                        null,
+                        "Bitte öffnen Sie diesen Link in Ihrem Browser:\n" + downloadUrl,
+                        "Download-Link",
+                        JOptionPane.INFORMATION_MESSAGE,
+                        iconSmall
                 );
                 logger.warn("Browser not supported, showed URL in dialog instead");
             }
         } catch (Exception e) {
             logger.error("Failed to open browser: {}", e.getMessage(), e);
             JOptionPane.showMessageDialog(
-                null,
+                    null,
                     """
                             Fehler beim Öffnen des Browsers.
                             Bitte besuchen Sie manuell:
                             https://github.com/frame-dev/VeboLagerSystem/releases""",
-                "Fehler",
-                JOptionPane.ERROR_MESSAGE,
-                iconSmall
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE,
+                    iconSmall
             );
         }
     }
@@ -924,13 +920,15 @@ public class Main {
             boolean enableWarnings,
             boolean enableAutomaticImport,
             int automaticImportInterval
-    ) {}
+    ) {
+    }
 
     private interface ProgressListener {
         void onProgress(int percent, String message);
     }
 
-    private record ProgressUpdate(int percent, String message) {}
+    private record ProgressUpdate(int percent, String message) {
+    }
 
     private static void updateProgress(ProgressListener progressListener, int percent, String message) {
         if (progressListener != null) {
@@ -991,10 +989,10 @@ public class Main {
                     logUtils.addLog("Stack trace: " + getStackTraceAsString(initException));
                     splashscreen.close();
                     JOptionPane.showMessageDialog(
-                        null,
-                        "Die Anwendung konnte nicht gestartet werden.\nDetails: " + initException.getMessage(),
-                        "Startfehler",
-                        JOptionPane.ERROR_MESSAGE
+                            null,
+                            "Die Anwendung konnte nicht gestartet werden.\nDetails: " + initException.getMessage(),
+                            "Startfehler",
+                            JOptionPane.ERROR_MESSAGE
                     );
                     System.exit(1);
                     return;
@@ -1028,12 +1026,12 @@ public class Main {
         final int[] result = new int[1];
         try {
             SwingUtilities.invokeAndWait(() -> result[0] = JOptionPane.showConfirmDialog(
-                null,
-                message,
-                title,
+                    null,
+                    message,
+                    title,
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.INFORMATION_MESSAGE,
-                icon
+                    icon
             ));
         } catch (Exception e) {
             throw new RuntimeException("Dialog konnte nicht angezeigt werden", e);

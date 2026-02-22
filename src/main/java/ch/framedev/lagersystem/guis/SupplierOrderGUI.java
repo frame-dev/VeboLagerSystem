@@ -9,8 +9,6 @@ import ch.framedev.lagersystem.utils.VendorOrderLogging;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import static ch.framedev.lagersystem.utils.JFrameUtils.GradientPanel;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -28,6 +26,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+
+import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 
 public class SupplierOrderGUI extends JFrame {
 
@@ -357,45 +357,6 @@ public class SupplierOrderGUI extends JFrame {
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
         return card;
-    }
-
-    private JButton createPrimaryButton(String text, Color color, ActionListener action) {
-        JButton btn = new JButton(text);
-        btn.addActionListener(action);
-        btn.setBackground(color);
-        btn.setForeground(ThemeManager.getTextOnPrimaryColor());
-        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        btn.setFocusPainted(false);
-        btn.setOpaque(true);
-        btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(color.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 16, 10, 16)
-        ));
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        Color hover = ThemeManager.getButtonHoverColor(color);
-        btn.addChangeListener(e -> btn.setBackground(btn.getModel().isRollover() ? hover : color));
-        return btn;
-    }
-
-    private JButton createSecondaryButton(String text, ActionListener action) {
-        JButton btn = new JButton(text);
-        btn.addActionListener(action);
-        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        btn.setFocusPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(false);
-        btn.setForeground(ThemeManager.getTextPrimaryColor());
-        btn.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        Color fg = ThemeManager.getTextPrimaryColor();
-        Color hover = ThemeManager.getButtonHoverColor(fg);
-        btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { btn.setForeground(hover); }
-            @Override public void mouseExited(MouseEvent e) { btn.setForeground(fg); }
-        });
-        return btn;
     }
 
     public static List<String> getAllSupplierOrders() {

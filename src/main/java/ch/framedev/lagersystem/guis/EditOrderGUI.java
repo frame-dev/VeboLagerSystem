@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static ch.framedev.lagersystem.utils.JFrameUtils.createThemeButton;
+
 /**
  * Modern edit order GUI with improved visual design and user experience.
  * Features: Split panel layout, gradient header, styled components, and article caching.
@@ -454,56 +456,6 @@ public class EditOrderGUI extends JFrame {
 
     public void display() {
         SwingUtilities.invokeLater(() -> setVisible(true));
-    }
-
-    private JButton createThemeButton(String text, Color baseBg) {
-        JButton button = new JButton(text);
-        button.setFocusPainted(false);
-        button.setBorderPainted(true);
-        button.setContentAreaFilled(true);
-        button.setOpaque(true);
-
-        Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
-        Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
-
-        button.setBackground(baseBg);
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(baseBg.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 18, 10, 18)
-        ));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        for (var ml : button.getMouseListeners()) {
-            if (ml != null && ml.getClass().getName().contains("EditOrderGUI")) {
-                button.removeMouseListener(ml);
-            }
-        }
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                if (button.isEnabled()) button.setBackground(hoverBg);
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                if (button.isEnabled()) button.setBackground(baseBg);
-            }
-
-            @Override
-            public void mousePressed(java.awt.event.MouseEvent evt) {
-                if (button.isEnabled()) button.setBackground(pressedBg);
-            }
-
-            @Override
-            public void mouseReleased(java.awt.event.MouseEvent evt) {
-                if (!button.isEnabled()) return;
-                button.setBackground(button.contains(evt.getPoint()) ? hoverBg : baseBg);
-            }
-        });
-
-        return button;
     }
 
     private static String safe(String s) {

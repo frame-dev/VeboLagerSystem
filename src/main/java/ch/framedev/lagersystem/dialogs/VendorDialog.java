@@ -1,5 +1,6 @@
 package ch.framedev.lagersystem.dialogs;
 
+import ch.framedev.lagersystem.guis.OrderGUI;
 import ch.framedev.lagersystem.guis.SettingsGUI;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
@@ -224,27 +225,7 @@ public class VendorDialog {
         okBtn.setFocusPainted(false);
         okBtn.setOpaque(true);
         okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        okBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                okBtn.setBackground(okHoverColor);
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                okBtn.setBackground(okBaseColor);
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                okBtn.setBackground(okPressedColor);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                okBtn.setBackground(okBtn.contains(e.getPoint()) ? okHoverColor : okBaseColor);
-            }
-        });
+        OrderGUI.addHoverEffects(okBtn, okBaseColor, okHoverColor, okPressedColor);
 
         buttonPanel.add(cancelBtn);
         buttonPanel.add(okBtn);
@@ -566,27 +547,7 @@ public class VendorDialog {
         okBtn.setFocusPainted(false);
         okBtn.setOpaque(true);
         okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        okBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                okBtn.setBackground(okHoverColor);
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                okBtn.setBackground(okBaseColor);
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                okBtn.setBackground(okPressedColor);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                okBtn.setBackground(okBtn.contains(e.getPoint()) ? okHoverColor : okBaseColor);
-            }
-        });
+        OrderGUI.addHoverEffects(okBtn, okBaseColor, okHoverColor, okPressedColor);
 
         buttonPanel.add(cancelBtn);
         buttonPanel.add(okBtn);

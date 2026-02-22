@@ -1,6 +1,7 @@
 package ch.framedev.lagersystem.managers;
 
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.LogUtils;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
@@ -20,6 +21,7 @@ import static ch.framedev.lagersystem.managers.DatabaseManager.TABLE_LOGS;
 public class LogManager {
 
     private static final Logger logger = org.apache.logging.log4j.LogManager.getLogger(LogManager.class);
+
     private static LogManager instance;
     private final DatabaseManager databaseManager;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
@@ -80,6 +82,7 @@ public class LogManager {
     public boolean createLog(Log log) {
         String sql = "INSERT INTO " + TABLE_LOGS + " (timestamp, level, message) VALUES (?, ?, ?);";
         boolean ok = databaseManager.executePreparedUpdate(sql, new Object[]{log.timestamp, log.level, log.message});
+        // Main.logUtils.addLog(log.message);
         if (ok) {
             // Invalidate caches so subsequent reads see the new log
             cache.clear();
