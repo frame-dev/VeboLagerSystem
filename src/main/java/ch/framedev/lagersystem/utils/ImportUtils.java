@@ -128,7 +128,7 @@ public class ImportUtils {
     }
 
     /**
-     * Load the clients list from the 'clients.json' file. Each client is represented as a Map<String, Object>.
+     * Load the clients list from the 'clients.json' file. Each client is represented as a Map.
      *
      * @return List of clients loaded from the file, or an empty list if the file cannot be loaded or is invalid.
      */
@@ -169,7 +169,7 @@ public class ImportUtils {
     }
 
     /**
-     * Load the department list from the 'departments.json' file. Each department is represented as a Map<String, Object>.
+     * Load the department list from the 'departments.json' file. Each department is represented as a Map.
      *
      * @return List of departments loaded from the file, or an empty list if the file cannot be loaded or is invalid.
      */
@@ -210,7 +210,7 @@ public class ImportUtils {
     }
 
     /**
-     * Load the vendor list from the 'vendor.json' file. Each vendor is represented as a Map<String, Object>.
+     * Load the vendor list from the 'vendor.json' file. Each vendor is represented as a Map.
      *
      * @return List of vendors loaded from the file, or an empty list if the file cannot be loaded or is invalid.
      */
@@ -252,7 +252,7 @@ public class ImportUtils {
     }
 
     /**
-     * Load the inventory data from the 'inventar.json' file. Each inventory item is represented as a Map<String, Object>.
+     * Load the inventory data from the 'inventar.json' file. Each inventory item is represented as a Map.
      *
      * @return List of inventory items loaded from the file, or an empty list if the file cannot be loaded or is invalid.
      */
@@ -304,7 +304,7 @@ public class ImportUtils {
     }
 
     /**
-     * Parse a JsonObject into a Map<String, Object>.
+     * Parse a JsonObject into a Map.
      *
      * @param gson       Gson instance for parsing
      * @param jsonObject JsonObject to parse
