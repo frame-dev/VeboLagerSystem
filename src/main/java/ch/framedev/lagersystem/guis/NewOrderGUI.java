@@ -77,6 +77,9 @@ public class NewOrderGUI extends JFrame {
     private JSpinner articleQtySpinner;
     private List<Article> allArticlesCache = new ArrayList<>();
 
+    /**
+     * Initializes the NewOrderGUI, sets up the layout, components, and event listeners.
+     */
     public NewOrderGUI() {
         ThemeManager.getInstance().registerWindow(this);
 
@@ -1005,6 +1008,9 @@ public class NewOrderGUI extends JFrame {
         updateTotalPrice();
     }
 
+    /**
+     * Creates the order in the system. This method can be extended to actually save the order in a database or send it to an API.
+     */
     public void display() {
         setVisible(true);
         if (Main.articleListGUI != null) Main.articleListGUI.display();

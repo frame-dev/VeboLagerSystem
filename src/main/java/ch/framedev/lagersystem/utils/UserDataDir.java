@@ -32,7 +32,6 @@ import static org.apache.commons.lang3.SystemUtils.*;
  *   </a>
  * </li>
  * </ul>
- * </p>
  */
 public final class UserDataDir {
 

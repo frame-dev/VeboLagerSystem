@@ -16,12 +16,22 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+
+/**
+ * The ClientDialog class provides static methods to display dialogs for adding and updating client information. It uses Swing components to create a user-friendly interface that allows users to input client details such as name and department. The dialogs are designed with a consistent theme and include validation to ensure that required fields are filled out correctly. The class interacts with the ClientManager to perform database operations for inserting and updating client records.
+ * @author framedev
+ */
 @SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "UnusedAssignment"})
 public class ClientDialog {
 
     private ClientDialog() {
     }
 
+    /**
+     * Shows a dialog to add a new client. The method returns an array containing the name and department of the newly added client if the user clicks "Add", or null if the user cancels the operation.
+     * @param frame The parent frame for the dialog.
+     * @return An array with the new client's details [name, department] if added, or null if cancelled.
+     */
     public static Object[] showAddClientDialog(JFrame frame) {
         final Object[][] holder = new Object[1][];
 
@@ -121,6 +131,12 @@ public class ClientDialog {
         return holder[0];
     }
 
+    /**
+     * Shows a dialog to edit an existing client's details. The existing array should contain the current name at index 0 and the current department at index 1 (both can be null or empty). The method returns an array with the updated name and department if the user clicks "Save", or null if the user cancels the operation.
+     * @param frame The parent frame for the dialog.
+     * @param existing An array containing the existing client details: [name, department]. Both can be null or empty if not available.
+     * @return An array with the updated client details [name, department] if saved, or null if cancelled.
+     */
     public static Object[] showUpdateClientDialog(JFrame frame, Object[] existing) {
         final Object[][] holder = new Object[1][];
 

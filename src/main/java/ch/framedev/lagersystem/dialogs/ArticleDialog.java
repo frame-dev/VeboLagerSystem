@@ -20,8 +20,17 @@ import java.util.function.Function;
 
 import static ch.framedev.lagersystem.guis.ArticleGUI.getHeaderPanel;
 
+/**
+ * This class provides static methods to display dialogs for adding and updating articles. It includes methods to create and style dialog components such as headers, form fields, buttons, and scroll panes. The dialogs are designed with a modern look using gradients, shadows, and blue accents for required fields. The main methods are showUpdateArticleDialog() for editing existing articles and showAddArticleDialog() for creating new articles. Both methods return the entered data in a structured format or null if the dialog is canceled.
+ */
 @SuppressWarnings({"ReassignedVariable", "UnusedAssignment", "ClassEscapesDefinedScope", "DuplicatedCode"})
 public class ArticleDialog {
+
+    /**
+     * Private constructor to prevent instantiation since this class only contains static methods for displaying dialogs.
+     */
+    private ArticleDialog() {
+    }
 
     /**
      * Displays a dialog for updating an article. The dialog allows users to modify article properties
@@ -518,6 +527,9 @@ public class ArticleDialog {
 
     /**
      * Creates the close button for the dialog header with modern styling
+     * @param dialog The dialog to close when the button is clicked
+     * @param resultHolder A reference to hold the result (set to null on close) to signal cancellation to the caller
+     * @return A styled JButton that closes the dialog when clicked
      */
     public static JButton createDialogCloseButton(JDialog dialog, Object[][] resultHolder) {
         JButton closeBtn = new JButton("X");
@@ -572,6 +584,7 @@ public class ArticleDialog {
 
     /**
      * Creates all form fields for the article dialog with modern card design
+     * @return An ArticleFormFields object containing references to all created form components for easy access.
      */
     public static ArticleFormFields createArticleFormFields() {
         ArticleGUI.RoundedPanel contentCard = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);

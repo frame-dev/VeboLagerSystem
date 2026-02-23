@@ -42,6 +42,11 @@ public final class ArticleQrPreviewDialog {
     private ArticleQrPreviewDialog() {
     }
 
+    /**
+     * Shows the QR code preview dialog for the given list of selected articles. The dialog will display a grid of generated QR codes based on the article data, along with options to view them in fullscreen and export them as a PDF. If no articles are selected, a warning message will be shown instead.
+     * @param parent the parent component for dialog positioning
+     * @param selectedArticles the list of articles to generate QR codes for and display in the preview
+     */
     public static void show(Component parent, List<Article> selectedArticles) {
         if (selectedArticles == null || selectedArticles.isEmpty()) {
             JOptionPane.showMessageDialog(parent,

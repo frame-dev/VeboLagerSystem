@@ -31,18 +31,56 @@ import java.util.Map;
  */
 public class Main {
 
+    private Main() {
+        // Private constructor to prevent instantiation of this utility class
+    }
+
+    /**
+     * Logger instance for logging application events and errors. Configured to log to both console and file, providing detailed information for debugging and monitoring application behavior.
+     */
     private static final Logger logger = LogManager.getLogger(Main.class);
+    /**
+     * Cached application data directory to avoid redundant lookups. Initialized on first access and reused for subsequent calls to getAppDataDir().
+     */
     private static volatile File appDataDirCache;
+    /**
+     * Flag to ensure that update checks are only performed once per application run, preventing redundant checks and potential performance issues.
+     */
     private static volatile boolean updatesChecked;
 
+    /**
+     * Database manager instance, responsible for all database interactions. Initialized at startup and used throughout the application.
+     */
     public static DatabaseManager databaseManager;
+    /**
+     * Main GUI instance, responsible for displaying the main application window. Initialized after loading settings and used to manage the main interface.
+     */
     public static ArticleListGUI articleListGUI;
+    /**
+     * Log utility instance, responsible for managing application logs. Initialized at startup and used for logging important events and errors throughout the application.
+     */
     public static LogUtils logUtils = new LogUtils();
+    /**
+     * Application settings loaded from properties file, accessible throughout the application.
+     */
     public static Settings settings;
+    /**
+     * Application icons loaded from resources, used for GUI and dialogs.
+     */
     public static ImageIcon icon;
+    /**
+     * Smaller icon variant for dialogs and taskbar, loaded from resources.
+     */
     public static ImageIcon iconSmall;
+    /**
+     * Application version string, used for display in the GUI and logging. Should be updated with each release to reflect the current version of the application.
+     */
     public static final String VERSION = "0.3-TESTING";
 
+    /**
+     * Main method - entry point of the application. Initializes the application, shows the splash screen, and starts the main GUI. Handles any exceptions that occur during startup and logs them appropriately.
+     * @param args command-line arguments (not used in this application)
+     */
     public static void main(String[] args) {
         try {
             // Initialize application

@@ -11,9 +11,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Centralized theme management for the application.
- * Provides color schemes for both light and dark themes.
- * Supports both static utility methods and instance-based theme management.
+ * Centralized theme manager for the Swing application.
+ *
+ * <p>This class provides:
+ * <ul>
+ *   <li>Light and dark color palettes</li>
+ *   <li>Runtime theme switching</li>
+ *   <li>Custom accent/header/button color support</li>
+ *   <li>Automatic UI refresh for registered windows</li>
+ *   <li>Convenience accessors for consistent styling</li>
+ * </ul>
+ *
+ * <p>The manager is implemented as a singleton and integrates with
+ * {@link UIManager} to apply consistent defaults across the entire UI.
  */
 @SuppressWarnings("unused")
 public class ThemeManager {
@@ -26,10 +36,13 @@ public class ThemeManager {
     private final List<Window> registeredWindows = new ArrayList<>();
 
     /**
-     * Theme enumeration
+     * Available application themes.
      */
     public enum Theme {
-        LIGHT, DARK
+        /** Light theme with bright surfaces and dark text. */
+        LIGHT,
+        /** Dark theme with dark surfaces and light text. */
+        DARK
     }
 
     // =========================
@@ -115,6 +128,9 @@ public class ThemeManager {
         public static final Color SCROLLBAR_THUMB = new Color(150, 155, 160);
     }
 
+    /**
+     * Dark Theme
+     */
     @SuppressWarnings("unused")
     public static class Dark {
 
@@ -198,11 +214,19 @@ public class ThemeManager {
     // Singleton
     // =========================
 
+    /**
+     * Creates the theme manager and applies initial UI defaults.
+     */
     private ThemeManager() {
         initialize();
         applyUIDefaults();
     }
 
+    /**
+     * Returns the singleton instance of the theme manager.
+     *
+     * @return theme manager instance
+     */
     public static ThemeManager getInstance() {
         synchronized (ThemeManager.class) {
             if (instance == null) {
@@ -216,6 +240,9 @@ public class ThemeManager {
     // Theme init / persistence
     // =========================
 
+    /**
+     * Initializes the theme from persisted settings and loads custom colors.
+     */
     public static void initialize() {
         if (Main.settings != null) {
             String darkModeStr = Main.settings.getProperty("dark_mode");
@@ -225,10 +252,20 @@ public class ThemeManager {
         }
     }
 
+    /**
+     * Returns the currently active theme.
+     *
+     * @return active theme
+     */
     public Theme getCurrentTheme() {
         return currentTheme;
     }
 
+    /**
+     * Changes the current theme, persists the setting, and refreshes all registered windows.
+     *
+     * @param theme new theme to apply
+     */
     public void setTheme(Theme theme) {
         currentTheme = theme;
 
@@ -240,6 +277,13 @@ public class ThemeManager {
         updateAllWindows();
     }
 
+    /**
+     * Sets custom accent, header, and button colors and refreshes the UI.
+     *
+     * @param accent custom accent color (nullable)
+     * @param header custom header color (nullable)
+     * @param button custom button color (nullable)
+     */
     public static void setCustomColors(Color accent, Color header, Color button) {
         customAccentColor = accent;
         customHeaderColor = header;
@@ -260,6 +304,9 @@ public class ThemeManager {
         return customButtonColor;
     }
 
+    /**
+     * Loads user-defined colors from persisted settings.
+     */
     private static void loadCustomColorsFromSettings() {
         if (Main.settings == null) {
             return;
@@ -269,6 +316,12 @@ public class ThemeManager {
         customButtonColor = parseHexColor(Main.settings.getProperty("theme_button_color"));
     }
 
+    /**
+     * Parses a hex color string into a {@link Color} instance.
+     *
+     * @param value hex string such as "#RRGGBB"
+     * @return parsed color or {@code null} if invalid
+     */
     private static Color parseHexColor(String value) {
         if (value == null || value.trim().isEmpty()) {
             return null;
@@ -288,19 +341,36 @@ public class ThemeManager {
         }
     }
 
+    /**
+     * Returns whether the current theme is dark.
+     *
+     * @return {@code true} if dark mode is active
+     */
     public static boolean isDarkMode() {
         return currentTheme == Theme.DARK;
     }
 
+    /**
+     * Convenience method to toggle dark mode.
+     *
+     * @param enabled {@code true} to enable dark theme
+     */
     public static void setDarkMode(boolean enabled) {
         getInstance().setTheme(enabled ? Theme.DARK : Theme.LIGHT);
     }
 
+    /**
+     * Applies theme-aware UI defaults specifically for JOptionPane dialogs.
+     */
     public static final class JOptionPaneTheme {
 
         private JOptionPaneTheme() {
         }
 
+        /**
+         * Applies theme colors and fonts to {@link UIManager} defaults.
+         * This ensures newly created components automatically use the current theme.
+         */
         public static void apply() {
             // Base colors
             Color bg = ThemeManager.getCardBackgroundColor();          // dialog panel background
@@ -563,6 +633,10 @@ public class ThemeManager {
     // UIManager defaults
     // =========================
 
+    /**
+     * Applies theme colors and fonts to {@link UIManager} defaults.
+     * This ensures newly created components automatically use the current theme.
+     */
     public static void applyUIDefaults() {
         UIDefaults d = UIManager.getDefaults();
 
@@ -728,16 +802,29 @@ public class ThemeManager {
     // Window registration / refresh
     // =========================
 
+    /**
+     * Registers a window so it can be refreshed when the theme changes.
+     *
+     * @param window window to track
+     */
     public void registerWindow(Window window) {
         if (window != null && !registeredWindows.contains(window)) {
             registeredWindows.add(window);
         }
     }
 
+    /**
+     * Removes a window from theme tracking.
+     *
+     * @param window window to remove
+     */
     public void unregisterWindow(Window window) {
         registeredWindows.remove(window);
     }
 
+    /**
+     * Refreshes all registered windows so the new theme is applied immediately.
+     */
     public void updateAllWindows() {
         registeredWindows.removeIf(w -> w == null || !w.isDisplayable());
 
@@ -751,6 +838,9 @@ public class ThemeManager {
         }
     }
 
+    /**
+     * Recursively applies theme styling to all components in a container.
+     */
     private void updateComponentTree(Container container) {
         applyThemeToComponent(container);
         for (Component comp : container.getComponents()) {
@@ -761,6 +851,9 @@ public class ThemeManager {
         }
     }
 
+    /**
+     * Applies theme colors to a single Swing component depending on its type.
+     */
     private void applyThemeToComponent(Component comp) {
 
         // Panels

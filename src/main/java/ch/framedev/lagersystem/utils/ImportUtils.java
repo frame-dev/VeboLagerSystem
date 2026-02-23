@@ -37,20 +37,20 @@ public class ImportUtils {
      * is intended for internal use and performs the following operations:
      * <p>
      * 1. Loads the inventory file 'inventar.json' from the application's resources.
-     *    Logs a warning if the file is not found or does not exist and an info
-     *    message if the file is successfully loaded.
+     * Logs a warning if the file is not found or does not exist and an info
+     * message if the file is successfully loaded.
      * <p>
      * 2. Loads the vendor file 'vendor.json'. Logs a warning if the file is not
-     *    found or does not exist and an info message if the file is successfully
-     *    loaded.
+     * found or does not exist and an info message if the file is successfully
+     * loaded.
      * <p>
      * 3. Loads the department file 'departments.json'. Logs a warning if the file
-     *    is not found or does not exist and an info message if the file is
-     *    successfully loaded.
+     * is not found or does not exist and an info message if the file is
+     * successfully loaded.
      * <p>
      * 4. Loads the clients file 'clients.json'. Logs a warning if the file is not
-     *    found or does not exist and an info message if the file is successfully
-     *    loaded.
+     * found or does not exist and an info message if the file is successfully
+     * loaded.
      * <p>
      * The LOGGER is used to report file loading statuses, and messages are also
      * recorded using the logging utility provided by the Main class. If any of
@@ -99,7 +99,7 @@ public class ImportUtils {
 
         // Load clients file
         CLIENTS_FILE = new SimpleJavaUtils().getFromResourceFile("clients.json", Main.class);
-        if(CLIENTS_FILE == null) {
+        if (CLIENTS_FILE == null) {
             LOGGER.warn("Clients file 'clients.json' not found in resources");
             Main.logUtils.addLog("Clients file 'clients.json' not found in resources");
         } else if (!CLIENTS_FILE.exists()) {
@@ -113,6 +113,7 @@ public class ImportUtils {
 
     /**
      * Create a instance of this class if not already created and return it.
+     *
      * @return Instance of ImportUtils
      */
     public static ImportUtils getInstance() {
@@ -126,10 +127,15 @@ public class ImportUtils {
         return instance;
     }
 
+    /**
+     * Load the clients list from the 'clients.json' file. Each client is represented as a Map<String, Object>.
+     *
+     * @return List of clients loaded from the file, or an empty list if the file cannot be loaded or is invalid.
+     */
     public List<Map<String, Object>> loadClientsList() {
         List<Map<String, Object>> clients = new ArrayList<>();
 
-        if(CLIENTS_FILE == null || !CLIENTS_FILE.exists()) {
+        if (CLIENTS_FILE == null || !CLIENTS_FILE.exists()) {
             LOGGER.warn("Cannot load file 'clients.json' from resources.");
             Main.logUtils.addLog("Cannot load file 'clients.json' from resources.");
             return clients;
@@ -162,10 +168,15 @@ public class ImportUtils {
         return clients;
     }
 
+    /**
+     * Load the department list from the 'departments.json' file. Each department is represented as a Map<String, Object>.
+     *
+     * @return List of departments loaded from the file, or an empty list if the file cannot be loaded or is invalid.
+     */
     public List<Map<String, Object>> loadDepartmentsList() {
         List<Map<String, Object>> list = new ArrayList<>();
 
-        if(DEPARTMENT_FILE == null || !DEPARTMENT_FILE.exists()) {
+        if (DEPARTMENT_FILE == null || !DEPARTMENT_FILE.exists()) {
             LOGGER.warn("Cannot load file 'departments.json' from resources.");
             Main.logUtils.addLog("Cannot load file 'departments.json' from resources.");
             return list;
@@ -198,10 +209,15 @@ public class ImportUtils {
         return list;
     }
 
+    /**
+     * Load the vendor list from the 'vendor.json' file. Each vendor is represented as a Map<String, Object>.
+     *
+     * @return List of vendors loaded from the file, or an empty list if the file cannot be loaded or is invalid.
+     */
     public List<Map<String, Object>> loadVendorList() {
         List<Map<String, Object>> list = new ArrayList<>();
 
-        if(VENDOR_FILE == null || !VENDOR_FILE.exists()) {
+        if (VENDOR_FILE == null || !VENDOR_FILE.exists()) {
             LOGGER.warn("Cannot load Vendor list from file 'vendor.json'.");
             Main.logUtils.addLog("Cannot load Vendor list from file 'vendor.json'.");
             return list;
@@ -210,7 +226,7 @@ public class ImportUtils {
         Gson gson = new Gson();
         try (FileReader reader = new FileReader(VENDOR_FILE)) {
             JsonArray jsonArray = gson.fromJson(reader, JsonArray.class);
-            if(jsonArray == null) {
+            if (jsonArray == null) {
                 LOGGER.info("Loaded {} vendors from file 'vendor.json'.", 0);
                 Main.logUtils.addLog("Loaded 0 vendors from file 'vendor.json'.");
                 return list;
@@ -235,6 +251,11 @@ public class ImportUtils {
         return list;
     }
 
+    /**
+     * Load the inventory data from the 'inventar.json' file. Each inventory item is represented as a Map<String, Object>.
+     *
+     * @return List of inventory items loaded from the file, or an empty list if the file cannot be loaded or is invalid.
+     */
     public List<Map<String, Object>> loadInventoryFile() {
         List<Map<String, Object>> inventoryData = new ArrayList<>();
 
@@ -284,7 +305,8 @@ public class ImportUtils {
 
     /**
      * Parse a JsonObject into a Map<String, Object>.
-     * @param gson Gson instance for parsing
+     *
+     * @param gson       Gson instance for parsing
      * @param jsonObject JsonObject to parse
      * @return Map representation of the JsonObject
      */
@@ -311,6 +333,7 @@ public class ImportUtils {
 
     /**
      * Parse a JsonPrimitive into the appropriate Java type.
+     *
      * @param value JsonElement representing a primitive value
      * @return Parsed Java Object (String, Boolean, Integer, Long, Double)
      */
@@ -336,9 +359,14 @@ public class ImportUtils {
         return value.getAsString(); // fallback
     }
 
+    /**
+     * Add an item name to the list of imported items. This method appends the given item name to a text file named 'imported_items.txt' located in the application's data directory. Each item name is written on a new line. If the file does not exist, it will be created. If an error occurs during writing, an error message is logged using the application's logging utility and the logger.
+     *
+     * @param itemName the itemName to add
+     */
     public static void addToList(String itemName) {
         File file = new File(Main.getAppDataDir(), "imported_items.txt");
-        try(FileWriter writer = new FileWriter(file, true)) {
+        try (FileWriter writer = new FileWriter(file, true)) {
             writer.write(itemName + System.lineSeparator());
         } catch (IOException e) {
             Main.logUtils.addLog("Failed to write item to imported_items.txt");
@@ -346,10 +374,14 @@ public class ImportUtils {
         }
     }
 
+    /**
+     * Get the list of imported items. This method reads the 'imported_items.txt' file located in the application's data directory and returns a list of item names that have been imported. Each line in the file represents a single item name. If the file does not exist, an empty list is returned. If an error occurs during reading, an error message is logged using the application's logging utility and the logger, and an empty list is returned.
+     * @return List of imported item names, or an empty list if the file does not exist or an error occurs during reading.
+     */
     public static List<String> getImportedItems() {
         List<String> importedItems = new ArrayList<>();
         File file = new File(Main.getAppDataDir(), "imported_items.txt");
-        if(!file.exists()) {
+        if (!file.exists()) {
             return importedItems;
         }
         try {
@@ -361,9 +393,14 @@ public class ImportUtils {
         return importedItems;
     }
 
+    /**
+     * Add a QR code ID to the list of imported QR codes. This method appends the given QR code ID to a text file named 'imported_qrcodes.txt' located in the application's data directory. Each QR code ID is written on a new line. If the file does not exist, it will be created. If an error occurs during writing, an error message is logged using the application's logging utility and the logger.
+     *
+     * @param qrId The QR code ID to be added to the list of imported QR codes.
+     */
     public static void addQrCodeImport(String qrId) {
         File file = new File(Main.getAppDataDir(), "imported_qrcodes.txt");
-        try(FileWriter writer = new FileWriter(file, true)) {
+        try (FileWriter writer = new FileWriter(file, true)) {
             writer.write(qrId + System.lineSeparator());
             writer.flush();
         } catch (IOException e) {
@@ -372,10 +409,14 @@ public class ImportUtils {
         }
     }
 
+    /**
+     * Get the list of imported QR code IDs. This method reads the 'imported_qrcodes.txt' file located in the application's data directory and returns a list of QR code IDs that have been imported. Each line in the file represents a single QR code ID. If the file does not exist, an empty list is returned. If an error occurs during reading, an error message is logged using the application's logging utility and the logger, and an empty list is returned.
+     * @return List of imported QR code IDs, or an empty list if the file does not exist or an error occurs during reading.
+     */
     public static List<String> getImportedQrCodes() {
         List<String> importedQrCodes = new ArrayList<>();
         File file = new File(Main.getAppDataDir(), "imported_qrcodes.txt");
-        if(!file.exists()) {
+        if (!file.exists()) {
             return importedQrCodes;
         }
         try {
@@ -387,9 +428,13 @@ public class ImportUtils {
         return importedQrCodes;
     }
 
+    /**
+     * Add a data entry to the own use list. This method appends the given data string to a text file named 'own_use_list.txt' located in the application's data directory. Each data entry is written on a new line. If the file does not exist, it will be created. If an error occurs during writing, an error message is logged using the application's logging utility and the logger.
+     * @param data The data string to be added to the own use list.
+     */
     public static void addToOwnUseList(String data) {
         File file = new File(Main.getAppDataDir(), "own_use_list.txt");
-        try(FileWriter writer = new FileWriter(file, true)) {
+        try (FileWriter writer = new FileWriter(file, true)) {
             writer.write(data + System.lineSeparator());
         } catch (IOException e) {
             Main.logUtils.addLog("Failed to write own_use_list.txt");

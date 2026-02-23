@@ -31,6 +31,10 @@ public final class ArticleQrCodeDialog {
     private ArticleQrCodeDialog() {
     }
 
+    /**
+     * Displays the Article QR Code Dialog, which allows users to view and manage QR code scan data retrieved from the server. The dialog includes a header with a title and subtitle, a content area with an info banner and a table displaying the QR code data, and a bottom action bar with buttons for refreshing data, importing selected or all entries, adding to the article list, removing from inventory, adding to supplier orders, deleting entries, and closing the dialog. The dialog is modal and will block interaction with the parent component until closed.
+     * @param parent the parent component relative to which the dialog will be displayed
+     */
     public static void show(Component parent) {
         ThemeManager.applyUIDefaults();
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent), "QR-Code Daten vom Server", Dialog.ModalityType.APPLICATION_MODAL);

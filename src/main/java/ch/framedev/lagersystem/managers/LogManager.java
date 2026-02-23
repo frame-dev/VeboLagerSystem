@@ -42,6 +42,13 @@ public class LogManager {
      * Log levels enum for better type safety
      */
     public enum LogLevel {
+        /**
+         * INFO: General informational messages about application operations.
+         * WARNING: Indications of potential issues or important events that are not errors.
+         * ERROR: Serious issues that have occurred, such as exceptions or failed operations.
+         * DEBUG: Detailed information useful for debugging purposes, typically not shown in production.
+         * TRACE: Very detailed information about the application's execution, often including method entry/exit and variable values, used for in-depth debugging.
+         */
         INFO, WARNING, ERROR, DEBUG, TRACE
     }
 
@@ -68,7 +75,11 @@ public class LogManager {
     }
 
     /**
-     * Log record
+     * Log record representing a log entry in the database.
+     * @param id The unique identifier for the log entry (auto-incremented by the database).
+     * @param timestamp The timestamp of when the log entry was created, stored as a string in the format "dd.MM.yyyy HH:mm:ss".
+     * @param level The log level (e.g., INFO, WARNING, ERROR, DEBUG, TRACE) indicating the severity or type of the log entry.
+     * @param message The log message content describing the event or information being logged.
      */
     public record Log(int id, String timestamp, String level, String message) {
         public Log(String timestamp, String level, String message) {
@@ -76,8 +87,11 @@ public class LogManager {
         }
     }
 
+
     /**
-     * Creates a log entry in the database
+     * Creates a log entry in the database. After successful insertion, it invalidates relevant caches to ensure that subsequent reads reflect the new log entry.
+     * @param log The Log record containing the timestamp, level, and message to be inserted into the database. The id field is not used for insertion as it is auto-incremented by the database.
+     * @return true if the log entry was successfully created in the database, false otherwise.
      */
     public boolean createLog(Log log) {
         String sql = "INSERT INTO " + TABLE_LOGS + " (timestamp, level, message) VALUES (?, ?, ?);";
@@ -96,7 +110,10 @@ public class LogManager {
     }
 
     /**
-     * Creates a log entry with current timestamp
+     * Convenience method to create a log entry with the current timestamp. This method formats the current date and time according to the specified formatter and then calls the createLog(Log log) method to insert the log entry into the database.
+     * @param level The log level (e.g., INFO, WARNING, ERROR, DEBUG, TRACE) indicating the severity or type of the log entry.
+     * @param message The log message content describing the event or information being logged.
+     * @return true if the log entry was successfully created in the database, false otherwise.
      */
     public boolean createLog(LogLevel level, String message) {
         String timestamp = LocalDateTime.now().format(FORMATTER);
@@ -105,7 +122,8 @@ public class LogManager {
     }
 
     /**
-     * Retrieves all logs from the database (cached)
+     * Retrieves all logs from the database, ordered by id in descending order (most recent first). This method uses a caching mechanism to improve performance for repeated calls. If the cache is valid (not expired), it returns the cached list of logs. Otherwise, it queries the database, updates the cache, and returns the fresh list of logs.
+     * @return A list of Log records representing all log entries in the database, ordered by most recent first. If an error occurs during retrieval, an empty list is returned and the error is logged.
      */
     public List<Log> getAllLogs() {
         long now = System.currentTimeMillis();
@@ -137,7 +155,9 @@ public class LogManager {
     }
 
     /**
-     * Retrieves logs filtered by level
+     * Retrieves logs filtered by the specified log level. This method queries the database directly for logs matching the given level and does not use caching for the list of logs, as counts are cached separately. The retrieved logs are ordered by id in descending order (most recent first). Each retrieved log is also added to the per-log cache for potential future retrieval by id.
+     * @param level The log level (e.g., INFO, WARNING, ERROR, DEBUG, TRACE) used to filter the logs. Only logs with this level will be retrieved from the database.
+     * @return A list of Log records representing the log entries that match the specified log level, ordered by most recent first. If an error occurs during retrieval, an empty list is returned and the error is logged.
      */
     public List<Log> getLogsByLevel(LogLevel level) {
         // For this case, query DB directly (counts are cached elsewhere)
@@ -164,7 +184,10 @@ public class LogManager {
     }
 
     /**
-     * Retrieves logs within a date range
+     * Retrieves logs that were created within the specified date range. The method expects the startDate and endDate parameters to be in the same format as the timestamp stored in the database (e.g., "dd.MM.yyyy HH:mm:ss"). It queries the database for logs where the timestamp is between the provided start and end dates, ordered by id in descending order (most recent first). Each retrieved log is also added to the per-log cache for potential future retrieval by id.
+     * @param startDate The start date of the range, formatted as a string in the same format as the timestamp stored in the database (e.g., "dd.MM.yyyy HH:mm:ss"). Logs with a timestamp equal to or greater than this date will be included in the results.
+     * @param endDate The end date of the range, formatted as a string in the same format as the timestamp stored in the database (e.g., "dd.MM.yyyy HH:mm:ss"). Logs with a timestamp equal to or less than this date will be included in the results.
+     * @return A list of Log records representing the log entries that were created within the specified date range, ordered by most recent first. If an error occurs during retrieval, an empty list is returned and the error is logged.
      */
     public List<Log> getLogsByDateRange(String startDate, String endDate) {
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS +
@@ -189,8 +212,10 @@ public class LogManager {
         return logs;
     }
 
+
     /**
-     * Searches logs by message content
+     * Retrieves logs that contain the specified search term in their message. The method performs a case-insensitive search for the search term within the message field of the logs. It uses a SQL LIKE query to find matching logs, ordered by id in descending order (most recent first). Each retrieved log
+     * @return A list of Log records representing the log entries that contain the specified search term in their message, ordered by most recent first. If an error occurs during retrieval, an empty list is returned and the error is logged.
      */
     public List<Log> searchLogs(String searchTerm) {
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS +
@@ -216,7 +241,9 @@ public class LogManager {
     }
 
     /**
-     * Get a single log by id (uses per-log cache)
+     * Retrieves a log entry by its unique identifier (id). The method first checks the in-memory cache for the log entry with the specified id. If it is found in the cache, it is returned immediately. If not found in the cache, the method queries the database for the log entry with the given id. If the log entry is found in the database, it is added to the cache before being returned. If an error occurs during retrieval or if no log entry with the specified id exists, null is returned and the error is logged.
+     * @param id The unique identifier of the log entry to be retrieved. This id corresponds to the primary key in the database and is auto-incremented when new log entries are created.
+     * @return A Log record representing the log entry with the specified id, or null if no such log entry exists or if an error occurs during retrieval. If the log entry is successfully retrieved from the database, it is also stored in the in-memory cache for potential future retrieval by id.
      */
     public Log getLogById(int id) {
         // try cache first
@@ -242,7 +269,9 @@ public class LogManager {
     }
 
     /**
-     * Deletes a log entry by ID
+     * Deletes a log entry from the database by its unique identifier (id). The method executes a DELETE SQL statement to remove the log entry with the specified id from the database. If the deletion is successful, it also removes the corresponding entry from the in-memory cache and invalidates related caches to ensure that subsequent reads reflect the deletion. If an error occurs during deletion, false is returned and the error is logged.
+     * @param id The unique identifier of the log entry to be deleted. This id corresponds to the primary key in the database and is auto-incremented when new log entries are created.
+     * @return true if the log entry was successfully deleted from the database, false otherwise. If the deletion is successful, the corresponding entry is also removed from the in-memory cache and related caches are invalidated. If an error occurs during deletion, false is returned and the error is logged.
      */
     public boolean deleteLog(int id) {
         String sql = "DELETE FROM " + TABLE_LOGS + " WHERE id = ?;";
@@ -258,8 +287,11 @@ public class LogManager {
         return ok;
     }
 
+
     /**
-     * Deletes logs older than specified days
+     * Deletes log entries that are older than the specified number of days. The method calculates the cutoff date based on the current date and the provided number of days, and then executes a DELETE SQL statement to remove all log entries with a timestamp older than the cutoff date. If any log entries are deleted, it also clears the in-memory cache and invalidates related caches to ensure that subsequent reads reflect the deletions. The method returns the number of log entries that were deleted. If an error occurs during deletion, 0 is returned and the error is logged.
+     * @param daysOld The number of days used to determine which log entries are considered old. Log entries with a timestamp older than the current date minus this number of days will be deleted from the database.
+     * @return The number of log entries that were deleted from the database. If any log entries are deleted, the in-memory cache and related caches are also cleared to reflect the deletions. If an error occurs during deletion, 0 is returned and the error is logged.
      */
     public int deleteOldLogs(int daysOld) {
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(daysOld);
@@ -300,6 +332,7 @@ public class LogManager {
 
     /**
      * Clears all logs from the database
+     * @return true if the logs were successfully cleared, false otherwise. If the logs are cleared, the in-memory cache and related caches are also cleared to reflect the deletions. If an error occurs during clearing, false is returned and the error is logged.
      */
     public boolean clearAllLogs() {
         String sql = "DELETE FROM " + TABLE_LOGS + ";";
@@ -316,7 +349,9 @@ public class LogManager {
     }
 
     /**
-     * Gets the count of logs by level (cached)
+     * Gets the count of logs for a specific log level. This method uses a caching mechanism to improve performance for repeated calls with the same log level. If the count for the specified log level is available in the cache and is not expired, it returns the cached count. Otherwise, it queries the database for the count of logs with the given log level, updates the cache, and returns the fresh count. If an error occurs during retrieval, 0 is returned and the error is logged.
+     * @param level The log level (e.g., INFO, WARNING, ERROR, DEBUG, TRACE) for which the count of logs should be retrieved. The method will return the number of log entries in the database that have this log level.
+     * @return The count of log entries in the database that have the specified log level. If the count is available in the cache and is not expired, the cached count is returned. Otherwise, the method queries the database for the count, updates the cache, and returns the fresh count. If an error occurs during retrieval, 0 is returned and the error is logged.
      */
     public int getLogCountByLevel(LogLevel level) {
         long now = System.currentTimeMillis();
@@ -340,6 +375,7 @@ public class LogManager {
 
     /**
      * Gets the total count of all logs (cached)
+     * @return The total count of all log entries in the database. If the total count is available in the cache and is not expired, the cached count is returned. Otherwise, the method queries the database for the total count, updates the cache, and returns the fresh count. If an error occurs during retrieval, 0 is returned and the error is logged.
      */
     public int getTotalLogCount() {
         long now = System.currentTimeMillis();

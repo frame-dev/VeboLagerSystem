@@ -789,7 +789,7 @@ public class UpdateManager {
      *
      * @param v1 First version string
      * @param v2 Second version string
-     * @return Negative if v1 < v2, 0 if equal, positive if v1 > v2
+     * @return Negative or positive integer based on comparison, 0 if equal
      */
     public int testVersionComparison(String v1, String v2) {
         logger.info("=== Testing Version Comparison ===");

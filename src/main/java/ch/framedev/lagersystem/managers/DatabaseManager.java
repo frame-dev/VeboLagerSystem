@@ -24,16 +24,46 @@ public class DatabaseManager {
 
     private static final Logger logger = LogManager.getLogger(DatabaseManager.class);
 
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
     public static final String TABLE_ARTICLES = "articles";
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
     public static final String TABLE_VENDORS = "vendors";
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
     public static final String TABLE_ORDERS = "orders";
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
     public static final String TABLE_CLIENTS = "clients";
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
     public static final String TABLE_DEPARTMENTS = "departments";
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
     public static final String TABLE_USERS = "users";
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
     public static final String TABLE_WARNINGS = "warnings";
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
     public static final String TABLE_LOGS = "logs";
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
     public static final String TABLE_NOTES = "notes";
 
+    /**
+     * Whitelist of allowed table names for clearTable() to prevent SQL injection. Must be kept in sync with actual schema and clearTable() usage.
+     */
     public static final Set<String> ALLOWED_TABLES = Set.of(
             TABLE_ARTICLES,
             TABLE_VENDORS,
@@ -144,6 +174,9 @@ public class DatabaseManager {
      * <p><b>SECURITY WARNING:</b> Passing user-controlled input into this method can lead to SQL injection.
      * Prefer {@link #executeQuery(String, Object...)} (prepared statements) or the safe mapping helpers
      * {@link #queryList(String, Object[], ResultMapper)} / {@link #queryOne(String, Object[], ResultMapper)}.
+     *
+     * @param sql raw SQL query string (e.g. "SELECT * FROM users WHERE id = 1")
+     * @return ResultSet or null on error; caller must call {@link #closeQuery(ResultSet)} when done.
      */
     @Deprecated
     public ResultSet executeQuery(String sql) {
@@ -179,8 +212,12 @@ public class DatabaseManager {
      * <pre>
      *     executeQuery("SELECT * FROM users WHERE username = ?", username);
      * </pre>
-     *
+     * <p>
      * Caller must call {@link #closeQuery(ResultSet)}.
+     *
+     * @param sql    SQL string with "?" placeholders (e.g. "SELECT * FROM users WHERE username = ?")
+     * @param params parameters to bind to the placeholders (e.g. username)
+     * @return ResultSet or null on error; caller must call {@link #closeQuery(ResultSet)} when done.
      */
     public ResultSet executeQuery(String sql, Object... params) {
         return executePreparedQuery(sql, params);
@@ -207,6 +244,10 @@ public class DatabaseManager {
      * Caller must call closeQuery(rs).
      * <p>
      * PreparedStatement is reused from an LRU cache.
+     *
+     * @param sql    SQL string with "?" placeholders (e.g. "SELECT * FROM users WHERE username = ?")
+     * @param params parameters to bind to the placeholders (e.g. username)
+     * @return ResultSet or null on error; caller must call {@link #closeQuery(ResultSet)} when done.
      */
     public ResultSet executePreparedQuery(String sql, Object[] params) {
         try {
@@ -229,6 +270,10 @@ public class DatabaseManager {
      * Execute prepared update statement.
      * <p>
      * PreparedStatement is reused from an LRU cache.
+     *
+     * @param sql    SQL string with "?" placeholders (e.g. "UPDATE users SET last_login = ? WHERE id = ?")
+     * @param params parameters to bind to the placeholders (e.g. lastLogin, userId)
+     * @return true if update succeeded, false on error
      */
     public boolean executePreparedUpdate(String sql, Object[] params) {
         try {
@@ -321,6 +366,8 @@ public class DatabaseManager {
      *
      * <p><b>SECURITY WARNING:</b> Passing user-controlled input into this method can lead to SQL injection.
      * Prefer {@link #executeUpdate(String, Object...)} (prepared statements).
+     * @param sql raw SQL update/DDL string (e.g. "UPDATE users SET last_login = '2024-01-01' WHERE id = 1")
+     * @return true if update succeeded, false on error
      */
     @Deprecated
     public boolean executeUpdate(String sql) {
@@ -355,6 +402,10 @@ public class DatabaseManager {
      * <pre>
      *     executeUpdate("UPDATE users SET last_login = ? WHERE id = ?", lastLogin, userId);
      * </pre>
+     *
+     * @param params parameters to bind to the placeholders (e.g. lastLogin, userId)
+     * @param sql    SQL string with "?" placeholders (e.g. "UPDATE users SET last_login = ? WHERE id = ?")
+     * @return true if update succeeded, false on error
      */
     public boolean executeUpdate(String sql, Object... params) {
         return executePreparedUpdate(sql, params);
@@ -365,6 +416,8 @@ public class DatabaseManager {
      *
      * <p><b>SECURITY WARNING:</b> Passing user-controlled input into this method can lead to SQL injection.
      * Prefer {@link #executeUpdateWithCount(String, Object...)} (prepared statements).
+     *
+     * @return affected rows count, or -1 if an error occurs
      */
     @Deprecated
     public int executeUpdateWithCount(String sql) {
@@ -393,6 +446,10 @@ public class DatabaseManager {
 
     /**
      * Executes a parameterized update/DDL and returns affected rows count (or -1 on error).
+     *
+     * @param sql    SQL string with "?" placeholders (e.g. "UPDATE users SET last_login = ? WHERE id = ?")
+     * @param params parameters to bind to the placeholders (e.g. lastLogin, user, Id)
+     * @return affected rows count, or -1 if an error occurs
      */
     public int executeUpdateWithCount(String sql, Object... params) {
         try {
@@ -441,6 +498,8 @@ public class DatabaseManager {
      * Clear all data from the database.
      * WARNING: destructive operation that removes ALL data from ALL tables.
      * Uses a transaction to ensure atomicity (all or nothing).
+     *
+     * @return true if all tables were cleared successfully, false if any error occurs (in which case no data will be deleted due to rollback).
      */
     public boolean clearDatabase() {
         logger.warn("clearDatabase() called - this will delete all data!");
@@ -508,6 +567,9 @@ public class DatabaseManager {
      * <p>
      * IMPORTANT: You cannot bind table names with PreparedStatement placeholders.
      * Therefore we whitelist table names and build SQL directly.
+     *
+     * @param tableName name of the table to clear (must be in ALLOWED_TABLES)
+     * @return true if the table was cleared successfully, false if the table name is invalid or an error occurs.
      */
     @SuppressWarnings("SqlSourceToSinkFlow")
     public boolean clearTable(String tableName) {
@@ -544,11 +606,32 @@ public class DatabaseManager {
     // Optional helper API (safe mapping) - prefer this over returning ResultSet long-term
     // ---------------------------------------------------------------------------------------------
 
+    /**
+     * Functional interface for mapping a ResultSet row to an object of type T.
+     *
+     * @param <T> the type of the mapped object
+     */
     @FunctionalInterface
     public interface ResultMapper<T> {
+        /**
+         * Map the current row of the ResultSet to an object of type T.
+         *
+         * @param rs ResultSet positioned at the current row; caller is responsible for closing it.
+         * @return mapped object of type T
+         * @throws SQLException if a database access error occurs or this method is called on a closed ResultSet
+         */
         T map(ResultSet rs) throws SQLException;
     }
 
+    /**
+     * Helper for list-result queries. Returns a list of mapped objects, or an empty list on error.
+     *
+     * @param sql    SQL string with "?" placeholders (e.g. "SELECT * FROM users WHERE department = ?")
+     * @param params parameters to bind to the placeholders (e.g. departmentName)
+     * @param mapper function to map each ResultSet row to an object of type T
+     * @param <T>    the type of the mapped objects
+     * @return list of mapped objects of type T, or an empty list if an error occurs
+     */
     @SuppressWarnings("SqlSourceToSinkFlow")
     public <T> List<T> queryList(String sql, Object[] params, ResultMapper<T> mapper) {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -567,11 +650,26 @@ public class DatabaseManager {
         }
     }
 
+    /**
+     * Helper for single-result queries. Returns the mapped object or null if no results.
+     *
+     * @param sql    SQL string with "?" placeholders (e.g. "SELECT * FROM users WHERE id = ?")
+     * @param params parameters to bind to the placeholders (e.g. userId)
+     * @param mapper function to map the ResultSet row to an object of type T
+     * @param <T>    the type of the mapped object
+     * @return mapped object of type T or null if no results
+     */
     public <T> T queryOne(String sql, Object[] params, ResultMapper<T> mapper) {
         List<T> list = queryList(sql, params, mapper);
         return list.isEmpty() ? null : list.getFirst();
     }
 
+    /**
+     * Helper for executing multiple operations in a transaction. If any exception occurs, the transaction is rolled back.
+     *
+     * @param work a Consumer that accepts a Connection and performs the desired operations; it can throw exceptions to trigger rollback
+     * @return true if the transaction was committed successfully, false if it was rolled back due to an exception
+     */
     public boolean inTransaction(Consumer<Connection> work) {
         boolean autoCommit = true;
         try {

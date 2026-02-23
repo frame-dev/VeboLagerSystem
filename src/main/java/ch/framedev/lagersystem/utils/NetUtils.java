@@ -7,12 +7,20 @@ import java.io.InputStreamReader;
 import java.net.*;
 import java.util.Enumeration;
 
+/**
+ * The NetUtils class provides utility methods for network-related operations, such as checking for active network interfaces, retrieving the client's IP address from an HttpExchange object, obtaining the local IP address of the host, and fetching the public IP address using an external service. The class is designed to be a final utility class with static methods, and it includes error handling to ensure that exceptions do not propagate and instead return null or false as appropriate. The methods in this class can be used in various parts of the application where network information is needed.
+ * @author framedev
+ */
 @SuppressWarnings("unused")
 public final class NetUtils {
 
     private NetUtils() {
     }
 
+    /**
+     * Checks if the host has any active network interfaces (excluding loopback and virtual). This is a basic check to determine if the host is likely connected to a network, but it does not guarantee Internet connectivity.
+     * @return true if at least one active non-loopback, non-virtual network interface is found; false otherwise.
+     */
     public static boolean hasNetwork() {
         try {
             Enumeration<NetworkInterface> ifs = NetworkInterface.getNetworkInterfaces();
@@ -27,7 +35,11 @@ public final class NetUtils {
         return false;
     }
 
-    // 1) Client-IP aus HttpExchange (prüft X-Forwarded-For / X-Real-IP / Forwarded)
+    /**
+     * Retrieves the client's IP address from the HttpExchange object. It first checks common headers that may contain the client's IP (e.g., "X-Forwarded-For", "X-Real-IP", "Forwarded") to account for cases where the server is behind a proxy. If these headers are not present or do not contain a valid IP, it falls back to using the remote address from the HttpExchange. The method also handles potential formatting issues, such as stripping quotes from header values.
+     * @param exchange the HttpExchange object containing the request and connection information.
+     * @return the client's IP address as a string if found; null if no valid IP address is found or if the exchange is null.
+     */
     public static String getClientIp(HttpExchange exchange) {
         if (exchange == null) return null;
         String[] headersToCheck = {"X-Forwarded-For", "X-Real-IP", "Forwarded"};
@@ -62,7 +74,10 @@ public final class NetUtils {
         return s;
     }
 
-    // 2) Erste erreichbare nicht-loopback IPv4-Adresse des Hosts
+    /**
+     * Retrieves the local IP address of the host by iterating through all network interfaces and their associated IP addresses. The method checks for active, non-loopback, and non-virtual interfaces, and returns the first valid IPv4 address found. If no valid IP address is found or if an exception occurs during the process, it falls back to using InetAddress.getLocalHost() to retrieve the local IP address. If that also fails, it returns null.
+     * @return the local IP address as a string if found; null if no valid IP address is found or if an error occurs.
+     */
     public static String getLocalIp() {
         try {
             Enumeration<NetworkInterface> ifs = NetworkInterface.getNetworkInterfaces();
@@ -87,7 +102,10 @@ public final class NetUtils {
         }
     }
 
-    // 3) Public/external IP via external service (kann fehlschlagen wenn kein Internet)
+    /**
+     * Retrieves the public IP address of the host by making an HTTP GET request to a public IP service (https://api.ipify.org). The method sets a connection and read timeout of 2000 milliseconds to prevent hanging. If the request is successful and a valid IP address is returned, it is trimmed and returned as a string. If any exception occurs during the process (e.g., network issues, service unavailability), the method returns null.
+     * @return the public IP address as a string if successful; null if an error occurs or if the response is invalid.
+     */
     public static String getPublicIp() {
         String service = "https://api.ipify.org";
         try {

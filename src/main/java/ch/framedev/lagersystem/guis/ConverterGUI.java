@@ -17,6 +17,11 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.DecimalFormat;
 
+/**
+ * A GUI for calculating the price of filling an article with a certain amount. The user can enter the desired
+ * amount in ml or liters, and the GUI will calculate the price based on the article's sell price and volume.
+ * @author framedev
+ */
 public class ConverterGUI extends JFrame {
 
     private final Article article;
@@ -25,6 +30,10 @@ public class ConverterGUI extends JFrame {
     private JComboBox<String> unitBox;
     private JLabel resultLabel;
 
+    /**
+     * Create a new converter GUI for the given article. The article's name and sell price will be displayed,
+     * @param article The article to calculate prices for. If null, the GUI will show placeholders and disable calculation.
+     */
     public ConverterGUI(Article article) {
         this.article = article;
 

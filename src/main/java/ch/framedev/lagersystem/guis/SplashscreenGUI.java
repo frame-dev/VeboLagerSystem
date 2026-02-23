@@ -7,6 +7,16 @@ import java.awt.event.ComponentEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.net.URL;
 
+/**
+ * Displays a modern splash screen for the LagerSystem application.
+ *
+ * <p>The UI uses a gradient background, subtle animated particles, and a glass-like card that contains
+ * the application logo, title/subtitle, a status message, and an animated progress bar.
+ * The layout is responsive and adapts its padding and typography when the window is resized.
+ *
+ * <p>Progress and status can be updated at runtime via {@link #updateProgress(int, String)}.
+ * The animation is driven by a {@link Timer} that periodically repaints the relevant components.
+ */
 @SuppressWarnings("unused")
 public class SplashscreenGUI extends JFrame {
 
@@ -36,6 +46,12 @@ public class SplashscreenGUI extends JFrame {
     private final JLabel titleLabel;
     private final JLabel subtitleLabel;
 
+    /**
+     * Creates and initializes the splash screen window.
+     *
+     * <p>Builds the UI, installs a resize listener for responsive sizing, initializes the particle system,
+     * and starts the animation timer.
+     */
     public SplashscreenGUI() {
         setTitle("Lagersystem - Splashscreen");
         setSize(920, 620);
@@ -123,6 +139,10 @@ public class SplashscreenGUI extends JFrame {
         startAnimation(root, card);
     }
 
+    /**
+     * Recomputes padding, typography, and progress bar size based on the current window size.
+     * This prevents clipping on small windows and keeps the layout visually balanced.
+     */
     private void updateResponsiveSizing() {
         int w = Math.max(getWidth(), 1);
         int h = Math.max(getHeight(), 1);
@@ -151,19 +171,40 @@ public class SplashscreenGUI extends JFrame {
         repaint();
     }
 
+    /**
+     * Clamps {@code v} to the inclusive range {@code [min, max]}.
+     *
+     * @param v value to clamp
+     * @param min minimum allowed value
+     * @param max maximum allowed value
+     * @return clamped value
+     */
     private static int clamp(int v, int min, int max) {
         return Math.max(min, Math.min(max, v));
     }
 
+    /**
+     * Updates the progress bar value and optionally updates the status message.
+     *
+     * @param percent progress value (typically 0–100)
+     * @param message status text to display; ignored if {@code null} or blank
+     */
     public void updateProgress(int percent, String message) {
         progressBar.setValue(percent);
         if (message != null && !message.isBlank()) statusLabel.setText(message);
     }
 
+    /**
+     * Shows the splash screen on the Swing Event Dispatch Thread (EDT).
+     */
     public void display() {
         SwingUtilities.invokeLater(() -> setVisible(true));
     }
 
+    /**
+     * Hides and disposes the splash screen on the Swing Event Dispatch Thread (EDT).
+     * Also stops the animation timer.
+     */
     public void close() {
         SwingUtilities.invokeLater(() -> {
             setVisible(false);
@@ -172,6 +213,11 @@ public class SplashscreenGUI extends JFrame {
         });
     }
 
+    /**
+     * Loads and scales the application logo used on the splash screen.
+     *
+     * @return the logo icon; returns a placeholder icon if the resource is missing
+     */
     private static Icon loadLogo() {
         URL logoUrl = SplashscreenGUI.class.getResource("/logo-small.png");
         if (logoUrl == null) return new EmptyIcon(96, 96);
@@ -385,6 +431,11 @@ public class SplashscreenGUI extends JFrame {
     // Animation
     // ---------------------------------------------------------------------------------------------
 
+    /**
+     * Starts the animation timer and repaints the given components regularly.
+     *
+     * @param components additional components to repaint (e.g. root/card)
+     */
     private void startAnimation(JComponent... components) {
         animationTimer = new Timer(16, event -> {
             phase += 0.072;
@@ -399,10 +450,18 @@ public class SplashscreenGUI extends JFrame {
         animationTimer.start();
     }
 
+    /**
+     * Stops the animation timer if it is running.
+     */
     private void stopAnimation() {
         if (animationTimer != null) animationTimer.stop();
     }
 
+    /**
+     * Returns the current animation phase value used to drive smooth oscillations.
+     *
+     * @return animation phase
+     */
     private double getPhase() {
         return phase;
     }

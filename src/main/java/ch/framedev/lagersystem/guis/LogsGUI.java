@@ -32,6 +32,10 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+/**
+ * The LogsGUI class provides a graphical user interface for viewing, filtering, and managing logs related to orders, suppliers, and supplier orders in the inventory system. It allows users to switch between different log categories, apply text and date filters, export logs to PDF or CSV formats, and clear logs. The GUI is designed with a modern look using custom styling and themes, and it includes features such as auto-refreshing logs and a context menu for copying log entries. The class interacts with various logging utilities to retrieve and manage log data, and it uses Log4j for logging any errors that occur within the GUI.
+ * @author framedev
+ */
 public class LogsGUI extends JFrame {
 
     private final Logger logger = LogManager.getLogger(LogsGUI.class);
@@ -56,6 +60,9 @@ public class LogsGUI extends JFrame {
         SUPPLIER_ORDER
     }
 
+    /**
+     * Initializes the LogsGUI by setting up the user interface components, including the header, buttons for log categories, filter fields, action buttons, and the main content area for displaying logs. It also attaches listeners for filtering logs based on user input and sets up a timer for auto-refreshing logs if enabled. The constructor loads the initial set of logs for the default category (ORDER) and applies the necessary styles and themes to the components.
+     */
     public LogsGUI() {
         ThemeManager.applyUIDefaults();
         setTitle(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");

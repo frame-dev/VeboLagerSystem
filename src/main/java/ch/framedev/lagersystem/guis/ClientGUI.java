@@ -22,6 +22,9 @@ import java.util.regex.PatternSyntaxException;
 
 import static ch.framedev.lagersystem.utils.JFrameUtils.createSecondaryButton;
 
+/**
+ * The ClientGUI class provides a graphical user interface for managing clients in the inventory system. It allows users to view, add, edit, delete, and filter clients based on their names and associated departments. The GUI is designed with a modern look and feel, utilizing theming from the ThemeManager to ensure consistency across the application. It features a responsive layout that adjusts to window resizing and includes interactive components such as tables, buttons, combo boxes, and search fields for an efficient user experience.
+ */
 @SuppressWarnings({"MismatchedQueryAndUpdateOfCollection", "DuplicatedCode"})
 public class ClientGUI extends JFrame {
 
@@ -34,6 +37,9 @@ public class ClientGUI extends JFrame {
 
     private static final String ALL_DEPARTMENTS_LABEL = UnicodeSymbols.DEPARTMENT + " Alle Abteilungen";
 
+    /**
+     * Initializes the ClientGUI, setting up the layout, components, and event handlers for managing clients. The GUI includes a header, a toolbar with filtering options and action buttons, a main area with a table displaying clients, and a search bar at the bottom. It also loads the initial client data from the database and applies theming to all components.
+     */
     public ClientGUI() {
         ThemeManager.getInstance().registerWindow(this);
 

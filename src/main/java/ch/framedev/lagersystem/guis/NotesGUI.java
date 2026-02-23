@@ -32,6 +32,9 @@ public class NotesGUI extends JFrame {
     private List<String> allTitles = List.of();
     private float fontScaleDelta = 0f;
 
+    /**
+     * Initializes the NotesGUI window, sets up the layout, components, and event handlers.
+     */
     public NotesGUI() {
         ThemeManager.getInstance().registerWindow(this);
 

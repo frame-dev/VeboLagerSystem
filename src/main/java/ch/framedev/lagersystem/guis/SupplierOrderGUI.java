@@ -26,6 +26,17 @@ import java.util.Optional;
 
 import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 
+/**
+ * GUI window that manages supplier reorders for articles.
+ *
+ * <p>This view displays all pending supplier order items in a table and allows
+ * users to add, remove, clear, and persist orders to a local text file.
+ * The GUI integrates with {@link ArticleManager} to resolve stock values
+ * and with {@link VendorOrderLogging} to record order actions.
+ *
+ * <p>The window is theme-aware and automatically registers itself with
+ * {@link ThemeManager} so colors update dynamically.
+ */
 @SuppressWarnings("DuplicatedCode")
 public class SupplierOrderGUI extends JFrame {
 
@@ -49,6 +60,12 @@ public class SupplierOrderGUI extends JFrame {
     private final DefaultTableModel tableModel;
     private final JTable table;
 
+    /**
+     * Creates and initializes the supplier order management window.
+     *
+     * <p>Builds the UI layout, configures the table, loads stored orders from disk,
+     * and refreshes the table contents.
+     */
     public SupplierOrderGUI() {
         ThemeManager.getInstance().registerWindow(this);
         INSTANCE = this;
@@ -164,9 +181,23 @@ public class SupplierOrderGUI extends JFrame {
         refreshTable();
     }
 
+    /**
+     * Immutable data holder representing a single supplier order entry.
+     *
+     * @param articleNumber article identifier
+     * @param name article display name
+     * @param vendor supplier name
+     * @param quantity requested quantity
+     * @param stock current stock level
+     * @param addedAt timestamp when the item was added
+     */
     private record OrderItem(String articleNumber, String name, String vendor, int quantity, int stock, String addedAt) {
     }
 
+    /**
+     * Loads supplier order entries from the persistent order file into memory.
+     * Invalid or malformed lines are ignored.
+     */
     private void loadFromFile() {
         ensureOrderFileExists();
         orderItems.clear();
@@ -192,6 +223,10 @@ public class SupplierOrderGUI extends JFrame {
         }
     }
 
+    /**
+     * Writes all current supplier order entries to disk.
+     * Stock values are refreshed from {@link ArticleManager} before saving.
+     */
     private void persist() {
         ensureOrderFileExists();
         List<String> lines = new ArrayList<>();
@@ -225,6 +260,10 @@ public class SupplierOrderGUI extends JFrame {
         }
     }
 
+    /**
+     * Rebuilds the table model from the in-memory order list and sorts
+     * entries by newest first.
+     */
     private void refreshTable() {
         tableModel.setRowCount(0);
         orderItems.stream()
@@ -239,6 +278,9 @@ public class SupplierOrderGUI extends JFrame {
                 }));
     }
 
+    /**
+     * Removes the currently selected order row from the list and persists the change.
+     */
     private void removeSelected() {
         int viewRow = table.getSelectedRow();
         if (viewRow < 0) return;
@@ -250,6 +292,9 @@ public class SupplierOrderGUI extends JFrame {
         refreshTable();
     }
 
+    /**
+     * Clears all supplier orders after user confirmation and persists the result.
+     */
     private void clearAll() {
         if (JOptionPane.showConfirmDialog(this,
                 "Alle Lieferanten-Bestellposten löschen?",
@@ -263,6 +308,12 @@ public class SupplierOrderGUI extends JFrame {
         }
     }
 
+    /**
+     * Adds a new supplier order entry or increases the quantity if it already exists.
+     *
+     * @param article article to order
+     * @param quantity amount to add
+     */
     private void upsertItem(Article article, int quantity) {
         String articleNumber = article.getArticleNumber();
         Optional<OrderItem> existing = orderItems.stream()
@@ -287,6 +338,13 @@ public class SupplierOrderGUI extends JFrame {
         refreshTable();
     }
 
+    /**
+     * Adds an article to the supplier order list using the singleton GUI instance.
+     * Executed on the Swing Event Dispatch Thread.
+     *
+     * @param article article to add
+     * @param quantity quantity to order
+     */
     public static void addArticleToSupplierOrder(Article article, int quantity) {
         if (article == null || quantity <= 0) return;
         SwingUtilities.invokeLater(() -> {
@@ -296,6 +354,9 @@ public class SupplierOrderGUI extends JFrame {
         });
     }
 
+    /**
+     * Ensures the supplier order file and its parent directory exist.
+     */
     private static void ensureOrderFileExists() {
         try {
             File parent = ORDER_FILE.toFile().getParentFile();
@@ -310,6 +371,12 @@ public class SupplierOrderGUI extends JFrame {
         }
     }
 
+    /**
+     * Parses an integer safely.
+     *
+     * @param s string to parse
+     * @return parsed value or {@code 0} if parsing fails
+     */
     private static int safeInt(String s) {
         try {
             return Integer.parseInt(s == null ? "0" : s.trim());
@@ -318,6 +385,11 @@ public class SupplierOrderGUI extends JFrame {
         }
     }
 
+    /**
+     * Creates a themed card-style panel used for UI sections.
+     *
+     * @return styled panel container
+     */
     private JPanel createCardPanel() {
         JPanel card = new JPanel(new BorderLayout());
         card.setBackground(ThemeManager.getCardBackgroundColor());
@@ -328,6 +400,11 @@ public class SupplierOrderGUI extends JFrame {
         return card;
     }
 
+    /**
+     * Returns all persisted supplier order lines.
+     *
+     * @return list of stored order entries
+     */
     public static List<String> getAllSupplierOrders() {
         List<String> orders = new ArrayList<>();
         ensureOrderFileExists();
@@ -340,6 +417,12 @@ public class SupplierOrderGUI extends JFrame {
         return orders;
     }
 
+    /**
+     * Returns the singleton instance of the supplier order window.
+     * Creates it if necessary.
+     *
+     * @return GUI instance
+     */
     public static SupplierOrderGUI getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new SupplierOrderGUI();
@@ -347,12 +430,20 @@ public class SupplierOrderGUI extends JFrame {
         return INSTANCE;
     }
 
+    /**
+     * Unregisters the window from the theme manager and disposes it.
+     */
     @Override
     public void dispose() {
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
 
+    /**
+     * Creates the gradient header panel used at the top of the window.
+     *
+     * @return styled header panel
+     */
     private static JPanel getHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout()) {
             @Override

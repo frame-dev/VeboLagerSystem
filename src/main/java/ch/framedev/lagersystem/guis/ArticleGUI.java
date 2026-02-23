@@ -53,12 +53,29 @@ public class ArticleGUI extends JFrame {
     // Category management
     private JComboBox<String> categoryFilter;
 
-    // Inner class to hold category range data
+    /**
+     * Helper class to represent a category and its associated article number range. Loaded from categories.json.
+     */
     public static class CategoryRange {
+        /**
+         * The name of the category (e.g., "Getränke")
+         */
         public String category;
+        /**
+         * The starting article number for this category (inclusive)
+         */
         public int rangeStart;
+        /**
+         * The ending article number for this category (inclusive)
+         */
         public int rangeEnd;
 
+        /**
+         * Creates a new CategoryRange with the specified category name and article number range.
+         * @param category The name of the category (e.g., "Getränke")
+         * @param start The starting article number for this category (inclusive)
+         * @param end The ending article number for this category (inclusive)
+         */
         public CategoryRange(String category, int start, int end) {
             this.category = category;
             this.rangeStart = start;
@@ -66,6 +83,9 @@ public class ArticleGUI extends JFrame {
         }
     }
 
+    /**
+     * Initializes the ArticleGUI, sets up the layout, loads categories and articles, and configures interactions.
+     */
     public ArticleGUI() {
         ThemeManager.getInstance().registerWindow(this);
 
@@ -564,6 +584,10 @@ public class ArticleGUI extends JFrame {
         return ArticleDialog.showAddArticleDialog(this);
     }
 
+    /**
+     * Creates a custom header panel with a horizontal gradient background for the article management section.
+     * @return A JPanel with a custom gradient background that can be used as a header for the article management section.
+     */
     public static JPanel getHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout()) {
             @Override
@@ -773,10 +797,17 @@ public class ArticleGUI extends JFrame {
         articleTable.revalidate();
     }
 
+    /**
+     * Displays the ArticleGUI window. This method can be called from the main menu or other parts of the application to show the article management interface.
+     */
     public void display() {
         setVisible(true);
     }
 
+    /**
+     * Entry point to launch the ArticleGUI independently for testing. In the full application, this would be launched from the main menu or another part of the app.
+     * @param args not used
+     */
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             ArticleGUI gui = new ArticleGUI();
@@ -1340,11 +1371,18 @@ public class ArticleGUI extends JFrame {
         ArticleQrPreviewDialog.show(this, getSelectedArticles());
     }
 
-    // Simple rounded panel implementation
+    /**
+     * A custom JPanel with rounded corners and a specified background color. Used for the header section of the ArticleGUI to create a visually appealing design that stands out from the rest of the interface.
+     */
     public static class RoundedPanel extends JPanel {
         private final Color backgroundColor;
         private final int radius;
 
+        /**
+         * Create a panel with rounded corners and a custom background color.
+         * @param bg The background color of the panel
+         * @param radius The radius of the rounded corners in pixels
+         */
         public RoundedPanel(Color bg, int radius) {
             this.backgroundColor = bg;
             this.radius = radius;

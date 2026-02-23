@@ -21,6 +21,10 @@ import java.util.regex.Pattern;
 
 import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 
+/**
+ * The OrderGUI class provides a graphical user interface for managing orders in the inventory system. It allows users to view, filter, create, edit, delete, and complete orders. The GUI displays a list of orders in a table format, with options to search and filter the orders based on various criteria. Users can also access detailed information about each order and perform actions such as editing or deleting orders directly from the interface. The class implements caching for order data to improve performance and reduce database load, while ensuring that the displayed information is up-to-date when necessary.
+ * @author framedev
+ */
 @SuppressWarnings("DuplicatedCode")
 public class OrderGUI extends JFrame {
 
@@ -39,6 +43,9 @@ public class OrderGUI extends JFrame {
     private final ConcurrentHashMap<String, Order> orderByIdCache =
             new ConcurrentHashMap<>();
 
+    /**
+     * Initializes the OrderGUI by setting up the main window, including the header, toolbar, order table, and search bar. The GUI allows users to view, filter, create, edit, delete, and complete orders. It also includes a search functionality to filter orders based on various criteria. The order data is loaded from the OrderManager and displayed in a JTable with custom styling and interactions. The GUI is designed to be responsive and user-friendly, with tooltips and confirmation dialogs for critical actions.
+     */
     public OrderGUI() {
         ThemeManager.applyUIDefaults();
         setTitle("Bestellungen Verwaltung");
@@ -615,6 +622,13 @@ public class OrderGUI extends JFrame {
         ));
     }
 
+    /**
+     * Adds hover and press effects to a button by changing its background color. The button's original background color should be set to 'base' for this to work properly.
+     * @param button The JButton to which the hover effects should be added.
+     * @param base The base background color of the button when it is in its normal state.
+     * @param hover The background color of the button when the mouse is hovering over it.
+     * @param pressed The background color of the button when it is being pressed (mouse click).
+     */
     public static void addHoverEffects(JButton button, Color base, Color hover, Color pressed) {
         button.addMouseListener(new MouseAdapter() {
             @Override public void mouseEntered(MouseEvent e) { button.setBackground(hover); }

@@ -841,6 +841,11 @@ public final class ArticleExporter {
         return escaped;
     }
 
+    /**
+     * Exports the given list of log entries to a PDF file, prompting the user for the save location. Each log entry is wrapped to fit within the page width, and multiple pages are created if necessary.
+     * @param logs Die Liste der Log-Einträge, die exportiert werden sollen. Jeder Eintrag wird als separate Zeile im PDF dargestellt.
+     * @param frame Das übergeordnete JFrame, das als Kontext für die Dateiauswahl und Fehlermeldungen verwendet wird. Kann null sein, wenn kein Kontext benötigt wird.
+     */
     public static void exportLogsToPdf(List<String> logs, JFrame frame) {
         if (logs == null || logs.isEmpty()) {
             JOptionPane.showMessageDialog(frame,

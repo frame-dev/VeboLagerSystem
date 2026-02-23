@@ -27,7 +27,9 @@ public class MainGUI extends JFrame {
 
     private JTabbedPane tabbedPane;
 
-    // Keep references so content stays alive and doesn't get disposed accidentally
+    /**
+     * IMPORTANT: These are the actual content frames for each tab. We keep them as fields to maintain state and avoid reloading when switching tabs. They are initialized lazily when the user first clicks on the respective tab. Do NOT dispose these frames when switching tabs, as that would kill listeners and resources. Instead, we just add/remove their content panels to the tab wrappers.
+     */
     public static ArticleGUI articleGUI;
     private VendorGUI vendorGUI;
     private OrderGUI orderGUI;
@@ -45,6 +47,9 @@ public class MainGUI extends JFrame {
     private final JPanel supplierOrderWrapper = createTabWrapper();
     private final JPanel logsWrapper = createTabWrapper();
 
+    /**
+     * Constructs the main GUI window for the VEBO Lagersystem application. This constructor initializes the main window, sets up the layout, and prepares the header, tabbed pane, and footer. It also registers the window with the ThemeManager to ensure that theme changes are applied correctly. The constructor does not load the content of the tabs immediately; instead, it sets up lazy loading to optimize performance and resource usage. The main window is configured to be maximized on startup and includes a custom icon if available.
+     */
     public MainGUI() {
         ThemeManager.getInstance().registerWindow(this);
         ThemeManager.applyUIDefaults();

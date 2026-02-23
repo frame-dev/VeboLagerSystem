@@ -12,8 +12,29 @@ import java.util.Locale;
 
 import static ch.framedev.lagersystem.guis.SettingsGUI.DEFAULT_FONT_STYLE;
 
+/**
+ * Utility helper class for building and managing UI-related settings components.
+ * <p>
+ * This class centralizes reusable logic for:
+ * <ul>
+ *   <li>Opening configuration directories</li>
+ *   <li>Creating styled settings sections</li>
+ *   <li>Resolving application fonts in a platform-safe way</li>
+ *   <li>Providing reusable rounded card panels</li>
+ * </ul>
+ * All methods are static and the class is not intended to be instantiated.
+ */
 public class SettingsUtils {
 
+    /**
+     * Opens the application settings directory in the system file explorer.
+     * <p>
+     * The directory is resolved via {@link Main#getAppDataDir()} and opened using
+     * {@link java.awt.Desktop}. If the folder cannot be opened, an error dialog
+     * is shown to the user and the failure is written to the application log.
+     *
+     * @param frame the parent frame used for positioning the error dialog
+     */
     public static void openSettingsFolder(JFrame frame) {
         File settingsDir = Main.getAppDataDir();
         try {
@@ -28,7 +49,16 @@ public class SettingsUtils {
     }
 
     /**
-     * Creates a modern styled section panel with card-like appearance
+     * Creates a styled settings section panel with a modern card-like appearance.
+     * <p>
+     * The panel includes a title, description, separator line and a container
+     * for optional header actions. It also registers the panel in the supplied
+     * searchable component list and stores searchable text as a client property.
+     *
+     * @param title               the section title displayed at the top of the card
+     * @param description         a descriptive text explaining the purpose of the section
+     * @param searchableSections  list used by the settings search feature to filter panels
+     * @return a fully styled section panel ready to be populated with settings controls
      */
     public static JPanel createSectionPanel(String title, String description, List<JComponent> searchableSections) {
         RoundedPanel section = getRoundedPanel();
@@ -100,6 +130,17 @@ public class SettingsUtils {
         return section;
     }
 
+    /**
+     * Resolves a font based on the configured application font style.
+     * <p>
+     * If no font is configured, the system UI font or the default application
+     * font is used as a fallback. On Windows and macOS, the method also ensures
+     * emoji compatibility by switching to a logical font if necessary.
+     *
+     * @param style    the {@link Font} style (e.g. {@link Font#PLAIN}, {@link Font#BOLD})
+     * @param fontSize the desired font size in pixels
+     * @return a platform-safe font instance that matches the requested style and size
+     */
     @SuppressWarnings("MagicConstant")
     public static Font getFontByName(int style, int fontSize) {
         String fontName = Main.settings.getProperty("font_style");
@@ -128,12 +169,24 @@ public class SettingsUtils {
     }
 
     /**
-     * Rounded panel for modern card design with enhanced shadow
+     * Custom panel implementation that renders a rounded card surface.
+     * <p>
+     * The panel draws its own background with anti-aliasing and a subtle
+     * drop shadow to achieve a modern card UI look used throughout the
+     * settings interface.
      */
     public static class RoundedPanel extends JPanel {
         private final Color backgroundColor;
         private final int radius;
 
+        /**
+         * Creates a rounded panel used for modern card-style UI sections.
+         * The panel is painted manually with anti-aliasing, a soft shadow,
+         * and rounded corners to match the application's design language.
+         *
+         * @param bg     the background color of the card surface
+         * @param radius the corner radius in pixels used for the rounded rectangle
+         */
         public RoundedPanel(Color bg, int radius) {
             this.backgroundColor = bg;
             this.radius = radius;

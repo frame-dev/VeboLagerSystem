@@ -16,9 +16,25 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The OrderExport class provides a utility method for creating a PDF export of an order. It uses the Apache PDFBox library to generate a PDF document that includes details about the order, such as the order ID, date, status, sender and receiver information, and a table of ordered articles with their quantities and prices. The method allows the user to choose the save location for the generated PDF document using a JFileChooser dialog. If the user cancels the save dialog or if an error occurs during PDF creation, appropriate messages are displayed to inform the user.
+ * @author framedev
+ */
 @SuppressWarnings("DuplicatedCode")
 public class OrderExport {
 
+    /**
+     * Private constructor to prevent instantiation of the OrderExport class, as it is a utility class that only contains static methods. This ensures that the class cannot be instantiated and is only used for its static functionality.
+     */
+    private OrderExport() {
+        // Private constructor to prevent instantiation
+    }
+
+    /**
+     * Creates a PDF export of the given order and allows the user to choose the save location. The PDF includes order details such as order ID, date, status, sender and receiver information, and a table of ordered articles with their quantities and prices. The method uses Apache PDFBox to generate the PDF document. If the user cancels the save dialog or if an error occurs during PDF creation, appropriate messages are displayed.
+     * @param frame The parent JFrame for the file chooser dialog. This frame will be used as the parent component for the dialog that allows the user to choose where to save the generated PDF document.
+     * @param order The order for which the PDF export will be created. The order details will be included in the generated PDF document.
+     */
     public static void createPDFExport(JFrame frame, Order order) {
         // Choose save location
         JFileChooser fc = new JFileChooser();

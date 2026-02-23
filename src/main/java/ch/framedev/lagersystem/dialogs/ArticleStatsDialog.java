@@ -26,6 +26,11 @@ public final class ArticleStatsDialog {
     private ArticleStatsDialog() {
     }
 
+    /**
+     * Displays a modal dialog with various statistics about the articles in stock, calculated from the provided JTable. The dialog includes an overview of total articles, total quantity, categories, vendors, financial metrics like stock value and potential revenue, and stock health indicators. It also features a modern design with hover effects and a responsive layout.
+     * @param parent the parent component to center the dialog on
+     * @param table the JTable containing the article data to analyze for statistics
+     */
     public static void show(Component parent, JTable table) {
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent),
                 UnicodeSymbols.PACKAGE + " Lager Details & Statistiken", Dialog.ModalityType.APPLICATION_MODAL);

@@ -14,6 +14,10 @@ import java.util.List;
 import java.util.*;
 import java.util.function.Supplier;
 
+/**
+ * The ArticleListGUI class provides a graphical user interface for displaying and managing a list of articles along with their quantities. It allows users to view article details, search/filter the list, edit quantities, remove articles, and clear the entire list. The GUI is designed with a modern look using rounded panels and styled buttons, and it integrates with the ThemeManager for dynamic theming. The class also includes static methods to set and retrieve the articles and their quantities, making it easy to integrate with other parts of the application.
+ * @author framedev
+ */
 @SuppressWarnings("unused")
 public class ArticleListGUI extends JFrame {
 
@@ -49,6 +53,9 @@ public class ArticleListGUI extends JFrame {
         }
     }
 
+    /**
+     * Constructs the ArticleListGUI window, initializes the UI components, and sets up event listeners. The window displays a list of articles with their quantities, allows searching/filtering, and provides actions to edit quantities, remove articles, or clear the list. It also integrates with the ThemeManager for dynamic theming and applies a modern design with rounded panels and styled buttons.
+     */
     public ArticleListGUI() {
         ThemeManager tm = ThemeManager.getInstance();
         tm.registerWindow(this);
@@ -476,6 +483,9 @@ public class ArticleListGUI extends JFrame {
         updateCountersAndEmptyState(filtered.size(), q);
     }
 
+    /**
+     * Rebuild the display cache and refresh the JList. This should be called whenever the underlying articlesAndQuantity map changes in a way that might affect the display (e.g., article name changes, new article added, etc.). It preserves the current search query and selection state as much as possible.
+     */
     public void refreshArticleList() {
         displayCache.clear();
 
@@ -584,6 +594,9 @@ public class ArticleListGUI extends JFrame {
         });
     }
 
+    /**
+     * Brings the window to the front if it's already visible, or makes it visible if it's not. This is useful for reusing the same instance of ArticleListGUI without creating multiple windows. If the window is already open, it will be focused and brought to the front; if it's not open, it will be shown.
+     */
     public void display() {
         SwingUtilities.invokeLater(() -> {
             if (!isVisible()) setVisible(true);
@@ -593,24 +606,45 @@ public class ArticleListGUI extends JFrame {
 
     // ---------- Static API ----------
 
+    /**
+     * Set the articles and their quantities to display in the list. This replaces any existing data.
+     * @param articleMap Map of Article to quantity. If null, it will be treated as an empty map.
+     */
     public static void setArticles(Map<Article, Integer> articleMap) {
         articlesAndQuantity = (articleMap == null) ? new HashMap<>() : articleMap;
     }
 
+    /**
+     * Get the current map of articles and their quantities. Modifying this map will affect the list directly, so be cautious when using it. If you want to modify the list, it's safer to use addArticle/removeArticle methods or create a copy of the map before making changes.
+     * @return The current map of Article to quantity. Never null, but may be empty.
+     */
     public static Map<Article, Integer> getArticles() {
         return articlesAndQuantity;
     }
 
+    /**
+     * Get the current map of articles and their quantities. This is the same as getArticles() but named to clarify that it includes quantities. Modifying this map will affect the list directly, so be cautious when using it. If you want to modify the list, it's safer to use addArticle/removeArticle methods or create a copy of the map before making changes.
+     * @return The current map of Article to quantity. Never null, but may be empty.
+     */
     public static Map<Article, Integer> getArticlesAndQuantity() {
         return articlesAndQuantity;
     }
 
+    /**
+     * Add an article with a specified quantity to the list. If the article already exists, its quantity will be updated. Quantity must be greater than 0; if not, it defaults to 1.
+     * @param article The Article to add or update. If null, the method does nothing.
+     * @param quantity The quantity for the article. Must be greater than 0; if not, it defaults to 1.
+     */
     public static void addArticle(Article article, int quantity) {
         if (article == null) return;
         if (quantity <= 0) quantity = 1;
         articlesAndQuantity.put(article, quantity);
     }
 
+    /**
+     * Remove an article from the list. If the article does not exist, the method does nothing.
+     * @param article The Article to remove. If null, the method does nothing.
+     */
     public static void removeArticle(Article article) {
         if (article == null) return;
         articlesAndQuantity.remove(article);

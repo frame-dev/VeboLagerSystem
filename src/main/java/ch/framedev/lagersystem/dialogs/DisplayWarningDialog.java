@@ -20,9 +20,15 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.List;
 
+/**
+ * This class provides methods to display warnings in a modern, styled dialog. It can show individual warnings with details and actions, as well as a table overview of all warnings. It uses the WarningManager to retrieve and update warnings. The dialogs are designed to be visually appealing and user-friendly, with responsive layouts and consistent theming. The code is structured to separate UI construction from data handling, and includes helper methods for common UI components like headers, buttons, and status chips.
+ */
 @SuppressWarnings("DuplicatedCode")
 public class DisplayWarningDialog {
 
+    /**
+     * Private constructor to prevent instantiation, as this class is intended to be used statically.
+     */
     private DisplayWarningDialog() {
     }
 
@@ -30,6 +36,7 @@ public class DisplayWarningDialog {
      * Displays a warning in a modern, styled dialog.
      *
      * @param warning The warning object to display
+     * @param frame   The parent frame for modality and centering
      */
     public static void displayWarning(JFrame frame, Warning warning) {
         SwingUtilities.invokeLater(() -> {
@@ -160,6 +167,7 @@ public class DisplayWarningDialog {
 
     /**
      * Display all warnings from WarningManager in a modern dialog.
+     * @param frame The parent frame for modality and centering
      */
     public static void showAllWarnings(JFrame frame) {
         WarningManager warningManager = WarningManager.getInstance();

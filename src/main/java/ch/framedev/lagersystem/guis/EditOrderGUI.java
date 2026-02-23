@@ -46,6 +46,10 @@ public class EditOrderGUI extends JFrame {
     private final DefaultTableModel tableModel;
     private final Map<String, Article> articleCache = new HashMap<>();
 
+    /**
+     * Initializes the EditOrderGUI with the given order, setting up the layout, components, and event handlers for editing the order details and articles.
+     * @param order the Order object containing the details to be edited in the GUI.
+     */
     public EditOrderGUI(Order order) {
         this.order = order;
 
@@ -398,6 +402,10 @@ public class EditOrderGUI extends JFrame {
         dispose();
     }
 
+    /**
+     * Extracts article numbers and quantities from the table model.
+     * @return a map of article numbers to their corresponding quantities based on the current table data.
+     */
     public Map<String, Integer> getTableData() {
         Map<String, Integer> data = new HashMap<>();
 
@@ -445,10 +453,18 @@ public class EditOrderGUI extends JFrame {
         return data;
     }
 
+    /**
+     * Displays the EditOrderGUI window on the Event Dispatch Thread to ensure thread safety and proper GUI rendering.
+     */
     public void display() {
         SwingUtilities.invokeLater(() -> setVisible(true));
     }
 
+    /**
+     * Utility method to safely handle null strings by converting them to empty strings, preventing potential NullPointerExceptions when setting text fields.
+     * @param s the input string that may be null
+     * @return the original string if it's not null, or an empty string if the input is null
+     */
     private static String safe(String s) {
         return s == null ? "" : s;
     }

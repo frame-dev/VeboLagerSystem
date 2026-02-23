@@ -21,6 +21,10 @@ import java.util.Objects;
 
 import static ch.framedev.lagersystem.utils.JFrameUtils.createThemeButton;
 
+/**
+ * GUI for completing orders. Displays a list of open orders and allows the user to view details and complete them.
+ * @author framedev
+ */
 public class CompleteOrderGUI extends JFrame {
 
     private JList<OrderListItem> ordersList;
@@ -34,6 +38,9 @@ public class CompleteOrderGUI extends JFrame {
     private final JLabel orderCountLabel;
     private final JLabel statusIconLabel;
 
+    /**
+     * Initializes the CompleteOrderGUI with a modern design and sets up all components and listeners.
+     */
     public CompleteOrderGUI() {
         ThemeManager.getInstance().registerWindow(this);
 
@@ -471,6 +478,9 @@ public class CompleteOrderGUI extends JFrame {
         OrderLoggingUtils.getInstance().addLogEntry(selected, user);
     }
 
+    /**
+     * Displays this GUI on the Event Dispatch Thread (EDT). Should be called after creating an instance.
+     */
     public void display() {
         SwingUtilities.invokeLater(() -> setVisible(true));
     }

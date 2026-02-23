@@ -9,6 +9,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The ClientManager class is responsible for managing client data in the database. It provides methods to create, read, update, and delete client records, as well as to retrieve client information. The class uses caching to improve performance for frequently accessed data, such as client departments and the list of all clients. It also logs all operations performed on clients for auditing purposes.
+ * @author framedev
+ */
 @SuppressWarnings({"BooleanMethodIsAlwaysInverted", "deprecation"})
 public class ClientManager {
 
@@ -34,6 +38,10 @@ public class ClientManager {
         databaseManager.executeUpdate(sql);
     }
 
+    /**
+     * Returns the singleton instance of ClientManager. If the instance does not exist yet, it will be created.
+     * @return The singleton instance of ClientManager.
+     */
     public static ClientManager getInstance() {
         if (instance == null) {
             instance = new ClientManager();
@@ -48,6 +56,12 @@ public class ClientManager {
         allClientsCache = null;
     }
 
+    /**
+     * Inserts a new client into the database. If a client with the same name already exists, the method will return false and not perform the insertion.
+     * @param firstLastName The name of the client to insert. This must be unique and not null.
+     * @param department The department to assign to the client. This can be null if no department is assigned.
+     * @return true if the client was successfully inserted, false if a client with the same name already exists or if the insertion failed.
+     */
     public boolean insertClient(String firstLastName, String department) {
         String sql = "INSERT INTO " + DatabaseManager.TABLE_CLIENTS + " (firstLastName, department) VALUES (?, ?);";
         boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName, department});
@@ -61,6 +75,11 @@ public class ClientManager {
         return success;
     }
 
+    /**
+     * Checks if a client with the given name exists in the database. This method first checks the cache for a quick lookup before querying the database.
+     * @param firstLastName The name of the client to check for existence. This must not be null.
+     * @return true if a client with the given name exists, false if no such client exists or if an error occurs during the check.
+     */
     public boolean existsClient(String firstLastName) {
         if (departmentCache.containsKey(firstLastName)) {
             return true;
@@ -77,6 +96,12 @@ public class ClientManager {
         }
     }
 
+    /**
+     * Updates the department of an existing client.
+     * @param firstLastName The name of the client to update.
+     * @param newDepartment The new department to assign to the client.
+     * @return true if the update was successful, false if the client does not exist or the update failed.
+     */
     public boolean updateClient(String firstLastName, String newDepartment) {
         if (!existsClient(firstLastName)) {
             return false;
@@ -93,6 +118,11 @@ public class ClientManager {
         return success;
     }
 
+    /**
+     * Deletes a client from the database. If the client does not exist, the method will return false and not perform any deletion.
+     * @param firstLastName The name of the client to delete.
+     * @return true if the client was successfully deleted, false if the client does not exist or if the deletion failed.
+     */
     public boolean deleteClient(String firstLastName) {
         if (!existsClient(firstLastName)) {
             return false;
@@ -108,6 +138,11 @@ public class ClientManager {
         return success;
     }
 
+    /**
+     * Retrieves the department of a client by their name. If the client does not exist, the method will return null.
+     * @param firstLastName The name of the client whose department should be retrieved.
+     * @return The department of the client, or null if the client does not exist or if an error occurs during retrieval.
+     */
     public String getDepartmentByName(String firstLastName) {
         if (departmentCache.containsKey(firstLastName)) {
             return departmentCache.get(firstLastName);
@@ -124,6 +159,10 @@ public class ClientManager {
         return null;
     }
 
+        /**
+     * Retrieves a list of all clients in the database. Each client is represented as a map with keys "firstLastName" and "department". The method uses caching to improve performance, and the cache is refreshed if it is older than 1 minute.
+     * @return A list of maps, where each map represents a client with keys "firstLastName" and "department". If an error occurs during retrieval, an empty list is returned.
+     */
     public List<Map<String, String>> getAllClients() {
         if (allClientsCache != null && System.currentTimeMillis() - allClientsCacheTime < CACHE_EXPIRY_MS) {
             return new ArrayList<>(allClientsCache);

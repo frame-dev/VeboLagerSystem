@@ -17,12 +17,36 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The ArticleUtils class provides utility methods for handling articles, including loading and managing article categories from a JSON file, calculating prices for filling based on article details, and determining the category of an article based on its number. It also defines an enum for volume units (liters and milliliters) to assist with price calculations.
+ * @author framedev
+ */
 public class ArticleUtils {
 
-    public enum VolumeUnit {
-        LITER, MILLILITER
+    /**
+     * Private constructor to prevent instantiation of this utility class, as all methods are static and it is not meant to be instantiated.
+     */
+    private ArticleUtils() {
+        // Private constructor to prevent instantiation
     }
 
+    /**
+     * Enum representing volume units for price calculation, such as liters and milliliters.
+     */
+    public enum VolumeUnit {
+        /**
+         * Represents liters (e.g., 1 lt. = 1 liter)
+         */
+        LITER,
+        /**
+         * Represents milliliters (e.g., 750 ml = 0.75 liters)
+         */
+        MILLILITER
+    }
+
+    /**
+     * Map to hold category names and their corresponding article number ranges, loaded from the categories.json file. The key is the category name (e.g., "Reinigungsmittel") and the value is an ArticleGUI.CategoryRange object that contains the category name and the start and end of the article number range for that category.
+     */
     public static Map<String, ArticleGUI.CategoryRange> categories; // category name -> range
 
     /**

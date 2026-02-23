@@ -22,6 +22,7 @@ public class Note {
     }
 
     /**
+     * Creates a new note instance with empty title and content, and the given date.
      * @return note title
      */
     public String getTitle() {
@@ -29,6 +30,7 @@ public class Note {
     }
 
     /**
+     * Gets the content/body of the note.
      * @return note content/body
      */
     public String getContent() {
@@ -36,6 +38,7 @@ public class Note {
     }
 
     /**
+     * Gets the formatted date string of the note.
      * @return formatted date string
      */
     public String getDate() {

@@ -14,10 +14,18 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 
+/**
+ * Utility class for creating and styling Swing components with a consistent look and feel across the application.
+ * Provides methods for creating styled buttons, panels, and form components, as well as a method for dynamically adjusting JTable column widths based on available space and base width proportions.
+ * This class is designed to centralize all UI styling logic, making it easier to maintain a cohesive design and update styles in one place.
+ * @author framedev
+ */
 @SuppressWarnings("DuplicatedCode")
 public class JFrameUtils {
 
-    // small rounded panel for card styling
+    /**
+     * A custom JPanel that paints itself with rounded corners and a specified background color. This can be used to create visually appealing containers for other components, such as forms or sections within the application's windows.
+     */
     @SuppressWarnings("DuplicatedCode")
     public static class RoundedPanel extends JPanel {
         private final Color bg;
@@ -40,6 +48,12 @@ public class JFrameUtils {
         }
     }
 
+    /**
+     * Dynamically adjusts the column widths of a JTable based on the available width of its enclosing JScrollPane and a set of base column widths.
+     * @param table The JTable whose columns should be adjusted
+     * @param tableScrollPane The JScrollPane that contains the JTable, used to determine available width
+     * @param baseColumnWidths An array of integers representing the base widths for each column, used to calculate proportional widths. If fewer values are provided than columns, remaining columns will default to a base width of 100.
+     */
     public static void adjustColumnWidths(JTable table, JScrollPane tableScrollPane, int[] baseColumnWidths) {
         if (tableScrollPane == null || table.getColumnCount() == 0) return;
 
@@ -181,6 +195,9 @@ public class JFrameUtils {
         }
     }
 
+    /**
+     * A custom JPanel that paints itself with a horizontal gradient background and rounded corners. This can be used for visually distinct sections of the UI, such as headers or highlighted areas.
+     */
     public static class GradientPanel extends JPanel {
         private final Color color1;
         private final Color color2;
@@ -294,6 +311,11 @@ public class JFrameUtils {
         return button;
     }
 
+    /**
+     * Applies a consistent color palette to a JButton, including hover and pressed states, based on a given base background color.
+     * @param button The JButton to style
+     * @param baseBg The base background color to use for the button (e.g., primary, accent, error)
+     */
     public static void applyButtonPalette(JButton button, Color baseBg) {
         Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
         Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
@@ -334,6 +356,11 @@ public class JFrameUtils {
         return btn;
     }
 
+    /**
+     * Creates a "danger" styled button, typically used for destructive actions like delete.
+     * @param text The button text
+     * @return A JButton with the danger color palette applied
+     */
     public static JButton createDangerButton(String text) {
         JButton btn = createRoundedButton(text);
         applyButtonPalette(btn, ThemeManager.getErrorColor());
@@ -381,6 +408,10 @@ public class JFrameUtils {
         return btn;
     }
 
+    /**
+     * Creates a header panel with a horizontal gradient background and rounded corners.
+     * @return A styled JPanel suitable for use as a header in the application's windows
+     */
     public static JPanel getHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout()) {
             @Override
