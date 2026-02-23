@@ -15,6 +15,7 @@ import java.util.List;
  * Provides color schemes for both light and dark themes.
  * Supports both static utility methods and instance-based theme management.
  */
+@SuppressWarnings("unused")
 public class ThemeManager {
 
     private static ThemeManager instance;
@@ -35,6 +36,7 @@ public class ThemeManager {
     // Theme color palettes
     // =========================
 
+    @SuppressWarnings("unused")
     public static class Light {
 
         // Base surfaces
@@ -113,6 +115,7 @@ public class ThemeManager {
         public static final Color SCROLLBAR_THUMB = new Color(150, 155, 160);
     }
 
+    @SuppressWarnings("unused")
     public static class Dark {
 
         // Base surfaces
@@ -201,11 +204,9 @@ public class ThemeManager {
     }
 
     public static ThemeManager getInstance() {
-        if (instance == null) {
-            synchronized (ThemeManager.class) {
-                if (instance == null) {
-                    instance = new ThemeManager();
-                }
+        synchronized (ThemeManager.class) {
+            if (instance == null) {
+                instance = new ThemeManager();
             }
         }
         return instance;
@@ -297,7 +298,8 @@ public class ThemeManager {
 
     public static final class JOptionPaneTheme {
 
-        private JOptionPaneTheme() {}
+        private JOptionPaneTheme() {
+        }
 
         public static void apply() {
             // Base colors
@@ -345,21 +347,20 @@ public class ThemeManager {
             UIManager.put("Button.focus", new ColorUIResource(btnBg));  // Keep original on focus
 
             // Hover effect colors
-            Color btnHoverBg = btnHover;
-            UIManager.put("Button.highlight", new ColorUIResource(btnHoverBg));
-            UIManager.put("Button.light", new ColorUIResource(btnHoverBg));
+            UIManager.put("Button.highlight", new ColorUIResource(btnHover));
+            UIManager.put("Button.light", new ColorUIResource(btnHover));
             UIManager.put("Button.shadow", new ColorUIResource(btnPressed));
             UIManager.put("Button.darkShadow", new ColorUIResource(btnPressed.darker()));
 
             // Create prettier button border with subtle shadow effect
             Color btnBorderColor = ThemeManager.isDarkMode()
-                ? new Color(Math.max(0, btnBg.getRed() - 30), Math.max(0, btnBg.getGreen() - 30), Math.max(0, btnBg.getBlue() - 30))
-                : new Color(Math.max(0, btnBg.getRed() - 20), Math.max(0, btnBg.getGreen() - 20), Math.max(0, btnBg.getBlue() - 20));
+                    ? new Color(Math.max(0, btnBg.getRed() - 30), Math.max(0, btnBg.getGreen() - 30), Math.max(0, btnBg.getBlue() - 30))
+                    : new Color(Math.max(0, btnBg.getRed() - 20), Math.max(0, btnBg.getGreen() - 20), Math.max(0, btnBg.getBlue() - 20));
 
             UIManager.put("Button.border", BorderFactory.createCompoundBorder(
                     BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(btnBorderColor, 1, true),
-                        BorderFactory.createEmptyBorder(1, 1, 2, 1)  // Subtle shadow for depth
+                            BorderFactory.createLineBorder(btnBorderColor, 1, true),
+                            BorderFactory.createEmptyBorder(1, 1, 2, 1)  // Subtle shadow for depth
                     ),
                     BorderFactory.createEmptyBorder(8, 20, 8, 20)
             ));

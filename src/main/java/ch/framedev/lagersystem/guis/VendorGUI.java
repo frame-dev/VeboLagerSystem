@@ -28,6 +28,7 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
  * - Caches vendor list for faster reloads (TTL-based)
  * - Invalidates cache on add/edit/delete/refresh
  */
+@SuppressWarnings("DuplicatedCode")
 public class VendorGUI extends JFrame {
 
     private final JTable vendorTable;
@@ -40,6 +41,7 @@ public class VendorGUI extends JFrame {
     private volatile long vendorsCacheTime = 0L;
 
     // Fast lookup by vendor name (optional but useful)
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     private final ConcurrentHashMap<String, Vendor> vendorByNameCache = new ConcurrentHashMap<>();
 
     public VendorGUI() {
@@ -494,28 +496,7 @@ public class VendorGUI extends JFrame {
 
     private void initializeVendorTable() {
         // Column names must match the row data order used in loadVendors()
-        String[] cols = new String[]{
-                UnicodeSymbols.TRUCK + " Name",
-                UnicodeSymbols.PERSON + " Kontakt",
-                UnicodeSymbols.PHONE + " Telefon",
-                UnicodeSymbols.EMAIL + " Email",
-                UnicodeSymbols.ADDRESS + " Adresse",
-                UnicodeSymbols.PACKAGE + " Gelieferte Artikel",
-                UnicodeSymbols.MONEY + " Mindestbestellwert"
-        };
-
-        DefaultTableModel model = new DefaultTableModel(cols, 0) {
-            @Override
-            public Class<?> getColumnClass(int columnIndex) {
-                // keep String for sorter simplicity; min order value is still displayed fine
-                return String.class;
-            }
-
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
+        DefaultTableModel model = getModel();
         vendorTable.setModel(model);
 
         // visuals
@@ -566,6 +547,31 @@ public class VendorGUI extends JFrame {
         header.setBackground(ThemeManager.getTableHeaderColor());
         header.setForeground(ThemeManager.getTextOnPrimaryColor());
         header.setFont(header.getFont().deriveFont(Font.BOLD, 18f));
+    }
+
+    private static DefaultTableModel getModel() {
+        String[] cols = new String[]{
+                UnicodeSymbols.TRUCK + " Name",
+                UnicodeSymbols.PERSON + " Kontakt",
+                UnicodeSymbols.PHONE + " Telefon",
+                UnicodeSymbols.EMAIL + " Email",
+                UnicodeSymbols.ADDRESS + " Adresse",
+                UnicodeSymbols.PACKAGE + " Gelieferte Artikel",
+                UnicodeSymbols.MONEY + " Mindestbestellwert"
+        };
+
+        return new DefaultTableModel(cols, 0) {
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                // keep String for sorter simplicity; min order value is still displayed fine
+                return String.class;
+            }
+
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
     }
 
     private void adjustColumnWidths() {

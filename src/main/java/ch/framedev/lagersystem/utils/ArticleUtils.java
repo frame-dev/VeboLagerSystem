@@ -19,7 +19,7 @@ import java.util.Map;
 
 public class ArticleUtils {
 
-    public static enum VolumeUnit {
+    public enum VolumeUnit {
         LITER, MILLILITER
     }
 

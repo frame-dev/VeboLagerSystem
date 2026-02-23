@@ -36,6 +36,7 @@ import static ch.framedev.lagersystem.utils.ArticleExporter.sanitizeForWinAnsi;
 /**
  * Dialog for previewing QR codes for selected articles and exporting them as a PDF.
  */
+@SuppressWarnings("DuplicatedCode")
 public final class ArticleQrPreviewDialog {
 
     private ArticleQrPreviewDialog() {
@@ -44,7 +45,7 @@ public final class ArticleQrPreviewDialog {
     public static void show(Component parent, List<Article> selectedArticles) {
         if (selectedArticles == null || selectedArticles.isEmpty()) {
             JOptionPane.showMessageDialog(parent,
-                    "Bitte w\u00e4hlen Sie mindestens einen Artikel aus.",
+                    "Bitte wählen Sie mindestens einen Artikel aus.",
                     "Keine Auswahl",
                     JOptionPane.WARNING_MESSAGE,
                     Main.iconSmall);

@@ -20,10 +20,9 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import static ch.framedev.lagersystem.utils.JFrameUtils.createRoundedButton;
 import static ch.framedev.lagersystem.utils.JFrameUtils.createSecondaryButton;
 
-@SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
+@SuppressWarnings({"MismatchedQueryAndUpdateOfCollection", "DuplicatedCode"})
 public class ClientGUI extends JFrame {
 
     private final JTable clientTable;
@@ -31,7 +30,6 @@ public class ClientGUI extends JFrame {
     private final int[] baseColumnWidths = new int[]{300, 300};
     private final List<Client> clients = new ArrayList<>();
 
-    private JComboBox<String> departmentCombobox;
     private final JComboBox<String> filterDepartmentCombobox;
 
     private static final String ALL_DEPARTMENTS_LABEL = UnicodeSymbols.DEPARTMENT + " Alle Abteilungen";
@@ -97,7 +95,7 @@ public class ClientGUI extends JFrame {
         filterLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         // Combo used in dialogs (create/edit)
-        departmentCombobox = new JComboBox<>();
+        JComboBox<String> departmentCombobox = new JComboBox<>();
         fillDepartmentList(departmentCombobox, false);
         styleComboBox(departmentCombobox);
 
@@ -388,11 +386,11 @@ public class ClientGUI extends JFrame {
     }
 
     private Object[] showAddClientDialog() {
-        return ClientDialog.showAddClientDialog(this, departmentCombobox);
+        return ClientDialog.showAddClientDialog(this);
     }
 
     private Object[] showUpdateClientDialog(Object[] existing) {
-        return ClientDialog.showUpdateClientDialog(this, existing, departmentCombobox);
+        return ClientDialog.showUpdateClientDialog(this, existing);
     }
 
     private void setupTableInteractions() {
@@ -531,44 +529,7 @@ public class ClientGUI extends JFrame {
     }
 
     private void adjustColumnWidths() {
-        if (tableScrollPane == null || clientTable.getColumnCount() == 0) return;
-
-        int available = tableScrollPane.getViewport().getWidth();
-        if (available <= 0) available = tableScrollPane.getWidth();
-        if (available <= 0) return;
-
-        int totalBase = 0;
-        for (int w : baseColumnWidths) totalBase += w;
-
-        TableColumnModel tcm = clientTable.getColumnModel();
-        int colCount = tcm.getColumnCount();
-
-        int used = 0;
-        int[] newW = new int[colCount];
-
-        for (int i = 0; i < colCount; i++) {
-            int base = i < baseColumnWidths.length ? baseColumnWidths[i] : 100;
-            int w = Math.max(60, (int) Math.round((base / (double) totalBase) * available));
-            newW[i] = w;
-            used += w;
-        }
-
-        int diff = available - used;
-        int idx = 0;
-        while (diff != 0 && colCount > 0) {
-            newW[idx % colCount] += (diff > 0 ? 1 : -1);
-            diff += (diff > 0 ? -1 : 1);
-            idx++;
-        }
-
-        for (int i = 0; i < colCount; i++) {
-            tcm.getColumn(i).setPreferredWidth(newW[i]);
-        }
-
-        clientTable.revalidate();
-        clientTable.repaint();
-        tableScrollPane.revalidate();
-        tableScrollPane.repaint();
+        JFrameUtils.adjustColumnWidths(clientTable, tableScrollPane, baseColumnWidths);
     }
 
     private JButton createRoundedButton(String text) {

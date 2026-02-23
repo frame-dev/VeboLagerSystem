@@ -9,26 +9,19 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.OrderExport;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.PDFont;
-import org.apache.pdfbox.pdmodel.font.PDType0Font;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.File;
 import java.util.List;
-import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 
+@SuppressWarnings("DuplicatedCode")
 public class OrderGUI extends JFrame {
 
     private final JTable orderTable;
@@ -348,6 +341,7 @@ public class OrderGUI extends JFrame {
         updateOrderCount();
     }
 
+    @SuppressWarnings("SameParameterValue")
     private void loadOrders(boolean forceReload) {
         List<Order> orders = getOrdersCached(forceReload);
 

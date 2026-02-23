@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings({"UnusedReturnValue", "unused"})
+@SuppressWarnings({"UnusedReturnValue", "unused", "deprecation", "DuplicatedCode"})
 public class UserManager {
 
     private final Logger logger = LogManager.getLogger(UserManager.class);
@@ -24,7 +24,6 @@ public class UserManager {
     private final ConcurrentHashMap<String, User> cache = new ConcurrentHashMap<>();
     private volatile List<String> allUsernamesCache = null;
     private volatile long allUsernamesCacheTime = 0L;
-    private final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
 
     private UserManager() {
         databaseManager = Main.databaseManager;
@@ -170,6 +169,8 @@ public class UserManager {
 
     public List<String> getAllUsernames() {
         long now = System.currentTimeMillis();
+        // 5 minutes
+        long CACHE_TTL_MILLIS = 5 * 60 * 1000;
         if (allUsernamesCache != null && (now - allUsernamesCacheTime) < CACHE_TTL_MILLIS) {
             return allUsernamesCache;
         }

@@ -139,13 +139,11 @@ public class Article {
      * @return QR code data payload
      */
     public String getQrCodeData() {
-        String data = "";
-        data += "artikelNr:" + articleNumber + ";";
-        data += "name:" + name + ";";
-        data += "details:" + details + ";";
-        data += "einkaufspreis:" + purchasePrice + ";";
-        data += "verkaufspreis:" + sellPrice + ";";
-        data += "lieferant:" + vendorName + ";";
-        return data;
+        return "artikelNr:" + articleNumber + ";" +
+                "name:" + name + ";" +
+                "details:" + details + ";" +
+                "einkaufspreis:" + purchasePrice + ";" +
+                "verkaufspreis:" + sellPrice + ";" +
+                "lieferant:" + vendorName;
     }
 }

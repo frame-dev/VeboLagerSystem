@@ -224,7 +224,7 @@ public class SplashscreenGUI extends JFrame {
                 g2.fillOval(getWidth() - 270 - drift, -35 + driftY, 340, 340);
 
                 g2.setColor(new Color(255, 255, 255, 75));
-                g2.fillOval(0 + drift, getHeight() - 280 + driftY, 320, 320);
+                g2.fillOval(drift, getHeight() - 280 + driftY, 320, 320);
 
                 paintAuroraBands(g2);
                 SplashscreenGUI.this.paintLightStreaks(g2);
@@ -339,7 +339,7 @@ public class SplashscreenGUI extends JFrame {
                 g2.setClip(null);
 
                 // Border
-                g2.setStroke(new BasicStroke(scale(STROKE)));
+                g2.setStroke(new BasicStroke(scale()));
                 g2.setColor(new Color(255, 255, 255, 210));
                 g2.drawRoundRect(x, y, w - 1, h - 1, arc, arc);
 
@@ -367,11 +367,11 @@ public class SplashscreenGUI extends JFrame {
             return insets;
         }
 
-        private float scale(float v) {
+        private float scale() {
             GraphicsConfiguration gc = getGraphicsConfiguration();
-            if (gc == null) return v;
+            if (gc == null) return GlassPanel.STROKE;
             double sx = gc.getDefaultTransform().getScaleX();
-            return (float) (v * sx);
+            return (float) (GlassPanel.STROKE * sx);
         }
     }
 

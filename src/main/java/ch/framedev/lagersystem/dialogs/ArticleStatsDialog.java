@@ -20,6 +20,7 @@ import java.util.Set;
 /**
  * Renders the article statistics dialog based on the current table model.
  */
+@SuppressWarnings("DuplicatedCode")
 public final class ArticleStatsDialog {
 
     private ArticleStatsDialog() {

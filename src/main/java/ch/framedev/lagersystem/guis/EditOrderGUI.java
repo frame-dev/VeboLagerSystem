@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
@@ -14,7 +15,6 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,15 +27,13 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.createThemeButton;
  * Modern edit order GUI with improved visual design and user experience.
  * Features: Split panel layout, gradient header, styled components, and article caching.
  */
-@SuppressWarnings("SwitchStatementWithTooFewBranches")
+@SuppressWarnings({"SwitchStatementWithTooFewBranches", "DuplicatedCode"})
 public class EditOrderGUI extends JFrame {
 
     private static final int PAD = 12;
     private static final int CARD_PAD = 14;
     private static final int RADIUS_HEADER = 20;
     private static final int RADIUS_CARD = 18;
-
-    private JTable articlesTable;
 
     private final Order order;
     private final JTextField receiverNameField;
@@ -211,7 +209,7 @@ public class EditOrderGUI extends JFrame {
             }
         };
 
-        articlesTable = new JTable(tableModel);
+        JTable articlesTable = new JTable(tableModel);
         applyTableTheme(articlesTable);
 
         JScrollPane scrollPane = new JScrollPane(articlesTable);
@@ -321,14 +319,7 @@ public class EditOrderGUI extends JFrame {
     }
 
     private void styleTextField(JTextField field) {
-        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-        field.setBackground(ThemeManager.getInputBackgroundColor());
-        field.setForeground(ThemeManager.getTextPrimaryColor());
-        field.setCaretColor(ThemeManager.getTextPrimaryColor());
+        JFrameUtils.styleTextField(field);
     }
 
     private void addStyledFormRow(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field) {

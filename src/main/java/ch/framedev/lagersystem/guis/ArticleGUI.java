@@ -34,6 +34,7 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.createSecondaryButton;
  * ArticleGUI with category support for better organization.
  * Categories are loaded from categories.json and mapped to articles based on article number ranges.
  */
+@SuppressWarnings("DuplicatedCode")
 public class ArticleGUI extends JFrame {
 
     private final JTable articleTable;

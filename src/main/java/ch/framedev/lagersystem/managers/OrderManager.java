@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings("UnusedReturnValue")
+@SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
 public class OrderManager {
 
     private final Logger logger = LogManager.getLogger(OrderManager.class);
@@ -25,7 +25,6 @@ public class OrderManager {
     private final ConcurrentHashMap<String, Order> cache = new ConcurrentHashMap<>();
     private volatile List<Order> allOrdersCache = null;
     private volatile long allOrdersCacheTime = 0L;
-    private final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
 
     private OrderManager() {
         databaseManager = Main.databaseManager;
@@ -213,6 +212,8 @@ public class OrderManager {
 
     public List<Order> getOrders() {
         long now = System.currentTimeMillis();
+        // 5 minutes
+        long CACHE_TTL_MILLIS = 5 * 60 * 1000;
         if (allOrdersCache != null && (now - allOrdersCacheTime) < CACHE_TTL_MILLIS) {
             return allOrdersCache;
         }

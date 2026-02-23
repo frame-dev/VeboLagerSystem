@@ -11,15 +11,15 @@ import java.util.function.Consumer;
 
 /**
  * Simple DatabaseManager for SQLite.
- *
+ * <p>
  * Performance notes:
  * - Avoids ParameterMetaData() (slow/unreliable in SQLite)
- * - Adds pragmatic SQLite PRAGMAs (WAL, NORMAL sync, cache_size, mmap_size, busy_timeout, etc.)
+ * - Adds pragmatic SQLite Pragmas (WAL, NORMAL sync, cache_size, mmap_size, busy_timeout, etc.)
  * - Uses a small LRU cache for PreparedStatements (huge win for repeated queries/updates)
  * - clearDatabase() uses a transaction and a single Statement for speed
  * - clearTable() uses a strict whitelist (safe + fast)
  */
-@SuppressWarnings({"UnusedReturnValue", "unused"})
+@SuppressWarnings({"UnusedReturnValue", "unused", "DeprecatedIsStillUsed", "SqlWithoutWhere"})
 public class DatabaseManager {
 
     private static final Logger logger = LogManager.getLogger(DatabaseManager.class);
@@ -139,15 +139,30 @@ public class DatabaseManager {
     }
 
     /**
-     * Execute a query and return the ResultSet. Caller must call closeQuery(rs).
+     * Executes a raw SQL query string.
      *
-     * @param sql SQL select/query
-     * @return ResultSet or null on error
+     * <p><b>SECURITY WARNING:</b> Passing user-controlled input into this method can lead to SQL injection.
+     * Prefer {@link #executeQuery(String, Object...)} (prepared statements) or the safe mapping helpers
+     * {@link #queryList(String, Object[], ResultMapper)} / {@link #queryOne(String, Object[], ResultMapper)}.
      */
+    @Deprecated
     public ResultSet executeQuery(String sql) {
+        if (sql == null || sql.trim().isEmpty()) {
+            Main.logUtils.addLog("Fehler bei der Abfrage: SQL ist leer");
+            return null;
+        }
+
+        // Very small guardrail: reject obvious multi-statement / comment injection patterns.
+        // This is NOT a complete SQL injection defense; prepared statements are the correct fix.
+        if (looksLikeMultiStatementOrComment(sql)) {
+            logger.warn("Rejected potentially unsafe raw SQL in executeQuery(): {}", sql);
+            Main.logUtils.addLog("Unsichere SQL-Abfrage abgelehnt (verwende PreparedStatement)");
+            return null;
+        }
+
         try {
             Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery(sql);
+            @SuppressWarnings("SqlSourceToSinkFlow") ResultSet rs = stmt.executeQuery(sql);
             openStatements.put(rs, stmt);
             return rs;
         } catch (SQLException e) {
@@ -158,9 +173,39 @@ public class DatabaseManager {
     }
 
     /**
+     * Executes a parameterized query using a cached PreparedStatement.
+     *
+     * <p>Use SQL placeholders ("?") and pass parameters via varargs:
+     * <pre>
+     *     executeQuery("SELECT * FROM users WHERE username = ?", username);
+     * </pre>
+     *
+     * Caller must call {@link #closeQuery(ResultSet)}.
+     */
+    public ResultSet executeQuery(String sql, Object... params) {
+        return executePreparedQuery(sql, params);
+    }
+
+    private boolean looksLikeMultiStatementOrComment(String sql) {
+        // Disallow semicolons (multiple statements) and SQL comments.
+        // SQLite (JDBC) typically executes only one statement in executeQuery(), but this helps prevent
+        // accidental concatenation and common injection payloads.
+        // allow trailing whitespace
+        int semi = sql.indexOf(';');
+        if (semi >= 0) {
+            // If semicolon appears anywhere before the end (ignoring whitespace), reject
+            for (int i = semi + 1; i < sql.length(); i++) {
+                if (!Character.isWhitespace(sql.charAt(i))) return true;
+            }
+        }
+        // Basic comment tokens
+        return sql.contains("--") || sql.contains("/*") || sql.contains("*/");
+    }
+
+    /**
      * Execute a prepared query and return the ResultSet.
      * Caller must call closeQuery(rs).
-     *
+     * <p>
      * PreparedStatement is reused from an LRU cache.
      */
     public ResultSet executePreparedQuery(String sql, Object[] params) {
@@ -182,7 +227,7 @@ public class DatabaseManager {
 
     /**
      * Execute prepared update statement.
-     *
+     * <p>
      * PreparedStatement is reused from an LRU cache.
      */
     public boolean executePreparedUpdate(String sql, Object[] params) {
@@ -224,7 +269,7 @@ public class DatabaseManager {
     /**
      * Close the given ResultSet and its creating Statement (if tracked).
      *
-     * @param rs ResultSet to close (may be null)
+     * @param rs ResultSet to close (maybe null)
      */
     public void closeQuery(ResultSet rs) {
         if (rs == null) return;
@@ -272,13 +317,28 @@ public class DatabaseManager {
     }
 
     /**
-     * Execute update/DDL statement.
+     * Executes a raw SQL update/DDL string.
      *
-     * @param sql SQL update/DDL
-     * @return true if succeeded
+     * <p><b>SECURITY WARNING:</b> Passing user-controlled input into this method can lead to SQL injection.
+     * Prefer {@link #executeUpdate(String, Object...)} (prepared statements).
      */
+    @Deprecated
     public boolean executeUpdate(String sql) {
+        if (sql == null || sql.trim().isEmpty()) {
+            Main.logUtils.addLog("Fehler bei der Aktualisierung: SQL ist leer");
+            return false;
+        }
+
+        // Very small guardrail: reject obvious multi-statement / comment injection patterns.
+        // This is NOT a complete SQL injection defense; prepared statements are the correct fix.
+        if (looksLikeMultiStatementOrComment(sql)) {
+            logger.warn("Rejected potentially unsafe raw SQL in executeUpdate(): {}", sql);
+            Main.logUtils.addLog("Unsichere SQL-Aktualisierung abgelehnt (verwende PreparedStatement)");
+            return false;
+        }
+
         try (Statement stmt = connection.createStatement()) {
+            //noinspection SqlSourceToSinkFlow
             stmt.executeUpdate(sql);
             return true;
         } catch (SQLException e) {
@@ -289,13 +349,58 @@ public class DatabaseManager {
     }
 
     /**
-     * Execute update/DDL statement and return affected rows count (or -1 on error).
+     * Executes a parameterized update/DDL using a cached PreparedStatement.
+     *
+     * <p>Use SQL placeholders ("?") and pass parameters via varargs:
+     * <pre>
+     *     executeUpdate("UPDATE users SET last_login = ? WHERE id = ?", lastLogin, userId);
+     * </pre>
      */
+    public boolean executeUpdate(String sql, Object... params) {
+        return executePreparedUpdate(sql, params);
+    }
+
+    /**
+     * Executes a raw SQL update/DDL string and returns affected rows count (or -1 on error).
+     *
+     * <p><b>SECURITY WARNING:</b> Passing user-controlled input into this method can lead to SQL injection.
+     * Prefer {@link #executeUpdateWithCount(String, Object...)} (prepared statements).
+     */
+    @Deprecated
     public int executeUpdateWithCount(String sql) {
+        if (sql == null || sql.trim().isEmpty()) {
+            Main.logUtils.addLog("Fehler bei der Aktualisierung: SQL ist leer");
+            return -1;
+        }
+
+        // Very small guardrail: reject obvious multi-statement / comment injection patterns.
+        // This is NOT a complete SQL injection defense; prepared statements are the correct fix.
+        if (looksLikeMultiStatementOrComment(sql)) {
+            logger.warn("Rejected potentially unsafe raw SQL in executeUpdateWithCount(): {}", sql);
+            Main.logUtils.addLog("Unsichere SQL-Aktualisierung abgelehnt (verwende PreparedStatement)");
+            return -1;
+        }
+
         try (Statement stmt = connection.createStatement()) {
+            //noinspection SqlSourceToSinkFlow
             return stmt.executeUpdate(sql);
         } catch (SQLException e) {
             logger.error("SQL Exception during executeUpdateWithCount: ", e);
+            Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
+            return -1;
+        }
+    }
+
+    /**
+     * Executes a parameterized update/DDL and returns affected rows count (or -1 on error).
+     */
+    public int executeUpdateWithCount(String sql, Object... params) {
+        try {
+            PreparedStatement pstmt = getCachedPreparedStatement("U", sql);
+            bindParams(pstmt, params);
+            return pstmt.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("SQL Exception during executeUpdateWithCount (prepared): ", e);
             Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
             return -1;
         }
@@ -400,10 +505,11 @@ public class DatabaseManager {
 
     /**
      * Clear a specific table from the database.
-     *
+     * <p>
      * IMPORTANT: You cannot bind table names with PreparedStatement placeholders.
      * Therefore we whitelist table names and build SQL directly.
      */
+    @SuppressWarnings("SqlSourceToSinkFlow")
     public boolean clearTable(String tableName) {
         if (tableName == null || tableName.trim().isEmpty()) {
             logger.error("clearTable called with invalid table name");
@@ -443,6 +549,7 @@ public class DatabaseManager {
         T map(ResultSet rs) throws SQLException;
     }
 
+    @SuppressWarnings("SqlSourceToSinkFlow")
     public <T> List<T> queryList(String sql, Object[] params, ResultMapper<T> mapper) {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             if (params != null) {

@@ -6,12 +6,13 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings("UnusedReturnValue")
+@SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
 public class VendorManager {
 
     private final Logger logger = LogManager.getLogger(VendorManager.class);
@@ -23,7 +24,6 @@ public class VendorManager {
     private final ConcurrentHashMap<String, Vendor> cache = new ConcurrentHashMap<>();
     private volatile List<Vendor> allVendorsCache = null;
     private volatile long allVendorsCacheTime = 0L;
-    private final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
 
     private VendorManager() {
         databaseManager = Main.databaseManager;
@@ -169,20 +169,7 @@ public class VendorManager {
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_VENDORS + " WHERE name = '" + name + "';";
         try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
             if (resultSet.next()) {
-                String contactPerson = resultSet.getString("contactPerson");
-                String phoneNumber = resultSet.getString("phoneNumber");
-                String email = resultSet.getString("email");
-                String address = resultSet.getString("address");
-                String suppliedArticlesStr = resultSet.getString("suppliedArticles");
-                double minOrderValue = resultSet.getDouble("minOrderValue");
-                List<String> suppliedArticles = new ArrayList<>();
-                if (suppliedArticlesStr != null && !suppliedArticlesStr.isEmpty()) {
-                    String[] articlesArray = suppliedArticlesStr.split(",");
-                    for (String article : articlesArray) {
-                        suppliedArticles.add(article.trim());
-                    }
-                }
-                Vendor v = new Vendor(name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue);
+                Vendor v = getVendor(name, resultSet);
                 cache.put(name, v);
                 return v;
             } else {
@@ -194,8 +181,27 @@ public class VendorManager {
         }
     }
 
+    private Vendor getVendor(String name, ResultSet resultSet) throws SQLException {
+        String contactPerson = resultSet.getString("contactPerson");
+        String phoneNumber = resultSet.getString("phoneNumber");
+        String email = resultSet.getString("email");
+        String address = resultSet.getString("address");
+        String suppliedArticlesStr = resultSet.getString("suppliedArticles");
+        double minOrderValue = resultSet.getDouble("minOrderValue");
+        List<String> suppliedArticles = new ArrayList<>();
+        if (suppliedArticlesStr != null && !suppliedArticlesStr.isEmpty()) {
+            String[] articlesArray = suppliedArticlesStr.split(",");
+            for (String article : articlesArray) {
+                suppliedArticles.add(article.trim());
+            }
+        }
+        return new Vendor(name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue);
+    }
+
     public List<Vendor> getVendors() {
         long now = System.currentTimeMillis();
+        // 5 minutes
+        long CACHE_TTL_MILLIS = 5 * 60 * 1000;
         if (allVendorsCache != null && (now - allVendorsCacheTime) < CACHE_TTL_MILLIS) {
             return allVendorsCache;
         }
@@ -205,20 +211,7 @@ public class VendorManager {
             List<Vendor> vendors = new ArrayList<>();
             while (resultSet.next()) {
                 String name = resultSet.getString("name");
-                String contactPerson = resultSet.getString("contactPerson");
-                String phoneNumber = resultSet.getString("phoneNumber");
-                String email = resultSet.getString("email");
-                String address = resultSet.getString("address");
-                String suppliedArticlesStr = resultSet.getString("suppliedArticles");
-                double minOrderValue = resultSet.getDouble("minOrderValue");
-                List<String> suppliedArticles = new ArrayList<>();
-                if (suppliedArticlesStr != null && !suppliedArticlesStr.isEmpty()) {
-                    String[] articlesArray = suppliedArticlesStr.split(",");
-                    for (String article : articlesArray) {
-                        suppliedArticles.add(article.trim());
-                    }
-                }
-                Vendor v = new Vendor(name, contactPerson, phoneNumber, email, address, suppliedArticles, minOrderValue);
+                Vendor v = getVendor(name, resultSet);
                 vendors.add(v);
                 // refresh per-vendor cache
                 cache.put(name, v);

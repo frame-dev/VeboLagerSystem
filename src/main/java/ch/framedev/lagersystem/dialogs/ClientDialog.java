@@ -16,12 +16,13 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+@SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "UnusedAssignment"})
 public class ClientDialog {
 
     private ClientDialog() {
     }
 
-    public static Object[] showAddClientDialog(JFrame frame, JComboBox<String> departmentCombobox) {
+    public static Object[] showAddClientDialog(JFrame frame) {
         final Object[][] holder = new Object[1][];
 
         JDialog dialog = new JDialog(frame, UnicodeSymbols.CLIENT + " Neuen Kunden hinzufügen", true);
@@ -53,7 +54,7 @@ public class ClientDialog {
 
         gbc.gridy = row++;
         gbc.insets = new Insets(4, 8, 18, 8);
-        JTextField nameField = createTextField(35);
+        JTextField nameField = createTextField();
         contentCard.add(nameField, gbc);
 
         // Department
@@ -63,7 +64,7 @@ public class ClientDialog {
 
         gbc.gridy = row++;
         gbc.insets = new Insets(4, 8, 8, 8);
-        departmentCombobox = new JComboBox<>();
+        JComboBox<String> departmentCombobox = new JComboBox<>();
         fillDepartmentList(departmentCombobox);
         departmentCombobox.setPreferredSize(new Dimension(420, 40));
         styleComboBox(departmentCombobox);
@@ -80,11 +81,10 @@ public class ClientDialog {
             dialog.dispose();
         });
 
-        JButton okBtn = createPrimaryButton(UnicodeSymbols.CHECKMARK + " Hinzufügen", "Den neuen Kunden zur Datenbank hinzufügen");
-        JComboBox<String> finalDepartmentCombobox = departmentCombobox;
+        JButton okBtn = createPrimaryButton(UnicodeSymbols.CHECKMARK + " Hinzufügen");
         okBtn.addActionListener(ae -> {
             String name = nameField.getText().trim();
-            String selectedDept = (String) finalDepartmentCombobox.getSelectedItem();
+            String selectedDept = (String) departmentCombobox.getSelectedItem();
             if (selectedDept == null) selectedDept = "";
             String dept = selectedDept.trim();
 
@@ -121,7 +121,7 @@ public class ClientDialog {
         return holder[0];
     }
 
-    public static Object[] showUpdateClientDialog(JFrame frame, Object[] existing, JComboBox<String> departmentCombobox) {
+    public static Object[] showUpdateClientDialog(JFrame frame, Object[] existing) {
         final Object[][] holder = new Object[1][];
 
         JDialog dialog = new JDialog(frame, UnicodeSymbols.EDIT + " Kunde bearbeiten", true);
@@ -153,7 +153,7 @@ public class ClientDialog {
 
         gbc.gridy = row++;
         gbc.insets = new Insets(4, 8, 18, 8);
-        JTextField nameField = createTextField(35);
+        JTextField nameField = createTextField();
         nameField.setText(existing != null && existing.length > 0 && existing[0] != null ? existing[0].toString() : "");
         contentCard.add(nameField, gbc);
 
@@ -164,7 +164,7 @@ public class ClientDialog {
 
         gbc.gridy = row++;
         gbc.insets = new Insets(4, 8, 8, 8);
-        departmentCombobox = new JComboBox<>();
+        JComboBox<String> departmentCombobox = new JComboBox<>();
         fillDepartmentList(departmentCombobox);
         departmentCombobox.setPreferredSize(new Dimension(420, 40));
         styleComboBox(departmentCombobox);
@@ -191,11 +191,10 @@ public class ClientDialog {
             dialog.dispose();
         });
 
-        JButton okBtn = createSuccessButton(UnicodeSymbols.FLOPPY + "  Speichern", "Die Änderungen am Kunden speichern");
-        JComboBox<String> finalDepartmentCombobox = departmentCombobox;
+        JButton okBtn = createSuccessButton(UnicodeSymbols.FLOPPY + "  Speichern");
         okBtn.addActionListener(ae -> {
             String name = nameField.getText().trim();
-            String selectedDept = (String) finalDepartmentCombobox.getSelectedItem();
+            String selectedDept = (String) departmentCombobox.getSelectedItem();
             if (selectedDept == null) selectedDept = "";
             String dept = selectedDept.trim();
 
@@ -275,25 +274,7 @@ public class ClientDialog {
     }
 
     private static JPanel createGradientHeader(String icon, String title, JDialog dialog, Runnable onClose) {
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                Color color1 = ThemeManager.getHeaderBackgroundColor();
-                Color color2 = ThemeManager.getHeaderGradientColor();
-
-                GradientPaint gradient = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
-                g2d.setPaint(gradient);
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-                g2d.dispose();
-            }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(22, 26, 22, 26));
+        JPanel headerPanel = getHeaderPanel();
 
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
         titlePanel.setOpaque(false);
@@ -348,6 +329,29 @@ public class ClientDialog {
         return headerPanel;
     }
 
+    private static JPanel getHeaderPanel() {
+        JPanel headerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                Color color1 = ThemeManager.getHeaderBackgroundColor();
+                Color color2 = ThemeManager.getHeaderGradientColor();
+
+                GradientPaint gradient = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
+                g2d.setPaint(gradient);
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.dispose();
+            }
+        };
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(22, 26, 22, 26));
+        return headerPanel;
+    }
+
     private static JLabel createLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
@@ -367,8 +371,8 @@ public class ClientDialog {
         return label;
     }
 
-    private static JTextField createTextField(int cols) {
-        JTextField field = new JTextField(cols);
+    private static JTextField createTextField() {
+        JTextField field = new JTextField(35);
         field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
@@ -403,14 +407,14 @@ public class ClientDialog {
         return field;
     }
 
-    private static JButton createPrimaryButton(String text, String tooltip) {
+    private static JButton createPrimaryButton(String text) {
         Color base = ThemeManager.getButtonBackgroundColor();
-        return createFilledButton(text, tooltip, base, ThemeManager.getTextOnPrimaryColor());
+        return createFilledButton(text, "Den neuen Kunden zur Datenbank hinzufügen", base, ThemeManager.getTextOnPrimaryColor());
     }
 
-    private static JButton createSuccessButton(String text, String tooltip) {
+    private static JButton createSuccessButton(String text) {
         Color base = ThemeManager.getSuccessColor();
-        return createFilledButton(text, tooltip, base, ThemeManager.getTextOnPrimaryColor());
+        return createFilledButton(text, "Die Änderungen am Kunden speichern", base, ThemeManager.getTextOnPrimaryColor());
     }
 
     private static JButton createDangerButton(String text, String tooltip) {

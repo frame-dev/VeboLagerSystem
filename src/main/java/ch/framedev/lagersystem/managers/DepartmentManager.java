@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "deprecation"})
 public class DepartmentManager {
 
     private final Logger logger = LogManager.getLogger(DepartmentManager.class);
@@ -22,7 +22,6 @@ public class DepartmentManager {
     private final ConcurrentHashMap<String, Map<String, Object>> cache = new ConcurrentHashMap<>();
     private volatile List<Map<String, Object>> allDepartmentsCache = null;
     private volatile long allDepartmentsCacheTime = 0L;
-    private final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
 
     private DepartmentManager() {
         databaseManager = Main.databaseManager;
@@ -155,6 +154,8 @@ public class DepartmentManager {
 
     public List<Map<String, Object>> getAllDepartments() {
         long now = System.currentTimeMillis();
+        // 5 minutes
+        long CACHE_TTL_MILLIS = 5 * 60 * 1000;
         if (allDepartmentsCache != null && (now - allDepartmentsCacheTime) < CACHE_TTL_MILLIS) {
             return allDepartmentsCache;
         }

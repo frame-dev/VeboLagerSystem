@@ -12,9 +12,6 @@ import org.apache.logging.log4j.Logger;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,12 +26,14 @@ import java.util.Optional;
 
 import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 
+@SuppressWarnings("DuplicatedCode")
 public class SupplierOrderGUI extends JFrame {
 
     private static SupplierOrderGUI INSTANCE;
 
     private final Logger logger = LogManager.getLogger(SupplierOrderGUI.class);
 
+    @SuppressWarnings("RegExpEmptyAlternationBranch")
     private static final String SEPARATOR = "|";
     private static final String[] COLUMNS = {
         UnicodeSymbols.NUMBERS + " Artikelnummer",
@@ -163,36 +162,6 @@ public class SupplierOrderGUI extends JFrame {
 
         loadFromFile();
         refreshTable();
-    }
-
-    private static GradientPanel getGradientPanel() {
-        GradientPanel header = new GradientPanel(
-                ThemeManager.getHeaderBackgroundColor(),
-                ThemeManager.getHeaderGradientColor()
-        );
-        header.setLayout(new BorderLayout());
-        header.setPreferredSize(new Dimension(0, 120));
-        header.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 0, 0, 30)),
-                BorderFactory.createEmptyBorder(22, 40, 22, 40)
-        ));
-        return header;
-    }
-
-    private JButton createButton(String text, Color color, ActionListener action) {
-        JButton btn = new JButton(text);
-        btn.addActionListener(action);
-        btn.setBackground(color);
-        btn.setForeground(Color.WHITE);
-        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        btn.setFocusPainted(false);
-        btn.setBorder(BorderFactory.createEmptyBorder(10, 18, 10, 18));
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { btn.setBackground(color.darker()); }
-            @Override public void mouseExited(MouseEvent e) { btn.setBackground(color); }
-        });
-        return btn;
     }
 
     private record OrderItem(String articleNumber, String name, String vendor, int quantity, int stock, String addedAt) {

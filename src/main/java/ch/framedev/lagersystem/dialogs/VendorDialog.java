@@ -15,6 +15,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.function.Function;
 
+@SuppressWarnings("DuplicatedCode")
 public class VendorDialog {
     public static Object[] showAddVendorDialog(JFrame frame) {
         final Object[][] holder = new Object[1][];

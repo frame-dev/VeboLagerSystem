@@ -28,7 +28,6 @@ public class ArticleListGUI extends JFrame {
     private final JLabel subtitleLabel = new JLabel("", SwingConstants.LEFT);
 
     private JList<ArticleDisplay> articleJList;
-    private JScrollPane scrollPane;
 
     private final Timer searchDebounce = new Timer(180, e -> filterList());
 
@@ -171,7 +170,7 @@ public class ArticleListGUI extends JFrame {
         configureSearchField();
         searchRow.add(searchField, BorderLayout.CENTER);
 
-        JButton clearBtn = createIconButton("✕", ThemeManager.getErrorColor());
+        JButton clearBtn = createIconButton(ThemeManager.getErrorColor());
         clearBtn.setToolTipText("Suche löschen (Esc)");
         clearBtn.addActionListener(e -> clearSearch());
         searchRow.add(clearBtn, BorderLayout.EAST);
@@ -179,7 +178,7 @@ public class ArticleListGUI extends JFrame {
         card.add(searchRow, BorderLayout.NORTH);
 
         // List area + empty state overlay
-        scrollPane = new JScrollPane(articleJList);
+        JScrollPane scrollPane = new JScrollPane(articleJList);
         scrollPane.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
         scrollPane.setBackground(ThemeManager.getCardBackgroundColor());
         scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
@@ -259,8 +258,8 @@ public class ArticleListGUI extends JFrame {
         ));
     }
 
-    private JButton createIconButton(String text, Color bg) {
-        JButton b = new JButton(text);
+    private JButton createIconButton(Color bg) {
+        JButton b = new JButton("✕");
         b.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         b.setPreferredSize(new Dimension(38, 38));
         b.setBackground(bg);
@@ -385,7 +384,7 @@ public class ArticleListGUI extends JFrame {
         ArticleDisplay selected = listModel.getElementAt(sel);
 
         String input = JOptionPane.showInputDialog(this,
-                "Neue Menge für \"" + safe(() -> selected.article.getName()) + "\":",
+                "Neue Menge für \"" + safe(selected.article::getName) + "\":",
                 selected.quantity);
 
         if (input == null) return;
@@ -630,25 +629,15 @@ public class ArticleListGUI extends JFrame {
             Article article = ad.article;
             int quantity = ad.quantity;
 
-            JPanel panel = new JPanel(new BorderLayout(12, 0));
-            panel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor().brighter()),
-                    BorderFactory.createEmptyBorder(12, 14, 12, 14)
-            ));
-            panel.setOpaque(true);
-
-            Color bg = isSelected
-                    ? ThemeManager.getSelectionBackgroundColor()
-                    : (index % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
-            panel.setBackground(bg);
+            JPanel panel = getJPanel(index, isSelected);
 
             // Left info
             JPanel info = new JPanel();
             info.setOpaque(false);
             info.setLayout(new BoxLayout(info, BoxLayout.Y_AXIS));
 
-            String name = safeStatic(article::getName, "—");
-            String number = safeStatic(article::getArticleNumber, "—");
+            String name = safeStatic(article::getName);
+            String number = safeStatic(article::getArticleNumber);
             int stock = safeIntStatic(article::getStockQuantity);
 
             JLabel nameLabel = new JLabel(name);
@@ -688,12 +677,27 @@ public class ArticleListGUI extends JFrame {
             return panel;
         }
 
-        private static String safeStatic(Supplier<String> s, String def) {
+        private static JPanel getJPanel(int index, boolean isSelected) {
+            JPanel panel = new JPanel(new BorderLayout(12, 0));
+            panel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor().brighter()),
+                    BorderFactory.createEmptyBorder(12, 14, 12, 14)
+            ));
+            panel.setOpaque(true);
+
+            Color bg = isSelected
+                    ? ThemeManager.getSelectionBackgroundColor()
+                    : (index % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+            panel.setBackground(bg);
+            return panel;
+        }
+
+        private static String safeStatic(Supplier<String> s) {
             try {
                 String v = s.get();
-                return (v == null || v.isBlank()) ? def : v;
+                return (v == null || v.isBlank()) ? "—" : v;
             } catch (Exception e) {
-                return def;
+                return "—";
             }
         }
 
@@ -703,6 +707,7 @@ public class ArticleListGUI extends JFrame {
     }
 
     // Rounded panel for modern UI
+    @SuppressWarnings("DuplicatedCode")
     private static class RoundedPanel extends JPanel {
         private final Color backgroundColor;
         private final int radius;

@@ -1,6 +1,5 @@
 package ch.framedev.lagersystem.utils;
 
-import ch.framedev.lagersystem.guis.OrderGUI;
 import ch.framedev.lagersystem.guis.SettingsGUI;
 import ch.framedev.lagersystem.managers.ThemeManager;
 
@@ -15,9 +14,11 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 
+@SuppressWarnings("DuplicatedCode")
 public class JFrameUtils {
 
     // small rounded panel for card styling
+    @SuppressWarnings("DuplicatedCode")
     public static class RoundedPanel extends JPanel {
         private final Color bg;
         private final int radius;
@@ -378,5 +379,24 @@ public class JFrameUtils {
         Color hover = ThemeManager.getButtonHoverColor(color);
         btn.addChangeListener(e -> btn.setBackground(btn.getModel().isRollover() ? hover : color));
         return btn;
+    }
+
+    public static JPanel getHeaderPanel() {
+        JPanel headerPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                GradientPaint gp = new GradientPaint(0, 0, ThemeManager.getHeaderBackgroundColor(), getWidth(), 0, ThemeManager.getHeaderGradientColor());
+                g2.setPaint(gp);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 22, 22);
+                g2.setColor(new Color(0,0,0,30));
+                g2.fillRoundRect(4, getHeight()-8, getWidth()-8, 8, 8, 8); // subtle shadow
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(18, 32, 18, 32));
+        return headerPanel;
     }
 }

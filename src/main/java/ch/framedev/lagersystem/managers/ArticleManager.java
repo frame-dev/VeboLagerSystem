@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -19,7 +20,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * - Automatic cache invalidation on updates/deletes
  * - Configurable cache size
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "deprecation"})
 public class ArticleManager {
 
     private final Logger logger = LogManager.getLogger(ArticleManager.class);
@@ -224,18 +225,7 @@ public class ArticleManager {
         }
         String sql = "INSERT INTO " + DatabaseManager.TABLE_ARTICLES + " (articleNumber, name, details, stockQuantity, minStockLevel, sellPrice, purchasePrice, vendorName) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
-        VendorManager vendorManager = VendorManager.getInstance();
-        if (!vendorManager.existsVendor(article.getVendorName())) {
-            Vendor vendor = new Vendor(article.getVendorName(), "", "", "", "", new ArrayList<>(), 0.0);
-            vendor.getSuppliedArticles().add(article.getArticleNumber());
-            vendorManager.insertVendor(vendor);
-        } else {
-            Vendor vendor = vendorManager.getVendorByName(article.getVendorName());
-            if (vendor != null && !vendor.getSuppliedArticles().contains(article.getArticleNumber())) {
-                vendor.getSuppliedArticles().add(article.getArticleNumber());
-                vendorManager.updateVendor(vendor);
-            }
-        }
+        insertVendorForArticle(article);
         boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{article.getArticleNumber(), article.getName(), article.getDetails(),
                 article.getStockQuantity(), article.getMinStockLevel(), article.getSellPrice(),
                 article.getPurchasePrice(), article.getVendorName()});
@@ -252,18 +242,7 @@ public class ArticleManager {
         return success;
     }
 
-    /**
-     * Update an existing article in the database
-     *
-     * @param article Article to update
-     * @return true if successful, false otherwise
-     */
-    public boolean updateArticle(Article article) {
-        if (!existsArticle(article.getArticleNumber())) {
-            return false;
-        }
-        String sql = "UPDATE " + DatabaseManager.TABLE_ARTICLES + " SET name = ?, details = ?, stockQuantity = ?, minStockLevel = ?, sellPrice = ?, purchasePrice = ?, vendorName = ? " +
-                "WHERE articleNumber = ?;";
+    private void insertVendorForArticle(Article article) {
         VendorManager vendorManager = VendorManager.getInstance();
         if (!vendorManager.existsVendor(article.getVendorName())) {
             Vendor vendor = new Vendor(article.getVendorName(), "", "", "", "", new ArrayList<>(), 0.0);
@@ -276,6 +255,21 @@ public class ArticleManager {
                 vendorManager.updateVendor(vendor);
             }
         }
+    }
+
+    /**
+     * Update an existing article in the database
+     *
+     * @param article Article to update
+     * @return true if successful, false otherwise
+     */
+    public boolean updateArticle(Article article) {
+        if (!existsArticle(article.getArticleNumber())) {
+            return false;
+        }
+        String sql = "UPDATE " + DatabaseManager.TABLE_ARTICLES + " SET name = ?, details = ?, stockQuantity = ?, minStockLevel = ?, sellPrice = ?, purchasePrice = ?, vendorName = ? " +
+                "WHERE articleNumber = ?;";
+        insertVendorForArticle(article);
         boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{article.getName(), article.getDetails(),
                 article.getStockQuantity(), article.getMinStockLevel(), article.getSellPrice(),
                 article.getPurchasePrice(), article.getVendorName(), article.getArticleNumber()});
@@ -344,25 +338,29 @@ public class ArticleManager {
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_ARTICLES + " WHERE articleNumber = ? LIMIT 1;";
         try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber})) {
-            if (resultSet.next()) {
-                Article article = new Article(
-                        resultSet.getString("articleNumber"),
-                        resultSet.getString("name"),
-                        resultSet.getString("details"),
-                        resultSet.getInt("stockQuantity"),
-                        resultSet.getInt("minStockLevel"),
-                        resultSet.getDouble("sellPrice"),
-                        resultSet.getDouble("purchasePrice"),
-                        resultSet.getString("vendorName")
-                );
-                cacheArticle(article);
-                return article;
-            } else {
-                return null;
-            }
+            return getArticle(resultSet);
         } catch (Exception e) {
             logger.error("Error while getting article with number '{}'", articleNumber, e);
             Main.logUtils.addLog("Error while getting article with number '" + articleNumber + "'");
+            return null;
+        }
+    }
+
+    private Article getArticle(ResultSet resultSet) throws SQLException {
+        if (resultSet.next()) {
+            Article article = new Article(
+                    resultSet.getString("articleNumber"),
+                    resultSet.getString("name"),
+                    resultSet.getString("details"),
+                    resultSet.getInt("stockQuantity"),
+                    resultSet.getInt("minStockLevel"),
+                    resultSet.getDouble("sellPrice"),
+                    resultSet.getDouble("purchasePrice"),
+                    resultSet.getString("vendorName")
+            );
+            cacheArticle(article);
+            return article;
+        } else {
             return null;
         }
     }
@@ -382,22 +380,7 @@ public class ArticleManager {
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_ARTICLES + " WHERE name = ? LIMIT 1;";
         try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{name})) {
-            if (resultSet.next()) {
-                Article article = new Article(
-                        resultSet.getString("articleNumber"),
-                        resultSet.getString("name"),
-                        resultSet.getString("details"),
-                        resultSet.getInt("stockQuantity"),
-                        resultSet.getInt("minStockLevel"),
-                        resultSet.getDouble("sellPrice"),
-                        resultSet.getDouble("purchasePrice"),
-                        resultSet.getString("vendorName")
-                );
-                cacheArticle(article);
-                return article;
-            } else {
-                return null;
-            }
+            return getArticle(resultSet);
         } catch (Exception e) {
             logger.error("Error while getting article with name '{}'", name, e);
             Main.logUtils.addLog("Error while getting article with name '" + name + "'");

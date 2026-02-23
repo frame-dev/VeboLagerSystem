@@ -25,6 +25,7 @@ import static ch.framedev.lagersystem.main.Main.articleListGUI;
 /**
  * Dialog for importing QR code scan data from the server.
  */
+@SuppressWarnings("DuplicatedCode")
 public final class ArticleQrCodeDialog {
 
     private ArticleQrCodeDialog() {

@@ -3,6 +3,8 @@ package ch.framedev.lagersystem.utils;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.guis.MainGUI;
 import ch.framedev.lagersystem.main.Main;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -25,7 +27,10 @@ import java.util.List;
 /**
  * Utility to export a JTable with article data into a PDF file.
  */
+@SuppressWarnings("DuplicatedCode")
 public final class ArticleExporter {
+
+    private static final Logger LOGGER = LogManager.getLogger(ArticleExporter.class);
 
     private ArticleExporter() {
     }
@@ -272,7 +277,7 @@ public final class ArticleExporter {
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE,
                     icon);
-            ex.printStackTrace();
+            LOGGER.error(ex.getMessage(), ex);
         }
     }
 
@@ -834,5 +839,91 @@ public final class ArticleExporter {
             return "\"" + escaped + "\"";
         }
         return escaped;
+    }
+
+    public static void exportLogsToPdf(List<String> logs, JFrame frame) {
+        if (logs == null || logs.isEmpty()) {
+            JOptionPane.showMessageDialog(frame,
+                    "Keine Logs zum Export vorhanden.",
+                    "PDF Export",
+                    JOptionPane.WARNING_MESSAGE);
+            LOGGER.warn("No Logs found to export!");
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("PDF Speichern");
+        fileChooser.setSelectedFile(new File("Logs_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
+        int userSelection = fileChooser.showSaveDialog(frame);
+        if (userSelection != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File fileToSave = fileChooser.getSelectedFile();
+        if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
+            fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
+        }
+
+        try (PDDocument doc = new PDDocument()) {
+            PDFont regularFont;
+            File arial = new File("/Library/Fonts/Arial.ttf");
+            if (arial.exists()) {
+                regularFont = PDType0Font.load(doc, arial);
+            } else {
+                try {
+                    Class<?> c = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
+                    Object helv = c.getField("HELVETICA").get(null);
+                    regularFont = (PDFont) helv;
+                } catch (Exception e) {
+                    LOGGER.error("No usable Font found!", e);
+                    throw new IOException("Keine verwendbaren Schriftarten gefunden");
+                }
+            }
+
+            PDRectangle pageSize = PDRectangle.A4;
+            float margin = 40f;
+            float fontSize = 10f;
+            float lineHeight = 14f;
+            float yStart = pageSize.getHeight() - margin;
+
+            PDPage page = new PDPage(pageSize);
+            doc.addPage(page);
+            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
+            contentStream.setFont(regularFont, fontSize);
+
+            float y = yStart;
+            for (String line : logs) {
+                List<String> wrapped = wrapLine(line, regularFont, fontSize, pageSize.getWidth() - 2 * margin);
+                for (String part : wrapped) {
+                    if (y - lineHeight < margin) {
+                        contentStream.close();
+                        page = new PDPage(pageSize);
+                        doc.addPage(page);
+                        contentStream = new PDPageContentStream(doc, page);
+                        contentStream.setFont(regularFont, fontSize);
+                        y = yStart;
+                    }
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(margin, y);
+                    contentStream.showText(part);
+                    contentStream.endText();
+                    y -= lineHeight;
+                }
+            }
+
+            contentStream.close();
+            doc.save(fileToSave);
+
+            JOptionPane.showMessageDialog(frame,
+                    "PDF erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
+                    "PDF Export",
+                    JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(frame,
+                    "Fehler beim PDF-Export: " + ex.getMessage(),
+                    "PDF Export",
+                    JOptionPane.ERROR_MESSAGE);
+            LOGGER.error("Could not create PDF-Export {}", ex.getMessage(), ex);
+        }
     }
 }

@@ -2,6 +2,8 @@ package ch.framedev.lagersystem.managers;
 
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.classes.Note;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -11,7 +13,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+@SuppressWarnings("deprecation")
 public class NotesManager {
+
+    private final Logger LOGGER = LogManager.getLogger(NotesManager.class);
 
     private final String TABLE = DatabaseManager.TABLE_NOTES;
     private static NotesManager instance;
@@ -21,7 +26,6 @@ public class NotesManager {
     private final ConcurrentHashMap<String, Note> cache = new ConcurrentHashMap<>();
     private volatile List<Note> allNotesCache = null;
     private volatile long allNotesCacheTime = 0L;
-    private final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
 
     private NotesManager() {
         databaseManager = Main.databaseManager;
@@ -114,6 +118,8 @@ public class NotesManager {
 
     public List<Note> getAllNotes() {
         long now = System.currentTimeMillis();
+        // 5 minutes
+        long CACHE_TTL_MILLIS = 5 * 60 * 1000;
         if (allNotesCache != null && (now - allNotesCacheTime) < CACHE_TTL_MILLIS) {
             return allNotesCache;
         }
@@ -135,7 +141,7 @@ public class NotesManager {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            LOGGER.error("Error fetching all notes", ex);
         }
         return notes;
     }

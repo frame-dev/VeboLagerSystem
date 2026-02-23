@@ -16,6 +16,7 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 
+@SuppressWarnings("DuplicatedCode")
 public class OrderExport {
 
     public static void createPDFExport(JFrame frame, Order order) {

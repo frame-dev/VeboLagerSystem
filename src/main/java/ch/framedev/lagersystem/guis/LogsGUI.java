@@ -27,18 +27,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import ch.framedev.lagersystem.main.Main;
-import ch.framedev.lagersystem.utils.OrderLoggingUtils;
+import ch.framedev.lagersystem.utils.*;
 import ch.framedev.lagersystem.managers.ThemeManager;
-import ch.framedev.lagersystem.utils.UnicodeSymbols;
-import ch.framedev.lagersystem.utils.VendorOrderLogging;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.font.PDFont;
-import org.apache.pdfbox.pdmodel.font.PDType0Font;
 
 public class LogsGUI extends JFrame {
 
@@ -120,19 +112,19 @@ public class LogsGUI extends JFrame {
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 12));
         filterPanel.setOpaque(false);
         JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche:");
-        styleLabel(searchLabel, Font.BOLD, 12, ThemeManager.getTextPrimaryColor());
+        styleLabel(searchLabel, Font.BOLD, ThemeManager.getTextPrimaryColor());
         filterPanel.add(searchLabel);
         searchField.setToolTipText("Textsuche in Logs");
         styleTextField(searchField);
         filterPanel.add(searchField);
         JLabel fromLabel = new JLabel("Von (dd.MM.yyyy):");
-        styleLabel(fromLabel, Font.PLAIN, 12, ThemeManager.getTextPrimaryColor());
+        styleLabel(fromLabel, Font.PLAIN, ThemeManager.getTextPrimaryColor());
         filterPanel.add(fromLabel);
         fromDateField.setToolTipText("z.B. 01.01.2024");
         styleTextField(fromDateField);
         filterPanel.add(fromDateField);
         JLabel toLabel = new JLabel("Bis (dd.MM.yyyy):");
-        styleLabel(toLabel, Font.PLAIN, 12, ThemeManager.getTextPrimaryColor());
+        styleLabel(toLabel, Font.PLAIN, ThemeManager.getTextPrimaryColor());
         filterPanel.add(toLabel);
         toDateField.setToolTipText("z.B. 31.12.2024");
         styleTextField(toDateField);
@@ -253,22 +245,7 @@ public class LogsGUI extends JFrame {
     }
 
     private static JPanel getHeaderPanel() {
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                GradientPaint gp = new GradientPaint(0, 0, ThemeManager.getHeaderBackgroundColor(), getWidth(), 0, ThemeManager.getHeaderGradientColor());
-                g2.setPaint(gp);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 22, 22);
-                g2.setColor(new Color(0,0,0,30));
-                g2.fillRoundRect(4, getHeight()-8, getWidth()-8, 8, 8, 8); // subtle shadow
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(18, 32, 18, 32));
-        return headerPanel;
+        return JFrameUtils.getHeaderPanel();
     }
 
     private void allLogs(ActionEvent actionEvent) {
@@ -340,8 +317,8 @@ public class LogsGUI extends JFrame {
         ));
     }
 
-    private void styleLabel(JLabel label, int style, int size, Color color) {
-        label.setFont(SettingsGUI.getFontByName(style, size));
+    private void styleLabel(JLabel label, int style, Color color) {
+        label.setFont(SettingsGUI.getFontByName(style, 12));
         label.setForeground(color);
     }
 
@@ -651,112 +628,7 @@ public class LogsGUI extends JFrame {
     }
 
     private void exportLogsToPdf(List<String> logs) {
-        if (logs == null || logs.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Keine Logs zum Export vorhanden.",
-                    "PDF Export",
-                    JOptionPane.WARNING_MESSAGE);
-            logger.warn("No Logs found to export!");
-            return;
-        }
-
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("PDF Speichern");
-        fileChooser.setSelectedFile(new File("Logs_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
-        int userSelection = fileChooser.showSaveDialog(this);
-        if (userSelection != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
-        File fileToSave = fileChooser.getSelectedFile();
-        if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
-            fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
-        }
-
-        try (PDDocument doc = new PDDocument()) {
-            PDFont regularFont;
-            File arial = new File("/Library/Fonts/Arial.ttf");
-            if (arial.exists()) {
-                regularFont = PDType0Font.load(doc, arial);
-            } else {
-                try {
-                    Class<?> c = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
-                    Object helv = c.getField("HELVETICA").get(null);
-                    regularFont = (PDFont) helv;
-                } catch (Exception e) {
-                    logger.error("No usable Font found!", e);
-                    throw new IOException("Keine verwendbaren Schriftarten gefunden");
-                }
-            }
-
-            PDRectangle pageSize = PDRectangle.A4;
-            float margin = 40f;
-            float fontSize = 10f;
-            float lineHeight = 14f;
-            float yStart = pageSize.getHeight() - margin;
-
-            PDPage page = new PDPage(pageSize);
-            doc.addPage(page);
-            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
-            contentStream.setFont(regularFont, fontSize);
-
-            float y = yStart;
-            for (String line : logs) {
-                List<String> wrapped = wrapLine(line, regularFont, fontSize, pageSize.getWidth() - 2 * margin);
-                for (String part : wrapped) {
-                    if (y - lineHeight < margin) {
-                        contentStream.close();
-                        page = new PDPage(pageSize);
-                        doc.addPage(page);
-                        contentStream = new PDPageContentStream(doc, page);
-                        contentStream.setFont(regularFont, fontSize);
-                        y = yStart;
-                    }
-                    contentStream.beginText();
-                    contentStream.newLineAtOffset(margin, y);
-                    contentStream.showText(part);
-                    contentStream.endText();
-                    y -= lineHeight;
-                }
-            }
-
-            contentStream.close();
-            doc.save(fileToSave);
-
-            JOptionPane.showMessageDialog(this,
-                    "PDF erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
-                    "PDF Export",
-                    JOptionPane.INFORMATION_MESSAGE);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Fehler beim PDF-Export: " + ex.getMessage(),
-                    "PDF Export",
-                    JOptionPane.ERROR_MESSAGE);
-            logger.error("Could not create PDF-Export {}", ex.getMessage(), ex);
-        }
-    }
-
-    private List<String> wrapLine(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
-        List<String> lines = new ArrayList<>();
-        if (text == null) {
-            return lines;
-        }
-        String[] words = text.split("\\s+");
-        StringBuilder current = new StringBuilder();
-        for (String word : words) {
-            String candidate = current.isEmpty() ? word : current + " " + word;
-            float width = font.getStringWidth(candidate) / 1000f * fontSize;
-            if (width > maxWidth && !current.isEmpty()) {
-                lines.add(current.toString());
-                current = new StringBuilder(word);
-            } else {
-                current = new StringBuilder(candidate);
-            }
-        }
-        if (!current.isEmpty()) {
-            lines.add(current.toString());
-        }
-        return lines;
+        ArticleExporter.exportLogsToPdf(logs, this);
     }
 
     private void clearCurrentLogs() {

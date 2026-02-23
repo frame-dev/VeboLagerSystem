@@ -20,6 +20,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.List;
 
+@SuppressWarnings("DuplicatedCode")
 public class DisplayWarningDialog {
 
     private DisplayWarningDialog() {
@@ -39,7 +40,7 @@ public class DisplayWarningDialog {
             // Determine palette based on warning type
             WarningPalette palette = paletteFor(warning);
 
-            JPanel chrome = createDialogChrome(ThemeManager.getBackgroundColor(), 18);
+            JPanel chrome = createDialogChrome(ThemeManager.getBackgroundColor());
             chrome.setLayout(new BorderLayout());
 
             JPanel header = createGradientHeader(
@@ -168,7 +169,7 @@ public class DisplayWarningDialog {
         dialog.setUndecorated(true);
         dialog.setLayout(new BorderLayout());
 
-        JPanel chrome = createDialogChrome(ThemeManager.getBackgroundColor(), 18);
+        JPanel chrome = createDialogChrome(ThemeManager.getBackgroundColor());
         chrome.setLayout(new BorderLayout());
 
         // Header
@@ -221,19 +222,7 @@ public class DisplayWarningDialog {
         }
 
         // Table model
-        String[] columnNames = {
-                UnicodeSymbols.STATUS + " Status",
-                UnicodeSymbols.TAG + " Typ",
-                UnicodeSymbols.TITLE + " Titel",
-                UnicodeSymbols.MEMO + " Nachricht",
-                UnicodeSymbols.CALENDAR + " Datum"
-        };
-        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false;
-            }
-        };
+        DefaultTableModel tableModel = getModel();
 
         for (Warning w : warnings) {
             String status = w.isResolved() ? UnicodeSymbols.CHECKMARK + " Gelöst" : UnicodeSymbols.WARNING + " Offen";
@@ -449,6 +438,22 @@ public class DisplayWarningDialog {
         dialog.setVisible(true);
     }
 
+    private static DefaultTableModel getModel() {
+        String[] columnNames = {
+                UnicodeSymbols.STATUS + " Status",
+                UnicodeSymbols.TAG + " Typ",
+                UnicodeSymbols.TITLE + " Titel",
+                UnicodeSymbols.MEMO + " Nachricht",
+                UnicodeSymbols.CALENDAR + " Datum"
+        };
+        return new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+    }
+
     private static JTable getWarningsTable(DefaultTableModel tableModel) {
         JTable table = new JTable(tableModel);
         table.setRowHeight(34);
@@ -475,8 +480,8 @@ public class DisplayWarningDialog {
         );
     }
 
-    private static JPanel createDialogChrome(Color bg, int radius) {
-        ArticleGUI.RoundedPanel chrome = new ArticleGUI.RoundedPanel(bg, radius);
+    private static JPanel createDialogChrome(Color bg) {
+        ArticleGUI.RoundedPanel chrome = new ArticleGUI.RoundedPanel(bg, 18);
         chrome.setOpaque(false);
 
         Color shadow = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 90 : 35);
@@ -494,21 +499,7 @@ public class DisplayWarningDialog {
     }
 
     private static JPanel createGradientHeader(Color a, Color b, String title, String subtitle, JDialog dialog) {
-        JPanel header = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                GradientPaint gp = new GradientPaint(0, 0, a, getWidth(), 0, b);
-                g2.setPaint(gp);
-                g2.fillRect(0, 0, getWidth(), getHeight());
-                g2.dispose();
-            }
-        };
-        header.setOpaque(false);
-        header.setBorder(BorderFactory.createEmptyBorder(18, 22, 18, 18));
+        JPanel header = getHeader(a, b);
 
         JPanel textStack = new JPanel();
         textStack.setOpaque(false);
@@ -533,6 +524,25 @@ public class DisplayWarningDialog {
         JButton closeBtn = createHeaderCloseButton(dialog);
         header.add(closeBtn, BorderLayout.EAST);
 
+        return header;
+    }
+
+    private static JPanel getHeader(Color a, Color b) {
+        JPanel header = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                GradientPaint gp = new GradientPaint(0, 0, a, getWidth(), 0, b);
+                g2.setPaint(gp);
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.dispose();
+            }
+        };
+        header.setOpaque(false);
+        header.setBorder(BorderFactory.createEmptyBorder(18, 22, 18, 18));
         return header;
     }
 

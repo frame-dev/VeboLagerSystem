@@ -22,6 +22,7 @@ import java.util.function.Supplier;
 /**
  * Modern Main Dashboard for VEBO Lagersystem with Tabbed Interface
  */
+@SuppressWarnings("DuplicatedCode")
 public class MainGUI extends JFrame {
 
     private JTabbedPane tabbedPane;
@@ -155,6 +156,20 @@ public class MainGUI extends JFrame {
      */
     private JPanel createHeaderPanel() {
         // Create gradient background panel
+        JFrameUtils.GradientPanel headerPanel = getGradientPanel();
+
+        // Left side: Title and subtitle
+        JPanel headerTextPanel = createHeaderTextPanel();
+        headerPanel.add(headerTextPanel, BorderLayout.WEST);
+
+        // Right side: Settings button and date
+        JPanel rightPanel = createHeaderRightPanel();
+        headerPanel.add(rightPanel, BorderLayout.EAST);
+
+        return headerPanel;
+    }
+
+    private static JFrameUtils.GradientPanel getGradientPanel() {
         JFrameUtils.GradientPanel headerPanel = new JFrameUtils.GradientPanel(
             ThemeManager.getHeaderBackgroundColor(),
             ThemeManager.getHeaderGradientColor()
@@ -165,15 +180,6 @@ public class MainGUI extends JFrame {
                 BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 0, 0, 30)),
                 BorderFactory.createEmptyBorder(30, 60, 30, 60)
         ));
-
-        // Left side: Title and subtitle
-        JPanel headerTextPanel = createHeaderTextPanel();
-        headerPanel.add(headerTextPanel, BorderLayout.WEST);
-
-        // Right side: Settings button and date
-        JPanel rightPanel = createHeaderRightPanel();
-        headerPanel.add(rightPanel, BorderLayout.EAST);
-
         return headerPanel;
     }
 
@@ -237,16 +243,12 @@ public class MainGUI extends JFrame {
         JButton settingsButton = new JButton(UnicodeSymbols.safeSymbol(UnicodeSymbols.BETTER_GEAR, "CFG", headerButtonFont) + " Einstellungen");
         styleHeaderButton(settingsButton);
         settingsButton.setToolTipText("Einstellungen des Programms öffnen");
-        settingsButton.addActionListener(e -> {
-            settingsGUI = showOrCreateWindow(settingsGUI, SettingsGUI::new);
-        });
+        settingsButton.addActionListener(e -> settingsGUI = showOrCreateWindow(settingsGUI, SettingsGUI::new));
         settingsButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
         JButton notesButton = new JButton(UnicodeSymbols.safeSymbol(UnicodeSymbols.CLIPBOARD, "CLIP", headerButtonFont) + " Notizen");
         styleHeaderButton(notesButton);
         notesButton.setToolTipText("Persönliche Notizen verwalten");
-        notesButton.addActionListener(e -> {
-            notesGUI = showOrCreateWindow(notesGUI, NotesGUI::new);
-        });
+        notesButton.addActionListener(e -> notesGUI = showOrCreateWindow(notesGUI, NotesGUI::new));
         notesButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
         JButton converterButton = new JButton(UnicodeSymbols.safeSymbol(UnicodeSymbols.CALCULATOR, "CALC", headerButtonFont) + " Einheitenrechner/Befüllungshilfe");
@@ -313,14 +315,6 @@ public class MainGUI extends JFrame {
                 this.setFont(getEmojiCapableFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 3)));
             }
         };
-        /**tabbedPane.setUI(new BasicTabbedPaneUI() {
-
-            @Override
-            protected int calculateTabHeight(int tabPlacement, int tabIndex, int fontHeight) {
-                // your desired tab height
-                return 30;
-            }
-        });*/
 
         // Trigger UI update
         tabbedPane.updateUI();
@@ -583,12 +577,12 @@ public class MainGUI extends JFrame {
 
     /**
      * Generates QR codes for all articles in the application.
-     *
+     * <p>
      * This method retrieves the full list of articles using the article manager.
      * If no articles are available, it displays a warning dialog to inform the user.
      * Otherwise, it invokes the {@code generateQrCodesForList} method to generate
      * QR codes for the retrieved list of articles with a confirmation prompt.
-     *
+     * <p>
      * The confirmation prompt text is localized and asks the user whether they want
      * to generate QR codes for all articles.
      */
@@ -608,22 +602,22 @@ public class MainGUI extends JFrame {
 
     /**
      * Generates QR codes for the selected articles within the application.
-     *
+     * <p>
      * This method retrieves a list of selected articles from the article GUI and
      * initiates QR code generation if a valid selection is made. If the article
      * GUI is not initialized or no articles are selected, it displays a warning
      * dialog to notify the user of the missing selection.
-     *
+     * <p>
      * The confirmation prompt includes the total count of selected articles, asking
      * the user for confirmation before proceeding with the QR code generation.
-     *
+     * <p>
      * Preconditions:
      * - The article GUI tab must be opened, and at least one article should be selected.
-     *
+     * <p>
      * Postconditions:
      * - Invokes the {@code generateQrCodesForList} method to generate QR codes
      *   for the list of selected articles, following confirmation from the user.
-     *
+     * <p>
      * Warning messages:
      * - If the article GUI is not initialized, a dialog indicates that the article
      *   tab must be opened.
@@ -655,7 +649,7 @@ public class MainGUI extends JFrame {
 
     /**
      * Generates QR codes for a given list of articles after displaying a confirmation dialog.
-     *
+     * <p>
      * This method allows the user to confirm whether they want to proceed with generating QR codes
      * for the provided list of articles. A progress dialog is displayed during the generation process.
      * Upon completion, the user is notified about the result, including the number of QR codes

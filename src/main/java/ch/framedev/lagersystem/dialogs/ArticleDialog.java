@@ -20,6 +20,7 @@ import java.util.function.Function;
 
 import static ch.framedev.lagersystem.guis.ArticleGUI.getHeaderPanel;
 
+@SuppressWarnings({"ReassignedVariable", "UnusedAssignment", "ClassEscapesDefinedScope", "DuplicatedCode"})
 public class ArticleDialog {
 
     /**
@@ -247,7 +248,6 @@ public class ArticleDialog {
         // Lieferant
         gbc.gridy = row++;
         contentCard.add(createLabel.apply(UnicodeSymbols.TRUCK + " Lieferant"), gbc);
-        gbc.gridy = row++;
         JTextField lieferantField = new JTextField(existingData != null && existingData.length > 8 && existingData[8] != null ? existingData[8].toString() : "", 25);
         styleTextField.accept(lieferantField);
         contentCard.add(lieferantField, gbc);
@@ -256,12 +256,7 @@ public class ArticleDialog {
         mainContainer.add(scrollPane, BorderLayout.CENTER);
 
         // Buttons (rounded card bar)
-        ArticleGUI.RoundedPanel buttonPanel = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 12, 10));
-        buttonPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
+        ArticleGUI.RoundedPanel buttonPanel = getButtonPanel();
 
         JButton cancelBtn = createDialogDangerActionButton(UnicodeSymbols.CLOSE + " Abbrechen");
         JButton okBtn = createDialogPrimaryActionButton(UnicodeSymbols.CHECKMARK + " Speichern");
@@ -326,6 +321,17 @@ public class ArticleDialog {
 
         return resultHolder[0];
     }
+
+    private static ArticleGUI.RoundedPanel getButtonPanel() {
+        ArticleGUI.RoundedPanel buttonPanel = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 12, 10));
+        buttonPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
+        return buttonPanel;
+    }
+
     private static JButton createDialogPrimaryActionButton(String text) {
         JButton btn = new JButton(text);
         btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
@@ -867,12 +873,7 @@ public class ArticleDialog {
      * Creates the button panel for the dialog
      */
     private static DialogButtons createDialogButtons(JDialog dialog, Object[][] resultHolder, ArticleFormFields formFields) {
-        ArticleGUI.RoundedPanel buttonPanel = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 12, 10));
-        buttonPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
+        ArticleGUI.RoundedPanel buttonPanel = getButtonPanel();
 
         JButton cancelBtn = createDialogDangerActionButton(UnicodeSymbols.CLOSE + " Abbrechen");
         JButton okBtn = createDialogPrimaryActionButton(UnicodeSymbols.CHECKMARK + " Hinzufügen");
@@ -888,102 +889,6 @@ public class ArticleDialog {
         okBtn.addActionListener(ae -> handleAddArticleConfirm(dialog, resultHolder, formFields));
 
         return new DialogButtons(buttonPanel, okBtn);
-    }
-
-    /**
-     * Creates the cancel button with modern styling and hover effects
-     */
-    private static JButton createDialogCancelButton(JDialog dialog, Object[][] resultHolder) {
-        JButton cancelBtn = new JButton(UnicodeSymbols.CLOSE + " Abbrechen");
-        cancelBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        cancelBtn.setForeground(ThemeManager.getTextPrimaryColor());
-
-        Color baseColor = ThemeManager.getSurfaceColor();
-        Color hoverColor = ThemeManager.getButtonHoverColor(baseColor);
-
-        cancelBtn.setBackground(baseColor);
-        cancelBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(12, 24, 12, 24)
-        ));
-        cancelBtn.setFocusPainted(false);
-        cancelBtn.setOpaque(true);
-        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        // Hover effect
-        cancelBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                cancelBtn.setBackground(hoverColor);
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                cancelBtn.setBackground(baseColor);
-            }
-        });
-
-        cancelBtn.addActionListener(ae -> {
-            resultHolder[0] = null;
-            dialog.dispose();
-        });
-        return cancelBtn;
-    }
-
-    /**
-     * Creates the OK button with modern blue styling and smooth hover effects
-     */
-    private static JButton createDialogOkButton(JDialog dialog, Object[][] resultHolder, ArticleFormFields formFields) {
-        JButton okBtn = new JButton(UnicodeSymbols.CHECKMARK + " Hinzufügen");
-        okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        okBtn.setForeground(Color.WHITE);
-
-        // Blue gradient colors
-        Color baseColor = ThemeManager.getButtonBackgroundColor();
-        Color hoverColor = ThemeManager.getButtonHoverColor(baseColor);
-        Color pressedColor = ThemeManager.getButtonPressedColor(baseColor);
-
-        okBtn.setBackground(baseColor);
-        okBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(baseColor.darker(), 1, true),
-                BorderFactory.createEmptyBorder(12, 28, 12, 28)
-        ));
-        okBtn.setFocusPainted(false);
-        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        // Smooth hover effects
-        okBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                okBtn.setBackground(hoverColor);
-                okBtn.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(hoverColor.darker(), 1, true),
-                        BorderFactory.createEmptyBorder(12, 28, 12, 28)
-                ));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                okBtn.setBackground(baseColor);
-                okBtn.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(baseColor.darker(), 1, true),
-                        BorderFactory.createEmptyBorder(12, 28, 12, 28)
-                ));
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                okBtn.setBackground(pressedColor);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                okBtn.setBackground(okBtn.contains(e.getPoint()) ? hoverColor : baseColor);
-            }
-        });
-
-        okBtn.addActionListener(ae -> handleAddArticleConfirm(dialog, resultHolder, formFields));
-        return okBtn;
     }
 
     private static void handleAddArticleConfirm(JDialog dialog, Object[][] resultHolder, ArticleFormFields fields) {

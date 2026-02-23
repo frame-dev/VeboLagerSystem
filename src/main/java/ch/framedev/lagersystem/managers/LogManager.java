@@ -1,7 +1,6 @@
 package ch.framedev.lagersystem.managers;
 
 import ch.framedev.lagersystem.main.Main;
-import ch.framedev.lagersystem.utils.LogUtils;
 import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
@@ -18,6 +17,7 @@ import static ch.framedev.lagersystem.managers.DatabaseManager.TABLE_LOGS;
  * LogManager for managing application logs in the database.
  * Provides functionality to create, retrieve, filter, and delete logs.
  */
+@SuppressWarnings({"unused", "deprecation"})
 public class LogManager {
 
     private static final Logger logger = org.apache.logging.log4j.LogManager.getLogger(LogManager.class);

@@ -18,6 +18,7 @@ import java.util.List;
  * Provides a split list/detail layout, toolbar actions, and themed dialogs.
  * Dialogs use rounded card styling with a header strip to match the app theme.
  */
+@SuppressWarnings("DuplicatedCode")
 public class NotesGUI extends JFrame {
 
     // NotesManager access to Database
@@ -706,9 +707,11 @@ public class NotesGUI extends JFrame {
         }
 
         if (listModel.isEmpty()) {
-            noteContentArea.setText("Keine Notizen vorhanden.\n\n" +
-                    "• Klicken Sie auf 'Notiz erstellen' um zu starten.\n" +
-                    "• Nutzen Sie die Suche, um Notizen schnell zu finden.");
+            noteContentArea.setText("""
+                    Keine Notizen vorhanden.
+                    
+                    • Klicken Sie auf 'Notiz erstellen' um zu starten.
+                    • Nutzen Sie die Suche, um Notizen schnell zu finden.""");
             noteContentArea.setCaretPosition(0);
         }
 

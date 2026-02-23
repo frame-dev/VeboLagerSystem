@@ -62,7 +62,6 @@ public class RoundButton extends JButton {
         int w = getWidth();
         int h = getHeight();
 
-        ThemeManager tm = ThemeManager.getInstance();
         Color border = ThemeManager.getBorderColor();
         if (isEnabled()) {
             border = getBackground().darker();

@@ -27,6 +27,7 @@ import static ch.framedev.lagersystem.dialogs.DisplayWarningDialog.displayWarnin
  * - Thread-sicheres Singleton-Pattern
  * - Effiziente Datenbankabfragen
  */
+@SuppressWarnings("unused")
 public class SchedulerManager {
 
     private final Logger logger = LogManager.getLogger(SchedulerManager.class);
@@ -162,7 +163,7 @@ public class SchedulerManager {
                     String titleCritical = "Kritischer Lagerbestand für Artikel " + article.getArticleNumber();
 
                     // Vermeide doppelte Warnungen
-                    if (!warningManager.hasWarning(titleCritical)) {
+                    if (warningManager.hasNotWarning(titleCritical)) {
                         Warning warning = new Warning(
                                 titleCritical,
                                 String.format("KRITISCH: Der Lagerbestand für Artikel '%s' (Nr: %s) ist sehr niedrig! " +
@@ -191,7 +192,7 @@ public class SchedulerManager {
                     String title = "Niedriger Lagerbestand für Artikel " + article.getArticleNumber();
 
                     // Vermeide doppelte Warnungen
-                    if (!warningManager.hasWarning(title)) {
+                    if (warningManager.hasNotWarning(title)) {
                         Warning warning = new Warning(
                                 title,
                                 String.format("Der Lagerbestand für Artikel '%s' (Nr: %s) ist niedrig. " +
@@ -286,7 +287,13 @@ public class SchedulerManager {
                 displayWarning(MainGUI.articleGUI, warning);
                 // Markiere als angezeigt
                 warning.setDisplayed(true);
-                warningManager.updateWarning(warning);
+                if(warningManager.updateWarning(warning)) {
+                    logger.info("Warnung {} angezeigt", warning.getTitle());
+                    Main.logUtils.addLog("Warnung " + warning.getTitle() + " angezeigt");
+                } else {
+                    logger.error("Fehler beim Anzeigen der Warnung {}", warning.getTitle());
+                    Main.logUtils.addLog("Fehler beim Anzeigen der Warnung " + warning.getTitle());
+                }
             }
 
         } catch (Exception e) {

@@ -28,7 +28,6 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -36,13 +35,13 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 
-import static ch.framedev.lagersystem.utils.JFrameUtils.applyButtonPalette;
 import static ch.framedev.lagersystem.utils.JFrameUtils.createThemeButton;
 
 /**
  * Modern new order GUI with improved visual design and user experience.
  * Features: Split panel layout, gradient header, styled components, and PDF export (PDFBox).
  */
+@SuppressWarnings("DuplicatedCode")
 public class NewOrderGUI extends JFrame {
 
     private static final int WINDOW_W = 1500;
@@ -76,7 +75,6 @@ public class NewOrderGUI extends JFrame {
     private JTextField articleSearchField;
     private JComboBox<Article> articleCombo;
     private JSpinner articleQtySpinner;
-    private JButton articleAddButton;
     private List<Article> allArticlesCache = new ArrayList<>();
 
     public NewOrderGUI() {
@@ -432,7 +430,7 @@ public class NewOrderGUI extends JFrame {
         gc.weightx = 0.10;
         panel.add(articleQtySpinner, gc);
 
-        articleAddButton = createThemeButton(UnicodeSymbols.HEAVY_PLUS + " Hinzufügen", ThemeManager.getPrimaryColor());
+        JButton articleAddButton = createThemeButton(UnicodeSymbols.HEAVY_PLUS + " Hinzufügen", ThemeManager.getPrimaryColor());
         articleAddButton.setToolTipText("Fügt den ausgewählten Artikel zur Bestellung hinzu");
 
         gc.gridx = 4;
@@ -647,14 +645,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void styleTextField(JTextField field) {
-        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
-        field.setBackground(ThemeManager.getInputBackgroundColor());
-        field.setForeground(ThemeManager.getTextPrimaryColor());
-        field.setCaretColor(ThemeManager.getTextPrimaryColor());
+        JFrameUtils.styleTextField(field);
     }
 
     private void styleComboBox(JComboBox<String> combo) {
