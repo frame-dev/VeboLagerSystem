@@ -388,21 +388,8 @@ public class UpdateManager {
      */
     public ReleaseInfo getLatestReleaseInfo() {
         try {
-            URL url = URI.create(GITHUB_RELEASES_URL).toURL();
-            HttpURLConnection connection = getHttpURLConnection(url);
-
-            int responseCode = connection.getResponseCode();
-            if (responseCode != 200) {
-                getWarmMessageReleaseInfo(responseCode);
-                Main.logUtils.addLog(String.format("Failed to get release info: HTTP %d", responseCode));
-                connection.disconnect();
-                return null;
-            }
-
-            String responseBody = readResponse(connection);
-            connection.disconnect();
-
-            JsonObject jsonObject = JsonParser.parseString(responseBody).getAsJsonObject();
+            JsonObject jsonObject = getJsonObject();
+            if (jsonObject == null) return null;
 
             String version = jsonObject.has("tag_name") ? jsonObject.get("tag_name").getAsString() : null;
             String notes = jsonObject.has("body") ? jsonObject.get("body").getAsString() : null;
@@ -429,6 +416,24 @@ public class UpdateManager {
             Main.logUtils.addLog(String.format("Error fetching release info: %s", e.getMessage()));
             return null;
         }
+    }
+
+    private JsonObject getJsonObject() throws IOException {
+        URL url = URI.create(GITHUB_RELEASES_URL).toURL();
+        HttpURLConnection connection = getHttpURLConnection(url);
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode != 200) {
+            getWarmMessageReleaseInfo(responseCode);
+            Main.logUtils.addLog(String.format("Failed to get release info: HTTP %d", responseCode));
+            connection.disconnect();
+            return null;
+        }
+
+        String responseBody = readResponse(connection);
+        connection.disconnect();
+
+        return JsonParser.parseString(responseBody).getAsJsonObject();
     }
 
     /**
@@ -737,24 +742,8 @@ public class UpdateManager {
     public String getLatestReleaseJarUrl() {
         try {
             // Create HTTP connection to GitHub API
-            URL url = URI.create(GITHUB_RELEASES_URL).toURL();
-            HttpURLConnection connection = getHttpURLConnection(url);
-
-            // Check response code
-            int responseCode = connection.getResponseCode();
-            if (responseCode != 200) {
-                getWarmMessageReleaseInfo(responseCode);
-                Main.logUtils.addLog(String.format("Failed to get release info: HTTP %d", responseCode));
-                connection.disconnect();
-                return null;
-            }
-
-            // Read response using helper method
-            String responseBody = readResponse(connection);
-            connection.disconnect();
-
-            // Parse JSON response
-            JsonObject jsonObject = JsonParser.parseString(responseBody).getAsJsonObject();
+            JsonObject jsonObject = getJsonObject();
+            if (jsonObject == null) return null;
 
             // Check if the assets array exists and has files
             if (jsonObject.has("assets")) {

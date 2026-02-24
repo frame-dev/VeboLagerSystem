@@ -44,6 +44,12 @@ public final class UserDataDir {
 
     private UserDataDir() { }
 
+    /**
+     * This method gets the AppPath
+     * @param appName The app name
+     * @return returns the AppPath
+     * @throws FileNotFoundException Returns if the file was found or not and returns the default path
+     */
     public static Path getAppPath( final String appName )
             throws FileNotFoundException {
         final var osPath = isWindows()

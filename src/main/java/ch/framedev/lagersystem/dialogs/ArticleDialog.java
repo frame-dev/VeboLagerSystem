@@ -43,7 +43,7 @@ public class ArticleDialog {
      *                     6: verkaufspreis (Number), 7: einkaufspreis (Number), 8: lieferant (Object)].
      *                     Null or invalid indices in the array will be handled gracefully.
      * @return An array containing the updated data for the article, in the same format as the input array.
-     *         If the dialog is canceled, this method will return null.
+     * If the dialog is canceled, this method will return null.
      */
     public static Object[] showUpdateArticleDialog(JFrame frame, Object[] existingData) {
         final Object[][] resultHolder = new Object[1][];
@@ -162,25 +162,29 @@ public class ArticleDialog {
             Object o = existingData != null && existingData.length > 4 ? existingData[4] : null;
             if (o instanceof Number) existingLager = ((Number) o).intValue();
             else if (o != null) existingLager = Integer.parseInt(o.toString());
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         try {
             Object o = existingData != null && existingData.length > 5 ? existingData[5] : null;
             if (o instanceof Number) existingMindest = ((Number) o).intValue();
             else if (o != null) existingMindest = Integer.parseInt(o.toString());
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         try {
             Object o = existingData != null && existingData.length > 6 ? existingData[6] : null;
             if (o instanceof Number) existingVerkauf = ((Number) o).doubleValue();
             else if (o != null) existingVerkauf = Double.parseDouble(o.toString());
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         try {
             Object o = existingData != null && existingData.length > 7 ? existingData[7] : null;
             if (o instanceof Number) existingEinkauf = ((Number) o).doubleValue();
             else if (o != null) existingEinkauf = Double.parseDouble(o.toString());
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         // Stock section
         gbc.gridy = row++;
@@ -527,7 +531,8 @@ public class ArticleDialog {
 
     /**
      * Creates the close button for the dialog header with modern styling
-     * @param dialog The dialog to close when the button is clicked
+     *
+     * @param dialog       The dialog to close when the button is clicked
      * @param resultHolder A reference to hold the result (set to null on close) to signal cancellation to the caller
      * @return A styled JButton that closes the dialog when clicked
      */
@@ -584,6 +589,7 @@ public class ArticleDialog {
 
     /**
      * Creates all form fields for the article dialog with modern card design
+     *
      * @return An ArticleFormFields object containing references to all created form components for easy access.
      */
     public static ArticleFormFields createArticleFormFields() {

@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * This class manages the departments in the database. It provides methods to create, read, update and delete departments.
  * It also implements a simple caching mechanism to improve performance when retrieving departments.
+ *
  * @author framedev
  */
 @SuppressWarnings({"unused", "deprecation"})
@@ -35,6 +36,7 @@ public class DepartmentManager {
 
     /**
      * Returns the singleton instance of DepartmentManager.
+     *
      * @return the singleton instance of DepartmentManager.
      */
     public static DepartmentManager getInstance() {
@@ -58,8 +60,9 @@ public class DepartmentManager {
 
     /**
      * Inserts a new department into the database.
+     *
      * @param departmentName The name of the department.
-     * @param kontoNumber The konto number of the department.
+     * @param kontoNumber    The konto number of the department.
      * @return true if successful, false otherwise.
      */
     public boolean insertDepartment(String departmentName, String kontoNumber) {
@@ -84,6 +87,7 @@ public class DepartmentManager {
 
     /**
      * Checks if a department with the given name exists.
+     *
      * @param departmentName The name of the department.
      * @return true if the department exists, false otherwise.
      */
@@ -102,6 +106,7 @@ public class DepartmentManager {
 
     /**
      * Deletes the department with the given name from the database.
+     *
      * @param departmentName The name of the department to delete.
      * @return true if the deletion was successful, false otherwise.
      */
@@ -125,6 +130,7 @@ public class DepartmentManager {
 
     /**
      * Updates the konto number of a department with the given name.
+     *
      * @param departmentName The name of the department to update.
      * @param newKontoNumber The new konto number to set.
      * @return true if the update was successful, false otherwise.
@@ -150,6 +156,7 @@ public class DepartmentManager {
 
     /**
      * Retrieves the department with the given name from the database.
+     *
      * @param departmentName The name of the department to retrieve.
      * @return a map containing the department's name and konto number, or null if not found.
      */
@@ -179,6 +186,7 @@ public class DepartmentManager {
 
     /**
      * Retrieves all departments from the database.
+     *
      * @return a list map containing all departments with their names and konto numbers.
      */
     public List<Map<String, Object>> getAllDepartments() {

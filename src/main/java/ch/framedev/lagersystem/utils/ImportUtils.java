@@ -376,6 +376,7 @@ public class ImportUtils {
 
     /**
      * Get the list of imported items. This method reads the 'imported_items.txt' file located in the application's data directory and returns a list of item names that have been imported. Each line in the file represents a single item name. If the file does not exist, an empty list is returned. If an error occurs during reading, an error message is logged using the application's logging utility and the logger, and an empty list is returned.
+     *
      * @return List of imported item names, or an empty list if the file does not exist or an error occurs during reading.
      */
     public static List<String> getImportedItems() {
@@ -411,6 +412,7 @@ public class ImportUtils {
 
     /**
      * Get the list of imported QR code IDs. This method reads the 'imported_qrcodes.txt' file located in the application's data directory and returns a list of QR code IDs that have been imported. Each line in the file represents a single QR code ID. If the file does not exist, an empty list is returned. If an error occurs during reading, an error message is logged using the application's logging utility and the logger, and an empty list is returned.
+     *
      * @return List of imported QR code IDs, or an empty list if the file does not exist or an error occurs during reading.
      */
     public static List<String> getImportedQrCodes() {
@@ -430,6 +432,7 @@ public class ImportUtils {
 
     /**
      * Add a data entry to the own use list. This method appends the given data string to a text file named 'own_use_list.txt' located in the application's data directory. Each data entry is written on a new line. If the file does not exist, it will be created. If an error occurs during writing, an error message is logged using the application's logging utility and the logger.
+     *
      * @param data The data string to be added to the own use list.
      */
     public static void addToOwnUseList(String data) {

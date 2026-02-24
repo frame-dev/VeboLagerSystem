@@ -8,34 +8,50 @@ import ch.framedev.lagersystem.utils.ArticleUtils;
 @SuppressWarnings("unused")
 public class Article {
 
-    /** Unique article identifier. */
+    /**
+     * Unique article identifier.
+     */
     private String articleNumber;
-    /** Display name of the article. */
+    /**
+     * Display name of the article.
+     */
     private String name;
-    /** Optional free-text description. */
+    /**
+     * Optional free-text description.
+     */
     private String details;
-    /** Current stock quantity in inventory. */
+    /**
+     * Current stock quantity in inventory.
+     */
     private int stockQuantity;
-    /** Minimum stock level threshold for warnings. */
+    /**
+     * Minimum stock level threshold for warnings.
+     */
     private int minStockLevel;
-    /** Sales price per unit. */
+    /**
+     * Sales price per unit.
+     */
     private double sellPrice;
-    /** Purchase price per unit. */
+    /**
+     * Purchase price per unit.
+     */
     private double purchasePrice;
-    /** Name of the vendor or supplier. */
+    /**
+     * Name of the vendor or supplier.
+     */
     private String vendorName;
 
     /**
      * Creates a new article instance.
      *
      * @param articleNumber unique article identifier
-     * @param name display name
-     * @param details optional description
+     * @param name          display name
+     * @param details       optional description
      * @param stockQuantity current stock quantity
      * @param minStockLevel minimum stock level threshold
-     * @param sellPrice sales price per unit
+     * @param sellPrice     sales price per unit
      * @param purchasePrice purchase price per unit
-     * @param vendorName vendor or supplier name
+     * @param vendorName    vendor or supplier name
      */
     public Article(String articleNumber, String name, String details, int stockQuantity, int minStockLevel,
                    double sellPrice, double purchasePrice, String vendorName) {
@@ -49,86 +65,155 @@ public class Article {
         this.vendorName = vendorName;
     }
 
-    /** @return unique article identifier */
+    /**
+     * Gets the article number
+     *
+     * @return unique article identifier
+     */
     public String getArticleNumber() {
         return articleNumber;
     }
 
-    /** @param articleNumber unique article identifier */
+    /**
+     * Sets the article number
+     *
+     * @param articleNumber unique article identifier
+     */
     public void setArticleNumber(String articleNumber) {
         this.articleNumber = articleNumber;
     }
 
-    /** @return display name */
+    /**
+     * Gets the name of the Article
+     *
+     * @return display name
+     */
     public String getName() {
         return name;
     }
 
-    /** @param name display name */
+    /**
+     * Sets the name for the Article
+     *
+     * @param name display name
+     */
     public void setName(String name) {
         this.name = name;
     }
 
-    /** @return optional description */
+    /**
+     * Gets the details for the Article
+     *
+     * @return optional description
+     */
     public String getDetails() {
         return details;
     }
 
-    /** @param details optional description */
+    /**
+     * Sets the details for the Article
+     *
+     * @param details optional description
+     */
     public void setDetails(String details) {
         this.details = details;
     }
 
-    /** @return current stock quantity */
+    /**
+     * Gets the Stock quantity variable for the Article
+     *
+     * @return current stock quantity
+     */
     public int getStockQuantity() {
         return stockQuantity;
     }
 
-    /** @param stockQuantity current stock quantity */
+    /**
+     * Sets the Stock quantity for the Article
+     *
+     * @param stockQuantity current stock quantity
+     */
     public void setStockQuantity(int stockQuantity) {
         this.stockQuantity = stockQuantity;
     }
 
-    /** @return minimum stock level threshold */
+    /**
+     * Gets the minimum stock level for the Article
+     *
+     * @return minimum stock level threshold
+     */
     public int getMinStockLevel() {
         return minStockLevel;
     }
 
-    /** @param minStockLevel minimum stock level threshold */
+    /**
+     * Sets the min stock level for the Article
+     *
+     * @param minStockLevel minimum stock level threshold
+     */
     public void setMinStockLevel(int minStockLevel) {
         this.minStockLevel = minStockLevel;
     }
 
-    /** @return sales price per unit */
+    /**
+     * Gets the sell price for the Article
+     *
+     * @return sales price per unit
+     */
     public double getSellPrice() {
         return sellPrice;
     }
 
-    /** @param sellPrice sales price per unit */
+    /**
+     * Sets the sell price for the Article
+     *
+     * @param sellPrice sales price per unit
+     */
     public void setSellPrice(double sellPrice) {
         this.sellPrice = sellPrice;
     }
 
-    /** @return purchase price per unit */
+    /**
+     * Gets the purchase price for the Article
+     *
+     * @return purchase price per unit
+     */
     public double getPurchasePrice() {
         return purchasePrice;
     }
 
-    /** @param purchasePrice purchase price per unit */
+    /**
+     * Sets the purchase price for the Article
+     *
+     * @param purchasePrice purchase price per unit
+     */
     public void setPurchasePrice(double purchasePrice) {
         this.purchasePrice = purchasePrice;
     }
 
-    /** @return vendor or supplier name */
+    /**
+     * Gets the vendor name of the Article
+     *
+     * @return vendor or supplier name
+     */
     public String getVendorName() {
         return vendorName;
     }
 
-    /** @param vendorName vendor or supplier name */
+    /**
+     * Sets the vendor name for the Article
+     *
+     * @param vendorName vendor or supplier name
+     */
     public void setVendorName(String vendorName) {
         this.vendorName = vendorName;
     }
 
+    /**
+     * Gets the category for the Article
+     *
+     * @return the Article category
+     */
     public String getCategory() {
         return ArticleUtils.getCategoryForArticle(articleNumber);
     }

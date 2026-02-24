@@ -2,30 +2,44 @@ package ch.framedev.lagersystem.classes;
 
 /**
  * Represents a warning with severity type, message, and resolution flags.
+ *
+ * @author framedev
  */
 public class Warning {
 
-    /** Short warning title. */
+    /**
+     * Short warning title.
+     */
     private String title;
-    /** Detailed warning message. */
+    /**
+     * Detailed warning message.
+     */
     private String message;
-    /** Warning category. */
+    /**
+     * Warning category.
+     */
     private WarningType type;
-    /** Warning date as stored text. */
+    /**
+     * Warning date as stored text.
+     */
     private String date;
-    /** Whether the warning has been resolved. */
+    /**
+     * Whether the warning has been resolved.
+     */
     private boolean isResolved;
-    /** Whether the warning has been displayed to the user. */
+    /**
+     * Whether the warning has been displayed to the user.
+     */
     private boolean isDisplayed;
 
     /**
      * Creates a new warning.
      *
-     * @param title short warning title
-     * @param message detailed warning message
-     * @param type warning category
-     * @param date warning date text
-     * @param isResolved whether the warning is resolved
+     * @param title       short warning title
+     * @param message     detailed warning message
+     * @param type        warning category
+     * @param date        warning date text
+     * @param isResolved  whether the warning is resolved
      * @param isDisplayed whether the warning has been displayed
      */
     public Warning(String title, String message, WarningType type, String date, boolean isResolved, boolean isDisplayed) {
@@ -37,62 +51,110 @@ public class Warning {
         this.isDisplayed = isDisplayed;
     }
 
-    /** @return short warning title */
+    /**
+     * Get the Title of the Warning
+     *
+     * @return short warning title
+     */
     public String getTitle() {
         return title;
     }
 
-    /** @param title short warning title */
+    /**
+     * Sets the Title for the Warning
+     *
+     * @param title short warning title
+     */
     public void setTitle(String title) {
         this.title = title;
     }
 
-    /** @return detailed warning message */
+    /**
+     * Gets the Message of the Warning
+     *
+     * @return detailed warning message
+     */
     public String getMessage() {
         return message;
     }
 
-    /** @param message detailed warning message */
+    /**
+     * Sets the Message for the Warning
+     *
+     * @param message detailed warning message
+     */
     public void setMessage(String message) {
         this.message = message;
     }
 
-    /** @return warning category */
+    /**
+     * Gets the type of the Warning
+     *
+     * @return warning category
+     */
     public WarningType getType() {
         return type;
     }
 
-    /** @param type warning category */
+    /**
+     * Sets the type for the Warning
+     *
+     * @param type warning category
+     */
     public void setType(WarningType type) {
         this.type = type;
     }
 
-    /** @return warning date text */
+    /**
+     * Gets the date for the Warning
+     *
+     * @return warning date text
+     */
     public String getDate() {
         return date;
     }
 
-    /** @param date warning date text */
+    /**
+     * Sets the date for the Warning
+     *
+     * @param date warning date text
+     */
     public void setDate(String date) {
         this.date = date;
     }
 
-    /** @return true when resolved */
+    /**
+     * Returns if the Warning was resolved
+     *
+     * @return true when resolved
+     */
     public boolean isResolved() {
         return isResolved;
     }
 
-    /** @param resolved whether the warning is resolved */
+    /**
+     * Sets if the Warning has been resolved
+     *
+     * @param resolved whether the warning is resolved
+     */
     public void setResolved(boolean resolved) {
         isResolved = resolved;
     }
 
-    /** @return true when displayed */
+    /**
+     * Returns if the Warning has been displayed
+     *
+     * @return true when displayed
+     */
     public boolean isDisplayed() {
         return isDisplayed;
     }
 
-    /** @param displayed whether the warning has been displayed */
+    /**
+     * Sets if the Warning has been displayed or not
+     *
+     * @param displayed whether the warning has been displayed
+     */
     public void setDisplayed(boolean displayed) {
         isDisplayed = displayed;
     }
@@ -100,21 +162,31 @@ public class Warning {
     /**
      * The type of warning.
      */
-    public static enum WarningType {
+    public enum WarningType {
         LOW_STOCK("Mindest Lagerbestand"),
         CRITICAL_STOCK("Kritischer Lagerbestand"),
         ORDER_NEEDED("Bestellung erforderlich"),
         OTHER("Sonstiges");
 
-        /** Localized display name. */
+        /**
+         * Localized display name.
+         */
         final String displayName;
 
-        /** @param displayName localized label */
+        /**
+         * Constructor for the enum (WarningType)
+         *
+         * @param displayName localized label
+         */
         WarningType(String displayName) {
             this.displayName = displayName;
         }
 
-        /** @return localized display name */
+        /**
+         * Gets the Displayname for the WarningType
+         *
+         * @return localized display name
+         */
         public String getDisplayName() {
             return displayName;
         }
@@ -125,12 +197,13 @@ public class Warning {
      *
      * @return QR code data payload
      */
+    @SuppressWarnings("unused")
     public String getQRCodeData() {
         return "title:" + title + ";" +
-               "message:" + message + ";" +
-               "type:" + type.name() + ";" +
-               "date:" + date + ";" +
-               "isResolved:" + isResolved + ";" +
-               "isDisplayed:" + isDisplayed;
+                "message:" + message + ";" +
+                "type:" + type.name() + ";" +
+                "date:" + date + ";" +
+                "isResolved:" + isResolved + ";" +
+                "isDisplayed:" + isDisplayed;
     }
 }

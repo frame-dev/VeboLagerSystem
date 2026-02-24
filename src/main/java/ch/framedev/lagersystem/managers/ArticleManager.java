@@ -72,6 +72,7 @@ public class ArticleManager {
 
     /**
      * Get singleton instance
+     *
      * @return ArticleManager instance
      */
     public static ArticleManager getInstance() {

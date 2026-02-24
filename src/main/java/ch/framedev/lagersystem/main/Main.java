@@ -126,7 +126,7 @@ public class Main {
     private static void printSystemInfo() {
         System.out.println("Java Version: " + System.getProperty("java.version"));
         System.out.println("Java Vendor: " + System.getProperty("java.vendor"));
-        System.out.println("OS: " + System.getProperty("os.name") + " " + System.getProperty("os.version"));
+        System.out.println("OS: " + System.getProperty("os.name") + " | " + System.getProperty("os.version"));
     }
 
     /**
