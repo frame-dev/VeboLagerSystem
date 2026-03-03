@@ -14,15 +14,19 @@ import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
-import java.awt.*;
+import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Locale;
 
 /**
  * Utility to export a JTable with article data into a PDF file.
@@ -37,28 +41,29 @@ public final class ArticleExporter {
 
     /**
      * Exports the contents of a JTable to a PDF file, allowing the user to choose the save location and file name. The PDF will include a header with the title and export date, a table with the article data, and a footer with page numbers and total article count.
-     * @param parent The parent component for the file chooser dialog
-     * @param table The JTable containing the article data to be exported
+     *
+     * @param parent           The parent component for the file chooser dialog
+     * @param table            The JTable containing the article data to be exported
      * @param baseColumnWidths An array of integers representing the base widths for each column, which will be used to calculate proportional column widths in the PDF. If the array has fewer entries than the number of columns in the table, default widths will be used for the remaining columns.
-     * @param icon An Icon to be used in error messages if the export process fails. This can be null if no icon is desired.
+     * @param icon             An Icon to be used in error messages if the export process fails. This can be null if no icon is desired.
      */
     public static void exportTableAsPdf(Component parent, JTable table, int[] baseColumnWidths, Icon icon) {
+        if(parent == null) {
+            return;
+        }
         if (table == null) {
             return;
         }
-
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("PDF Speichern");
-        fileChooser.setSelectedFile(new File("Artikel_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
-
-        int userSelection = fileChooser.showSaveDialog(parent);
-        if (userSelection != JFileChooser.APPROVE_OPTION) {
-            return;
+        if (baseColumnWidths == null) {
+            baseColumnWidths = new int[0];
         }
 
-        File fileToSave = fileChooser.getSelectedFile();
-        if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
-            fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
+        File fileToSave = chooseSaveFile(parent,
+                "PDF Speichern",
+                "Artikel_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf",
+                "pdf");
+        if (fileToSave == null) {
+            return;
         }
 
         try (PDDocument doc = new PDDocument()) {
@@ -66,9 +71,7 @@ public final class ArticleExporter {
             PDFont boldFont = fonts[0];
             PDFont regularFont = fonts[1];
 
-            final boolean useWinAnsiFallback =
-                    boldFont.getClass().getSimpleName().contains("PDType1Font") ||
-                            regularFont.getClass().getSimpleName().contains("PDType1Font");
+            final boolean useWinAnsiFallback = (boldFont instanceof PDType1Font) || (regularFont instanceof PDType1Font);
 
             // Page setup - Use A4 landscape for all columns to fit
             PDRectangle pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()); // Landscape
@@ -283,6 +286,7 @@ public final class ArticleExporter {
 
     /**
      * Sanitizes a string to ensure it only contains characters that can be represented in WinAnsi encoding.
+     *
      * @param text The input text to sanitize
      * @return A sanitized version of the input text, where characters that cannot be represented in WinAnsi are removed. If the input text is null or empty, an empty string is returned.
      */
@@ -302,6 +306,7 @@ public final class ArticleExporter {
     }
 
     private static PDFont[] loadPdfFonts(PDDocument doc) throws IOException {
+        if(doc == null) throw new IllegalArgumentException("Document cannot be null");
         PDFont regular = null;
         PDFont bold = null;
 
@@ -360,15 +365,9 @@ public final class ArticleExporter {
         }
 
         if (regular == null || bold == null) {
-            try {
-                Class<?> c = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
-                Object helvBold = c.getField("HELVETICA_BOLD").get(null);
-                Object helv = c.getField("HELVETICA").get(null);
-                bold = (PDFont) helvBold;
-                regular = (PDFont) helv;
-            } catch (Exception e) {
-                throw new IOException("Keine verwendbaren Schriftarten gefunden");
-            }
+            // Last-resort fallback (limited glyph support)
+            regular = PDType1Font.HELVETICA;
+            bold = PDType1Font.HELVETICA_BOLD;
         }
 
         if (bold == null) {
@@ -383,17 +382,26 @@ public final class ArticleExporter {
 
     /**
      * Generates a PDF file representing an order, including sender and receiver information, department, and a list of ordered articles with their quantities and prices.
-     * @param file The file to which the PDF will be saved
-     * @param senderNameCombobox A JComboBox containing the sender's name (selected item will be used)
-     * @param senderKontoField A JTextField containing the sender's account information
+     *
+     * @param file                 The file to which the PDF will be saved
+     * @param senderNameCombobox   A JComboBox containing the sender's name (selected item will be used)
+     * @param senderKontoField     A JTextField containing the sender's account information
      * @param receiverNameCombobox A JComboBox containing the receiver's name (selected item will be used)
-     * @param receiverKontoField A JTextField containing the receiver's account information
-     * @param departmentList A JComboBox containing the department information (selected item will be used)
-     * @param orderArticles A Map of Article objects to their ordered quantities, representing the articles included in the order
+     * @param receiverKontoField   A JTextField containing the receiver's account information
+     * @param departmentList       A JComboBox containing the department information (selected item will be used)
+     * @param orderArticles        A Map of Article objects to their ordered quantities, representing the articles included in the order
      * @throws IOException If an error occurs during PDF generation or saving the file
      */
     @SuppressWarnings("deprecation")
     public static void exportOrderToPDF(File file, JComboBox<String> senderNameCombobox, JTextField senderKontoField, JComboBox<String> receiverNameCombobox, JTextField receiverKontoField, JComboBox<String> departmentList, Map<Article, Integer> orderArticles) throws IOException {
+        if(file == null) throw new IllegalArgumentException("File cannot be null");
+        if(senderNameCombobox == null) throw new IllegalArgumentException("Sender name combobox cannot be null");
+        if(senderKontoField == null) throw new IllegalArgumentException("Sender konto field cannot be null");
+        if(receiverNameCombobox == null) throw new IllegalArgumentException("Receiver name combobox cannot be null");
+        if(receiverKontoField == null) throw new IllegalArgumentException("Receiver konto field cannot be null");
+        if(departmentList == null) throw new IllegalArgumentException("Department list cannot be null");
+        if(orderArticles == null) throw new IllegalArgumentException("Order articles cannot be null");
+        if(orderArticles.isEmpty()) throw new IllegalArgumentException("Order articles cannot be empty");
         try (PDDocument doc = new PDDocument()) {
             PDPage page = new PDPage();
             doc.addPage(page);
@@ -631,10 +639,12 @@ public final class ArticleExporter {
 
     /**
      * Safely retrieves the selling price of an article, returning 0.0 if any exceptions occur (e.g., method not found).
+     *
      * @param a The article for which to retrieve the selling price
      * @return The selling price of the article, or 0.0 if it cannot be retrieved due to an exception
      */
     private static double safePrice(Article a) {
+        if(a == null) throw new IllegalArgumentException("Article cannot be null");
         try {
             return a.getSellPrice();
         } catch (NoSuchMethodError | AbstractMethodError | RuntimeException ex) {
@@ -644,7 +654,8 @@ public final class ArticleExporter {
 
     /**
      * Sanitizes a string to ensure it only contains characters that can be represented in WinAnsi encoding.
-     * @param text The input text to sanitize
+     *
+     * @param text               The input text to sanitize
      * @param useWinAnsiFallback Whether to perform the sanitization. If false, the original text is returned without modification.
      * @return A sanitized version of the input text, where characters that cannot be represented in WinAnsi are removed if useWinAnsiFallback is true. If useWinAnsiFallback is false, the original text is returned unchanged.
      */
@@ -665,20 +676,17 @@ public final class ArticleExporter {
 
     /**
      * Exports the given list of articles to a PDF file, prompting the user for the save location.
+     *
      * @param articles Die Liste der Artikel, die exportiert werden sollen
      */
     public static void exportArticlesToPdf(java.util.List<Article> articles) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("PDF Speichern");
-        fileChooser.setSelectedFile(new File("Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
-        int userSelection = fileChooser.showSaveDialog(MainGUI.articleGUI);
-        if (userSelection != JFileChooser.APPROVE_OPTION) {
+        if(articles == null) throw new IllegalArgumentException("Articles cannot be null");
+        File fileToSave = chooseSaveFile(MainGUI.articleGUI,
+                "PDF Speichern",
+                "Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf",
+                "pdf");
+        if (fileToSave == null) {
             return;
-        }
-
-        File fileToSave = fileChooser.getSelectedFile();
-        if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
-            fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
         }
 
         try (PDDocument doc = new PDDocument()) {
@@ -776,6 +784,7 @@ public final class ArticleExporter {
      * @param articles Die Liste der Artikel, die exportiert werden sollen
      */
     public static void exportArticlesToCsv(List<Article> articles) {
+        if(articles == null) throw new IllegalArgumentException("Articles cannot be null");
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("CSV Speichern");
         fileChooser.setSelectedFile(new File("Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".csv"));
@@ -843,10 +852,12 @@ public final class ArticleExporter {
 
     /**
      * Exports the given list of log entries to a PDF file, prompting the user for the save location. Each log entry is wrapped to fit within the page width, and multiple pages are created if necessary.
-     * @param logs Die Liste der Log-Einträge, die exportiert werden sollen. Jeder Eintrag wird als separate Zeile im PDF dargestellt.
+     *
+     * @param logs  Die Liste der Log-Einträge, die exportiert werden sollen. Jeder Eintrag wird als separate Zeile im PDF dargestellt.
      * @param frame Das übergeordnete JFrame, das als Kontext für die Dateiauswahl und Fehlermeldungen verwendet wird. Kann null sein, wenn kein Kontext benötigt wird.
      */
     public static void exportLogsToPdf(List<String> logs, JFrame frame) {
+        if(frame == null) throw new IllegalArgumentException("Frame cannot be null");
         if (logs == null || logs.isEmpty()) {
             JOptionPane.showMessageDialog(frame,
                     "Keine Logs zum Export vorhanden.",
@@ -856,17 +867,12 @@ public final class ArticleExporter {
             return;
         }
 
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("PDF Speichern");
-        fileChooser.setSelectedFile(new File("Logs_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
-        int userSelection = fileChooser.showSaveDialog(frame);
-        if (userSelection != JFileChooser.APPROVE_OPTION) {
+        File fileToSave = chooseSaveFile(frame,
+                "PDF Speichern",
+                "Logs_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf",
+                "pdf");
+        if (fileToSave == null) {
             return;
-        }
-
-        File fileToSave = fileChooser.getSelectedFile();
-        if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
-            fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
         }
 
         try (PDDocument doc = new PDDocument()) {
@@ -930,5 +936,50 @@ public final class ArticleExporter {
                     JOptionPane.ERROR_MESSAGE);
             LOGGER.error("Could not create PDF-Export {}", ex.getMessage(), ex);
         }
+    }
+
+    // Helper to choose a save file with extension filter and overwrite confirmation
+    private static File chooseSaveFile(Component parent, String dialogTitle, String defaultFileName, String extension) {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle(dialogTitle);
+        fileChooser.setSelectedFile(new File(defaultFileName));
+
+        if (extension != null && !extension.isBlank()) {
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                    extension.toUpperCase(Locale.ROOT) + " Dateien (*." + extension.toLowerCase(Locale.ROOT) + ")",
+                    extension.toLowerCase(Locale.ROOT)
+            ));
+        }
+
+        int userSelection = fileChooser.showSaveDialog(parent);
+        if (userSelection != JFileChooser.APPROVE_OPTION) {
+            return null;
+        }
+
+        File selected = fileChooser.getSelectedFile();
+        if (selected == null) {
+            return null;
+        }
+
+        String nameLower = selected.getName().toLowerCase(Locale.ROOT);
+        String extLower = extension == null ? "" : extension.toLowerCase(Locale.ROOT);
+        if (!extLower.isBlank() && !nameLower.endsWith("." + extLower)) {
+            selected = new File(selected.getAbsolutePath() + "." + extLower);
+        }
+
+        if (selected.exists()) {
+            int overwrite = JOptionPane.showConfirmDialog(
+                    parent,
+                    "Die Datei existiert bereits. Überschreiben?\n\n" + selected.getName(),
+                    "Bestätigen",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+            );
+            if (overwrite != JOptionPane.YES_OPTION) {
+                return null;
+            }
+        }
+
+        return selected;
     }
 }

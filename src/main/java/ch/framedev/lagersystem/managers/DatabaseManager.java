@@ -112,19 +112,17 @@ public class DatabaseManager {
      * @param fileName database file name
      */
     public DatabaseManager(String path, String fileName) {
-        String prefix = (path != null && !path.isEmpty())
-                ? (path.endsWith("/") ? path : path + "/")
-                : "";
-
-        File dir = new File(prefix);
-        if (!dir.exists()) {
+        String normalizedPath = (path == null) ? "" : path.trim();
+        File dir = normalizedPath.isEmpty() ? null : new File(normalizedPath);
+        if (dir != null && !dir.exists()) {
             if (!dir.mkdirs()) {
                 Main.logUtils.addLog("Fehler beim Erstellen des Datenbank-Verzeichnisses: " + dir.getAbsolutePath());
                 throw new RuntimeException("Failed to create database directory: " + dir.getAbsolutePath());
             }
         }
 
-        String url = "jdbc:sqlite:" + prefix + fileName;
+        File dbFile = (dir == null) ? new File(fileName) : new File(dir, fileName);
+        String url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
         try {
             this.connection = DriverManager.getConnection(url);
             applySQLitePragmas(); // performance + safety defaults
@@ -300,15 +298,32 @@ public class DatabaseManager {
 
     private PreparedStatement getCachedPreparedStatement(String type, String sql) throws SQLException {
         String key = type + ":" + sql;
-        PreparedStatement ps = stmtCache.get(key);
-        if (ps != null && !ps.isClosed()) {
+        synchronized (stmtCache) {
+            PreparedStatement ps = stmtCache.get(key);
+            if (ps != null && !ps.isClosed()) {
+                return ps;
+            }
+
+            // Create new and cache it
+            ps = connection.prepareStatement(sql);
+            stmtCache.put(key, ps);
             return ps;
         }
+    }
 
-        // Create new and cache it
-        ps = connection.prepareStatement(sql);
-        stmtCache.put(key, ps);
-        return ps;
+    /**
+     * Checks whether a PreparedStatement instance is currently managed by the LRU cache.
+     * This lets {@link #closeQuery(ResultSet)} safely close non-cached PreparedStatements
+     * while keeping cached ones alive for reuse.
+     */
+    private boolean isCachedPreparedStatement(PreparedStatement ps) {
+        if (ps == null) return false;
+        synchronized (stmtCache) {
+            for (PreparedStatement cached : stmtCache.values()) {
+                if (cached == ps) return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -332,8 +347,15 @@ public class DatabaseManager {
 
         // IMPORTANT:
         // If it's a cached PreparedStatement, we do NOT close it here (we keep it for reuse).
-        if (stmt instanceof PreparedStatement) {
-            // keep cached prepared statements alive
+        if (stmt instanceof PreparedStatement ps) {
+            if (isCachedPreparedStatement(ps)) {
+                return; // keep cached prepared statements alive
+            }
+            // Not cached -> close to avoid leaks
+            try {
+                if (!ps.isClosed()) ps.close();
+            } catch (SQLException ignored) {
+            }
             return;
         }
 

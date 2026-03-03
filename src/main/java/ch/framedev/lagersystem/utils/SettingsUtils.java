@@ -26,6 +26,10 @@ import static ch.framedev.lagersystem.guis.SettingsGUI.DEFAULT_FONT_STYLE;
  */
 public class SettingsUtils {
 
+    private SettingsUtils() {
+        // Utility class
+    }
+
     /**
      * Opens the application settings directory in the system file explorer.
      * <p>
@@ -37,6 +41,16 @@ public class SettingsUtils {
      */
     public static void openSettingsFolder(JFrame frame) {
         File settingsDir = Main.getAppDataDir();
+
+        if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+            JOptionPane.showMessageDialog(frame,
+                    "Öffnen des Einstellungen-Ordners wird von diesem System nicht unterstützt.",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE);
+            Main.logUtils.addLog("Fehler beim Öffnen des Einstellungen-Ordners: Desktop OPEN nicht unterstützt");
+            return;
+        }
+
         try {
             Desktop.getDesktop().open(settingsDir);
         } catch (IOException e) {
@@ -61,9 +75,12 @@ public class SettingsUtils {
      * @return a fully styled section panel ready to be populated with settings controls
      */
     public static JPanel createSectionPanel(String title, String description, List<JComponent> searchableSections) {
+        String safeTitle = title == null ? "" : title;
+        String safeDescription = description == null ? "" : description;
+
         RoundedPanel section = getRoundedPanel();
-        section.putClientProperty("searchText", (title + " " + description).toLowerCase());
-        searchableSections.add(section);
+        section.putClientProperty("searchText", (safeTitle + " " + safeDescription).toLowerCase());
+        if (searchableSections != null) searchableSections.add(section);
 
         // Header panel with better visual hierarchy
         JPanel headerPanel = new JPanel(new BorderLayout());
@@ -73,7 +90,7 @@ public class SettingsUtils {
 
         JPanel headerLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         headerLeft.setOpaque(false);
-        JLabel titleLabel = new JLabel(title);
+        JLabel titleLabel = new JLabel(safeTitle);
         titleLabel.setFont(getFontByName(Font.BOLD, 20));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
         headerLeft.add(titleLabel);
@@ -84,9 +101,9 @@ public class SettingsUtils {
         headerPanel.add(headerActions, BorderLayout.EAST);
         section.putClientProperty("headerActions", headerActions);
 
-        // Description with better formatting
-        JLabel descLabel = new JLabel("<html><div style='line-height: 1.8; color: #6c757d; font-weight: 300;'>" +
-                description + "</div></html>");
+        // Description with better formatting and theme color
+        // Avoid hard-coded colors inside HTML so theme foreground is respected
+        JLabel descLabel = new JLabel("<html><div style='line-height: 1.6;'>" + safeDescription + "</div></html>");
         descLabel.setFont(getFontByName(Font.PLAIN, 13));
         descLabel.setForeground(ThemeManager.getTextSecondaryColor());
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -143,15 +160,23 @@ public class SettingsUtils {
      */
     @SuppressWarnings("MagicConstant")
     public static Font getFontByName(int style, int fontSize) {
-        String fontName = Main.settings.getProperty("font_style");
-        if(fontName == null || fontName.trim().isEmpty()) {
+        String fontName = null;
+        if (Main.settings != null) {
+            fontName = Main.settings.getProperty("font_style");
+        }
+
+        if (fontName == null || fontName.trim().isEmpty()) {
             Font uiFont = UIManager.getFont("Label.font");
             fontName = uiFont == null ? DEFAULT_FONT_STYLE : uiFont.getFamily();
         } else if (isWindows() && ("Arial".equalsIgnoreCase(fontName) || "Arial Unicode MS".equalsIgnoreCase(fontName))) {
+            // Prefer system UI font on Windows to improve glyph coverage
             Font uiFont = UIManager.getFont("Label.font");
             fontName = uiFont == null ? DEFAULT_FONT_STYLE : uiFont.getFamily();
         }
+
         Font font = new Font(fontName, style, fontSize);
+
+        // Emoji / symbol fallback on Windows + macOS
         if ((isWindows() || isMac()) && font.canDisplayUpTo("\uD83D\uDCC1") != -1) {
             font = new Font("Dialog", style, fontSize);
         }
@@ -201,11 +226,11 @@ public class SettingsUtils {
 
             // Draw subtle shadow
             g2.setColor(new Color(0, 0, 0, 15));
-            g2.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, radius, radius);
+            g2.fillRoundRect(2, 2, Math.max(0, getWidth() - 4), Math.max(0, getHeight() - 4), radius, radius);
 
             // Draw main card
             g2.setColor(backgroundColor);
-            g2.fillRoundRect(0, 0, getWidth() - 2, getHeight() - 2, radius, radius);
+            g2.fillRoundRect(0, 0, Math.max(0, getWidth() - 2), Math.max(0, getHeight() - 2), radius, radius);
 
             g2.dispose();
             super.paintComponent(g);

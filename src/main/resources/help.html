@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hilfe zur Anwendung</title>
+    <style>
+        :root {
+            --bg: #0b1220;
+            --surface: rgba(255, 255, 255, 0.06);
+            --surface-strong: rgba(255, 255, 255, 0.10);
+            --text: rgba(255, 255, 255, 0.92);
+            --muted: rgba(255, 255, 255, 0.70);
+            --border: rgba(255, 255, 255, 0.14);
+            --accent: #7c3aed;
+            --accent-2: #22c55e;
+            --shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+            --radius: 18px;
+            --code: rgba(255, 255, 255, 0.06);
+            --code-border: rgba(255, 255, 255, 0.12);
+            --link: rgba(255, 255, 255, 0.92);
+            --link-muted: rgba(255, 255, 255, 0.75);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
+                "Segoe UI Emoji";
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--text);
+            background:
+                radial-gradient(900px 500px at 15% 10%, rgba(124, 58, 237, 0.25), transparent 60%),
+                radial-gradient(800px 450px at 80% 20%, rgba(34, 197, 94, 0.18), transparent 60%),
+                radial-gradient(700px 420px at 50% 95%, rgba(59, 130, 246, 0.16), transparent 55%),
+                linear-gradient(180deg, var(--bg), #060a12 70%);
+        }
+
+        .page {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 44px 22px 72px;
+        }
+
+        header {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .title {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(1.8rem, 2.3vw + 1.2rem, 2.6rem);
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.5;
+            max-width: 70ch;
+        }
+
+        .badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .badges img {
+            height: 22px;
+            width: auto;
+            border-radius: 6px;
+        }
+
+        blockquote {
+            margin: 0;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            color: var(--muted);
+        }
+
+        hr {
+            border: none;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.10);
+            margin: 18px 0;
+        }
+
+        a {
+            color: var(--link);
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.95em;
+            padding: 0.15em 0.35em;
+            border-radius: 8px;
+            background: var(--code);
+            border: 1px solid var(--code-border);
+        }
+
+        pre {
+            position: relative;
+            margin: 12px 0;
+            padding: 14px;
+            border-radius: 14px;
+            overflow: auto;
+            background: var(--code);
+            border: 1px solid var(--code-border);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        pre code {
+            padding: 0;
+            border: none;
+            background: transparent;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.88);
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.86);
+            padding: 8px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+            user-select: none;
+        }
+
+        .copy-btn:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.10);
+            border-color: rgba(255, 255, 255, 0.24);
+        }
+
+        .copy-btn:active {
+            transform: translateY(0px);
+        }
+
+        .copy-btn[aria-disabled="true"] {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        pre.has-copy {
+            padding-top: 44px;
+        }
+
+        .copy-toast {
+            position: fixed;
+            left: 50%;
+            bottom: 18px;
+            transform: translateX(-50%);
+            padding: 10px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(0, 0, 0, 0.55);
+            color: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+            font-size: 0.9rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 150ms ease;
+            z-index: 9999;
+        }
+
+        .copy-toast.show {
+            opacity: 1;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .kpi {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .kpi .card {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+        }
+
+        .kpi .label {
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.70);
+        }
+
+        .kpi .value {
+            margin-top: 4px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        details {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 12px;
+        }
+
+        details+details {
+            margin-top: 10px;
+        }
+
+        summary {
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            font-weight: 700;
+        }
+
+        summary::-webkit-details-marker {
+            display: none;
+        }
+
+        summary .pill {
+            font-weight: 600;
+            font-size: 0.78rem;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: rgba(34, 197, 94, 0.10);
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            color: rgba(255, 255, 255, 0.82);
+            white-space: nowrap;
+        }
+
+        .screenshot-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .shot {
+            border: 1px dashed rgba(255, 255, 255, 0.22);
+            border-radius: 16px;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.03);
+            color: rgba(255, 255, 255, 0.72);
+        }
+
+        .shot .title {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--muted);
+            font-size: 0.9rem;
+            white-space: nowrap;
+            height: fit-content;
+        }
+
+        .chip .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #60a5fa);
+            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.18);
+        }
+
+        nav {
+            position: sticky;
+            top: 14px;
+            z-index: 10;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .toc {
+            list-style: none;
+            margin: 0;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .toc a {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            text-decoration: none;
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+        }
+
+        .toc a span {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .toc a:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .toc a .arrow {
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        main {
+            margin-top: 18px;
+            display: grid;
+            gap: 16px;
+        }
+
+        section {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            box-shadow: var(--shadow);
+            padding: 18px 18px 14px;
+        }
+
+        section:target {
+            outline: 2px solid rgba(124, 58, 237, 0.55);
+            outline-offset: 2px;
+        }
+
+        h2 {
+            margin: 0 0 8px;
+            font-size: 1.25rem;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .badge {
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.82);
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: rgba(124, 58, 237, 0.20);
+            border: 1px solid rgba(124, 58, 237, 0.35);
+        }
+
+        p {
+            margin: 0 0 10px;
+            color: var(--muted);
+            line-height: 1.7;
+        }
+
+        .steps {
+            margin: 10px 0 6px;
+            padding-left: 18px;
+            color: var(--text);
+        }
+
+        .steps li {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .callout {
+            margin-top: 12px;
+            padding: 12px 12px;
+            border-radius: 14px;
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            background: rgba(34, 197, 94, 0.10);
+            color: rgba(255, 255, 255, 0.82);
+        }
+
+        .callout strong {
+            color: var(--text);
+        }
+
+        footer {
+            margin-top: 18px;
+            color: rgba(255, 255, 255, 0.55);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 720px) {
+            .toc {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .title {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .kpi {
+                grid-template-columns: 1fr;
+            }
+
+            .toc a {
+                padding: 12px 12px;
+            }
+
+            .screenshot-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <header>
+            <div class="title">
+                <div>
+                    <h1>📦 VEBO Lagersystem</h1>
+                </div>
+                <div class="chip"><span class="dot"></span><span>Desktop App • Java 21 • SQLite</span></div>
+            </div>
+
+            <blockquote>
+                <strong>Ein modernes Lagerverwaltungssystem für VEBO Oensingen.</strong>
+                <div class="muted" style="margin-top:6px;">Diese Seite ist die HTML-Version der wichtigsten
+                    README-Inhalte (kurz & navigierbar).</div>
+            </blockquote>
+
+            <div class="badges" aria-label="Badges">
+                <a href="https://github.com/frame-dev/VeboLagerSystem" target="_blank" rel="noopener noreferrer">
+                    <img alt="Version" src="https://img.shields.io/badge/version-0.3--TESTING-blue.svg">
+                </a>
+                <a href="https://openjdk.org/" target="_blank" rel="noopener noreferrer">
+                    <img alt="Java" src="https://img.shields.io/badge/Java-21-orange.svg">
+                </a>
+                <a href="LICENSE" target="_blank" rel="noopener noreferrer">
+                    <img alt="License" src="https://img.shields.io/badge/license-Proprietary-red.svg">
+                </a>
+                <a href="https://github.com/frame-dev/VeboLagerSystem" target="_blank" rel="noopener noreferrer">
+                    <img alt="Status" src="https://img.shields.io/badge/status-Active%20Development-green.svg">
+                </a>
+            </div>
+
+            <div class="kpi" aria-label="Projekt-Infos">
+                <div class="card">
+                    <div class="label">Version</div>
+                    <div class="value">0.3-TESTING</div>
+                </div>
+                <div class="card">
+                    <div class="label">Stand</div>
+                    <div class="value">Februar 2026</div>
+                </div>
+                <div class="card">
+                    <div class="label">Plattformen</div>
+                    <div class="value">Win • macOS • Linux</div>
+                </div>
+                <div class="card">
+                    <div class="label">Build</div>
+                    <div class="value">Maven</div>
+                </div>
+            </div>
+        </header>
+
+        <nav aria-label="Inhaltsverzeichnis">
+            <ul class="toc">
+                <li><a href="#overview"><span>🎯 Überblick</span><span class="arrow">→</span></a></li>
+                <li><a href="#features"><span>✨ Hauptfunktionen</span><span class="arrow">→</span></a></li>
+                <li><a href="#screenshots"><span>📸 Screenshots</span><span class="arrow">→</span></a></li>
+                <li><a href="#stack"><span>🛠️ Technologie</span><span class="arrow">→</span></a></li>
+                <li><a href="#install"><span>📥 Installation</span><span class="arrow">→</span></a></li>
+                <li><a href="#usage"><span>🚀 Verwendung</span><span class="arrow">→</span></a></li>
+                <li><a href="#architecture"><span>🏗️ Architektur</span><span class="arrow">→</span></a></li>
+                <li><a href="#config"><span>⚙️ Konfiguration</span><span class="arrow">→</span></a></li>
+                <li><a href="#datadir"><span>💾 App-Daten</span><span class="arrow">→</span></a></li>
+                <li><a href="#scanserver"><span>📡 QR-Server</span><span class="arrow">→</span></a></li>
+                <li><a href="#support"><span>📞 Support</span><span class="arrow">→</span></a></li>
+                <li><a href="#license"><span>📄 Lizenz</span><span class="arrow">→</span></a></li>
+                <li><a href="#links"><span>🔗 Links</span><span class="arrow">→</span></a></li>
+            </ul>
+        </nav>
+
+        <main>
+            <section id="overview">
+                <h2>🎯 Überblick <span class="badge">Kurzfassung</span></h2>
+                <p><strong>VEBO Lagersystem</strong> ist eine Desktop-Anwendung zur Verwaltung von Lagerbeständen,
+                    Artikeln, Bestellungen, Lieferanten und Abteilungen – entwickelt für VEBO Oensingen.</p>
+                <ul class="steps">
+                    <li><strong>Effiziente Lagerverwaltung:</strong> Echtzeitübersicht über Bestände</li>
+                    <li><strong>Automatisierung:</strong> Periodische Lagerchecks & Warnungen</li>
+                    <li><strong>Benutzerfreundlichkeit:</strong> Moderne, konsistente UI mit Theme-/Font-Optionen</li>
+                    <li><strong>Nachvollziehbarkeit:</strong> Protokolle, Audit-Trails und Logs</li>
+                    <li><strong>Flexibilität:</strong> Anpassbare Einstellungen, QR-Workflow, Updates</li>
+                </ul>
+                <div class="callout"><strong>Tipp:</strong> Für eine vollständige technische Dokumentation siehe die
+                    README im Repository.</div>
+            </section>
+
+            <section id="features">
+                <h2>✨ Hauptfunktionen <span class="badge">Auszug</span></h2>
+
+                <details open>
+                    <summary>📦 Artikelverwaltung <span class="pill">Core</span></summary>
+                    <ul class="steps">
+                        <li>Artikelstamm inkl. Artikelnummer, Details, Preise</li>
+                        <li>Bestandsführung mit Min/Max, Kategorien, Lieferantenzuordnung</li>
+                        <li>Bulk-Aktionen: Mehrfach löschen, Bestand anpassen, Export</li>
+                        <li>QR-Codes: Generieren, Vorschau, PDF-Export, Daten abrufen</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>📋 Bestellungsverwaltung <span class="pill">Workflow</span></summary>
+                    <ul class="steps">
+                        <li>Erstellen/Bearbeiten/Löschen, Status (Offen/Abgeschlossen)</li>
+                        <li>Abschließen-Workflow, Filter & Suche</li>
+                        <li>PDF-Export mit Layout + Protokoll inkl. Benutzer-Tracking</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>⚠️ Warnsystem & Scheduler <span class="pill">Automatik</span></summary>
+                    <ul class="steps">
+                        <li>Automatische Bestandsprüfungen (Intervall konfigurierbar)</li>
+                        <li>Warnungen bei Mindest-/kritischen Beständen</li>
+                        <li>Ungelesene Warnungen werden hervorgehoben</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>📊 Logs, Import/Export & Backup <span class="pill">Admin</span></summary>
+                    <ul class="steps">
+                        <li>Log-UI mit Kategorien, Datumsfilter, Export (PDF/CSV)</li>
+                        <li>CSV Import/Export (Artikel, Lieferanten, Kunden, Bestellungen)</li>
+                        <li>Startdaten-Import aus JSON-Ressourcen</li>
+                    </ul>
+                </details>
+            </section>
+
+            <section id="screenshots">
+                <h2>📸 Screenshots <span class="badge">Platzhalter</span></h2>
+                <p class="muted">Hier kannst du später echte Screenshots verlinken oder einbetten.</p>
+                <div class="screenshot-grid">
+                    <div class="shot">
+                        <div class="title">Hauptfenster</div>
+                        <div class="muted">Tabbed Interface (Artikel, Lieferanten, Bestellungen, ...)</div>
+                    </div>
+                    <div class="shot">
+                        <div class="title">Artikelverwaltung</div>
+                        <div class="muted">Bulk-Tools, QR-Buttons, Detailsicht</div>
+                    </div>
+                    <div class="shot">
+                        <div class="title">Bestellungen</div>
+                        <div class="muted">Bearbeiten, Abschließen, Filtern, Protokollieren</div>
+                    </div>
+                    <div class="shot">
+                        <div class="title">Logs</div>
+                        <div class="muted">Suche, Filter, Export</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="stack">
+                <h2>🛠️ Technologie-Stack <span class="badge">Kurz</span></h2>
+                <ul class="steps">
+                    <li><strong>Frontend:</strong> Java Swing, Custom UI Components, Theme System</li>
+                    <li><strong>Backend:</strong> Java 21, SQLite, Log4j2, Gson, ZXing</li>
+                    <li><strong>PDF:</strong> Apache PDFBox</li>
+                    <li><strong>Build:</strong> Maven</li>
+                </ul>
+            </section>
+
+            <section id="install">
+                <h2>📥 Installation <span class="badge">Maven</span></h2>
+                <p class="muted">Voraussetzungen: JDK 21+, Maven 3.6+, Git</p>
+                <pre><code>git clone https://github.com/frame-dev/VeboLagerSystem.git
+cd VeboLagerSystem
+mvn clean install
+mvn exec:java -Dexec.mainClass="ch.framedev.lagersystem.main.Main"</code></pre>
+                <p class="muted">Alternative (JAR):</p>
+                <pre><code>mvn clean package
+                    java -jar target/VeboLagerSystem-0.3-TESTING.jar</code></pre>
+            </section>
+
+            <section id="usage">
+                <h2>🚀 Verwendung <span class="badge">Basics</span></h2>
+                <ul class="steps">
+                    <li><strong>Erster Start:</strong> DB & Einstellungen werden initialisiert, optional Import von
+                        Startdaten</li>
+                    <li><strong>Artikel:</strong> hinzufügen/bearbeiten/löschen, Bulk-Aktionen, QR-Export</li>
+                    <li><strong>Bestellungen:</strong> anlegen, bearbeiten, abschließen, PDF-Export</li>
+                    <li><strong>Logs:</strong> filtern, suchen, exportieren</li>
+                </ul>
+            </section>
+
+            <section id="architecture">
+                <h2>🏗️ Architektur <span class="badge">Patterns</span></h2>
+                <ul class="steps">
+                    <li><strong>Singleton:</strong> Manager-Klassen</li>
+                    <li><strong>Observer:</strong> Theme-Updates für Fenster</li>
+                    <li><strong>Factory:</strong> UI-Komponenten</li>
+                    <li><strong>MVC:</strong> Trennung GUI / Business-Logic / Daten</li>
+                </ul>
+                <div class="callout"><strong>Hinweis:</strong> Die vollständige Projektstruktur ist in der README
+                    dokumentiert.</div>
+            </section>
+
+            <section id="config">
+                <h2>⚙️ Konfiguration <span class="badge">settings.properties</span></h2>
+                <p>Die Einstellungen werden im App-Datenverzeichnis in <code>settings.properties</code> gespeichert.</p>
+                <pre><code># First run / Import
+first-time=true
+load-from-files=true
+
+# Scheduler
+stock_check_interval=30
+enable_auto_stock_check=true
+
+# QR-Code Import
+enable_automatic_import_qrcode=true
+qrcode_import_interval=10
+server_url=https://framedev.ch/vebo/scans.json
+
+# Theme / UI
+dark_mode=false
+table_font_size=16
+font_style=Dialog
+
+# Update-Manager
+github-token=</code></pre>
+            </section>
+
+            <section id="datadir">
+                <h2>💾 App-Datenverzeichnis <span class="badge">Paths</span></h2>
+                <ul class="steps">
+                    <li><strong>Windows:</strong> <code>%APPDATA%/VeboLagerSystem/</code></li>
+                    <li><strong>macOS:</strong> <code>~/Library/Application Support/VeboLagerSystem/</code></li>
+                    <li><strong>Linux:</strong> <code>$XDG_DATA_HOME/VeboLagerSystem/</code> oder
+                        <code>~/.local/share/VeboLagerSystem/</code>
+                    </li>
+                </ul>
+                <pre><code>VeboLagerSystem/
+├── vebo_lager_system.db
+├── settings.properties
+├── scans.json
+├── qr_codes/
+├── supplier_orders.txt
+├── imported_qrcodes.txt
+├── imported_items.txt
+├── own_use_list.txt
+└── logs/
+    ├── vebo_lager_system.log
+    ├── bestellung.log
+    └── vendorOrder.log</code></pre>
+            </section>
+
+            <section id="scanserver">
+                <h2>📡 QR-Scan-Server (Optional) <span class="badge">ScanServer</span></h2>
+                <p>Optionaler kleiner HTTP-Server für QR-Scans (<code>ScanServer</code>).</p>
+                <pre><code>mvn exec:java -Dexec.mainClass="ch.framedev.lagersystem.scan.ScanServer"</code></pre>
+                <ul class="steps">
+                    <li><code>/scan?data=...</code> (Formular + Speicherung)</li>
+                    <li><code>/list</code> (JSON aller Scans)</li>
+                    <li><code>/latest</code> (letzter Scan als JSON)</li>
+                </ul>
+            </section>
+
+            <section id="support">
+                <h2>📞 Support <span class="badge">Kontakt</span></h2>
+                <ul class="steps">
+                    <li><strong>Entwickler:</strong> Darryl Huber</li>
+                    <li><strong>Organisation:</strong> VEBO Oensingen</li>
+                    <li><strong>E-Mail:</strong> <a href="mailto:support@vebo.ch">support@vebo.ch</a></li>
+                    <li><strong>Website:</strong> <a href="https://vebo.ch" target="_blank"
+                            rel="noopener noreferrer">vebo.ch</a></li>
+                </ul>
+                <div class="callout"><strong>Probleme melden:</strong> GitHub Issue erstellen + Schritte + relevante
+                    Logs beilegen.</div>
+            </section>
+
+            <section id="license">
+                <h2>📄 Lizenz <span class="badge">Proprietary</span></h2>
+                <p><strong>Proprietary License</strong></p>
+                <p class="muted">© 2026 VEBO Oensingen. Alle Rechte vorbehalten. Diese Software darf ohne ausdrückliche
+                    schriftliche Genehmigung nicht kopiert, verändert oder verteilt werden.</p>
+            </section>
+
+            <section id="links">
+                <h2>🔗 Links <span class="badge">Ressourcen</span></h2>
+                <ul class="steps">
+                    <li><a href="https://github.com/frame-dev/VeboLagerSystem" target="_blank"
+                            rel="noopener noreferrer">GitHub Repository</a></li>
+                    <li><a href="https://github.com/frame-dev/VeboLagerSystem/issues" target="_blank"
+                            rel="noopener noreferrer">Issue Tracker</a></li>
+                    <li><a href="https://github.com/frame-dev/VeboLagerSystem/wiki" target="_blank"
+                            rel="noopener noreferrer">Wiki / Documentation</a></li>
+                    <li><a href="https://vebo.ch" target="_blank" rel="noopener noreferrer">VEBO Website</a></li>
+                </ul>
+            </section>
+
+            <footer>
+                Stand: <span id="today">—</span>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Aktuelles Datum im Footer anzeigen
+        const el = document.getElementById('today');
+        if (el) {
+            const d = new Date();
+            el.textContent = d.toLocaleDateString('de-CH', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        // Code-Blöcke: Copy-to-Clipboard Button
+        function showToast(message) {
+            let toast = document.querySelector('.copy-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.className = 'copy-toast';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = message;
+            toast.classList.add('show');
+            window.clearTimeout(showToast._t);
+            showToast._t = window.setTimeout(() => toast.classList.remove('show'), 1400);
+        }
+
+        function getCodeText(pre) {
+            const code = pre.querySelector('code');
+            if (!code) return pre.innerText;
+            // textContent bewahrt Zeilenumbrüche zuverlässig
+            return code.textContent.replace(/\n\s*$/g, '\n');
+        }
+
+        async function copyText(text) {
+            // Modern Clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+                return;
+            }
+            // Fallback für file:// / unsichere Kontexte
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            ta.style.top = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+
+        document.querySelectorAll('pre').forEach((pre) => {
+            if (pre.querySelector('.copy-btn')) return;
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'copy-btn';
+            btn.innerHTML = '📋 <span>Copy</span>';
+            btn.setAttribute('aria-label', 'Code kopieren');
+
+            pre.classList.add('has-copy');
+            pre.appendChild(btn);
+
+            btn.addEventListener('click', async () => {
+                try {
+                    btn.setAttribute('aria-disabled', 'true');
+                    const text = getCodeText(pre);
+                    await copyText(text);
+
+                    const labelSpan = btn.querySelector('span');
+                    if (labelSpan) labelSpan.textContent = 'Copied!';
+                    showToast('Code kopiert');
+
+                    window.setTimeout(() => {
+                        if (labelSpan) labelSpan.textContent = 'Copy';
+                        btn.removeAttribute('aria-disabled');
+                    }, 1200);
+                } catch (e) {
+                    btn.removeAttribute('aria-disabled');
+                    showToast('Kopieren nicht möglich');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

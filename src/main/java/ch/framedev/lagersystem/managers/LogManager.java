@@ -22,7 +22,7 @@ public class LogManager {
 
     private static final Logger logger = org.apache.logging.log4j.LogManager.getLogger(LogManager.class);
 
-    private static LogManager instance;
+    private static volatile LogManager instance;
     private final DatabaseManager databaseManager;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
@@ -59,7 +59,11 @@ public class LogManager {
 
     public static LogManager getInstance() {
         if (instance == null) {
-            instance = new LogManager();
+            synchronized (LogManager.class) {
+                if (instance == null) {
+                    instance = new LogManager();
+                }
+            }
         }
         return instance;
     }
@@ -68,6 +72,7 @@ public class LogManager {
         String sql = "CREATE TABLE IF NOT EXISTS " + TABLE_LOGS + " (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                 "timestamp TEXT NOT NULL," +
+                "epochMillis INTEGER NOT NULL," +
                 "level TEXT NOT NULL," +
                 "message TEXT NOT NULL" +
                 ");";
@@ -96,17 +101,11 @@ public class LogManager {
      * @return true if the log entry was successfully created in the database, false otherwise.
      */
     public boolean createLog(Log log) {
-        String sql = "INSERT INTO " + TABLE_LOGS + " (timestamp, level, message) VALUES (?, ?, ?);";
-        boolean ok = databaseManager.executePreparedUpdate(sql, new Object[]{log.timestamp, log.level, log.message});
+        String sql = "INSERT INTO " + TABLE_LOGS + " (timestamp, epochMillis, level, message) VALUES (?, ?, ?, ?);";
+        boolean ok = databaseManager.executePreparedUpdate(sql, new Object[]{log.timestamp, System.currentTimeMillis(), log.level, log.message});
         // Main.logUtils.addLog(log.message);
         if (ok) {
-            // Invalidate caches so subsequent reads see the new log
-            cache.clear();
-            allLogsCache = null;
-            allLogsCacheTime = 0L;
-            countsCache.clear();
-            totalCountCache = null;
-            countsCacheTime = 0L;
+            invalidateCaches();
         }
         return ok;
     }
@@ -119,8 +118,9 @@ public class LogManager {
      * @return true if the log entry was successfully created in the database, false otherwise.
      */
     public boolean createLog(LogLevel level, String message) {
+        String safeMessage = message == null ? "" : message;
         String timestamp = LocalDateTime.now().format(FORMATTER);
-        Log log = new Log(timestamp, level.name(), message);
+        Log log = new Log(timestamp, level.name(), safeMessage);
         return createLog(log);
     }
 
@@ -189,13 +189,39 @@ public class LogManager {
     }
 
     /**
-     * Retrieves logs that were created within the specified date range. The method expects the startDate and endDate parameters to be in the same format as the timestamp stored in the database (e.g., "dd.MM.yyyy HH:mm:ss"). It queries the database for logs where the timestamp is between the provided start and end dates, ordered by id in descending order (most recent first). Each retrieved log is also added to the per-log cache for potential future retrieval by id.
+     * Retrieves logs created within the specified date range. The method expects the startDate and endDate parameters to be in the same format as the timestamp stored in the database (e.g., "dd.MM.yyyy HH:mm:ss"). It queries the database for logs where the timestamp is between the provided start and end dates, ordered by id in descending order (most recent first). Each retrieved log is also added to the per-log cache for potential future retrieval by id.
      *
      * @param startDate The start date of the range, formatted as a string in the same format as the timestamp stored in the database (e.g., "dd.MM.yyyy HH:mm:ss"). Logs with a timestamp equal to or greater than this date will be included in the results.
      * @param endDate   The end date of the range, formatted as a string in the same format as the timestamp stored in the database (e.g., "dd.MM.yyyy HH:mm:ss"). Logs with a timestamp equal to or less than this date will be included in the results.
      * @return A list of Log records representing the log entries that were created within the specified date range, ordered by most recent first. If an error occurs during retrieval, an empty list is returned and the error is logged.
      */
     public List<Log> getLogsByDateRange(String startDate, String endDate) {
+        // Prefer epochMillis comparisons when the inputs are parseable.
+        try {
+            long startMillis = LocalDateTime.parse(startDate, FORMATTER).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+            long endMillis = LocalDateTime.parse(endDate, FORMATTER).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+
+            String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS +
+                    " WHERE epochMillis BETWEEN ? AND ? ORDER BY id DESC;";
+            List<Log> logs = new ArrayList<>();
+
+            try (ResultSet rs = databaseManager.executePreparedQuery(sql, new Object[]{startMillis, endMillis})) {
+                while (rs.next()) {
+                    Log l = new Log(
+                            rs.getInt("id"),
+                            rs.getString("timestamp"),
+                            rs.getString("level"),
+                            rs.getString("message")
+                    );
+                    logs.add(l);
+                    cache.put(l.id, l);
+                }
+            }
+            return logs;
+        } catch (Exception ignored) {
+            // Fall back to the legacy timestamp string comparison.
+        }
+
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS +
                 " WHERE timestamp BETWEEN ? AND ? ORDER BY id DESC;";
         List<Log> logs = new ArrayList<>();
@@ -225,6 +251,9 @@ public class LogManager {
      * @return A list of Log records representing the log entries that contain the specified search term in their message, ordered by most recent first. If an error occurs during retrieval, an empty list is returned and the error is logged.
      */
     public List<Log> searchLogs(String searchTerm) {
+        if (searchTerm == null) {
+            return List.of();
+        }
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS +
                 " WHERE message LIKE ? ORDER BY id DESC;";
         List<Log> logs = new ArrayList<>();
@@ -304,20 +333,14 @@ public class LogManager {
      * @return The number of log entries that were deleted from the database. If any log entries are deleted, the in-memory cache and related caches are also cleared to reflect the deletions. If an error occurs during deletion, 0 is returned and the error is logged.
      */
     public int deleteOldLogs(int daysOld) {
-        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(daysOld);
-        String cutoffTimestamp = cutoffDate.format(FORMATTER);
-        String sql = "DELETE FROM " + TABLE_LOGS + " WHERE timestamp < '" + cutoffTimestamp + "';";
+        long cutoffMillis = System.currentTimeMillis() - (daysOld * 24L * 60L * 60L * 1000L);
+        String sql = "DELETE FROM " + TABLE_LOGS + " WHERE epochMillis < ?;";
         try {
-            int count = databaseManager.executeUpdateWithCount(sql);
-            if (count > 0) {
-                cache.clear();
-                allLogsCache = null;
-                allLogsCacheTime = 0L;
-                countsCache.clear();
-                totalCountCache = null;
-                countsCacheTime = 0L;
+            boolean ok = databaseManager.executePreparedUpdate(sql, new Object[]{cutoffMillis});
+            if (ok) {
+                invalidateCaches();
             }
-            return count;
+            return ok ? 1 : 0;
         } catch (Exception e) {
             logger.error("Error deleting old logs: {}", e.getMessage(), e);
             return 0;
@@ -328,16 +351,11 @@ public class LogManager {
      * Deletes logs older than 30 days
      */
     private void deleteOldLogs() {
-        // Deletes logs older than 30 days based on the timestamp column (assumed ISO 8601 or yyyy-MM-dd HH:mm:ss format)
-        String sql = "DELETE FROM " + TABLE_LOGS + " WHERE date(timestamp) < date('now', '-30 days')";
+        // Deletes logs older than 30 days based on epochMillis
+        long cutoffMillis = System.currentTimeMillis() - (30L * 24L * 60L * 60L * 1000L);
+        String sql = "DELETE FROM " + TABLE_LOGS + " WHERE epochMillis < " + cutoffMillis;
         databaseManager.executeUpdate(sql);
-        // invalidate caches
-        cache.clear();
-        allLogsCache = null;
-        allLogsCacheTime = 0L;
-        countsCache.clear();
-        totalCountCache = null;
-        countsCacheTime = 0L;
+        invalidateCaches();
     }
 
     /**
@@ -349,12 +367,7 @@ public class LogManager {
         String sql = "DELETE FROM " + TABLE_LOGS + ";";
         boolean ok = databaseManager.executeUpdate(sql);
         if (ok) {
-            cache.clear();
-            allLogsCache = null;
-            allLogsCacheTime = 0L;
-            countsCache.clear();
-            totalCountCache = null;
-            countsCacheTime = 0L;
+            invalidateCaches();
         }
         return ok;
     }
@@ -413,6 +426,10 @@ public class LogManager {
      * Clear in-memory caches immediately.
      */
     public void clearCache() {
+        invalidateCaches();
+    }
+
+    private void invalidateCaches() {
         cache.clear();
         allLogsCache = null;
         allLogsCacheTime = 0L;

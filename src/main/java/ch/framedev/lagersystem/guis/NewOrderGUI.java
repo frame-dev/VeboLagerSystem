@@ -572,6 +572,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void styleArticleComboBox(JComboBox<Article> combo) {
+        if(combo == null) return;
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
         Color border = ThemeManager.getInputBorderColor();
@@ -626,6 +627,7 @@ public class NewOrderGUI extends JFrame {
     // ---------------------------------------------------------------------
 
     private void fillSenderNameCombobox() {
+        if(senderNameCombobox == null) return;
         senderNameCombobox.removeAllItems();
         senderNameCombobox.addItem("VEBO AG");
 
@@ -652,6 +654,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void styleComboBox(JComboBox<String> combo) {
+        if(combo == null) return;
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
         Color border = ThemeManager.getInputBorderColor();
@@ -739,6 +742,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void applyOrderTableTheme(JTable table) {
+        if(table == null) return;
         table.setRowHeight(28);
         table.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         table.setShowGrid(true);
@@ -781,6 +785,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void addStyledFormRow(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field) {
+        if(panel == null || gbc == null || labelText == null || field == null) return;
         JLabel label = new JLabel(labelText);
         label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         label.setForeground(ThemeManager.getTextPrimaryColor());
@@ -795,6 +800,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void fillReceiverNameCombobox() {
+        if(receiverNameCombobox == null) return;
         receiverNameCombobox.removeAllItems();
         receiverNameCombobox.addItem("");
 
@@ -812,6 +818,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void fillDepartmentList() {
+        if(departmentList == null) return;
         departmentList.removeAllItems();
         departmentList.addItem("");
 
@@ -850,6 +857,7 @@ public class NewOrderGUI extends JFrame {
 
         for (Map.Entry<Article, Integer> entry : articlesWithQty.entrySet()) {
             Article a = entry.getKey();
+            if(a == null) continue;
             Integer qty = entry.getValue();
 
             if (qty != null && qty > 0) {
@@ -874,6 +882,7 @@ public class NewOrderGUI extends JFrame {
         }
         for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
             Article a = e.getKey();
+            if(a == null) continue;
             int qty = e.getValue();
             double unit = safePrice(a);
             double line = unit * qty;
@@ -888,6 +897,7 @@ public class NewOrderGUI extends JFrame {
 
     private double safePrice(Article a) {
         try {
+            if(a == null) return 0.0;
             return a.getSellPrice();
         } catch (NoSuchMethodError | AbstractMethodError | RuntimeException ex) {
             return 0.0;

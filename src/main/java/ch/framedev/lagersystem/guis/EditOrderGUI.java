@@ -262,6 +262,7 @@ public class EditOrderGUI extends JFrame {
     }
 
     private void applyTableTheme(JTable table) {
+        if(table == null) throw new NullPointerException("table must not be null");
         table.setRowHeight(28);
         table.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
         table.setShowGrid(true);
@@ -327,6 +328,10 @@ public class EditOrderGUI extends JFrame {
     }
 
     private void addStyledFormRow(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field) {
+        if(panel == null) throw new NullPointerException("panel must not be null");
+        if(gbc == null) throw new NullPointerException("gbc must not be null");
+        if(labelText == null) throw new NullPointerException("labelText must not be null");
+        if(field == null) throw new NullPointerException("field must not be null");
         JLabel label = new JLabel(labelText);
         label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         label.setForeground(ThemeManager.getTextPrimaryColor());

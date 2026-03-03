@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The ClientManager class is responsible for managing client data in the database. It provides methods to create, read, update, and delete client records, as well as to retrieve client information. The class uses caching to improve performance for frequently accessed data, such as client departments and the list of all clients. It also logs all operations performed on clients for auditing purposes.
@@ -21,7 +22,7 @@ public class ClientManager {
 
     // Simple caches for fast lookups
     private static final long CACHE_EXPIRY_MS = 60_000; // 1 minute
-    private final Map<String, String> departmentCache = Collections.synchronizedMap(new HashMap<>());
+    private final Map<String, String> departmentCache = new ConcurrentHashMap<>();
     private volatile List<Map<String, String>> allClientsCache;
     private volatile long allClientsCacheTime;
 
@@ -50,10 +51,10 @@ public class ClientManager {
     }
 
     private void invalidateCaches(String firstLastName) {
-        if (firstLastName != null) {
-            departmentCache.remove(firstLastName);
-        }
+        if(firstLastName == null) throw new IllegalArgumentException("First and last name cannot be null");
+        departmentCache.remove(firstLastName);
         allClientsCache = null;
+        allClientsCacheTime = 0L;
     }
 
     /**
@@ -63,6 +64,9 @@ public class ClientManager {
      * @return true if the client was successfully inserted, false if a client with the same name already exists or if the insertion failed.
      */
     public boolean insertClient(String firstLastName, String department) {
+        if (firstLastName == null || firstLastName.isBlank()) {
+            return false;
+        }
         String sql = "INSERT INTO " + DatabaseManager.TABLE_CLIENTS + " (firstLastName, department) VALUES (?, ?);";
         boolean success = databaseManager.executePreparedUpdate(sql, new Object[]{firstLastName, department});
         if (success) {
@@ -81,18 +85,26 @@ public class ClientManager {
      * @return true if a client with the given name exists, false if no such client exists or if an error occurs during the check.
      */
     public boolean existsClient(String firstLastName) {
+        if (firstLastName == null || firstLastName.isBlank()) {
+            return false;
+        }
         if (departmentCache.containsKey(firstLastName)) {
             return true;
         }
-        String sql = "SELECT 1 FROM " + DatabaseManager.TABLE_CLIENTS + " WHERE firstLastName = ? LIMIT 1;";
-        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{firstLastName})) {
+        String sql = "SELECT department FROM " + DatabaseManager.TABLE_CLIENTS + " WHERE firstLastName = ? LIMIT 1;";
+        ResultSet resultSet = null;
+        try {
+            resultSet = databaseManager.executePreparedQuery(sql, new Object[]{firstLastName});
+            if (resultSet == null) return false;
             boolean exists = resultSet.next();
             if (exists) {
-                departmentCache.put(firstLastName, resultSet.getString(1));
+                departmentCache.put(firstLastName, resultSet.getString("department"));
             }
             return exists;
         } catch (Exception e) {
             return false;
+        } finally {
+            databaseManager.closeQuery(resultSet);
         }
     }
 
@@ -103,6 +115,9 @@ public class ClientManager {
      * @return true if the update was successful, false if the client does not exist or the update failed.
      */
     public boolean updateClient(String firstLastName, String newDepartment) {
+        if (firstLastName == null || firstLastName.isBlank()) {
+            return false;
+        }
         if (!existsClient(firstLastName)) {
             return false;
         }
@@ -124,6 +139,9 @@ public class ClientManager {
      * @return true if the client was successfully deleted, false if the client does not exist or if the deletion failed.
      */
     public boolean deleteClient(String firstLastName) {
+        if (firstLastName == null || firstLastName.isBlank()) {
+            return false;
+        }
         if (!existsClient(firstLastName)) {
             return false;
         }
@@ -144,22 +162,31 @@ public class ClientManager {
      * @return The department of the client, or null if the client does not exist or if an error occurs during retrieval.
      */
     public String getDepartmentByName(String firstLastName) {
-        if (departmentCache.containsKey(firstLastName)) {
-            return departmentCache.get(firstLastName);
+        if (firstLastName == null || firstLastName.isBlank()) {
+            return null;
         }
-        String sql = "SELECT department FROM * " + DatabaseManager.TABLE_CLIENTS + " WHERE firstLastName = ?;";
-        try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{firstLastName})) {
-            if (resultSet.next()) {
+        String cached = departmentCache.get(firstLastName);
+        if (cached != null) {
+            return cached;
+        }
+
+        String sql = "SELECT department FROM " + DatabaseManager.TABLE_CLIENTS + " WHERE firstLastName = ?;";
+        ResultSet resultSet = null;
+        try {
+            resultSet = databaseManager.executePreparedQuery(sql, new Object[]{firstLastName});
+            if (resultSet != null && resultSet.next()) {
                 String dept = resultSet.getString("department");
                 departmentCache.put(firstLastName, dept);
                 return dept;
             }
         } catch (Exception ignored) {
+        } finally {
+            databaseManager.closeQuery(resultSet);
         }
         return null;
     }
 
-        /**
+    /**
      * Retrieves a list of all clients in the database. Each client is represented as a map with keys "firstLastName" and "department". The method uses caching to improve performance, and the cache is refreshed if it is older than 1 minute.
      * @return A list of maps, where each map represents a client with keys "firstLastName" and "department". If an error occurs during retrieval, an empty list is returned.
      */
@@ -170,19 +197,25 @@ public class ClientManager {
 
         String sql = "SELECT firstLastName, department FROM " + DatabaseManager.TABLE_CLIENTS +";";
         List<Map<String, String>> clients = new ArrayList<>();
-        try (var resultSet = databaseManager.executeQuery(sql)) {
-            while (resultSet.next()) {
-                Map<String, String> client = new HashMap<>();
-                String name = resultSet.getString("firstLastName");
-                String dept = resultSet.getString("department");
-                client.put("firstLastName", name);
-                client.put("department", dept);
-                clients.add(client);
-                departmentCache.put(name, dept);
+        ResultSet resultSet = null;
+        try {
+            resultSet = databaseManager.executePreparedQuery(sql, new Object[]{});
+            if (resultSet != null) {
+                while (resultSet.next()) {
+                    Map<String, String> client = new HashMap<>();
+                    String name = resultSet.getString("firstLastName");
+                    String dept = resultSet.getString("department");
+                    client.put("firstLastName", name);
+                    client.put("department", dept);
+                    clients.add(client);
+                    departmentCache.put(name, dept);
+                }
             }
             allClientsCache = clients;
             allClientsCacheTime = System.currentTimeMillis();
         } catch (Exception ignored) {
+        } finally {
+            databaseManager.closeQuery(resultSet);
         }
         return clients;
     }

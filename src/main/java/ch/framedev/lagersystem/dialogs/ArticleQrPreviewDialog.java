@@ -30,6 +30,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 import static ch.framedev.lagersystem.utils.ArticleExporter.sanitizeForWinAnsi;
 
@@ -58,6 +59,7 @@ public final class ArticleQrPreviewDialog {
         }
 
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent), "QR-Code Vorschau", Dialog.ModalityType.APPLICATION_MODAL);
+        ThemeManager.applyUIDefaults();
         dialog.setLayout(new BorderLayout());
         dialog.getContentPane().setBackground(ThemeManager.getBackgroundColor());
 
@@ -239,8 +241,10 @@ public final class ArticleQrPreviewDialog {
                         String url = buildQrCodeUrl(article);
                         BufferedImage image = QRCodeGenerator.generateQRCodeBufferedImage(url, 220, 220);
                         items.add(new QrPreviewItem(article, image));
-                    } catch (Exception ignored) {
+                    } catch (Exception ex) {
                         // skip broken entries but continue
+                        // log for diagnostics (don’t spam UI)
+                        ex.printStackTrace();
                     }
                 }
                 return items;
@@ -350,7 +354,75 @@ public final class ArticleQrPreviewDialog {
             }
         };
 
-        exportPdfButton.addActionListener(e -> exportQrCodesToPdf(parent, previewItems));
+        exportPdfButton.addActionListener(e -> {
+            if (previewItems.isEmpty()) {
+                JOptionPane.showMessageDialog(parent,
+                        "Keine QR-Codes zum Export vorhanden.",
+                        "QR-Codes exportieren",
+                        JOptionPane.WARNING_MESSAGE,
+                        Main.iconSmall);
+                return;
+            }
+
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("PDF Speichern");
+            fileChooser.setSelectedFile(new File("QR_Codes_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
+
+            int userSelection = fileChooser.showSaveDialog(parent);
+            if (userSelection != JFileChooser.APPROVE_OPTION) {
+                return;
+            }
+
+            File fileToSave = fileChooser.getSelectedFile();
+            if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
+                fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
+            }
+
+            // UI feedback
+            exportPdfButton.setEnabled(false);
+            progress.setVisible(true);
+            progress.setIndeterminate(true);
+            infoLabel.setText(UnicodeSymbols.CLOCK + " Exportiere PDF …");
+
+            File finalFileToSave = fileToSave;
+            new SwingWorker<Void, Void>() {
+                Exception error;
+
+                @Override
+                protected Void doInBackground() {
+                    try {
+                        exportQrCodesToPdf(finalFileToSave, previewItems);
+                    } catch (Exception ex) {
+                        error = ex;
+                    }
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+                    progress.setIndeterminate(false);
+                    progress.setVisible(false);
+                    exportPdfButton.setEnabled(true);
+
+                    if (error != null) {
+                        JOptionPane.showMessageDialog(parent,
+                                "Fehler beim PDF-Export: " + error.getMessage(),
+                                "QR-Codes exportieren",
+                                JOptionPane.ERROR_MESSAGE,
+                                Main.iconSmall);
+                        infoLabel.setText(UnicodeSymbols.CLOSE + " Fehler beim Export");
+                        return;
+                    }
+
+                    JOptionPane.showMessageDialog(parent,
+                            "PDF erfolgreich exportiert:\n" + finalFileToSave.getAbsolutePath(),
+                            "QR-Codes exportieren",
+                            JOptionPane.INFORMATION_MESSAGE,
+                            Main.iconSmall);
+                    infoLabel.setText(UnicodeSymbols.CHECKMARK + " PDF exportiert: " + finalFileToSave.getName());
+                }
+            }.execute();
+        });
 
         worker.execute();
 
@@ -361,34 +433,17 @@ public final class ArticleQrPreviewDialog {
     }
 
     private static String buildQrCodeUrl(Article article) {
-        String data = article.getQrCodeData();
+        String data = (article != null) ? article.getQrCodeData() : null;
+        if (data == null) data = "";
         String encodedData = URLEncoder.encode(data, StandardCharsets.UTF_8);
         String serverUrl = "https://framedev.ch/vebo/scan.php";
         return serverUrl + "?data=" + encodedData;
     }
 
-    private static void exportQrCodesToPdf(Component parent, List<QrPreviewItem> items) {
+    private static void exportQrCodesToPdf(File fileToSave, List<QrPreviewItem> items) throws IOException {
+        Objects.requireNonNull(fileToSave, "fileToSave");
         if (items == null || items.isEmpty()) {
-            JOptionPane.showMessageDialog(parent,
-                    "Keine QR-Codes zum Export vorhanden.",
-                    "QR-Codes exportieren",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
-            return;
-        }
-
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("PDF Speichern");
-        fileChooser.setSelectedFile(new File("QR_Codes_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
-
-        int userSelection = fileChooser.showSaveDialog(parent);
-        if (userSelection != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-
-        File fileToSave = fileChooser.getSelectedFile();
-        if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
-            fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
+            throw new IllegalArgumentException("No QR codes to export");
         }
 
         try (PDDocument doc = new PDDocument()) {
@@ -406,62 +461,56 @@ public final class ArticleQrPreviewDialog {
 
             PDPage page = new PDPage(pageSize);
             doc.addPage(page);
-            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
 
-            float startY = pageHeight - margin;
-            int col = 0;
-            int row = 0;
+            try (PDPageContentStream contentStream = new PDPageContentStream(doc, page)) {
+                float startY = pageHeight - margin;
+                int col = 0;
+                int row = 0;
 
-            for (QrPreviewItem item : items) {
-                float x = margin + (col * cellWidth);
-                float yTop = startY - (row * cellHeight);
+                PDPageContentStream cs = contentStream;
+                for (QrPreviewItem item : items) {
+                    float x = margin + (col * cellWidth);
+                    float yTop = startY - (row * cellHeight);
 
-                if (yTop - cellHeight < margin) {
-                    contentStream.close();
-                    page = new PDPage(pageSize);
-                    doc.addPage(page);
-                    contentStream = new PDPageContentStream(doc, page);
-                    col = 0;
-                    row = 0;
-                    x = margin;
-                    yTop = startY;
+                    if (yTop - cellHeight < margin) {
+                        cs.close();
+                        page = new PDPage(pageSize);
+                        doc.addPage(page);
+                        cs = new PDPageContentStream(doc, page);
+                        col = 0;
+                        row = 0;
+                        x = margin;
+                        yTop = startY;
+                    }
+
+                    PDImageXObject image = LosslessFactory.createFromImage(doc, item.image());
+                    float imageX = x + (cellWidth - imageSize) / 2f;
+                    float imageY = yTop - imageSize;
+                    cs.drawImage(image, imageX, imageY, imageSize, imageSize);
+
+                    String labelText = item.article().getArticleNumber() + " - " + item.article().getName();
+                    labelText = sanitizeForWinAnsi(labelText);
+                    labelText = trimTextToWidth(labelText, regularFont, fontSize, cellWidth - 12);
+                    cs.beginText();
+                    cs.setFont(regularFont, fontSize);
+                    cs.newLineAtOffset(x + 6, imageY - 14);
+                    cs.showText(labelText);
+                    cs.endText();
+
+                    col++;
+                    if (col >= columns) {
+                        col = 0;
+                        row++;
+                    }
                 }
 
-                PDImageXObject image = LosslessFactory.createFromImage(doc, item.image());
-                float imageX = x + (cellWidth - imageSize) / 2f;
-                float imageY = yTop - imageSize;
-                contentStream.drawImage(image, imageX, imageY, imageSize, imageSize);
-
-                String labelText = item.article().getArticleNumber() + " - " + item.article().getName();
-                labelText = sanitizeForWinAnsi(labelText);
-                labelText = trimTextToWidth(labelText, regularFont, fontSize, cellWidth - 12);
-                contentStream.beginText();
-                contentStream.setFont(regularFont, fontSize);
-                contentStream.newLineAtOffset(x + 6, imageY - 14);
-                contentStream.showText(labelText);
-                contentStream.endText();
-
-                col++;
-                if (col >= columns) {
-                    col = 0;
-                    row++;
+                // If we created additional content streams, ensure the last one is closed.
+                if (cs != contentStream) {
+                    cs.close();
                 }
             }
 
-            contentStream.close();
             doc.save(fileToSave);
-
-            JOptionPane.showMessageDialog(parent,
-                    "PDF erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
-                    "QR-Codes exportieren",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(parent,
-                    "Fehler beim PDF-Export: " + ex.getMessage(),
-                    "QR-Codes exportieren",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
         }
     }
 

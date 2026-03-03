@@ -7,10 +7,12 @@ import org.apache.logging.log4j.Logger;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -23,14 +25,28 @@ public class NotesManager {
 
     private final Logger LOGGER = LogManager.getLogger(NotesManager.class);
 
+    private static final DateTimeFormatter DATE_FORMAT =
+            DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss", Locale.ROOT);
+
     private final String TABLE = DatabaseManager.TABLE_NOTES;
-    private static NotesManager instance;
+    private static volatile NotesManager instance;
     private final DatabaseManager databaseManager;
 
     // ==================== Cache ====================
     private final ConcurrentHashMap<String, Note> cache = new ConcurrentHashMap<>();
     private volatile List<Note> allNotesCache = null;
     private volatile long allNotesCacheTime = 0L;
+
+    private static String normalizeTitle(String title) {
+        if (title == null) return null;
+        String t = title.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    private void invalidateAllNotesCache() {
+        allNotesCache = null;
+        allNotesCacheTime = 0L;
+    }
 
     private NotesManager() {
         databaseManager = Main.databaseManager;
@@ -43,16 +59,23 @@ public class NotesManager {
      * @return The singleton instance of NotesManager.
      */
     public static NotesManager getInstance() {
-        if (instance == null) {
-            instance = new NotesManager();
+        NotesManager local = instance;
+        if (local == null) {
+            synchronized (NotesManager.class) {
+                local = instance;
+                if (local == null) {
+                    local = new NotesManager();
+                    instance = local;
+                }
+            }
         }
-        return instance;
+        return local;
     }
 
     private void createTable() {
         String sql = "CREATE TABLE IF NOT EXISTS " + TABLE + " (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                "title TEXT NOT NULL," +
+                "title TEXT NOT NULL UNIQUE," +
                 "content VARCHAR(2555)," +
                 "date TEXT" +
                 ");";
@@ -66,20 +89,19 @@ public class NotesManager {
      * @return true if a note with the given title exists, false if no such note exists or if an error occurs during the check.
      */
     public boolean exists(String title) {
-        if (title == null) return false;
+        String t = normalizeTitle(title);
+        if (t == null) return false;
         // prefer cache
-        if (cache.containsKey(title)) return true;
+        if (cache.containsKey(t)) return true;
 
-        String sql = "SELECT COUNT(*) FROM " + TABLE + " WHERE title = ?;";
-        try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
-            if (resultSet.next()) {
-                int count = resultSet.getInt(1);
-                return count > 0;
-            }
+        String sql = "SELECT 1 FROM " + TABLE + " WHERE title = ? LIMIT 1;";
+        try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{t})) {
+            return resultSet.next();
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            LOGGER.error("Error while checking if note exists: {}", t, e);
+            Main.logUtils.addLog("Fehler beim Prüfen ob Notiz existiert: " + t);
+            return false;
         }
-        return false;
     }
 
     /**
@@ -90,20 +112,16 @@ public class NotesManager {
      * @return true if the note was successfully added, false if a note with the same title already exists or if the insertion failed.
      */
     public boolean addNote(String title, String content) {
-        if (exists(title)) {
-            Main.logUtils.addLog("Notiz mit Titel '" + title + "' existiert bereits.");
-            return false;
-        }
-        SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
-        String date = formatter.format(System.currentTimeMillis());
+        String t = normalizeTitle(title);
+        if(!normalizeTextNotNull(title)) return false;
+        String date = DATE_FORMAT.format(LocalDateTime.now());
         String sql = "INSERT INTO " + TABLE + " (title, content, date) VALUES (?, ?, ?);";
-        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title, content, date});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{t, content, date});
         if (result) {
             // update cache
-            Note n = new Note(title, content, date);
-            cache.put(title, n);
-            allNotesCache = null;
-            allNotesCacheTime = 0L;
+            Note n = new Note(t, content, date);
+            cache.put(t, n);
+            invalidateAllNotesCache();
         }
         return result;
     }
@@ -116,17 +134,14 @@ public class NotesManager {
      * @return true if the note was successfully updated, false if the note does not exist or if the update operation failed.
      */
     public boolean updateNote(String title, String content) {
-        if (!exists(title)) {
-            Main.logUtils.addLog("Notiz mit Titel '" + title + "' existiert nicht.");
-            return false;
-        }
+        String t = normalizeTitle(title);
+        if(!normalizeTextNotNull(title)) return false;
         String sql = "UPDATE " + TABLE + " SET content = ? WHERE title = ?;";
-        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{content, title});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{content, t});
         if (result) {
             // invalidate per-note cache entry so next read fetches fresh data
-            cache.remove(title);
-            allNotesCache = null;
-            allNotesCacheTime = 0L;
+            cache.remove(t);
+            invalidateAllNotesCache();
         }
         return result;
     }
@@ -138,24 +153,20 @@ public class NotesManager {
      * @return true if the note was successfully deleted, false if the note does not exist or if the deletion operation failed.
      */
     public boolean deleteNote(String title) {
-        if (!exists(title)) {
-            Main.logUtils.addLog("Notiz mit Titel '" + title + "' existiert nicht.");
-            return false;
-        }
+        String t = normalizeTitle(title);
+        if(!normalizeTextNotNull(title)) return false;
         String sql = "DELETE FROM " + TABLE + " WHERE title = ?;";
-        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{t});
         if (result) {
-            cache.remove(title);
-            allNotesCache = null;
-            allNotesCacheTime = 0L;
+            cache.remove(t);
+            invalidateAllNotesCache();
         }
         return result;
     }
 
     public List<Note> getAllNotes() {
         long now = System.currentTimeMillis();
-        // 5 minutes
-        long CACHE_TTL_MILLIS = 5 * 60 * 1000;
+        final long CACHE_TTL_MILLIS = 5 * 60 * 1000;
         if (allNotesCache != null && (now - allNotesCacheTime) < CACHE_TTL_MILLIS) {
             return allNotesCache;
         }
@@ -175,9 +186,13 @@ public class NotesManager {
             allNotesCache = Collections.unmodifiableList(notes);
             allNotesCacheTime = System.currentTimeMillis();
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            LOGGER.error("Error fetching all notes", e);
+            Main.logUtils.addLog("Fehler beim Laden aller Notizen");
+            return List.of();
         } catch (Exception ex) {
             LOGGER.error("Error fetching all notes", ex);
+            Main.logUtils.addLog("Fehler beim Laden aller Notizen");
+            return List.of();
         }
         return notes;
     }
@@ -189,22 +204,25 @@ public class NotesManager {
      * @return The Note object corresponding to the given title, or null if no such note exists in the database. If an error occurs during retrieval, a RuntimeException is thrown.
      */
     public Note getNoteByTitle(String title) {
-        if (title == null) return null;
+        String t = normalizeTitle(title);
+        if (t == null) return null;
         // try cache first
-        Note cached = cache.get(title);
+        Note cached = cache.get(t);
         if (cached != null) return cached;
 
         String sql = "SELECT * FROM " + TABLE + " WHERE title = ?;";
-        try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
+        try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{t})) {
             if (resultSet.next()) {
                 String content = resultSet.getString("content");
                 String date = resultSet.getString("date");
-                Note n = new Note(title, content, date);
-                cache.put(title, n);
+                Note n = new Note(t, content, date);
+                cache.put(t, n);
                 return n;
             }
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            LOGGER.error("Error while retrieving note by title: {}", t, e);
+            Main.logUtils.addLog("Fehler beim Laden der Notiz: " + t);
+            return null;
         }
         return null;
     }
@@ -214,7 +232,20 @@ public class NotesManager {
      */
     public void clearCache() {
         cache.clear();
-        allNotesCache = null;
-        allNotesCacheTime = 0L;
+        invalidateAllNotesCache();
+    }
+
+
+    public boolean normalizeTextNotNull(String title) {
+        String t = normalizeTitle(title);
+        if (t == null) {
+            Main.logUtils.addLog("Notiz-Titel ist leer oder ungültig.");
+            return false;
+        }
+        if (exists(t)) {
+            Main.logUtils.addLog("Notiz mit Titel '" + t + "' existiert bereits.");
+            return false;
+        }
+        return true;
     }
 }

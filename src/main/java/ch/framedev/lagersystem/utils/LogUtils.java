@@ -28,6 +28,12 @@ public class LogUtils {
     private final Path logFilePath;
 
     /**
+     * Dedicated lock for file I/O to avoid blocking other logging work.
+     * Log4j itself is thread-safe; we only need to serialize file appends.
+     */
+    private final Object fileLock = new Object();
+
+    /**
      * Initializes the LogUtils class by setting up the log file path and ensuring that the log file and its parent directories exist. The log file is located in the "logs" directory within the application's data directory, and is named "vebo_lager_system.log". If the log file or its parent directories do not exist, they will be created. Any errors encountered during this process will be logged using Log4j.
      */
     public LogUtils() {
@@ -35,6 +41,10 @@ public class LogUtils {
         initializeLogFile();
     }
 
+    /**
+     * Ensures that the log directory exists.
+     * The log file itself will be created lazily on first write (CREATE + APPEND).
+     */
     private void initializeLogFile() {
         Path parentDir = logFilePath.getParent();
         if (parentDir == null) {
@@ -43,39 +53,66 @@ public class LogUtils {
         }
         try {
             Files.createDirectories(parentDir);
-            if (!Files.exists(logFilePath)) {
-                Files.createFile(logFilePath);
-            }
-        } catch (IOException e) {
-            LOGGER.log(Level.ERROR, "Fehler beim Erstellen der Log-Datei: {}", logFilePath, e);
+        } catch (IOException | SecurityException e) {
+            LOGGER.log(Level.ERROR, "Fehler beim Erstellen des Log-Verzeichnisses: {}", parentDir, e);
         }
     }
 
     /**
-     * Adds a log entry to the log file and logs it using Log4j. The log entry is timestamped with the current date and time. The method is synchronized to ensure thread safety when multiple threads are logging simultaneously.
-     * @param logEntry The log entry to be added to the log file and logged with Log4j.
+     * Convenience method that logs at INFO level.
+     *
+     * @param logEntry message to log (nullable; null becomes an empty string)
      */
-    public synchronized void addLog(String logEntry) {
-        String timestampedEntry = "[" + DATE_FORMAT.format(LocalDateTime.now()) + "] >> " + logEntry;
+    public void addLog(String logEntry) {
+        addLog(Level.INFO, logEntry);
+    }
+
+    /**
+     * Adds a log entry to the log file and logs it using Log4j.
+     * The log entry is timestamped with the current date and time.
+     *
+     * <p>Thread-safety: file appends are serialized via {@link #fileLock}.
+     * Log4j is thread-safe and does not need external synchronization.</p>
+     *
+     * @param level    Log4j level to use
+     * @param logEntry message to log (nullable; null becomes an empty string)
+     */
+    public void addLog(Level level, String logEntry) {
+        String msg = (logEntry == null) ? "" : logEntry;
+        Level effectiveLevel = (level == null) ? Level.INFO : level;
+
+        String timestampedEntry = "[" + DATE_FORMAT.format(LocalDateTime.now()) + "] >> " + msg;
         writeLogToFile(timestampedEntry);
-        LOGGER.log(Level.INFO, logEntry);
-        ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager.getInstance();
-        if (!logManager.createLog(ch.framedev.lagersystem.managers.LogManager.LogLevel.INFO, logEntry)) {
-            LOGGER.log(Level.ERROR, "LogManager could not create log");
+        LOGGER.log(effectiveLevel, msg);
+
+        // Forward to the application's own LogManager (if available)
+        try {
+            ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager.getInstance();
+            if (!logManager.createLog(ch.framedev.lagersystem.managers.LogManager.LogLevel.INFO, msg)) {
+                LOGGER.log(Level.ERROR, "LogManager could not create log");
+            }
+        } catch (Exception ex) {
+            LOGGER.log(Level.ERROR, "Fehler beim Weiterleiten an den internen LogManager", ex);
         }
     }
 
+    /**
+     * Appends a single line to the configured log file.
+     * Uses CREATE + APPEND so the file is created automatically if missing.
+     */
     private void writeLogToFile(String logEntry) {
-        try (BufferedWriter writer = Files.newBufferedWriter(
-                logFilePath,
-                StandardCharsets.UTF_8,
-                StandardOpenOption.CREATE,
-                StandardOpenOption.APPEND
-        )) {
-            writer.write(logEntry);
-            writer.newLine();
-        } catch (IOException e) {
-            LOGGER.log(Level.ERROR, "Fehler beim Schreiben der Log-Datei: {}", logFilePath, e);
+        synchronized (fileLock) {
+            try (BufferedWriter writer = Files.newBufferedWriter(
+                    logFilePath,
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND
+            )) {
+                writer.write(logEntry);
+                writer.newLine();
+            } catch (IOException | SecurityException e) {
+                LOGGER.log(Level.ERROR, "Fehler beim Schreiben der Log-Datei: {}", logFilePath, e);
+            }
         }
     }
 }

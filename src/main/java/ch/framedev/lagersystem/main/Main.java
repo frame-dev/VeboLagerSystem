@@ -29,6 +29,7 @@ import java.util.Map;
  *
  * @author FrameDev
  */
+@SuppressWarnings("SameParameterValue")
 public class Main {
 
     private Main() {
@@ -100,7 +101,7 @@ public class Main {
     /**
      * Convert stack trace to string for logging
      */
-    private static String getStackTraceAsString(Exception e) {
+    private static String getStackTraceAsString(Throwable e) {
         StringBuilder sb = new StringBuilder();
         for (StackTraceElement element : e.getStackTrace()) {
             sb.append("\n  at ").append(element.toString());
@@ -548,12 +549,20 @@ public class Main {
      * Launch the main GUI
      */
     private static void launchGUI() {
-        System.out.println("\n🚀 Starte GUI...");
-        MainGUI mainGUI = new MainGUI();
-        mainGUI.display();
-        System.out.println("✓ Anwendung gestartet");
+        Runnable r = () -> {
+            System.out.println("\n🚀 Starte GUI...");
+            MainGUI mainGUI = new MainGUI();
+            mainGUI.display();
+            System.out.println("✓ Anwendung gestartet");
 
-        startScheduledTasks();
+            startScheduledTasks();
+        };
+
+        if (SwingUtilities.isEventDispatchThread()) {
+            r.run();
+        } else {
+            SwingUtilities.invokeLater(r);
+        }
     }
 
     /**
@@ -574,9 +583,9 @@ public class Main {
     private static SchedulerConfig loadSchedulerConfig() {
         return new SchedulerConfig(
                 getIntSetting("stock_check_interval", 30),
-                getBooleanSetting("enable_auto_stock_check"),
-                getBooleanSetting("enable_hourly_warnings"),
-                getBooleanSetting("enable_automatic_import_qrcode"),
+                getBooleanSetting("enable_auto_stock_check", true),
+                getBooleanSetting("enable_hourly_warnings", true),
+                getBooleanSetting("enable_automatic_import_qrcode", true),
                 getIntSetting("qrcode_import_interval", 10)
         );
     }
@@ -586,15 +595,22 @@ public class Main {
      */
     private static int getIntSetting(String key, int defaultValue) {
         String value = settings.getProperty(key);
-        return (value != null) ? Integer.parseInt(value) : defaultValue;
+        if (value == null) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
     }
 
     /**
      * Get boolean setting with a default value
      */
-    private static boolean getBooleanSetting(String key) {
+    private static boolean getBooleanSetting(String key, boolean defaultValue) {
         String value = settings.getProperty(key);
-        return value == null || Boolean.parseBoolean(value);
+        return value == null ? defaultValue : Boolean.parseBoolean(value);
     }
 
     /**
@@ -977,7 +993,7 @@ public class Main {
 
     private static void sleepQuietly() {
         try {
-            Thread.sleep((long) 300);
+            Thread.sleep((long) 100);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -1041,9 +1057,6 @@ public class Main {
 
                 // Launch GUI
                 launchGUI();
-
-                // Check for updates
-                checkForUpdatesOnce();
             }
         };
         worker.execute();

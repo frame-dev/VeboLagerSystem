@@ -17,10 +17,14 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.util.List;
 import java.util.Map;
 
 import static ch.framedev.lagersystem.main.Main.articleListGUI;
+import static ch.framedev.lagersystem.utils.ArticleUtils.getHeaderPanel;
 
 /**
  * Dialog for importing QR code scan data from the server.
@@ -33,6 +37,7 @@ public final class ArticleQrCodeDialog {
 
     /**
      * Displays the Article QR Code Dialog, which allows users to view and manage QR code scan data retrieved from the server. The dialog includes a header with a title and subtitle, a content area with an info banner and a table displaying the QR code data, and a bottom action bar with buttons for refreshing data, importing selected or all entries, adding to the article list, removing from inventory, adding to supplier orders, deleting entries, and closing the dialog. The dialog is modal and will block interaction with the parent component until closed.
+     *
      * @param parent the parent component relative to which the dialog will be displayed
      */
     public static void show(Component parent) {
@@ -44,7 +49,7 @@ public final class ArticleQrCodeDialog {
         dialog.setMinimumSize(new Dimension(900, 600));
 
         // ===== Header (gradient like other dialogs) =====
-        JPanel headerPanel = ArticleGUI.getHeaderPanel();
+        JPanel headerPanel = getHeaderPanel();
         headerPanel.setLayout(new BorderLayout());
 
         JPanel headerLeft = new JPanel();
@@ -77,13 +82,16 @@ public final class ArticleQrCodeDialog {
         closeHeaderBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         closeHeaderBtn.setPreferredSize(new Dimension(44, 44));
         closeHeaderBtn.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
                 closeHeaderBtn.setForeground(ThemeManager.getTextOnPrimaryColor());
                 closeHeaderBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 120));
                 closeHeaderBtn.setContentAreaFilled(true);
                 closeHeaderBtn.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
             }
-            @Override public void mouseExited(java.awt.event.MouseEvent e) {
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
                 closeHeaderBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
                 closeHeaderBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
                 closeHeaderBtn.setContentAreaFilled(false);
@@ -399,6 +407,8 @@ public final class ArticleQrCodeDialog {
         removeFromInventoryBtn.setVisible(false);
         buttonPanel.add(addToOrderBtn);
         addToOrderBtn.setVisible(false);
+        buttonPanel.add(deleteBtn);
+        deleteBtn.setVisible(false);
         buttonPanel.add(closeBtn);
 
         actionPanel.add(buttonPanel, BorderLayout.EAST);
@@ -430,6 +440,8 @@ public final class ArticleQrCodeDialog {
                     }
 
                     for (Map<String, Object> dataMap : qrCodeDataList) {
+                        if (dataMap.isEmpty()) continue;
+                        if (dataMap == null) continue;
                         Object[] rowData = new Object[6];
                         rowData[0] = dataMap.getOrDefault("timestamp", "N/A");
                         rowData[1] = dataMap.getOrDefault("data", "N/A");
@@ -473,82 +485,124 @@ public final class ArticleQrCodeDialog {
             int selectedCount = selectedRows.length;
             boolean hasSelection = selectedCount > 0;
 
+            // Reset all buttons to a safe baseline
             importBtn.setEnabled(false);
-            removeFromInventoryBtn.setEnabled(false);
+            importBtn.setVisible(false);
+
             importAllBtn.setEnabled(tableModel.getRowCount() > 0);
+            importAllBtn.setVisible(false);
+
+            addToArticleListBtn.setEnabled(false);
             addToArticleListBtn.setVisible(false);
+
+            removeFromInventoryBtn.setEnabled(false);
+            removeFromInventoryBtn.setVisible(false);
+
             addToOrderBtn.setEnabled(false);
             addToOrderBtn.setVisible(false);
 
-            boolean hasSellType = false;
-            boolean hasBuyType = false;
-            boolean hasOrderType = false;
-            boolean ownUse = false;
+            deleteBtn.setEnabled(false);
+            deleteBtn.setVisible(false);
 
-            if (hasSelection) {
-                ownUse = Boolean.parseBoolean(String.valueOf(qrTable.getValueAt(selectedRows[0], 4)));
-                boolean allSell = true;
-                boolean allBuy = true;
-                boolean allOrder = true;
-
-                for (int row : selectedRows) {
-                    String type = qrTable.getValueAt(row, 3).toString();
-                    if (!type.equalsIgnoreCase("sell")) allSell = false;
-                    if (!type.equalsIgnoreCase("buy")) allBuy = false;
-                    if (!type.equalsIgnoreCase("order")) allOrder = false;
-                }
-                hasSellType = allSell;
-                hasBuyType = allBuy;
-                hasOrderType = allOrder;
+            if (!hasSelection) {
+                statusLabel.setText("Bereit zum Importieren");
+                statusIcon.setForeground(ThemeManager.getSuccessColor());
+                return;
             }
 
-            if (selectedCount == 1 && ownUse) {
+            // Determine selection composition
+            boolean allSell = true;
+            boolean allBuy = true;
+            boolean allOrder = true;
+            boolean allOwnUseTrue = true;
+            boolean allOwnUseFalse = true;
+
+            for (int row : selectedRows) {
+                Object typeObj = qrTable.getValueAt(row, 3);
+                String type = typeObj == null ? "" : typeObj.toString().trim();
+
+                if (!type.equalsIgnoreCase("sell")) allSell = false;
+                if (!type.equalsIgnoreCase("buy")) allBuy = false;
+                if (!type.equalsIgnoreCase("order")) allOrder = false;
+
+                Object ownUseObj = qrTable.getValueAt(row, 4);
+                boolean ownUseVal = parseOwnUse(ownUseObj);
+                if (!ownUseVal) allOwnUseTrue = false;
+                if (ownUseVal) allOwnUseFalse = false;
+            }
+
+            boolean hasSellType = allSell;
+            boolean hasBuyType = allBuy;
+            boolean hasOrderType = allOrder;
+
+            // Rules:
+            // 1) Remove-from-inventory only makes sense for EXACTLY ONE row, type=sell, ownUse=true
+            if (selectedCount == 1 && hasSellType && allOwnUseTrue) {
                 removeFromInventoryBtn.setEnabled(true);
                 removeFromInventoryBtn.setVisible(true);
-                importBtn.setEnabled(false);
-                importBtn.setVisible(false);
+
+                deleteBtn.setEnabled(true);
+                deleteBtn.setVisible(true);
+
                 importAllBtn.setEnabled(false);
                 importAllBtn.setVisible(false);
-                addToArticleListBtn.setVisible(false);
-                addToOrderBtn.setEnabled(false);
+
                 statusLabel.setText("1 Eigenverbrauch-Datensatz ausgewählt");
-            } else if (hasSelection && hasBuyType) {
+                statusIcon.setForeground(ThemeManager.getErrorColor());
+                return;
+            }
+
+            // 2) BUY: allow import selected, import all, supplier order, delete
+            if (hasBuyType) {
                 importBtn.setEnabled(true);
                 importBtn.setVisible(true);
-                removeFromInventoryBtn.setEnabled(false);
-                removeFromInventoryBtn.setVisible(false);
-                importAllBtn.setEnabled(true);
-                importAllBtn.setVisible(true);
-                addToArticleListBtn.setVisible(false);
-                addToOrderBtn.setEnabled(true);
-                statusLabel.setText(selectedCount + " Einlagern-Datensatz" + (selectedCount > 1 ? "e" : "") + " ausgewählt");
-            } else if (hasSelection && hasSellType) {
-                removeFromInventoryBtn.setEnabled(false);
-                removeFromInventoryBtn.setVisible(false);
-                addToArticleListBtn.setVisible(true);
-                importBtn.setEnabled(false);
-                importBtn.setVisible(false);
-                importAllBtn.setEnabled(false);
-                importAllBtn.setVisible(false);
-                addToOrderBtn.setEnabled(false);
-                statusLabel.setText(selectedCount + " Verkauf-Datensatz" + (selectedCount > 1 ? "e" : "") + " ausgewählt");
-            } else if (hasSelection && hasOrderType) {
-                removeFromInventoryBtn.setEnabled(false);
-                removeFromInventoryBtn.setVisible(false);
-                addToOrderBtn.setVisible(true);
-                addToOrderBtn.setEnabled(true);
-                addToArticleListBtn.setVisible(false);
-                importBtn.setVisible(false);
-                importAllBtn.setVisible(false);
-                statusLabel.setText(selectedCount + " Bestell-Datensatz " + selectedCount + " ausgewählt");
-            } else {
-                importBtn.setEnabled(false);
-                removeFromInventoryBtn.setEnabled(false);
+
                 importAllBtn.setEnabled(tableModel.getRowCount() > 0);
-                addToArticleListBtn.setVisible(true);
-                addToOrderBtn.setEnabled(false);
-                statusLabel.setText(hasSelection ? "Gemischte Auswahl" : "Bereit zum Importieren");
+                importAllBtn.setVisible(true);
+
+                addToOrderBtn.setEnabled(true);
+                addToOrderBtn.setVisible(true);
+
+                deleteBtn.setEnabled(true);
+                deleteBtn.setVisible(true);
+
+                statusLabel.setText(selectedCount + " Einlagern-Datensatz" + (selectedCount > 1 ? "e" : "") + " ausgewählt");
+                statusIcon.setForeground(ThemeManager.getSuccessColor());
+                return;
             }
+
+            // 3) SELL (non-own-use): allow add-to-orderlist + delete
+            // Own-use sell rows are handled by rule (1) (single selection) or considered mixed for safety.
+            if (hasSellType && allOwnUseFalse) {
+                addToArticleListBtn.setEnabled(true);
+                addToArticleListBtn.setVisible(true);
+
+                deleteBtn.setEnabled(true);
+                deleteBtn.setVisible(true);
+
+                statusLabel.setText(selectedCount + " Verkauf-Datensatz" + (selectedCount > 1 ? "e" : "") + " ausgewählt");
+                statusIcon.setForeground(ThemeManager.getAccentColor());
+                return;
+            }
+
+            // 4) ORDER: allow supplier order + delete
+            if (hasOrderType) {
+                addToOrderBtn.setEnabled(true);
+                addToOrderBtn.setVisible(true);
+
+                deleteBtn.setEnabled(true);
+                deleteBtn.setVisible(true);
+
+                statusLabel.setText(selectedCount + " Bestell-Datensatz" + (selectedCount > 1 ? "e" : "") + " ausgewählt");
+                statusIcon.setForeground(ThemeManager.getAccentColor());
+                return;
+            }
+
+            // 5) Mixed selection: only deletion is safe
+            deleteBtn.setEnabled(true);
+            deleteBtn.setVisible(true);
+            statusLabel.setText("Gemischte Auswahl");
+            statusIcon.setForeground(ThemeManager.getWarningColor());
         });
 
         refreshBtn.addActionListener(e -> {
@@ -580,6 +634,9 @@ public final class ArticleQrCodeDialog {
                         int availableCount = 0;
                         if (qrCodeDataList != null && !qrCodeDataList.isEmpty()) {
                             for (Map<String, Object> dataMap : qrCodeDataList) {
+                                if (dataMap.isEmpty()) {
+                                    throw new IllegalArgumentException("dataMap is empty");
+                                }
                                 Object[] rowData = new Object[6];
                                 rowData[0] = dataMap.getOrDefault("timestamp", "N/A");
                                 rowData[1] = dataMap.getOrDefault("data", "N/A");
@@ -806,6 +863,23 @@ public final class ArticleQrCodeDialog {
         dialog.setVisible(true);
     }
 
+    private static boolean parseOwnUse(Object ownUseObj) {
+        if (ownUseObj == null) return false;
+        if (ownUseObj instanceof Boolean b) return b;
+        if (ownUseObj instanceof Number n) return n.intValue() != 0;
+
+        String s = ownUseObj.toString().trim();
+        if (s.isEmpty()) return false;
+
+        // Truthy Werte (Backend/Locale)
+        if (s.equalsIgnoreCase("true")) return true;
+        if (s.equalsIgnoreCase("yes") || s.equalsIgnoreCase("y")) return true;
+        if (s.equalsIgnoreCase("ja")) return true;
+        if (s.equals("1")) return true;
+
+        return false;
+    }
+
     private static Article retrieveParts(String[] parts) {
         String artikelNr = parts[0].replace("artikelNr:", "");
         String name = parts[1].replace("name:", "");
@@ -814,10 +888,11 @@ public final class ArticleQrCodeDialog {
         String buyPrice = parts[4].replace("buyPrice:", "");
         String vendor = parts[5].replace("vendor:", "");
         return new Article(artikelNr, name, details, 0, 0,
-                Double.parseDouble(buyPrice), Double.parseDouble(sellPrice), vendor);
+                Double.parseDouble(sellPrice), Double.parseDouble(buyPrice), vendor);
     }
 
     private static void styleButton(JButton button, Color bgColor, Color fgColor) {
+        if (button == null) return;
         Color hoverBg = ThemeManager.getButtonHoverColor(bgColor);
         Color pressedBg = ThemeManager.getButtonPressedColor(bgColor);
 
@@ -835,31 +910,38 @@ public final class ArticleQrCodeDialog {
         ));
 
         // remove previous listeners to avoid stacking styles
-        for (java.awt.event.MouseListener ml : button.getMouseListeners()) {
+        for (MouseListener ml : button.getMouseListeners()) {
             if (ml.getClass().getName().contains("ArticleQrCodeDialog")) {
                 button.removeMouseListener(ml);
             }
         }
 
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override public void mouseEntered(java.awt.event.MouseEvent e) {
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
                 button.setBackground(hoverBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(hoverBg.darker(), 1),
                         BorderFactory.createEmptyBorder(10, 16, 10, 16)
                 ));
             }
-            @Override public void mouseExited(java.awt.event.MouseEvent e) {
+
+            @Override
+            public void mouseExited(MouseEvent e) {
                 button.setBackground(bgColor);
                 button.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(bgColor.darker(), 1),
                         BorderFactory.createEmptyBorder(10, 16, 10, 16)
                 ));
             }
-            @Override public void mousePressed(java.awt.event.MouseEvent e) {
+
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
                 button.setBackground(pressedBg);
             }
-            @Override public void mouseReleased(java.awt.event.MouseEvent e) {
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
                 button.setBackground(button.contains(e.getPoint()) ? hoverBg : bgColor);
             }
         });

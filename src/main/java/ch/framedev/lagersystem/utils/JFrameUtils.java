@@ -1,18 +1,24 @@
 package ch.framedev.lagersystem.utils;
 
+import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.guis.SettingsGUI;
+import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.plaf.basic.ComboPopup;
+import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Utility class for creating and styling Swing components with a consistent look and feel across the application.
@@ -22,6 +28,17 @@ import java.awt.event.MouseListener;
  */
 @SuppressWarnings("DuplicatedCode")
 public class JFrameUtils {
+
+    /**
+     * ClientProperty key used to store and replace our internal button palette MouseListener.
+     * This prevents listener stacking without removing listeners added elsewhere.
+     */
+    private static final String CLIENT_PROP_PALETTE_LISTENER = "jframeutils.paletteListener";
+
+    /**
+     * Minimum column width used by {@link #adjustColumnWidths(JTable, JScrollPane, int[])}.
+     */
+    private static final int MIN_COLUMN_WIDTH = 60;
 
     /**
      * A custom JPanel that paints itself with rounded corners and a specified background color. This can be used to create visually appealing containers for other components, such as forms or sections within the application's windows.
@@ -55,34 +72,57 @@ public class JFrameUtils {
      * @param baseColumnWidths An array of integers representing the base widths for each column, used to calculate proportional widths. If fewer values are provided than columns, remaining columns will default to a base width of 100.
      */
     public static void adjustColumnWidths(JTable table, JScrollPane tableScrollPane, int[] baseColumnWidths) {
-        if (tableScrollPane == null || table.getColumnCount() == 0) return;
+        if (table == null || tableScrollPane == null) return;
+        if (table.getColumnCount() == 0) return;
 
-        int available = tableScrollPane.getViewport().getWidth();
+        // Ensure preferred widths are respected.
+        if (table.getAutoResizeMode() != JTable.AUTO_RESIZE_OFF) {
+            table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        }
+
+        int available = tableScrollPane.getViewport() != null ? tableScrollPane.getViewport().getWidth() : 0;
         if (available <= 0) available = tableScrollPane.getWidth();
         if (available <= 0) return;
 
-        int totalBase = 0;
-        for (int w : baseColumnWidths) totalBase += w;
+        int[] bases = (baseColumnWidths == null) ? new int[0] : baseColumnWidths;
 
         TableColumnModel tcm = table.getColumnModel();
         int colCount = tcm.getColumnCount();
+
+        // Compute total base width (falling back to 100 when not provided)
+        int totalBase = 0;
+        for (int i = 0; i < colCount; i++) {
+            int base = i < bases.length ? bases[i] : 100;
+            if (base < 1) base = 1;
+            totalBase += base;
+        }
+        if (totalBase <= 0) return;
 
         int used = 0;
         int[] newW = new int[colCount];
 
         for (int i = 0; i < colCount; i++) {
-            int base = i < baseColumnWidths.length ? baseColumnWidths[i] : 100;
-            int w = Math.max(60, (int) Math.round((base / (double) totalBase) * available));
+            int base = i < bases.length ? bases[i] : 100;
+            if (base < 1) base = 1;
+            int w = Math.max(MIN_COLUMN_WIDTH, (int) Math.round((base / (double) totalBase) * available));
             newW[i] = w;
             used += w;
         }
 
+        // Distribute rounding difference across columns so we match the available width.
         int diff = available - used;
         int idx = 0;
         while (diff != 0 && colCount > 0) {
-            newW[idx % colCount] += (diff > 0 ? 1 : -1);
-            diff += (diff > 0 ? -1 : 1);
+            int col = idx % colCount;
+            int next = newW[col] + (diff > 0 ? 1 : -1);
+            // Keep columns from shrinking below the minimum width.
+            if (next >= MIN_COLUMN_WIDTH) {
+                newW[col] = next;
+                diff += (diff > 0 ? -1 : 1);
+            }
             idx++;
+            // Safety to avoid pathological loops.
+            if (idx > colCount * 1000) break;
         }
 
         for (int i = 0; i < colCount; i++) {
@@ -96,6 +136,7 @@ public class JFrameUtils {
     }
 
     public static void styleTextField(JTextField field) {
+        if (field == null) return;
         field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
@@ -107,6 +148,7 @@ public class JFrameUtils {
     }
 
     public static void styleComboBox(JComboBox<String> combo) {
+        if (combo == null) return;
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
         Color border = ThemeManager.getInputBorderColor();
@@ -226,50 +268,12 @@ public class JFrameUtils {
         button.setBorderPainted(true);
         button.setContentAreaFilled(true);
         button.setOpaque(true);
-
-        Color defaultBg = ThemeManager.getAccentColor();
-        Color hoverBg = ThemeManager.getButtonHoverColor(defaultBg);
-        Color pressedBg = ThemeManager.getButtonPressedColor(defaultBg);
-
-        button.setBackground(defaultBg);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(defaultBg.darker(), 1),
-                BorderFactory.createEmptyBorder(9, 16, 9, 16)
-        ));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(hoverBg);
-                button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(hoverBg.darker(), 2),
-                        BorderFactory.createEmptyBorder(8, 15, 8, 15)
-                ));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(defaultBg);
-                button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(defaultBg.darker(), 1),
-                        BorderFactory.createEmptyBorder(9, 16, 9, 16)
-                ));
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                button.setBackground(pressedBg);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                button.setBackground(button.contains(e.getPoint()) ? hoverBg : defaultBg);
-            }
-        });
-
+        // Apply default accent palette (hover/pressed) without stacking listeners.
+        applyButtonPalette(button, ThemeManager.getAccentColor());
         return button;
     }
 
@@ -279,35 +283,11 @@ public class JFrameUtils {
         button.setBorderPainted(true);
         button.setContentAreaFilled(true);
         button.setOpaque(true);
-
-        Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
-        Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
-
-        button.setBackground(baseBg);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(baseBg.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 20, 10, 20)
-        ));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        button.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseEntered(java.awt.event.MouseEvent evt) {
-                if (button.isEnabled()) button.setBackground(hoverBg);
-            }
-            public void mouseExited(java.awt.event.MouseEvent evt) {
-                if (button.isEnabled()) button.setBackground(baseBg);
-            }
-            public void mousePressed(java.awt.event.MouseEvent evt) {
-                if (button.isEnabled()) button.setBackground(pressedBg);
-            }
-            public void mouseReleased(java.awt.event.MouseEvent evt) {
-                if (!button.isEnabled()) return;
-                button.setBackground(button.contains(evt.getPoint()) ? hoverBg : baseBg);
-            }
-        });
-
+        applyButtonPalette(button, baseBg);
         return button;
     }
 
@@ -317,6 +297,8 @@ public class JFrameUtils {
      * @param baseBg The base background color to use for the button (e.g., primary, accent, error)
      */
     public static void applyButtonPalette(JButton button, Color baseBg) {
+        if (button == null || baseBg == null) return;
+
         Color hoverBg = ThemeManager.getButtonHoverColor(baseBg);
         Color pressedBg = ThemeManager.getButtonPressedColor(baseBg);
 
@@ -326,14 +308,13 @@ public class JFrameUtils {
                 BorderFactory.createEmptyBorder(10, 18, 10, 18)
         ));
 
-        // Remove previous palette listeners (avoid stacking)
-        for (MouseListener ml : button.getMouseListeners()) {
-            if (ml instanceof MouseAdapter) {
-                button.removeMouseListener(ml);
-            }
+        // Remove only the listener previously installed by this utility (avoid breaking external listeners).
+        Object existing = button.getClientProperty(CLIENT_PROP_PALETTE_LISTENER);
+        if (existing instanceof MouseListener ml) {
+            button.removeMouseListener(ml);
         }
 
-        button.addMouseListener(new MouseAdapter() {
+        MouseAdapter paletteListener = new MouseAdapter() {
             @Override public void mouseEntered(MouseEvent e) { if (button.isEnabled()) button.setBackground(hoverBg); }
             @Override public void mouseExited(MouseEvent e)  { if (button.isEnabled()) button.setBackground(baseBg); }
             @Override public void mousePressed(MouseEvent e) { if (button.isEnabled()) button.setBackground(pressedBg); }
@@ -341,7 +322,10 @@ public class JFrameUtils {
                 if (!button.isEnabled()) return;
                 button.setBackground(button.contains(e.getPoint()) ? hoverBg : baseBg);
             }
-        });
+        };
+
+        button.putClientProperty(CLIENT_PROP_PALETTE_LISTENER, paletteListener);
+        button.addMouseListener(paletteListener);
     }
 
     public static JButton createPrimaryButton(String text) {
@@ -429,5 +413,115 @@ public class JFrameUtils {
         headerPanel.setOpaque(false);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(18, 32, 18, 32));
         return headerPanel;
+    }
+
+    /**
+     * This method retrieves the currently selected articles from the JTable, converting the selected rows into Article objects.
+     *
+     * @return A list of Article objects corresponding to the selected rows in the table. If no rows are selected, returns an empty list.
+     */
+    public static List<Article> getSelectedArticles(JTable articleTable) {
+        int[] selectedRows = articleTable.getSelectedRows();
+        if (selectedRows == null || selectedRows.length == 0) {
+            return Collections.emptyList();
+        }
+
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        List<Article> selectedArticles = new ArrayList<>();
+        for (int selectedRow : selectedRows) {
+            int modelRow = articleTable.convertRowIndexToModel(selectedRow);
+            Object articleNumber = model.getValueAt(modelRow, 0);
+            Object name = model.getValueAt(modelRow, 1);
+            Object details = model.getValueAt(modelRow, 3);
+            Object stockQuantity = model.getValueAt(modelRow, 4);
+            Object minStockLevel = model.getValueAt(modelRow, 5);
+            Object sellPrice = model.getValueAt(modelRow, 6);
+            if (sellPrice instanceof String str) {
+                sellPrice = str.replace(" CHF", "").trim();
+            }
+            Object purchasePrice = model.getValueAt(modelRow, 7);
+            if (purchasePrice instanceof String str) {
+                purchasePrice = str.replace(" CHF", "").trim();
+            }
+            Object vendorName = model.getValueAt(modelRow, 8);
+
+            Article article = new Article(
+                    String.valueOf(articleNumber),
+                    String.valueOf(name),
+                    String.valueOf(details),
+                    toInt(stockQuantity),
+                    toInt(minStockLevel),
+                    toDouble(sellPrice),
+                    toDouble(purchasePrice),
+                    String.valueOf(vendorName)
+            );
+            selectedArticles.add(article);
+        }
+        return selectedArticles;
+    }
+
+    public static void exportSelectedArticles(JFrame frame, JTable articleTable) {
+        java.util.List<Article> selected = getSelectedArticles(articleTable);
+        if (selected.isEmpty()) {
+            JOptionPane.showMessageDialog(frame,
+                    "Bitte wählen Sie mindestens einen Artikel aus.",
+                    "Keine Auswahl",
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+            return;
+        }
+
+        Object[] options = {"CSV", "PDF", "Abbrechen"};
+        int choice = JOptionPane.showOptionDialog(frame,
+                "Auswahl exportieren als:",
+                "Export",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                Main.iconSmall,
+                options,
+                options[0]);
+        if (choice == 0) {
+            exportArticlesToCsv(selected);
+        } else if (choice == 1) {
+            exportArticlesToPdf(selected);
+        }
+    }
+
+    private static void exportArticlesToCsv(java.util.List<Article> articles) {
+        ArticleExporter.exportArticlesToCsv(articles);
+    }
+
+    private static void exportArticlesToPdf(List<Article> articles) {
+        ArticleExporter.exportArticlesToPdf(articles);
+    }
+
+    private static int toInt(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String str) {
+            str = str.replace(" CHF", "").trim();
+            try {
+                return Integer.parseInt(str.trim());
+            } catch (NumberFormatException ignored) {
+                return 0;
+            }
+        }
+        return 0;
+    }
+
+    private static double toDouble(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value instanceof String str) {
+            str = str.replace(" CHF", "").trim();
+            try {
+                return Double.parseDouble(str.trim());
+            } catch (NumberFormatException ignored) {
+                return 0.0;
+            }
+        }
+        return 0.0;
     }
 }

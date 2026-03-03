@@ -215,6 +215,7 @@ public class Article {
      * @return the Article category
      */
     public String getCategory() {
+        if (articleNumber == null) return null;
         return ArticleUtils.getCategoryForArticle(articleNumber);
     }
 
@@ -224,6 +225,7 @@ public class Article {
      * @return QR code data payload
      */
     public String getQrCodeData() {
+        if (articleNumber == null) throw new NullPointerException("Article number cannot be null");
         return "artikelNr:" + articleNumber + ";" +
                 "name:" + name + ";" +
                 "details:" + details + ";" +

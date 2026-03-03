@@ -71,11 +71,11 @@ public class ArticleManager {
     }
 
     /**
-     * Get singleton instance
+     * Get a singleton instance
      *
      * @return ArticleManager instance
      */
-    public static ArticleManager getInstance() {
+    public static synchronized ArticleManager getInstance() {
         if (instance == null) {
             instance = new ArticleManager();
         }
@@ -105,8 +105,13 @@ public class ArticleManager {
         articleCache.remove(articleNumber);
         articleNumberIndex.remove(articleNumber);
         // Also need to remove from name cache if present
-        nameCache.entrySet().removeIf(entry ->
-                entry.getValue().getArticleNumber().equals(articleNumber));
+        synchronized (nameCache) {
+            nameCache.entrySet().removeIf(entry -> {
+                Article a = entry.getValue();
+                String num = a == null ? null : a.getArticleNumber();
+                return articleNumber != null && articleNumber.equals(num);
+            });
+        }
         invalidateAllArticlesList();
     }
 
@@ -140,10 +145,15 @@ public class ArticleManager {
      * @param article Article to cache
      */
     private void cacheArticle(Article article) {
-        if (article != null) {
-            articleCache.put(article.getArticleNumber(), article);
-            nameCache.put(article.getName(), article);
-            articleNumberIndex.add(article.getArticleNumber());
+        if (article == null) return;
+        String num = article.getArticleNumber();
+        String name = article.getName();
+        if (num != null && !num.isBlank()) {
+            articleCache.put(num, article);
+            articleNumberIndex.add(num);
+        }
+        if (name != null && !name.isBlank()) {
+            nameCache.put(name, article);
         }
     }
 
@@ -184,6 +194,7 @@ public class ArticleManager {
      * @return true if exists, false otherwise
      */
     public boolean existsArticle(String articleNumber) {
+        if (articleNumber == null || articleNumber.isBlank()) return false;
         // Fast-path: cache check
         if (articleCache.containsKey(articleNumber) || articleNumberIndex.contains(articleNumber)) {
             return true;
@@ -201,7 +212,10 @@ public class ArticleManager {
         }
 
         String sql = "SELECT 1 FROM " + DatabaseManager.TABLE_ARTICLES + " WHERE articleNumber = ? LIMIT 1;";
-        try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber})) {
+        ResultSet resultSet = null;
+        try {
+            resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber});
+            if (resultSet == null) return false;
             boolean exists = resultSet.next();
             if (exists) {
                 articleNumberIndex.add(articleNumber);
@@ -211,6 +225,8 @@ public class ArticleManager {
             logger.error("Error while checking if article with number '{}' exists", articleNumber, e);
             Main.logUtils.addLog("Error while checking if article with number " + articleNumber + " exists");
             return false;
+        } finally {
+            databaseManager.closeQuery(resultSet);
         }
     }
 
@@ -221,6 +237,7 @@ public class ArticleManager {
      * @return true if successful, false otherwise
      */
     public boolean insertArticle(Article article) {
+        if (article == null) throw new IllegalArgumentException("Article cannot be null");
         if (existsArticle(article.getArticleNumber())) {
             Main.logUtils.addLog("Article with the number " + article.getArticleNumber() + " already exists!");
             return false;
@@ -245,6 +262,7 @@ public class ArticleManager {
     }
 
     private void insertVendorForArticle(Article article) {
+        if (article == null) throw new IllegalArgumentException("Article cannot be null");
         VendorManager vendorManager = VendorManager.getInstance();
         if (!vendorManager.existsVendor(article.getVendorName())) {
             Vendor vendor = new Vendor(article.getVendorName(), "", "", "", "", new ArrayList<>(), 0.0);
@@ -266,6 +284,7 @@ public class ArticleManager {
      * @return true if successful, false otherwise
      */
     public boolean updateArticle(Article article) {
+        if (article == null) throw new IllegalArgumentException("Article cannot be null");
         if (!existsArticle(article.getArticleNumber())) {
             return false;
         }
@@ -295,6 +314,7 @@ public class ArticleManager {
      * @return true if successful, false otherwise
      */
     public boolean deleteArticleByNumber(String articleNumber) {
+        if (articleNumber == null) throw new IllegalArgumentException("Article number cannot be null");
         if (!existsArticle(articleNumber)) {
             return false;
         }
@@ -319,6 +339,7 @@ public class ArticleManager {
      * @return true if successful, false otherwise
      */
     public boolean deleteArticle(Article article) {
+        if (article == null) throw new IllegalArgumentException("Article cannot be null");
         if (existsArticle(article.getArticleNumber())) {
             return deleteArticleByNumber(article.getArticleNumber());
         }
@@ -332,6 +353,7 @@ public class ArticleManager {
      * @return Article object or null if not found
      */
     public Article getArticleByNumber(String articleNumber) {
+        if (articleNumber == null) throw new IllegalArgumentException("Article number cannot be null");
         Article cached = articleCache.get(articleNumber);
         if (cached != null) {
             logger.debug("Article {} retrieved from cache", articleNumber);
@@ -339,16 +361,22 @@ public class ArticleManager {
         }
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_ARTICLES + " WHERE articleNumber = ? LIMIT 1;";
-        try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber})) {
+        ResultSet resultSet = null;
+        try {
+            resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber});
+            if (resultSet == null) return null;
             return getArticle(resultSet);
         } catch (Exception e) {
             logger.error("Error while getting article with number '{}'", articleNumber, e);
             Main.logUtils.addLog("Error while getting article with number '" + articleNumber + "'");
             return null;
+        } finally {
+            databaseManager.closeQuery(resultSet);
         }
     }
 
     private Article getArticle(ResultSet resultSet) throws SQLException {
+        if(resultSet == null) return null;
         if (resultSet.next()) {
             Article article = new Article(
                     resultSet.getString("articleNumber"),
@@ -374,6 +402,7 @@ public class ArticleManager {
      * @return Article object or null if not found
      */
     public Article getArticleByName(String name) {
+        if(name == null) throw new IllegalArgumentException("Article name cannot be null");
         Article cached = nameCache.get(name);
         if (cached != null) {
             logger.debug("Article '{}' retrieved from name cache", name);
@@ -381,12 +410,17 @@ public class ArticleManager {
         }
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_ARTICLES + " WHERE name = ? LIMIT 1;";
-        try (ResultSet resultSet = databaseManager.executePreparedQuery(sql, new Object[]{name})) {
+        ResultSet resultSet = null;
+        try {
+            resultSet = databaseManager.executePreparedQuery(sql, new Object[]{name});
+            if (resultSet == null) return null;
             return getArticle(resultSet);
         } catch (Exception e) {
             logger.error("Error while getting article with name '{}'", name, e);
             Main.logUtils.addLog("Error while getting article with name '" + name + "'");
             return null;
+        } finally {
+            databaseManager.closeQuery(resultSet);
         }
     }
 
@@ -409,7 +443,11 @@ public class ArticleManager {
         }
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_ARTICLES + ";";
-        try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
+        ResultSet resultSet = null;
+        try {
+            resultSet = databaseManager.executeQuery(sql, new Object[]{});
+            if (resultSet == null) return List.of();
+
             List<Article> articles = new ArrayList<>();
             while (resultSet.next()) {
                 Article article = new Article(
@@ -426,24 +464,29 @@ public class ArticleManager {
                 cacheArticle(article);
             }
 
+            // Ensure the index is synchronized with the freshly loaded data
+            articleNumberIndex.clear();
+            for (Article a : articles) {
+                String num = a == null ? null : a.getArticleNumber();
+                if (num != null && !num.isBlank()) articleNumberIndex.add(num);
+            }
+
             allArticlesLock.writeLock().lock();
             try {
-                allArticlesCache = articles;
+                allArticlesCache = Collections.unmodifiableList(new ArrayList<>(articles));
                 allArticlesCacheTime = System.currentTimeMillis();
                 logger.debug("All articles cached ({} articles)", articles.size());
             } finally {
                 allArticlesLock.writeLock().unlock();
             }
 
-            // Ensure the index is synchronized with the freshly loaded data
-            articleNumberIndex.clear();
-            articles.forEach(a -> articleNumberIndex.add(a.getArticleNumber()));
-
             return new ArrayList<>(articles);
         } catch (Exception e) {
             logger.error("Error while getting all articles", e);
             Main.logUtils.addLog("Error while getting all articles");
-            return null;
+            return List.of();
+        } finally {
+            databaseManager.closeQuery(resultSet);
         }
     }
 
@@ -455,6 +498,7 @@ public class ArticleManager {
      * @return true if successful, false otherwise
      */
     public boolean removeFromStock(String articleNumber, int quantity) {
+        if(articleNumber == null) throw new IllegalArgumentException("Article number cannot be null");
         Article article = getArticleByNumber(articleNumber);
         if (article == null) {
             return false;
@@ -475,6 +519,7 @@ public class ArticleManager {
      * @return true if successful, false otherwise
      */
     public boolean addToStock(String articleNumber, int quantity) {
+        if(articleNumber == null) throw new IllegalArgumentException("Article number cannot be null");
         Article article = getArticleByNumber(articleNumber);
         if (article == null) {
             return false;

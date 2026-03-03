@@ -206,6 +206,7 @@ public class CompleteOrderGUI extends JFrame {
     }
 
     private void attachListeners() {
+        if(ordersList == null) return;
         ordersList.addListSelectionListener(e -> {
             OrderListItem item = ordersList.getSelectedValue();
             if (item != null && item.order != null) {
@@ -252,6 +253,7 @@ public class CompleteOrderGUI extends JFrame {
     }
 
     private void showOrderDetails(Order order) {
+        if(order == null) return;
         detailsPanel.removeAll();
         detailsPanel.setLayout(new GridBagLayout());
 
@@ -308,6 +310,7 @@ public class CompleteOrderGUI extends JFrame {
     }
 
     private void addDetailRow(JPanel panel, GridBagConstraints gbc, String label, String value, Color accentColor) {
+        if(panel == null || gbc == null || label == null || value == null || accentColor == null) return;
         JPanel rowPanel = new JPanel(new BorderLayout(10, 0));
         rowPanel.setOpaque(false);
         rowPanel.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
@@ -351,6 +354,7 @@ public class CompleteOrderGUI extends JFrame {
         List<String> shortages = new ArrayList<>();
 
         for (Article article : articles) {
+            if(article == null) continue;
             int ordered = selected.getOrderedArticles().get(article.getArticleNumber());
             int stock = article.getStockQuantity();
 
@@ -464,6 +468,7 @@ public class CompleteOrderGUI extends JFrame {
     }
 
     private void updateUserAndLog(Order selected) {
+        if(selected == null) return;
         UserManager userManager = UserManager.getInstance();
         String sender = safe(selected.getSenderName()).toLowerCase();
 

@@ -97,7 +97,7 @@
     "minStockLevel": 0,
     "sellPrice": 2.4,
     "buyPrice": 2.18,
-    "vendorName": "SUVA"
+    "vendorName": "Thomi"
   },
   {
     "number": "1107",
@@ -107,7 +107,7 @@
     "minStockLevel": 2,
     "sellPrice": 119.9,
     "buyPrice": 109.0,
-    "vendorName": "SUVA"
+    "vendorName": "Thomi"
   },
   {
     "number": "1108",
@@ -1111,7 +1111,7 @@
   },
   {
     "number": "3221",
-    "name": "Schimmelentferner germex C",
+    "name": "Schimmelentferner Germex C",
     "details": "10 lt.",
     "stockQuantity": 0,
     "minStockLevel": 0,

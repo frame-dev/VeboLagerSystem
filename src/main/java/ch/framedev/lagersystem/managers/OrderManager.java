@@ -6,19 +6,16 @@ import ch.framedev.lagersystem.main.Main;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
 public class OrderManager {
 
     private final Logger logger = LogManager.getLogger(OrderManager.class);
 
-    private static OrderManager instance;
+    private static volatile OrderManager instance;
     private final DatabaseManager databaseManager;
 
     // ==================== Cache ====================
@@ -32,15 +29,22 @@ public class OrderManager {
     }
 
     public static OrderManager getInstance() {
-        if (instance == null) {
-            instance = new OrderManager();
+        OrderManager local = instance;
+        if (local == null) {
+            synchronized (OrderManager.class) {
+                local = instance;
+                if (local == null) {
+                    local = new OrderManager();
+                    instance = local;
+                }
+            }
         }
-        return instance;
+        return local;
     }
 
     private void createTable() {
         String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_ORDERS + " (" +
-                "orderId TEXT," +
+                "orderId TEXT UNIQUE," +
                 "orderedArticles TEXT," +
                 "receiverName TEXT," +
                 "receiverKontoNumber TEXT," +
@@ -53,36 +57,80 @@ public class OrderManager {
         databaseManager.executeUpdate(sql);
     }
 
-    public boolean existsOrder(String orderId) {
-        if (orderId == null) return false;
-        // prefer cache
-        if (cache.containsKey(orderId)) return true;
+    private static String normalizeId(String orderId) {
+        if (orderId == null) return null;
+        String id = orderId.trim();
+        return id.isEmpty() ? null : id;
+    }
 
-        String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + " WHERE orderId = '" + orderId + "';";
-        try (var resultSet = databaseManager.executeQuery(sql)) {
+    private static String serializeOrderedArticles(Map<String, Integer> orderedArticles) {
+        if (orderedArticles == null || orderedArticles.isEmpty()) return "";
+        return orderedArticles.entrySet().stream()
+                .filter(e -> e.getKey() != null)
+                .map(e -> e.getKey().trim() + ":" + Math.max(0, e.getValue() == null ? 0 : e.getValue()))
+                .collect(Collectors.joining(","));
+    }
+
+    private static Map<String, Integer> parseOrderedArticles(String orderedArticlesStr) {
+        Map<String, Integer> orderedArticles = new HashMap<>();
+        if (orderedArticlesStr == null || orderedArticlesStr.isBlank()) {
+            return orderedArticles;
+        }
+        String[] articlesArray = orderedArticlesStr.split(",");
+        for (String articleEntry : articlesArray) {
+            if (articleEntry == null || articleEntry.isBlank()) continue;
+            String[] parts = articleEntry.split(":", 2);
+            if (parts.length != 2) continue;
+            String articleNumber = parts[0].trim();
+            if (articleNumber.isEmpty()) continue;
+            try {
+                int quantity = Integer.parseInt(parts[1].trim());
+                orderedArticles.put(articleNumber, quantity);
+            } catch (NumberFormatException ignored) {
+                // skip malformed quantity
+            }
+        }
+        return orderedArticles;
+    }
+
+    private void invalidateAllOrdersCache() {
+        allOrdersCache = null;
+        allOrdersCacheTime = 0L;
+    }
+
+    public boolean existsOrder(String orderId) {
+        String id = normalizeId(orderId);
+        if (id == null) return false;
+        // prefer cache
+        if (cache.containsKey(id)) return true;
+
+        String sql = "SELECT 1 FROM " + DatabaseManager.TABLE_ORDERS + " WHERE orderId = ? LIMIT 1;";
+        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{id})) {
             return resultSet.next();
         } catch (Exception e) {
-            logger.error("Error while checking if order with id '{}'", orderId, e);
-            Main.logUtils.addLog("Error while checking if order with id '" + orderId + "'");
+            logger.error("Error while checking if order with id '{}'", id, e);
+            Main.logUtils.addLog("Error while checking if order with id '" + id + "'");
             return false;
         }
     }
 
     public boolean insertOrder(Order order) {
-        if (existsOrder(order.getOrderId())) {
+        if (order == null) return false;
+        String id = normalizeId(order.getOrderId());
+        if (id == null) return false;
+
+        if (existsOrder(id)) {
             return false;
         }
-        StringBuilder articlesBuilder = new StringBuilder();
-        order.getOrderedArticles().forEach((articleNumber, quantity) ->
-                articlesBuilder.append(articleNumber).append(":").append(quantity).append(","));
-        if (!articlesBuilder.isEmpty()) {
-            articlesBuilder.setLength(articlesBuilder.length() - 1); // Remove trailing comma
-        }
+
+        String articlesStr = serializeOrderedArticles(order.getOrderedArticles());
+
         String sql = "INSERT INTO " + DatabaseManager.TABLE_ORDERS + " (orderId, orderedArticles, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber, department, status) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
-                order.getOrderId(),
-                articlesBuilder.toString(),
+                id,
+                articlesStr,
                 order.getReceiverName(),
                 order.getReceiverKontoNumber(),
                 order.getOrderDate(),
@@ -91,35 +139,37 @@ public class OrderManager {
                 order.getDepartment(),
                 order.getStatus()
         });
-        if(result) {
-            Main.logUtils.addLog("Order with id '" + order.getOrderId() + "' inserted");
-            // update cache
-            cache.put(order.getOrderId(), order);
-            allOrdersCache = null;
-            allOrdersCacheTime = 0L;
+
+        if (result) {
+            Main.logUtils.addLog("Order with id '" + id + "' inserted");
+            cache.put(id, order);
+            invalidateAllOrdersCache();
             return true;
-        } else {
-            logger.error("Error while inserting order with id '{}'", order.getOrderId());
-            Main.logUtils.addLog("Error while inserting order with id '" + order.getOrderId() + "'");
-            return false;
         }
+
+        logger.error("Error while inserting order with id '{}'", id);
+        Main.logUtils.addLog("Error while inserting order with id '" + id + "'");
+        return false;
     }
 
     public boolean updateOrder(Order order) {
-        if (!existsOrder(order.getOrderId())) {
-            Main.logUtils.addLog("Order with id '" + order.getOrderId() + "' does not exist");
+        if (order == null) return false;
+        String id = normalizeId(order.getOrderId());
+        if (id == null) return false;
+
+        if (!existsOrder(id)) {
+            Main.logUtils.addLog("Order with id '" + id + "' does not exist");
             return false;
         }
-        StringBuilder articlesBuilder = new StringBuilder();
-        order.getOrderedArticles().forEach((articleNumber, quantity) ->
-                articlesBuilder.append(articleNumber).append(":").append(quantity).append(","));
-        if (!articlesBuilder.isEmpty()) {
-            articlesBuilder.setLength(articlesBuilder.length() - 1); // Remove trailing comma
-        }
-        String sql = "UPDATE " + DatabaseManager.TABLE_ORDERS + " SET orderedArticles = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?, status = ?" +
+
+        String articlesStr = serializeOrderedArticles(order.getOrderedArticles());
+
+        String sql = "UPDATE " + DatabaseManager.TABLE_ORDERS +
+                " SET orderedArticles = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?, status = ? " +
                 "WHERE orderId = ?;";
-        boolean result =  databaseManager.executePreparedUpdate(sql, new Object[]{
-                articlesBuilder.toString(),
+
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
+                articlesStr,
                 order.getReceiverName(),
                 order.getReceiverKontoNumber(),
                 order.getOrderDate(),
@@ -127,55 +177,59 @@ public class OrderManager {
                 order.getSenderKontoNumber(),
                 order.getDepartment(),
                 order.getStatus(),
-                order.getOrderId()
+                id
         });
-        if(result) {
-            Main.logUtils.addLog("Order with id '" + order.getOrderId() + "' updated");
-            // update cache
-            cache.put(order.getOrderId(), order);
-            allOrdersCache = null;
-            allOrdersCacheTime = 0L;
+
+        if (result) {
+            Main.logUtils.addLog("Order with id '" + id + "' updated");
+            cache.put(id, order);
+            invalidateAllOrdersCache();
             return true;
-        } else {
-            logger.error("Error while updating order with id '{}'", order.getOrderId());
-            Main.logUtils.addLog("Error while updating order with id '" + order.getOrderId() + "'");
-            return false;
         }
+
+        logger.error("Error while updating order with id '{}'", id);
+        Main.logUtils.addLog("Error while updating order with id '" + id + "'");
+        return false;
     }
 
     public boolean deleteOrder(String orderId) {
-        if (!existsOrder(orderId)) {
+        String id = normalizeId(orderId);
+        if (id == null) return false;
+
+        if (!existsOrder(id)) {
             return false;
         }
+
         String sql = "DELETE FROM " + DatabaseManager.TABLE_ORDERS + " WHERE orderId = ?;";
-        if( databaseManager.executePreparedUpdate(sql, new Object[]{orderId})) {
-            Main.logUtils.addLog("Order with id '" + orderId + "' deleted");
-            // remove from cache
-            cache.remove(orderId);
-            allOrdersCache = null;
-            allOrdersCacheTime = 0L;
+        boolean ok = databaseManager.executePreparedUpdate(sql, new Object[]{id});
+
+        if (ok) {
+            Main.logUtils.addLog("Order with id '" + id + "' deleted");
+            cache.remove(id);
+            invalidateAllOrdersCache();
             return true;
-        } else {
-            logger.error("Error while deleting order with id '{}'", orderId);
-            Main.logUtils.addLog("Error while deleting order with id '" + orderId + "'");
-            return false;
         }
+
+        logger.error("Error while deleting order with id '{}'", id);
+        Main.logUtils.addLog("Error while deleting order with id '" + id + "'");
+        return false;
     }
 
     public Order getOrder(String orderId) {
-        if (orderId == null) return null;
-        // try cache first
-        Order cached = cache.get(orderId);
+        String id = normalizeId(orderId);
+        if (id == null) return null;
+
+        Order cached = cache.get(id);
         if (cached != null) return cached;
 
-        String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + " WHERE orderId = '" + orderId + "';";
-        try (var resultSet = databaseManager.executeQuery(sql)) {
+        String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + " WHERE orderId = ?;";
+        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{id})) {
             if (resultSet.next()) {
                 String orderedArticlesStr = resultSet.getString("orderedArticles");
-                var orderedArticles = getOrderedArticles(orderedArticlesStr);
+                Map<String, Integer> orderedArticles = parseOrderedArticles(orderedArticlesStr);
                 Order o = new Order(
                         resultSet.getString("orderId"),
-                        orderedArticles,
+                        new java.util.HashMap<>(orderedArticles),
                         resultSet.getString("receiverName"),
                         resultSet.getString("receiverKontoNumber"),
                         resultSet.getString("orderDate"),
@@ -184,30 +238,14 @@ public class OrderManager {
                         resultSet.getString("department"),
                         resultSet.getString("status")
                 );
-                cache.put(orderId, o);
+                cache.put(id, o);
                 return o;
             }
         } catch (Exception e) {
-            logger.error("Error while checking if order with id '{}'", orderId, e);
-            Main.logUtils.addLog("Error while checking if order with id '" + orderId + "'");
+            logger.error("Error while retrieving order with id '{}'", id, e);
+            Main.logUtils.addLog("Error while retrieving order with id '" + id + "'");
         }
         return null;
-    }
-
-    private static HashMap<String, Integer> getOrderedArticles(String orderedArticlesStr) {
-        var orderedArticles = new HashMap<String, Integer>();
-        if (orderedArticlesStr != null && !orderedArticlesStr.isEmpty()) {
-            String[] articlesArray = orderedArticlesStr.split(",");
-            for (String articleEntry : articlesArray) {
-                String[] parts = articleEntry.split(":");
-                if (parts.length == 2) {
-                    String articleNumber = parts[0].trim();
-                    int quantity = Integer.parseInt(parts[1].trim());
-                    orderedArticles.put(articleNumber, quantity);
-                }
-            }
-        }
-        return orderedArticles;
     }
 
     public List<Order> getOrders() {
@@ -220,10 +258,10 @@ public class OrderManager {
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + ";";
         try (var resultSet = databaseManager.executeQuery(sql)) {
-            var orders = new ArrayList<Order>();
+            List<Order> orders = new ArrayList<>();
             while (resultSet.next()) {
                 String orderedArticlesStr = resultSet.getString("orderedArticles");
-                var orderedArticles = getOrderedArticles(orderedArticlesStr);
+                Map<String, Integer> orderedArticles = parseOrderedArticles(orderedArticlesStr);
                 Order o = new Order(
                         resultSet.getString("orderId"),
                         orderedArticles,
@@ -241,7 +279,7 @@ public class OrderManager {
             }
             allOrdersCache = Collections.unmodifiableList(orders);
             allOrdersCacheTime = System.currentTimeMillis();
-            return orders;
+            return allOrdersCache;
         } catch (Exception e) {
             logger.error("Error while checking if orders in Database", e);
             Main.logUtils.addLog("Error while checking if orders in Database");
@@ -258,7 +296,9 @@ public class OrderManager {
             if(article == null) {
                 article = ArticleManager.getInstance().getArticleByNumber(entry.getKey());
             }
-            articles.add(article);
+            if (article != null) {
+                articles.add(article);
+            }
         }
         return articles;
     }
@@ -268,7 +308,6 @@ public class OrderManager {
      */
     public void clearCache() {
         cache.clear();
-        allOrdersCache = null;
-        allOrdersCacheTime = 0L;
+        invalidateAllOrdersCache();
     }
 }

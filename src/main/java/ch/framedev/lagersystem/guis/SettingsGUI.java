@@ -7,6 +7,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.*;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
+import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.SettingsUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.LogManager;
@@ -126,7 +127,7 @@ public class SettingsGUI extends JFrame {
      * Standard-Schriftfamilie, falls keine Einstellung vorhanden ist.
      */
     public static final String DEFAULT_FONT_STYLE = "Dialog";
-    private static final String DEFAULT_SERVER_URL = "https://framedev.ch/vebo/scans.json";
+    private static final String DEFAULT_SERVER_URL = "https://framedev.ch/vebo";
 
     /**
      * Aktuell verwendete Tabellenschriftgröße (px). Wird u.a. für Vorschau und Tabellen-UI genutzt.
@@ -229,7 +230,13 @@ public class SettingsGUI extends JFrame {
         JPanel mainContainer = new JPanel(new BorderLayout());
         mainContainer.setBackground(ThemeManager.getBackgroundColor());
 
-        mainContainer.add(createHeaderPanel(), BorderLayout.NORTH);
+        // ===== Top area (Header) – VendorGUI-style card =====
+        JPanel topPaddingWrapper = new JPanel(new BorderLayout());
+        topPaddingWrapper.setOpaque(false);
+        // single consistent outer padding
+        topPaddingWrapper.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
+        topPaddingWrapper.add(createHeaderPanel(), BorderLayout.CENTER);
+        mainContainer.add(topPaddingWrapper, BorderLayout.NORTH);
         mainContainer.add(createContentWrapper(), BorderLayout.CENTER);
         mainContainer.add(createBottomButtonPanel(), BorderLayout.SOUTH);
 
@@ -256,61 +263,83 @@ public class SettingsGUI extends JFrame {
     }
 
     private JPanel createHeaderPanel() {
-        // Header Panel with enhanced gradient effect
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                if (g instanceof Graphics2D g2d) {
-                    g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                    Color color1 = ThemeManager.getPrimaryColor();
-                    Color color2 = new Color(
-                            Math.max(0, color1.getRed() - 10),
-                            Math.max(0, color1.getGreen() - 10),
-                            Math.max(0, color1.getBlue() - 10)
-                    );
-                    GradientPaint gradient = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
-                    g2d.setPaint(gradient);
-                    g2d.fillRect(0, 0, getWidth(), getHeight());
-                }
-            }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setPreferredSize(new Dimension(0, 140));
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(25, 35, 25, 35));
+        // VendorGUI-style header card (consistent with other screens)
+        JFrameUtils.RoundedPanel headerCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
+        headerCard.setLayout(new BorderLayout());
+        headerCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)
+        ));
+        headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel titleLabel = new JLabel(UnicodeSymbols.BETTER_GEAR + "  Einstellungen");
-        titleLabel.setFont(getFontByName(Font.BOLD, 28));
-        titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
+        JLabel titleLabel = new JLabel(UnicodeSymbols.BETTER_GEAR + " Einstellungen");
+        titleLabel.setFont(getFontByName(Font.BOLD, 22));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-        JLabel subtitleLabel = new JLabel("Konfiguration und Verwaltung des Lagersystems");
-        subtitleLabel.setFont(getFontByName(Font.PLAIN, 14));
-        subtitleLabel.setForeground(new Color(255, 255, 255, 200));
+        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Konfiguration und Verwaltung des Lagersystems");
+        subtitleLabel.setFont(getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        JPanel headerTextPanel = new JPanel();
-        headerTextPanel.setLayout(new BoxLayout(headerTextPanel, BoxLayout.Y_AXIS));
-        headerTextPanel.setOpaque(false);
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerTextPanel.add(titleLabel);
-        headerTextPanel.add(Box.createVerticalStrut(5));
-        headerTextPanel.add(subtitleLabel);
+        headerText.add(titleLabel);
+        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(subtitleLabel);
 
-        headerPanel.add(headerTextPanel, BorderLayout.WEST);
-        return headerPanel;
+        headerCard.add(headerText, BorderLayout.WEST);
+
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        wrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        wrapper.add(headerCard, BorderLayout.CENTER);
+        // allow full-width under BoxLayout/BorderLayout parents
+        // (removed setMaximumSize line)
+
+        return wrapper;
     }
 
     private JPanel createContentWrapper() {
         JPanel contentWrapper = new JPanel(new BorderLayout());
         contentWrapper.setBackground(ThemeManager.getBackgroundColor());
-        contentWrapper.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+        // keep same outer padding as other screens (VendorGUI/LogsGUI)
+        contentWrapper.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
 
-        JPanel searchPanel = createSearchPanel();
+        // Content card (tabs + search) for a cleaner, consistent design
+        JFrameUtils.RoundedPanel contentCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        contentCard.setLayout(new BorderLayout(0, 10));
+        contentCard.setOpaque(false);
+        contentCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)
+        ));
+
+        // Tabs (TOP placement) + Search bar below the tab strip (visual hierarchy)
         JTabbedPane tabbedPane = createTabbedPane();
+        JPanel searchPanel = createSearchPanel();
 
-        contentWrapper.add(searchPanel, BorderLayout.NORTH);
-        contentWrapper.add(tabbedPane, BorderLayout.CENTER);
+        // Put the tabs above the search (search belongs to the tab contents area)
+        JPanel tabsAndSearch = new JPanel();
+        tabsAndSearch.setOpaque(false);
+        tabsAndSearch.setLayout(new BoxLayout(tabsAndSearch, BoxLayout.Y_AXIS));
+        tabbedPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+        searchPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        tabsAndSearch.add(tabbedPane);
+        tabsAndSearch.add(Box.createVerticalStrut(10));
+        tabsAndSearch.add(searchPanel);
 
+        contentCard.add(tabsAndSearch, BorderLayout.NORTH);
+
+        // The tabbed pane itself contains the scrollable content; we only need to ensure it expands.
+        // Wrap it so it takes all remaining space and stays aligned.
+        JPanel tabFill = new JPanel(new BorderLayout());
+        tabFill.setOpaque(false);
+        tabFill.add(tabbedPane, BorderLayout.CENTER);
+        contentCard.add(tabFill, BorderLayout.CENTER);
+
+        contentWrapper.add(contentCard, BorderLayout.CENTER);
         return contentWrapper;
     }
 
@@ -403,20 +432,20 @@ public class SettingsGUI extends JFrame {
 
         searchPanel.add(searchLabel, BorderLayout.WEST);
         searchPanel.add(searchFieldWrapper, BorderLayout.CENTER);
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 16, 0));
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
         return searchPanel;
     }
 
     private JTabbedPane createTabbedPane() {
-        JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.LEFT);
+        JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
+        tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
+        tabbedPane.setOpaque(false);
+        tabbedPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         tabbedPane.setFont(getFontByName(Font.BOLD, 14));
         tabbedPane.setBackground(ThemeManager.getCardBackgroundColor());
         tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
-        tabbedPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
+        tabbedPane.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor()));
 
         buildTabs(tabbedPane);
         return tabbedPane;
@@ -491,8 +520,16 @@ public class SettingsGUI extends JFrame {
     }
 
     private void buildTabs(JTabbedPane tabbedPane) {
-        // This method now contains all the tab creation code that previously lived in the constructor.
+        if(tabbedPane == null) return;
+        buildSystemAutomaticTab(tabbedPane);
+        buildDesignTab(tabbedPane);
+        buildConnectionTab(tabbedPane);
+        buildDatabaseTab(tabbedPane);
+        buildImportExportTab(tabbedPane);
+        buildAboutTab(tabbedPane);
+    }
 
+    private void buildSystemAutomaticTab(JTabbedPane tabbedPane) {
         // === CATEGORY 1: System & Automatisierung ===
         JPanel systemPanel = createCategoryPanel();
         JScrollPane systemScroll = createScrollablePanel(systemPanel);
@@ -833,7 +870,49 @@ public class SettingsGUI extends JFrame {
 
         // finally add to system panel
         systemPanel.add(categoryPanel);
+        systemPanel.add(Box.createVerticalGlue());
+        systemPanel.add(Box.createVerticalStrut(25));
+        JPanel otherSection = createSectionPanel("Sonstiges", "Allgemeine Einstellungen");
+        otherSection.add(Box.createVerticalStrut(18));
+        JLabel openSettingsLabel = createInfoLabel("Öffnet den Ordner, in dem die Einstellungsdateien gespeichert sind.");
+        otherSection.add(openSettingsLabel);
+        otherSection.add(Box.createVerticalStrut(10));
+        JButton openSettingsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Einstellungen-Ordner öffnen", new Color(52, 152, 219));
+        openSettingsFolderButton.addActionListener(e -> openSettingsFolder());
+        otherSection.add(openSettingsFolderButton);
+        JLabel logsLabel = createInfoLabel("Öffnet den Ordner, in dem die Anwendungsprotokolle gespeichert sind.");
+        otherSection.add(Box.createVerticalStrut(15));
+        otherSection.add(logsLabel);
+        otherSection.add(Box.createVerticalStrut(10));
+        JButton openLogsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Protokolle-Ordner öffnen", new Color(52, 152, 219));
+        openLogsFolderButton.addActionListener(e -> openLogsFolder());
+        otherSection.add(openLogsFolderButton);
+        otherSection.add(Box.createVerticalStrut(15));
+        JLabel logsDelete = createInfoLabel("Löscht alle Anwendungsprotokolle aus dem Protokolle-Ordner. So wie in der Datenbank.");
+        otherSection.add(Box.createVerticalStrut(15));
+        otherSection.add(logsDelete);
+        JButton deleteLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alle Protokolle löschen", new Color(220, 53, 69));
+        deleteLogsButton.addActionListener(e -> deleteAllLogs());
+        otherSection.add(Box.createVerticalStrut(10));
+        otherSection.add(deleteLogsButton);
+        otherSection.add(Box.createVerticalStrut(15));
+        JLabel logsDeleteTime = createInfoLabel("Löscht alle Anwendungsprotokolle, die älter als 30 Tage sind, aus dem Protokolle-Ordner. So wie in der Datenbank.");
+        otherSection.add(Box.createVerticalStrut(15));
+        otherSection.add(logsDeleteTime);
+        JCheckBox deleteOldLogsCheckBox = new JCheckBox("Alte Protokolle (älter als 30 Tage) löschen");
+        styleCheckbox(deleteOldLogsCheckBox);
+        otherSection.add(Box.createVerticalStrut(10));
+        otherSection.add(deleteOldLogsCheckBox);
+        JButton deleteOldLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alte Protokolle löschen", new Color(220, 53, 69));
+        deleteOldLogsButton.addActionListener(e -> deleteOldLogs());
+        otherSection.add(Box.createVerticalStrut(10));
+        otherSection.add(deleteOldLogsButton);
+        systemPanel.add(otherSection);
+        // Add system panel to tabbed pane
+        tabbedPane.addTab(UnicodeSymbols.WRENCH + " System", systemScroll);
+    }
 
+    private void buildDesignTab(JTabbedPane tabbedPane) {
         // === CATEGORY 1b: Darstellung ===
         // One-page layout (no right-side sticky panel). Everything scrolls together.
         JPanel appearancePanel = createCategoryPanel();
@@ -967,46 +1046,9 @@ public class SettingsGUI extends JFrame {
         appearancePanel.add(Box.createVerticalGlue());
         // Add appearance panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.COLOR_PALETTE + " Darstellung", appearanceScroll);
-        systemPanel.add(Box.createVerticalGlue());
-        systemPanel.add(Box.createVerticalStrut(25));
-        JPanel otherSection = createSectionPanel("Sonstiges", "Allgemeine Einstellungen");
-        otherSection.add(Box.createVerticalStrut(18));
-        JLabel openSettingsLabel = createInfoLabel("Öffnet den Ordner, in dem die Einstellungsdateien gespeichert sind.");
-        otherSection.add(openSettingsLabel);
-        otherSection.add(Box.createVerticalStrut(10));
-        JButton openSettingsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Einstellungen-Ordner öffnen", new Color(52, 152, 219));
-        openSettingsFolderButton.addActionListener(e -> openSettingsFolder());
-        otherSection.add(openSettingsFolderButton);
-        JLabel logsLabel = createInfoLabel("Öffnet den Ordner, in dem die Anwendungsprotokolle gespeichert sind.");
-        otherSection.add(Box.createVerticalStrut(15));
-        otherSection.add(logsLabel);
-        otherSection.add(Box.createVerticalStrut(10));
-        JButton openLogsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Protokolle-Ordner öffnen", new Color(52, 152, 219));
-        openLogsFolderButton.addActionListener(e -> openLogsFolder());
-        otherSection.add(openLogsFolderButton);
-        otherSection.add(Box.createVerticalStrut(15));
-        JLabel logsDelete = createInfoLabel("Löscht alle Anwendungsprotokolle aus dem Protokolle-Ordner. So wie in der Datenbank.");
-        otherSection.add(Box.createVerticalStrut(15));
-        otherSection.add(logsDelete);
-        JButton deleteLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alle Protokolle löschen", new Color(220, 53, 69));
-        deleteLogsButton.addActionListener(e -> deleteAllLogs());
-        otherSection.add(Box.createVerticalStrut(10));
-        otherSection.add(deleteLogsButton);
-        otherSection.add(Box.createVerticalStrut(15));
-        JLabel logsDeleteTime = createInfoLabel("Löscht alle Anwendungsprotokolle, die älter als 30 Tage sind, aus dem Protokolle-Ordner. So wie in der Datenbank.");
-        otherSection.add(Box.createVerticalStrut(15));
-        otherSection.add(logsDeleteTime);
-        JCheckBox deleteOldLogsCheckBox = new JCheckBox("Alte Protokolle (älter als 30 Tage) löschen");
-        styleCheckbox(deleteOldLogsCheckBox);
-        otherSection.add(Box.createVerticalStrut(10));
-        otherSection.add(deleteOldLogsCheckBox);
-        JButton deleteOldLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alte Protokolle löschen", new Color(220, 53, 69));
-        deleteOldLogsButton.addActionListener(e -> deleteOldLogs());
-        otherSection.add(Box.createVerticalStrut(10));
-        otherSection.add(deleteOldLogsButton);
-        systemPanel.add(otherSection);
-        // Add system panel to tabbed pane
-        tabbedPane.addTab(UnicodeSymbols.WRENCH + " System", systemScroll);
+    }
+
+    private void buildConnectionTab(JTabbedPane tabbedPane) {
         // === CATEGORY 2: Verbindung ===
         JPanel connectionPanel = createCategoryPanel();
         JScrollPane connectionScroll = createScrollablePanel(connectionPanel);
@@ -1143,6 +1185,9 @@ public class SettingsGUI extends JFrame {
         connectionPanel.add(Box.createVerticalGlue());
         // Add connection panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.GLOBE + " Verbindung", connectionScroll);
+    }
+
+    private void buildDatabaseTab(JTabbedPane tabbedPane) {
         // === CATEGORY 3: Datenbank ===
         JPanel databasePanel = createCategoryPanel();
         JScrollPane databaseScroll = createScrollablePanel(databasePanel);
@@ -1216,6 +1261,9 @@ public class SettingsGUI extends JFrame {
         databasePanel.add(Box.createVerticalGlue());
         // Add database panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.FLOPPY + " Datenbank", databaseScroll);
+    }
+
+    private void buildImportExportTab(JTabbedPane tabbedPane) {
         // === CATEGORY 4: Import & Export ===
         JPanel importExportPanel = createCategoryPanel();
         JScrollPane importExportScroll = createScrollablePanel(importExportPanel);
@@ -1290,6 +1338,9 @@ public class SettingsGUI extends JFrame {
         importExportPanel.add(Box.createVerticalGlue());
         // Add import/export panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.DOWNLOAD + " Import/Export", importExportScroll);
+    }
+
+    private void buildAboutTab(JTabbedPane tabbedPane) {
         // === CATEGORY 5: About ===
         JPanel aboutPanel = createCategoryPanel();
         JScrollPane aboutScroll = createScrollablePanel(aboutPanel);
@@ -1468,6 +1519,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private void styleInputField(JTextField field) {
+        if(field == null) return;
         field.setFont(getFontByName(Font.PLAIN, 13));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
@@ -1637,6 +1689,7 @@ public class SettingsGUI extends JFrame {
      * Creates a scrollable panel wrapper with optimized settings
      */
     private JScrollPane createScrollablePanel(JPanel panel) {
+        if(panel == null) throw new NullPointerException("Panel cannot be null");
         JScrollPane scrollPane = new JScrollPane(panel);
         scrollPane.setBorder(null);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
@@ -1684,10 +1737,12 @@ public class SettingsGUI extends JFrame {
      * Creates a modern styled section panel with card-like appearance
      */
     private JPanel createSectionPanel(String title, String description) {
+        if(title == null || description == null) throw new NullPointerException("Title and description cannot be null");
         return SettingsUtils.createSectionPanel(title, description, searchableSections);
     }
 
     private void addSectionResetButton(JPanel section, Runnable action) {
+        if(section == null || action == null) throw new NullPointerException("Section and action cannot be null");
         Object actions = section.getClientProperty("headerActions");
         if (actions instanceof JPanel panel) {
             JButton resetButton = createHeaderActionButton();
@@ -1697,6 +1752,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private JPanel createColorRow(String labelText, String key) {
+        if(labelText == null || key == null) throw new NullPointerException("Label text and key cannot be null");
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         row.setOpaque(false);
 
@@ -1750,6 +1806,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private Color getSelectedColorForKey(String key) {
+        if(key == null) throw new NullPointerException("Key cannot be null");
         if ("theme_accent_color".equals(key)) {
             return selectedAccentColor;
         }
@@ -1763,6 +1820,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private void setSelectedColorForKey(String key, Color color) {
+        if(key == null) throw new NullPointerException("Key cannot be null");
         if ("theme_accent_color".equals(key)) {
             selectedAccentColor = color;
         } else if ("theme_header_color".equals(key)) {
@@ -1897,6 +1955,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private void configureSlider(JSlider slider, JSpinner spinner, JLabel sampleLabel) {
+        if(slider == null || spinner == null || sampleLabel == null) throw new IllegalArgumentException("slider, spinner and sampleLabel must not be null");
         final String baseText = sampleLabel.getText().replaceAll("\\s*\\(\\d+px\\)\\s*$", "");
 
         slider.setPaintTicks(true);
@@ -1929,6 +1988,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private boolean valueEqualsSpinner(int value, JSpinner spinner) {
+        if(spinner == null) throw new IllegalArgumentException("spinner must not be null");
         Object spinnerValue = spinner.getValue();
         return spinnerValue instanceof Integer && (Integer) spinnerValue == value;
     }
@@ -1953,6 +2013,7 @@ public class SettingsGUI extends JFrame {
      * Styles a checkbox with a modern appearance and enhanced click area
      */
     private void styleCheckbox(JCheckBox checkbox) {
+        if(checkbox == null) throw new IllegalArgumentException("checkbox must not be null");
         checkbox.setFont(getFontByName(Font.PLAIN, 14));
         checkbox.setForeground(ThemeManager.getTextPrimaryColor());
         checkbox.setOpaque(false);
@@ -1985,6 +2046,7 @@ public class SettingsGUI extends JFrame {
      * Styles a spinner with modern, rounded appearance and focus effects
      */
     private void styleSpinner(JSpinner spinner) {
+        if(spinner == null) throw new IllegalArgumentException("spinner must not be null");
         JComponent editor = spinner.getEditor();
         if (editor instanceof JSpinner.DefaultEditor) {
             JTextField textField = ((JSpinner.DefaultEditor) editor).getTextField();
@@ -2025,6 +2087,7 @@ public class SettingsGUI extends JFrame {
      * Creates a modern styled button with smooth hover effects and professional appearance
      */
     private JButton createStyledButton(String text, Color originalBg) {
+        if(text == null) throw new IllegalArgumentException("text must not be null");
         JButton button = new JButton(text);
         button.setFont(getFontByName(Font.BOLD, 14));
         button.setForeground(Color.WHITE);
@@ -2380,6 +2443,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private void applySettingsProperties(Properties props) {
+        if(props == null) throw new IllegalArgumentException("props must not be null");
         stockCheckIntervalSpinner.setValue(parseIntProperty(props, "stock_check_interval", DEFAULT_STOCK_CHECK_INTERVAL));
         enableWarningDisplayCheckbox.setSelected(Boolean.parseBoolean(props.getProperty("enable_hourly_warnings", String.valueOf(DEFAULT_ENABLE_WARNINGS))));
         warningDisplayIntervalSpinner.setValue(parseIntProperty(props, "warning_display_interval", DEFAULT_WARNING_INTERVAL));
@@ -2402,6 +2466,8 @@ public class SettingsGUI extends JFrame {
     }
 
     private int parseIntProperty(Properties props, String key, int fallback) {
+        if(props == null) throw new IllegalArgumentException("props must not be null");
+        if(key == null) throw new IllegalArgumentException("key must not be null");
         try {
             return Integer.parseInt(props.getProperty(key, String.valueOf(fallback)));
         } catch (NumberFormatException ex) {
@@ -2698,6 +2764,7 @@ public class SettingsGUI extends JFrame {
      * Shows error dialog when update check fails
      */
     private void showUpdateError(String errorMessage) {
+        if(errorMessage == null) throw new IllegalArgumentException("errorMessage must not be null");
         JOptionPane.showMessageDialog(this,
                 "<html><b>" + UnicodeSymbols.WARNING + " Fehler bei Update-Prüfung</b><br/><br/>" +
                         "Die Update-Prüfung ist fehlgeschlagen:<br/>" +
@@ -2712,6 +2779,7 @@ public class SettingsGUI extends JFrame {
      * Gets the download URL based on the release channel
      */
     private String getDownloadUrl(String channel) {
+        if(channel == null) throw new IllegalArgumentException("channel must not be null");
         return switch (channel.toLowerCase()) {
             case "beta" -> "https://github.com/frame-dev/VeboLagerSystem/releases?q=beta";
             case "alpha" -> "https://github.com/frame-dev/VeboLagerSystem/releases?q=alpha";
@@ -2724,6 +2792,7 @@ public class SettingsGUI extends JFrame {
      * Opens the download page in the default browser
      */
     private void openDownloadPage(String url) {
+        if(url == null) throw new IllegalArgumentException("url must not be null");
         try {
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                 Desktop.getDesktop().browse(new java.net.URI(url));
@@ -2937,6 +3006,9 @@ public class SettingsGUI extends JFrame {
      * Creates a panel with a label, spinner, and unit label
      */
     private JPanel createLabeledSpinnerPanel(String labelText, JSpinner spinner, String unitText, int columns) {
+        if(labelText == null) throw new IllegalArgumentException("labelText must not be null");
+        if(spinner == null) throw new IllegalArgumentException("spinner must not be null");
+        if(unitText == null) throw new IllegalArgumentException("unitText must not be null");
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         panel.setOpaque(false);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -2967,6 +3039,8 @@ public class SettingsGUI extends JFrame {
      * Creates a panel with a label and combo box
      */
     private JPanel createLabeledComboBoxPanel(String labelText, JComboBox<?> comboBox) {
+        if(labelText == null) throw new IllegalArgumentException("labelText must not be null");
+        if(comboBox == null) throw new IllegalArgumentException("comboBox must not be null");
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         panel.setOpaque(false);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -3458,6 +3532,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private void styleComboBox(JComboBox<String> combo) {
+        if(combo == null) throw new IllegalArgumentException("combo must not be null");
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
         Color border = ThemeManager.getInputBorderColor();

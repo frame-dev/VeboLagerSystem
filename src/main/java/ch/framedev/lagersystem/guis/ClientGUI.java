@@ -352,6 +352,7 @@ public class ClientGUI extends JFrame {
 
 
     private void fillDepartmentList(JComboBox<String> target, boolean skipFirstItem) {
+        if(target == null) return;
         DepartmentManager departmentManager = DepartmentManager.getInstance();
         for (var department : departmentManager.getAllDepartments()) {
             String dept = (String) department.get("department");
@@ -396,6 +397,7 @@ public class ClientGUI extends JFrame {
     }
 
     private Object[] showUpdateClientDialog(Object[] existing) {
+        if(existing == null) return null;
         return ClientDialog.showUpdateClientDialog(this, existing);
     }
 
@@ -592,6 +594,7 @@ public class ClientGUI extends JFrame {
     }
 
     private void styleTextField(JTextField tf) {
+        if(tf == null) return;
         tf.setBackground(ThemeManager.getInputBackgroundColor());
         tf.setForeground(ThemeManager.getTextPrimaryColor());
         tf.setCaretColor(ThemeManager.getTextPrimaryColor());
@@ -602,6 +605,7 @@ public class ClientGUI extends JFrame {
     }
 
     private void styleComboBox(JComboBox<String> combo) {
+        if(combo == null) return;
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
         Color border = ThemeManager.getInputBorderColor();

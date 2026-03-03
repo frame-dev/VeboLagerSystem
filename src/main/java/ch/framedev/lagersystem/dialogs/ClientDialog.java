@@ -33,10 +33,17 @@ public class ClientDialog {
      * @return An array with the new client's details [name, department] if added, or null if cancelled.
      */
     public static Object[] showAddClientDialog(JFrame frame) {
+        if(frame == null) throw new NullPointerException("Frame must not be null");
+        ThemeManager.applyUIDefaults();
         final Object[][] holder = new Object[1][];
 
         JDialog dialog = new JDialog(frame, UnicodeSymbols.CLIENT + " Neuen Kunden hinzufügen", true);
         dialog.setUndecorated(true);
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
 
         JPanel mainContainer = createDialogChrome();
 
@@ -124,6 +131,7 @@ public class ClientDialog {
         dialog.getRootPane().setDefaultButton(okBtn);
 
         dialog.setSize(720, 460);
+        dialog.setMinimumSize(new Dimension(640, 420));
         dialog.setLocationRelativeTo(frame);
         SwingUtilities.invokeLater(nameField::requestFocusInWindow);
         dialog.setVisible(true);
@@ -138,10 +146,18 @@ public class ClientDialog {
      * @return An array with the updated client details [name, department] if saved, or null if cancelled.
      */
     public static Object[] showUpdateClientDialog(JFrame frame, Object[] existing) {
+        if(frame == null) throw new IllegalArgumentException("Frame must not be null");
+        if(existing == null) throw new IllegalArgumentException("Existing must not be null");
+        ThemeManager.applyUIDefaults();
         final Object[][] holder = new Object[1][];
 
         JDialog dialog = new JDialog(frame, UnicodeSymbols.EDIT + " Kunde bearbeiten", true);
         dialog.setUndecorated(true);
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
 
         JPanel mainContainer = createDialogChrome();
 
@@ -170,7 +186,8 @@ public class ClientDialog {
         gbc.gridy = row++;
         gbc.insets = new Insets(4, 8, 18, 8);
         JTextField nameField = createTextField();
-        nameField.setText(existing != null && existing.length > 0 && existing[0] != null ? existing[0].toString() : "");
+        nameField.setText(existing.length > 0 && existing[0] != null ? existing[0].toString() : "");
+        final String originalName = nameField.getText().trim();
         contentCard.add(nameField, gbc);
 
         // Department
@@ -186,7 +203,7 @@ public class ClientDialog {
         styleComboBox(departmentCombobox);
 
         // Pre-select existing department
-        if (existing != null && existing.length > 1 && existing[1] != null) {
+        if (existing.length > 1 && existing[1] != null) {
             String existingDept = existing[1].toString();
             for (int i = 0; i < departmentCombobox.getItemCount(); i++) {
                 if (existingDept.equals(departmentCombobox.getItemAt(i))) {
@@ -210,6 +227,14 @@ public class ClientDialog {
         JButton okBtn = createSuccessButton(UnicodeSymbols.FLOPPY + "  Speichern");
         okBtn.addActionListener(ae -> {
             String name = nameField.getText().trim();
+            if (!originalName.isEmpty() && !name.equals(originalName)) {
+                JOptionPane.showMessageDialog(dialog,
+                        "Der Kundenname kann aktuell nicht geändert werden.\nBitte erstellen Sie einen neuen Kunden oder lassen Sie den Namen unverändert.",
+                        "Hinweis",
+                        JOptionPane.WARNING_MESSAGE,
+                        Main.iconSmall);
+                return;
+            }
             String selectedDept = (String) departmentCombobox.getSelectedItem();
             if (selectedDept == null) selectedDept = "";
             String dept = selectedDept.trim();
@@ -247,6 +272,7 @@ public class ClientDialog {
         dialog.getRootPane().setDefaultButton(okBtn);
 
         dialog.setSize(720, 480);
+        dialog.setMinimumSize(new Dimension(640, 440));
         dialog.setLocationRelativeTo(frame);
         SwingUtilities.invokeLater(nameField::requestFocusInWindow);
         dialog.setVisible(true);
@@ -337,8 +363,11 @@ public class ClientDialog {
         });
 
         closeBtn.addActionListener(e -> {
-            if (onClose != null) onClose.run();
-            dialog.dispose();
+            if (onClose != null) {
+                onClose.run();
+            } else {
+                dialog.dispose();
+            }
         });
 
         headerPanel.add(closeBtn, BorderLayout.EAST);
@@ -369,6 +398,7 @@ public class ClientDialog {
     }
 
     private static JLabel createLabel(String text) {
+        if(text == null) throw new IllegalArgumentException("Text must not be null");
         JLabel label = new JLabel(text);
         label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         label.setForeground(ThemeManager.getTextPrimaryColor());
@@ -376,6 +406,7 @@ public class ClientDialog {
     }
 
     private static JLabel createRequiredLabel(String text) {
+        if(text == null) throw new IllegalArgumentException("Text must not be null");
         JLabel label = createLabel(text);
         if (text.contains("*")) {
             Color accent = ThemeManager.getAccentColor();
@@ -424,16 +455,19 @@ public class ClientDialog {
     }
 
     private static JButton createPrimaryButton(String text) {
+        if(text == null) throw new IllegalArgumentException("Text must not be null");
         Color base = ThemeManager.getButtonBackgroundColor();
         return createFilledButton(text, "Den neuen Kunden zur Datenbank hinzufügen", base, ThemeManager.getTextOnPrimaryColor());
     }
 
     private static JButton createSuccessButton(String text) {
+        if(text == null) throw new IllegalArgumentException("Text must not be null");
         Color base = ThemeManager.getSuccessColor();
         return createFilledButton(text, "Die Änderungen am Kunden speichern", base, ThemeManager.getTextOnPrimaryColor());
     }
 
     private static JButton createDangerButton(String text, String tooltip) {
+        if(text == null) throw new IllegalArgumentException("Text must not be null");
         Color base = ThemeManager.getErrorColor();
         return createFilledButton(text, tooltip, base, ThemeManager.getTextOnPrimaryColor());
     }
@@ -492,6 +526,7 @@ public class ClientDialog {
     // ------------------------- Existing helpers -------------------------
 
     private static void fillDepartmentList(JComboBox<String> departmentCombobox) {
+        if(departmentCombobox == null) throw new IllegalArgumentException("Department combobox must not be null");
         departmentCombobox.removeAllItems();
         departmentCombobox.addItem("");
 
@@ -512,12 +547,13 @@ public class ClientDialog {
         if (editor instanceof JTextField tf) {
             tf.setBackground(ThemeManager.getInputBackgroundColor());
             tf.setForeground(ThemeManager.getTextPrimaryColor());
-            tf.setCaretColor(ThemeManager.getTextPrimaryColor());
+            tf.setCaretColor(ThemeManager.getAccentColor());
             tf.setBorder(null);
         }
     }
 
     private static void styleComboBox(JComboBox<String> combo) {
+        if(combo == null) throw new IllegalArgumentException("Combobox must not be null");
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
         Color border = ThemeManager.getInputBorderColor();
@@ -607,7 +643,7 @@ public class ClientDialog {
             if (editorComp instanceof JTextField tf) {
                 tf.setBackground(bg);
                 tf.setForeground(fg);
-                tf.setCaretColor(fg);
+                tf.setCaretColor(ThemeManager.getAccentColor());
                 tf.setBorder(null);
             }
         }

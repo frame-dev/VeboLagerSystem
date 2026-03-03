@@ -247,6 +247,7 @@ public class NotesGUI extends JFrame {
     }
 
     private void styleToolbarButton(JButton button) {
+        if (button == null) return;
         Color base = ThemeManager.getAccentColor();
         Color hover = ThemeManager.getButtonHoverColor(base);
 
@@ -275,17 +276,17 @@ public class NotesGUI extends JFrame {
      * <p>
      * This method performs the following steps:
      * 1. Retrieves the title of the currently selected note from the list.
-     *    If no note is selected, a warning message is displayed to prompt the user to make a selection.
+     * If no note is selected, a warning message is displayed to prompt the user to make a selection.
      * 2. Uses the retrieved title to fetch the note from the notes manager.
-     *    If the note is not found, the method exits without further action.
+     * If the note is not found, the method exits without further action.
      * 3. Creates and displays a dialog prepopulated with the note's current content
-     *    to allow the user to edit the note.
+     * to allow the user to edit the note.
      * 4. Handles the save action within the dialog:
-     *    a. Validates that the updated content is not empty.
-     *       Displays an error message if validation fails.
-     *    b. Attempts to save the changes through the notes manager.
-     *       If the update is successful, closes the dialog and refreshes the notes list.
-     *       If the update fails (e.g., due to duplicate titles), displays an error message.
+     * a. Validates that the updated content is not empty.
+     * Displays an error message if validation fails.
+     * b. Attempts to save the changes through the notes manager.
+     * If the update is successful, closes the dialog and refreshes the notes list.
+     * If the update fails (e.g., due to duplicate titles), displays an error message.
      * <p>
      * The dialog consists of a text area for editing the content and a save button.
      * The layout and components are dynamically set up within this method.
@@ -357,14 +358,14 @@ public class NotesGUI extends JFrame {
      * <p>
      * This method performs the following steps:
      * 1. Retrieves the title of the selected note from the list. If no note is selected,
-     *    a warning message is displayed to prompt the user to make a selection.
+     * a warning message is displayed to prompt the user to make a selection.
      * 2. Confirms with the user whether they want to delete the selected note
-     *    through a confirmation dialog.
+     * through a confirmation dialog.
      * 3. If the user confirms deletion, attempts to delete the note using the notes manager.
-     *    - If the deletion is successful:
-     *      - Updates the notes list to reflect the change.
-     *      - Clears the content area of the note editor.
-     *    - If the deletion fails, displays an error message to indicate the failure.
+     * - If the deletion is successful:
+     * - Updates the notes list to reflect the change.
+     * - Clears the content area of the note editor.
+     * - If the deletion fails, displays an error message to indicate the failure.
      */
     private void deleteNote() {
         String selectedTitle = notesList.getSelectedValue();
@@ -400,11 +401,11 @@ public class NotesGUI extends JFrame {
      * <p>
      * Detailed Behavior:
      * - Validates that both the title and content fields are not empty before allowing the note to be created.
-     *   If either field is empty, an error message is displayed and the creation process is halted.
+     * If either field is empty, an error message is displayed and the creation process is halted.
      * - Attempts to add the note to the underlying notes manager. On success:
-     *   a. Closes the dialog.
-     *   b. Refreshes the notes list displayed in the GUI.
-     *   On failure (e.g., duplicate title), displays an error message indicating the issue.
+     * a. Closes the dialog.
+     * b. Refreshes the notes list displayed in the GUI.
+     * On failure (e.g., duplicate title), displays an error message indicating the issue.
      * <p>
      * Error Handling:
      * If the title or content is empty, or a note with the same title already exists, appropriate
@@ -414,11 +415,11 @@ public class NotesGUI extends JFrame {
      * - The UI layout is dynamically constructed using GridBagLayout for proper alignment.
      * - The main dialog body includes labels, input fields, and a scrollable text area.
      * - Button panel includes the save button for submitting the note and is displayed
-     *   at the bottom of the dialog.
+     * at the bottom of the dialog.
      * <p>
      * Dependencies:
      * - Relies on helper methods such as `createNoteDialogShell`, `createDialogTextField`,
-     *   `createDialogTextArea`, and `createDialogButton` for constructing individual dialog components.
+     * `createDialogTextArea`, and `createDialogButton` for constructing individual dialog components.
      * - Uses `notesManager` for managing the notes and `setupList` for refreshing the GUI.
      * <p>
      * Post-condition:
@@ -491,6 +492,7 @@ public class NotesGUI extends JFrame {
      * @return a configured JDialog instance with the specified title and default layout.
      */
     private JDialog createNoteDialogShell(String title) {
+        if (title == null) throw new IllegalArgumentException("Title cannot be null");
         JDialog dialog = new JDialog(this, title, true);
         dialog.setSize(480, 540);
         dialog.setMinimumSize(new Dimension(440, 440));
@@ -562,6 +564,7 @@ public class NotesGUI extends JFrame {
      * @return the JPanel representing the body of the dialog, or the dialog's content pane if no custom body panel is set
      */
     private JPanel getDialogBodyPanel(JDialog dialog) {
+        if (dialog == null) throw new IllegalArgumentException("Dialog cannot be null");
         Object body = dialog.getRootPane().getClientProperty("notes.dialog.body");
         return body instanceof JPanel panel ? panel : (JPanel) dialog.getContentPane();
     }
@@ -590,7 +593,7 @@ public class NotesGUI extends JFrame {
      * - Foreground color: Matches the primary text color from the theme manager.
      * - Caret color: Matches the primary text color from the theme manager.
      * - Border: A combination of a line border using the input border color from the theme manager
-     *   and an empty border for padding.
+     * and an empty border for padding.
      * <p>
      * This text field is ready for immediate integration in themed dialog interfaces.
      *
@@ -617,6 +620,7 @@ public class NotesGUI extends JFrame {
      * @return a configured JTextArea instance with specified text and appearance settings
      */
     private JTextArea createDialogTextArea(String content) {
+        if (content == null) throw new IllegalArgumentException("Content cannot be null");
         JTextArea area = new JTextArea(content);
         area.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         area.setBackground(ThemeManager.getInputBackgroundColor());
@@ -647,10 +651,11 @@ public class NotesGUI extends JFrame {
      * Creates and configures a customizable dialog button with the specified text and background color.
      *
      * @param text the text to display on the button.
-     * @param bg the background color of the button.
+     * @param bg   the background color of the button.
      * @return a fully configured {@code JButton} with the specified properties.
      */
     private JButton createDialogButton(String text, Color bg) {
+        if (text == null) throw new IllegalArgumentException("Text cannot be null");
         JButton button = new JButton(text);
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
@@ -673,10 +678,12 @@ public class NotesGUI extends JFrame {
      * The panel is styled with a right-aligned layout and an appropriate border.
      *
      * @param primaryButton the primary action button to be added to the panel
-     * @param dialog the dialog that the cancel button will close when clicked
+     * @param dialog        the dialog that the cancel button will close when clicked
      * @return a JPanel containing the styled button panel
      */
     private JPanel createDialogButtonPanel(JButton primaryButton, JDialog dialog) {
+        if (primaryButton == null) throw new IllegalArgumentException("Primary button cannot be null");
+        if (dialog == null) throw new IllegalArgumentException("Dialog cannot be null");
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         panel.setOpaque(false);
 
@@ -741,9 +748,20 @@ public class NotesGUI extends JFrame {
         searchField.setToolTipText("Titel durchsuchen (Strg/Cmd+F)");
 
         searchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { applySearchFilter(); }
-            @Override public void removeUpdate(DocumentEvent e) { applySearchFilter(); }
-            @Override public void changedUpdate(DocumentEvent e) { applySearchFilter(); }
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                applySearchFilter();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                applySearchFilter();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                applySearchFilter();
+            }
         });
 
         RoundedPanel card = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
@@ -797,13 +815,17 @@ public class NotesGUI extends JFrame {
         // New note (Ctrl/Cmd+N)
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), "notes.new");
         am.put("notes.new", new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) { createNoteDialog(); }
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                createNoteDialog();
+            }
         });
 
         // Focus search (Ctrl/Cmd+F)
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), "notes.find");
         am.put("notes.find", new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
                 searchField.requestFocusInWindow();
                 searchField.selectAll();
             }
@@ -812,13 +834,19 @@ public class NotesGUI extends JFrame {
         // Delete selected note (Delete)
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "notes.delete");
         am.put("notes.delete", new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) { deleteNote(); }
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                deleteNote();
+            }
         });
 
         // Refresh (F5)
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), "notes.refresh");
         am.put("notes.refresh", new AbstractAction() {
-            @Override public void actionPerformed(java.awt.event.ActionEvent e) { setupList(); }
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                setupList();
+            }
         });
     }
 
@@ -844,10 +872,11 @@ public class NotesGUI extends JFrame {
      * by applying the given delta value.
      *
      * @param component the component whose font size is to be adjusted
-     * @param delta the value to adjust the font size by; positive values increase the size,
-     *              while negative values decrease the size
+     * @param delta     the value to adjust the font size by; positive values increase the size,
+     *                  while negative values decrease the size
      */
     private void applyFontDelta(Component component, float delta) {
+        if (component == null) throw new IllegalArgumentException("Component cannot be null");
         Font font = component.getFont();
         if (font != null) {
             component.setFont(font.deriveFont(font.getSize2D() + delta));
@@ -888,7 +917,7 @@ public class NotesGUI extends JFrame {
          * This panel features rounded corners and supports anti-aliasing for smoother rendering.
          * It is non-opaque by default to properly display rounded edges.
          *
-         * @param bg the background color of the panel
+         * @param bg     the background color of the panel
          * @param radius the corner radius for the rounded panel
          */
         RoundedPanel(Color bg, int radius) {

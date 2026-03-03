@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -18,7 +19,7 @@ public class PartialOrderGUI extends JFrame {
     private final Order order;
     private final Map<Article, JTextField> quantityFields = new HashMap<>();
 
-    public PartialOrderGUI(Order order) {
+    public PartialOrderGUI(@NotNull Order order) {
         this.order = order;
 
         setTitle("Teilbestellung vervollständigen");

@@ -6,8 +6,6 @@ import ch.framedev.lagersystem.main.Main;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -28,11 +26,19 @@ public class OrderLoggingUtils {
     private static final DateTimeFormatter DATE_FORMAT =
             DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss", Locale.ROOT);
     private static volatile OrderLoggingUtils instance;
+
+    /** Absolute path to the order log file (created on demand). */
     private final Path logFilePath;
 
+    /** Dedicated lock to serialize file writes without blocking other logic. */
+    private final Object fileLock = new Object();
+
     private OrderLoggingUtils() {
-        this.logFilePath = new java.io.File(Main.getAppDataDir() + java.io.File.separator + "logs" + java.io.File.separator + "bestellung.log").toPath();
-        ensureLogFileExists();
+        // Build paths using NIO to stay cross-platform and avoid manual separators.
+        this.logFilePath = Main.getAppDataDir().toPath()
+                .resolve("logs")
+                .resolve("bestellung.log");
+        ensureLogDirExists();
     }
 
     public static OrderLoggingUtils getInstance() {
@@ -47,65 +53,93 @@ public class OrderLoggingUtils {
     }
 
     /**
-     * Adds a log entry for the given order and user. The log entry includes the current date and time, the user's name, and the order ID. The method is synchronized to ensure thread safety when multiple threads are logging simultaneously. If either the order or user is null, a warning is logged and the method returns without adding a log entry.
-     * @param order The order for which the log entry is being added.
-     * @param user The user who processed the order, whose name will be included in the log entry.
+     * Adds a log entry for the given order and user.
+     *
+     * <p>The entry is appended to {@code bestellung.log} and also forwarded to the in-app log.
+     * File IO is synchronized via {@link #fileLock} to keep the critical section small.
+     *
+     * @param order the processed order (must not be {@code null})
+     * @param user  the user who processed the order (must not be {@code null})
      */
-    public synchronized void addLogEntry(Order order, User user) {
+    public void addLogEntry(Order order, User user) {
         if (order == null || user == null) {
             LOGGER.warn("addLogEntry called with null order or user");
             return;
         }
-        String dateString = DATE_FORMAT.format(LocalDateTime.now());
-        String logEntry = String.format("Datum: %s, Benutzer '%s' hat eine Bestellung verarbeitet: %s%n",
-                dateString,
-                safe(user.getName()),
-                safe(order.getOrderId()));
-        writeLogToFile(logEntry);
+
+        String logEntry = formatEntry(order, user);
+
+        // Serialize only the file append (avoid locking around formatting/UI logging).
+        synchronized (fileLock) {
+            writeLogToFile(logEntry);
+        }
+
         Main.logUtils.addLog("[ORDER LOG|INFO] " + logEntry.trim());
     }
 
-    private void ensureLogFileExists() {
+    /**
+     * Builds a single, human-readable log line.
+     */
+    private String formatEntry(Order order, User user) {
+        String dateString = DATE_FORMAT.format(LocalDateTime.now());
+        return String.format(
+                "Datum: %s, Benutzer '%s' hat eine Bestellung verarbeitet: %s%n",
+                dateString,
+                safe(user.getName()),
+                safe(order.getOrderId())
+        );
+    }
+
+    /**
+     * Ensures the log directory exists. The log file itself is created on demand when writing.
+     */
+    private void ensureLogDirExists() {
         Path parent = logFilePath.getParent();
         if (parent == null) {
-            LOGGER.error("Kein Log-Verzeichnis fuer Pfad: {}", logFilePath);
-            Main.logUtils.addLog("[ORDER LOG|ERROR] Fehler: Kein Log-Verzeichnis fuer Pfad: " + logFilePath);
+            LOGGER.error("No log directory for path: {}", logFilePath);
+            Main.logUtils.addLog("[ORDER LOG|ERROR] No log directory for path: " + logFilePath);
             return;
         }
         try {
             Files.createDirectories(parent);
-            if (!Files.exists(logFilePath)) {
-                Files.createFile(logFilePath);
-            }
         } catch (IOException e) {
-            LOGGER.error("Konnte die Log-Datei nicht erstellen: {}", logFilePath, e);
-            Main.logUtils.addLog("[ORDER LOG|ERROR] Fehler: Konnte die Log-Datei nicht erstellen: " + logFilePath);
+            LOGGER.error("Could not create log directory: {}", parent, e);
+            Main.logUtils.addLog("[ORDER LOG|ERROR] Could not create log directory: " + parent + " (" + e.getMessage() + ")");
         }
     }
 
+    /**
+     * Appends a single line to the order log file.
+     */
     private void writeLogToFile(String logEntry) {
-        try (BufferedWriter writer = Files.newBufferedWriter(
-                logFilePath,
-                StandardCharsets.UTF_8,
-                StandardOpenOption.CREATE,
-                StandardOpenOption.APPEND
-        )) {
-            writer.write(logEntry);
+        try {
+            Files.writeString(
+                    logFilePath,
+                    logEntry,
+                    StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND
+            );
         } catch (IOException e) {
-            LOGGER.error("Fehler beim Schreiben des Log-Eintrags in die Datei: {}", logFilePath, e);
-            Main.logUtils.addLog("[ORDER LOG|ERROR] Fehler beim Schreiben des Log-Eintrags in die Datei: " + logFilePath);
+            LOGGER.error("Failed to write order log entry to: {}", logFilePath, e);
+            Main.logUtils.addLog("[ORDER LOG|ERROR] Failed to write order log entry to: " + logFilePath + " (" + e.getMessage() + ")");
         }
     }
 
+    /**
+     * Reads all log lines from the order log file.
+     *
+     * @return immutable list of log lines (empty if missing or unreadable)
+     */
     public List<String> getAllLogs() {
         if (!Files.exists(logFilePath)) {
             return List.of();
         }
-        try (BufferedReader reader = Files.newBufferedReader(logFilePath, StandardCharsets.UTF_8)) {
-            return reader.lines().toList();
+        try {
+            return List.copyOf(Files.readAllLines(logFilePath, StandardCharsets.UTF_8));
         } catch (IOException ex) {
-            LOGGER.error("Fehler beim Lesen der Log-Datei: {}", logFilePath, ex);
-            Main.logUtils.addLog("[ORDER LOG|ERROR] Fehler beim Lesen der Log-Datei: " + logFilePath);
+            LOGGER.error("Failed to read order log file: {}", logFilePath, ex);
+            Main.logUtils.addLog("[ORDER LOG|ERROR] Failed to read order log file: " + logFilePath + " (" + ex.getMessage() + ")");
             return List.of();
         }
     }

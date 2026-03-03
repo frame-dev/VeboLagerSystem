@@ -28,14 +28,21 @@ public final class ArticleStatsDialog {
 
     /**
      * Displays a modal dialog with various statistics about the articles in stock, calculated from the provided JTable. The dialog includes an overview of total articles, total quantity, categories, vendors, financial metrics like stock value and potential revenue, and stock health indicators. It also features a modern design with hover effects and a responsive layout.
+     *
      * @param parent the parent component to center the dialog on
-     * @param table the JTable containing the article data to analyze for statistics
+     * @param table  the JTable containing the article data to analyze for statistics
      */
     public static void show(Component parent, JTable table) {
+        if (parent == null || table == null) {
+            JOptionPane.showMessageDialog(null, "Fehler beim öffnen des Dialoges.");
+            return;
+        }
+        ThemeManager.applyUIDefaults();
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent),
                 UnicodeSymbols.PACKAGE + " Lager Details & Statistiken", Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setUndecorated(true);
         dialog.setSize(900, 750);
+        dialog.setMinimumSize(new Dimension(760, 560));
         dialog.setLocationRelativeTo(parent);
 
         JPanel mainContainer = new JPanel(new BorderLayout());
@@ -267,6 +274,11 @@ public final class ArticleStatsDialog {
 
         dialog.getContentPane().add(mainContainer);
         dialog.getRootPane().setDefaultButton(okBtn);
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
         dialog.setVisible(true);
     }
 
@@ -398,7 +410,7 @@ public final class ArticleStatsDialog {
 
         tile.add(text, BorderLayout.CENTER);
 
-        // Hover lift effect must work over children too
+        // The hover lift effect must work over children too
         MouseAdapter hover = new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -409,9 +421,8 @@ public final class ArticleStatsDialog {
             @Override
             public void mouseExited(MouseEvent e) {
                 // Avoid flicker when moving between child components inside the tile
-                Point p = MouseInfo.getPointerInfo().getLocation();
-                SwingUtilities.convertPointFromScreen(p, tile);
-                if (p.x >= 0 && p.y >= 0 && p.x < tile.getWidth() && p.y < tile.getHeight()) {
+                Point p = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), tile);
+                if (tile.contains(p)) {
                     return;
                 }
                 tile.setBorder(baseBorder);
@@ -432,8 +443,8 @@ public final class ArticleStatsDialog {
         double totalValue = 0.0;
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = (int) model.getValueAt(i, 4);
-            double einkaufspreis = (double) model.getValueAt(i, 7);
+            int lagerbestand = readInt(model, i, 4);
+            double einkaufspreis = readDouble(model, i, 7);
             totalValue += lagerbestand * einkaufspreis;
         }
         return totalValue;
@@ -443,8 +454,8 @@ public final class ArticleStatsDialog {
         double totalRevenue = 0.0;
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = (int) model.getValueAt(i, 4);
-            double verkaufspreis = (double) model.getValueAt(i, 6);
+            int lagerbestand = readInt(model, i, 4);
+            double verkaufspreis = readDouble(model, i, 6);
             totalRevenue += lagerbestand * verkaufspreis;
         }
         return totalRevenue;
@@ -454,8 +465,8 @@ public final class ArticleStatsDialog {
         int count = 0;
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = (int) model.getValueAt(i, 4);
-            int mindestbestand = (int) model.getValueAt(i, 5);
+            int lagerbestand = readInt(model, i, 4);
+            int mindestbestand = readInt(model, i, 5);
             if (lagerbestand <= mindestbestand && mindestbestand > 0) {
                 count++;
             }
@@ -467,7 +478,7 @@ public final class ArticleStatsDialog {
         int count = 0;
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = (int) model.getValueAt(i, 4);
+            int lagerbestand = readInt(model, i, 4);
             if (lagerbestand == 0) {
                 count++;
             }
@@ -479,7 +490,7 @@ public final class ArticleStatsDialog {
         int total = 0;
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = (int) model.getValueAt(i, 4);
+            int lagerbestand = readInt(model, i, 4);
             total += lagerbestand;
         }
         return total;
@@ -489,7 +500,7 @@ public final class ArticleStatsDialog {
         Set<String> categories = new HashSet<>();
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            String category = (String) model.getValueAt(i, 2);
+            String category = readString(model, i, 2);
             if (category != null && !category.trim().isEmpty() && !category.equals("Unbekannt")) {
                 categories.add(category);
             }
@@ -501,7 +512,7 @@ public final class ArticleStatsDialog {
         Set<String> vendors = new HashSet<>();
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            String vendor = (String) model.getValueAt(i, 8);
+            String vendor = readString(model, i, 8);
             if (vendor != null && !vendor.trim().isEmpty()) {
                 vendors.add(vendor);
             }
@@ -515,13 +526,13 @@ public final class ArticleStatsDialog {
         String articleName = "N/A";
 
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = (int) model.getValueAt(i, 4);
-            double einkaufspreis = (double) model.getValueAt(i, 7);
+            int lagerbestand = readInt(model, i, 4);
+            double einkaufspreis = readDouble(model, i, 7);
             double value = lagerbestand * einkaufspreis;
 
             if (value > maxValue) {
                 maxValue = value;
-                articleName = (String) model.getValueAt(i, 1);
+                articleName = readString(model, i, 1);
             }
         }
 
@@ -534,8 +545,8 @@ public final class ArticleStatsDialog {
         int articlesWithMinSet = 0;
 
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = (int) model.getValueAt(i, 4);
-            int mindestbestand = (int) model.getValueAt(i, 5);
+            int lagerbestand = readInt(model, i, 4);
+            int mindestbestand = readInt(model, i, 5);
 
             if (mindestbestand > 0) {
                 articlesWithMinSet++;
@@ -549,5 +560,36 @@ public final class ArticleStatsDialog {
             return 100.0;
         }
         return (articlesAboveMin * 100.0) / articlesWithMinSet;
+    }
+
+    private static int readInt(DefaultTableModel model, int row, int col) {
+        Object v = model.getValueAt(row, col);
+        if (v == null) return 0;
+        if (v instanceof Number n) return n.intValue();
+        try {
+            String s = v.toString().trim().replace("'", "");
+            if (s.isEmpty()) return 0;
+            return (int) Math.round(Double.parseDouble(s.replace(",", ".")));
+        } catch (Exception ignored) {
+            return 0;
+        }
+    }
+
+    private static double readDouble(DefaultTableModel model, int row, int col) {
+        Object v = model.getValueAt(row, col);
+        if (v == null) return 0.0;
+        if (v instanceof Number n) return n.doubleValue();
+        try {
+            String s = v.toString().trim().replace("'", "");
+            if (s.isEmpty()) return 0.0;
+            return Double.parseDouble(s.replace(",", "."));
+        } catch (Exception ignored) {
+            return 0.0;
+        }
+    }
+
+    private static String readString(DefaultTableModel model, int row, int col) {
+        Object v = model.getValueAt(row, col);
+        return v == null ? "" : v.toString();
     }
 }

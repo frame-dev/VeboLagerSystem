@@ -3,10 +3,10 @@ package ch.framedev.lagersystem.utils;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.swing.UIManager;
 
 /**
@@ -33,24 +33,27 @@ import javax.swing.UIManager;
  * with ASCII file encodings.
  */
 @SuppressWarnings({"UnnecessaryUnicodeEscape", "unused"})
-public class UnicodeSymbols {
+public final class UnicodeSymbols {
+
+    private UnicodeSymbols() {
+        // utility class
+    }
+
     private static class FontSupport {
         private static final String OS_NAME = getOSName();
         private static final boolean WINDOWS = OS_NAME.contains("win");
         private static final boolean MAC = OS_NAME.contains("mac");
         private static final Font UI_FONT = initUiFont();
         private static final Font[] EMOJI_FONTS = initEmojiFonts();
-        private static final Font[] FONTS = initFonts();
-        private static final Map<String, Boolean> CACHE = new HashMap<>();
+        private static volatile Font[] FONTS;
+        private static final Object FONTS_LOCK = new Object();
+        private static final Map<String, Boolean> CACHE = new ConcurrentHashMap<>();
     }
 
     private static String getOSName() {
         return System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
     }
 
-    private static boolean isMac() {
-        return FontSupport.MAC;
-    }
 
     private static Font initUiFont() {
         try {
@@ -95,14 +98,27 @@ public class UnicodeSymbols {
         }
     }
 
-    private static Font[] initFonts() {
-        try {
-            if (GraphicsEnvironment.isHeadless()) {
-                return new Font[0];
+    private static Font[] getAllFonts() {
+        Font[] fonts = FontSupport.FONTS;
+        if (fonts != null) {
+            return fonts;
+        }
+        synchronized (FontSupport.FONTS_LOCK) {
+            fonts = FontSupport.FONTS;
+            if (fonts != null) {
+                return fonts;
             }
-            return GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
-        } catch (Exception ignored) {
-            return new Font[0];
+            try {
+                if (GraphicsEnvironment.isHeadless()) {
+                    fonts = new Font[0];
+                } else {
+                    fonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
+                }
+            } catch (Exception ignored) {
+                fonts = new Font[0];
+            }
+            FontSupport.FONTS = fonts;
+            return fonts;
         }
     }
 
@@ -124,15 +140,8 @@ public class UnicodeSymbols {
             }
         }
 
-        // For macOS, also check if it's a compatible character range
-        if (isMac()) {
-            if (isBasicMultilingualPlane(text)) {
-                return true;
-            }
-        }
-
         // Check all available fonts
-        for (Font font : FontSupport.FONTS) {
+        for (Font font : getAllFonts()) {
             if (font.canDisplayUpTo(text) == -1) {
                 return true;
             }
@@ -140,25 +149,6 @@ public class UnicodeSymbols {
         return false;
     }
 
-    /**
-     * Check if the text is in the Basic Multilingual Plane (BMP).
-     * macOS handles BMP characters reliably.
-     */
-    private static boolean isBasicMultilingualPlane(String text) {
-        // In Java, chars are always 16-bit, so we check for surrogate pairs
-        // that would indicate higher Unicode planes
-        if (text == null || text.isEmpty()) {
-            return true;
-        }
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            // Check if it's a high surrogate (indicates a character outside BMP)
-            if (Character.isHighSurrogate(c)) {
-                return false;
-            }
-        }
-        return true;
-    }
 
     // ===================== UI Elements =====================
     /** A symbol for closing UI elements, typically a cross or 'X'. Unicode: U+2715. */
@@ -661,23 +651,17 @@ public class UnicodeSymbols {
     public static String getSymbol(String emoji, String fallback) {
         String safeFallback = fallback == null ? "" : fallback;
 
-        // Null/empty checks
         if (emoji == null || emoji.isEmpty()) {
             return safeFallback;
         }
 
-        // For Windows and macOS, check font support and use emoji if available
-        if (FontSupport.WINDOWS || FontSupport.MAC) {
-            Boolean cached = FontSupport.CACHE.get(emoji);
-            if (cached == null) {
-                cached = canDisplayAll(emoji);
-                FontSupport.CACHE.put(emoji, cached);
-            }
-            return cached ? emoji : safeFallback;
+        // Cache result per symbol to avoid repeated font scans.
+        Boolean cached = FontSupport.CACHE.get(emoji);
+        if (cached == null) {
+            cached = canDisplayAll(emoji);
+            FontSupport.CACHE.put(emoji, cached);
         }
-
-        // For Linux and other platforms, try emoji first, fallback to text
-        return emoji;
+        return cached ? emoji : safeFallback;
     }
 
     /**
@@ -691,21 +675,17 @@ public class UnicodeSymbols {
      * @return symbol if supported by font, otherwise fallback text
      */
     public static String safeSymbol(String symbol, String fallback, Font font) {
+        String safeFallback = fallback == null ? "" : fallback;
+
         if (symbol == null || symbol.isEmpty()) {
-            return fallback == null ? "" : fallback;
+            return safeFallback;
         }
-        
-        // On non-Windows platforms, return symbol directly
-        if (!FontSupport.WINDOWS) {
-            return symbol;
-        }
-        
-        // On Windows, check if font can display the symbol
+
         if (font == null) {
-            return fallback == null ? "" : fallback;
+            return getSymbol(symbol, safeFallback);
         }
-        
-        return font.canDisplayUpTo(symbol) == -1 ? symbol : (fallback == null ? "" : fallback);
+
+        return font.canDisplayUpTo(symbol) == -1 ? symbol : safeFallback;
     }
 
     /**
@@ -720,23 +700,4 @@ public class UnicodeSymbols {
         return getSymbol(emoji, fallback);
     }
 
-    /**
-     * Checks if a string contains surrogate pairs (emoji outside BMP).
-     * Surrogate pairs may not render reliably in Swing components on macOS.
-     *
-     * @param text the text to check
-     * @return true if the text contains surrogate pairs
-     */
-    private static boolean isSurrogatePair(String text) {
-        if (text == null || text.isEmpty()) {
-            return false;
-        }
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (Character.isHighSurrogate(c) || Character.isLowSurrogate(c)) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

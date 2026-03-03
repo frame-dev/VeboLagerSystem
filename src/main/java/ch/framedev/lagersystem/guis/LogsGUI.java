@@ -77,23 +77,52 @@ public class LogsGUI extends JFrame {
         mainPanel.setBackground(ThemeManager.getBackgroundColor());
         add(mainPanel, BorderLayout.CENTER);
 
-        // Header panel with gradient and shadow
-        JPanel headerPanel = getHeaderPanel();
+        // ===== Top area (Header + Toolbar) =====
+        JPanel topContainer = new JPanel();
+        topContainer.setBackground(ThemeManager.getBackgroundColor());
+        topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
+        // mainPanel already provides outer padding; keep only vertical spacing here
+        topContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+
+        // Header card (VendorGUI-style)
+        JFrameUtils.RoundedPanel headerPanel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
+        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)
+        ));
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel titleLabel = new JLabel(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");
-        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 30));
-        titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
-        headerPanel.add(titleLabel, BorderLayout.WEST);
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Protokolle und Systemereignisse anzeigen");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 17));
-        subtitleLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 230));
-        subtitleLabel.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
-        headerPanel.add(subtitleLabel, BorderLayout.SOUTH);
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setOpaque(false);
-        topPanel.add(headerPanel, BorderLayout.NORTH);
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerText.add(titleLabel);
+        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(subtitleLabel);
+
+        headerPanel.add(headerText, BorderLayout.WEST);
+
+        // BoxLayout: use a standard wrapper so the header stretches to the left edge/full width
+        JPanel headerWrapper = new JPanel(new BorderLayout());
+        headerWrapper.setOpaque(false);
+        headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerWrapper.add(headerPanel, BorderLayout.CENTER);
+
+        Dimension hpPref = headerPanel.getPreferredSize();
+        headerWrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, hpPref.height));
+
+        topContainer.add(headerWrapper);
+        topContainer.add(Box.createVerticalStrut(10));
 
         // Button panel for log categories (floating card look)
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 18, 12));
@@ -170,9 +199,13 @@ public class LogsGUI extends JFrame {
         toolbarPanel.add(actionPanel, BorderLayout.SOUTH);
 
         JPanel toolbarCard = createCardWrapper(toolbarPanel);
-        toolbarCard.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
-        topPanel.add(toolbarCard, BorderLayout.SOUTH);
-        mainPanel.add(topPanel, BorderLayout.NORTH);
+        toolbarCard.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        toolbarCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        Dimension tbPref = toolbarCard.getPreferredSize();
+        toolbarCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, tbPref.height));
+
+        topContainer.add(toolbarCard);
+        mainPanel.add(topContainer, BorderLayout.NORTH);
 
         // Card-like content panel for logs (fills all remaining space)
         JPanel contentPanel = getContentPanel();
@@ -196,6 +229,7 @@ public class LogsGUI extends JFrame {
 
         // Button hover effects with smooth color transitions
         for(JButton button : new JButton[]{orderLogsButton, supplierLogsButton, supplierOrderLogsButton, allLogsButton}) {
+            if(button == null) continue;
             button.addMouseListener(new MouseAdapter() {
                 final Color orig = button.getBackground();
                 final Color hover = orig.brighter();
@@ -251,9 +285,6 @@ public class LogsGUI extends JFrame {
         return contentPanel;
     }
 
-    private static JPanel getHeaderPanel() {
-        return JFrameUtils.getHeaderPanel();
-    }
 
     private void allLogs(ActionEvent actionEvent) {
         File allLogsFile = new File(new File(Main.getAppDataDir(), "logs"), "vebo_lager_system.log");
@@ -298,6 +329,7 @@ public class LogsGUI extends JFrame {
      * Helper method to style buttons consistently
      */
     private void styleButton(JButton button, Color bgColor, Color fgColor) {
+        if(button == null) return;
         button.setBackground(bgColor);
         button.setForeground(fgColor);
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
@@ -314,6 +346,7 @@ public class LogsGUI extends JFrame {
 
     // ---- ADDED HELPER METHODS ----
     private void styleTextField(JTextField field) {
+        if(field == null) return;
         field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
@@ -325,11 +358,13 @@ public class LogsGUI extends JFrame {
     }
 
     private void styleLabel(JLabel label, int style, Color color) {
+        if(label == null) return;
         label.setFont(SettingsGUI.getFontByName(style, 12));
         label.setForeground(color);
     }
 
     private void styleActionButton(JButton button, Color bg) {
+        if(button == null) return;
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setBackground(bg);
@@ -499,6 +534,7 @@ public class LogsGUI extends JFrame {
     }
 
     private String resolveStyleName(String line) {
+        if(line == null) return "default";
         String upper = line.toUpperCase();
         if (upper.contains("ERROR") || upper.contains("FEHLER") || upper.contains("EXCEPTION")) {
             return "error";

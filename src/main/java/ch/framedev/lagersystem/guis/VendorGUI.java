@@ -340,6 +340,7 @@ public class VendorGUI extends JFrame {
     // -------------------- UI helpers --------------------
 
     private void styleTextField(JTextField tf) {
+        if(tf == null) throw new IllegalArgumentException("tf must not be null");
         tf.setBackground(ThemeManager.getInputBackgroundColor());
         tf.setForeground(ThemeManager.getTextPrimaryColor());
         tf.setCaretColor(ThemeManager.getTextPrimaryColor());
@@ -381,6 +382,7 @@ public class VendorGUI extends JFrame {
      * @return The updated vendor data as an Object array, or null if canceled.
      */
     private Object[] showUpdateVendorDialog(Object[] existing) {
+        if (existing == null) throw new IllegalArgumentException("existing must not be null");
         return VendorDialog.showUpdateVendorDialog(this, existing);
     }
 

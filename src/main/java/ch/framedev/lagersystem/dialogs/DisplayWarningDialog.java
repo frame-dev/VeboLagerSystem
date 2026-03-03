@@ -39,12 +39,24 @@ public class DisplayWarningDialog {
      * @param frame   The parent frame for modality and centering
      */
     public static void displayWarning(JFrame frame, Warning warning) {
+        if(frame == null) throw new IllegalArgumentException("Frame must not be null");
+
+        ThemeManager.applyUIDefaults();
+        if (warning == null) {
+            JOptionPane.showMessageDialog(frame,
+                    "Keine Warnung zum Anzeigen vorhanden.",
+                    "Warnung",
+                    JOptionPane.WARNING_MESSAGE,
+                    Main.iconSmall);
+            return;
+        }
+
         SwingUtilities.invokeLater(() -> {
             JDialog dialog = new JDialog(frame, "Warnung", Dialog.ModalityType.APPLICATION_MODAL);
             dialog.setUndecorated(true);
             dialog.setLayout(new BorderLayout());
 
-            // Determine palette based on warning type
+            // Determine a palette based on the warning type
             WarningPalette palette = paletteFor(warning);
 
             JPanel chrome = createDialogChrome(ThemeManager.getBackgroundColor());
@@ -88,6 +100,7 @@ public class DisplayWarningDialog {
             messageArea.setForeground(ThemeManager.getTextPrimaryColor());
             messageArea.setBackground(ThemeManager.getCardBackgroundColor());
             messageArea.setBorder(null);
+            messageArea.setCaretPosition(0);
 
             JScrollPane messageScroll = new JScrollPane(messageArea);
             messageScroll.setBorder(BorderFactory.createCompoundBorder(
@@ -170,6 +183,9 @@ public class DisplayWarningDialog {
      * @param frame The parent frame for modality and centering
      */
     public static void showAllWarnings(JFrame frame) {
+        if(frame == null) throw new IllegalArgumentException("Frame must not be null");
+        ThemeManager.applyUIDefaults();
+        SwingUtilities.invokeLater(() -> {
         WarningManager warningManager = WarningManager.getInstance();
         List<Warning> warnings = warningManager.getAllWarnings();
 
@@ -444,6 +460,7 @@ public class DisplayWarningDialog {
         dialog.setSize(980, 650);
         dialog.setLocationRelativeTo(frame);
         dialog.setVisible(true);
+        });
     }
 
     private static DefaultTableModel getModel() {
@@ -463,6 +480,7 @@ public class DisplayWarningDialog {
     }
 
     private static JTable getWarningsTable(DefaultTableModel tableModel) {
+        if(tableModel == null) throw new IllegalArgumentException("Table model must not be null");
         JTable table = new JTable(tableModel);
         table.setRowHeight(34);
         table.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
@@ -480,6 +498,7 @@ public class DisplayWarningDialog {
     // ------------------------ UI helpers ------------------------
 
     private static void installEscToClose(JDialog dialog) {
+        if(dialog == null) throw new IllegalArgumentException("Dialog must not be null");
         JRootPane root = dialog.getRootPane();
         root.registerKeyboardAction(
                 e -> dialog.dispose(),
@@ -555,6 +574,7 @@ public class DisplayWarningDialog {
     }
 
     private static JButton createHeaderCloseButton(JDialog dialog) {
+        if(dialog == null) throw new IllegalArgumentException("Dialog must not be null");
         JButton close = new JButton(UnicodeSymbols.CLOSE);
         close.setToolTipText("Schließen");
         close.setForeground(ThemeManager.withAlpha(Color.WHITE, 220));
@@ -607,6 +627,7 @@ public class DisplayWarningDialog {
     }
 
     private static void styleActionButton(JButton button, Color base, Color fg) {
+        if(button == null) throw new IllegalArgumentException("Button must not be null");
         Color hover = ThemeManager.getButtonHoverColor(base);
         Color pressed = ThemeManager.getButtonPressedColor(base);
 
@@ -663,6 +684,7 @@ public class DisplayWarningDialog {
     }
 
     private static WarningPalette paletteFor(Warning warning) {
+        if(warning == null) throw new IllegalArgumentException("Warning must not be null");
         // Two-tone header gradients + accent for CTA
         return switch (warning.getType()) {
             case LOW_STOCK -> new WarningPalette(

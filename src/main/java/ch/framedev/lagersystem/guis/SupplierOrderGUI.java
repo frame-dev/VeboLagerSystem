@@ -82,40 +82,47 @@ public class SupplierOrderGUI extends JFrame {
         mainContainer.setBackground(ThemeManager.getBackgroundColor());
         mainContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-        // Modern gradient header
-        JPanel header = getHeaderPanel();
+        // ===== Top area (Header card – same style as VendorGUI) =====
+        JPanel topContainer = new JPanel();
+        topContainer.setBackground(ThemeManager.getBackgroundColor());
+        topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
+        topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
 
-        // Title section with icon
-        JPanel titleSection = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 2));
-        titleSection.setOpaque(false);
+        // Header card
+        RoundedPanel headerCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
+        headerCard.setLayout(new BorderLayout());
+        headerCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)
+        ));
+        headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel iconLabel = new JLabel(UnicodeSymbols.TRUCK);
-        iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 38));
-        iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
-        titleSection.add(iconLabel);
+        JLabel titleLabel = new JLabel(UnicodeSymbols.TRUCK + " Lieferanten-Bestellungen");
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-        JPanel titleTextPanel = new JPanel();
-        titleTextPanel.setLayout(new BoxLayout(titleTextPanel, BoxLayout.Y_AXIS));
-        titleTextPanel.setOpaque(false);
+        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Verwalten Sie Ihre Artikel-Nachbestellungen");
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        JLabel title = new JLabel("Lieferanten-Bestellungen");
-        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 28));
-        title.setForeground(ThemeManager.getTextOnPrimaryColor());
-        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerText.add(titleLabel);
+        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(subtitleLabel);
 
-        JLabel subtitle = new JLabel("Verwalten Sie Ihre Artikel-Nachbestellungen");
-        subtitle.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        subtitle.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 230));
-        subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerCard.add(headerText, BorderLayout.WEST);
 
-        titleTextPanel.add(title);
-        titleTextPanel.add(Box.createVerticalStrut(5));
-        titleTextPanel.add(subtitle);
+        JPanel headerWrapper = new JPanel(new BorderLayout());
+        headerWrapper.setOpaque(false);
+        headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerWrapper.add(headerCard, BorderLayout.CENTER);
 
-        titleSection.add(titleTextPanel);
-        header.add(titleSection, BorderLayout.WEST);
-
-        mainContainer.add(header, BorderLayout.NORTH);
+        topContainer.add(headerWrapper);
+        mainContainer.add(topContainer, BorderLayout.NORTH);
 
         tableModel = new DefaultTableModel(COLUMNS, 0) {
             @Override
@@ -232,6 +239,7 @@ public class SupplierOrderGUI extends JFrame {
         List<String> lines = new ArrayList<>();
 
         for (OrderItem item : orderItems) {
+            if(item == null) throw new IllegalArgumentException("item must not be null");
             int stock = item.stock();
             Article a = ArticleManager.getInstance().getArticleByNumber(item.articleNumber());
             if (a != null) {
@@ -315,6 +323,7 @@ public class SupplierOrderGUI extends JFrame {
      * @param quantity amount to add
      */
     private void upsertItem(Article article, int quantity) {
+        if(article == null) throw new IllegalArgumentException("article must not be null");
         String articleNumber = article.getArticleNumber();
         Optional<OrderItem> existing = orderItems.stream()
                 .filter(it -> Objects.equals(it.articleNumber(), articleNumber))
@@ -439,27 +448,4 @@ public class SupplierOrderGUI extends JFrame {
         super.dispose();
     }
 
-    /**
-     * Creates the gradient header panel used at the top of the window.
-     *
-     * @return styled header panel
-     */
-    private static JPanel getHeaderPanel() {
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                GradientPaint gp = new GradientPaint(0, 0, ThemeManager.getHeaderBackgroundColor(), getWidth(), 0, ThemeManager.getHeaderGradientColor());
-                g2.setPaint(gp);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 22, 22);
-                g2.setColor(new Color(0,0,0,30));
-                g2.fillRoundRect(4, getHeight()-8, getWidth()-8, 8, 8, 8); // subtle shadow
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(18, 32, 18, 32));
-        return headerPanel;
-    }
 }

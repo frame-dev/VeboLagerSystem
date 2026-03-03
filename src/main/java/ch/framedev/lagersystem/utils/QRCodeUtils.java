@@ -14,12 +14,14 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +33,12 @@ import java.util.Map;
 public class QRCodeUtils {
 
     private static final Logger logger = LogManager.getLogger(QRCodeUtils.class);
-    private static final File STORE = new File(Main.getAppDataDir(), "scans.json"); // eine Zeile = ein JSON
+
+    /** Shared Gson instance (thread-safe for read-only use). */
+    private static final Gson GSON = new Gson();
+
+    /** Local store for QR scan data (JSON array stored in scans.json). */
+    private static final File STORE = new File(Main.getAppDataDir(), "scans.json");
 
     /**
      * Generates QR code images for a list of articles.
@@ -51,6 +58,10 @@ public class QRCodeUtils {
         List<File> qrCodeFiles = new ArrayList<>();
         for (Article article : articles) {
             String data = article.getQrCodeData();
+            if (data == null || data.isBlank()) {
+                logger.warn("Skipping QR code generation for article {} because QR data is empty", article.getArticleNumber());
+                continue;
+            }
             // Encode data for URL safety
             String encodedData;
             try {
@@ -60,7 +71,13 @@ public class QRCodeUtils {
                 Main.logUtils.addLog("Fehler beim Kodieren der QR-Daten für Artikel: " + article.getArticleNumber() + " - " + ex.getMessage());
                 continue;
             }
-            String url = "https://framedev.ch/vebo/scan.php?data=" + encodedData;
+            String serverUrl = Main.settings.getProperty("server_url");
+            String url;
+            if (serverUrl == null || serverUrl.isBlank())
+                url = "https://framedev.ch/vebo/scan.php?data=" + encodedData;
+            else {
+                url = serverUrl + "/scan.php?data=" + encodedData;
+            }
             try {
                 File qrCodeFile = QRCodeGenerator.generateQRCodeImage(url, 300, 300, Main.getAppDataDir() + "/qr_codes/" + article.getArticleNumber() + "_qrcode.png");
                 qrCodeFiles.add(qrCodeFile);
@@ -70,6 +87,41 @@ public class QRCodeUtils {
             }
         }
         return qrCodeFiles;
+    }
+
+    /**
+     * Ensures the local scans.json file exists.
+     * If it doesn't exist, it will be created as an empty JSON array.
+     */
+    private static void ensureStoreExists() {
+        try {
+            File parent = STORE.getParentFile();
+            if (parent != null && !parent.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                parent.mkdirs();
+            }
+            if (!STORE.exists()) {
+                Files.writeString(STORE.toPath(), "[]", StandardCharsets.UTF_8);
+            }
+        } catch (Exception e) {
+            logger.warn("Could not ensure QR store exists at {}: {}", STORE.getAbsolutePath(), e.getMessage());
+            Main.logUtils.addLog("Konnte QR-Store nicht initialisieren: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Reads the local store as a JSON array. If the file is missing or invalid, an empty array is returned.
+     */
+    private static JsonArray readStoreArray() {
+        ensureStoreExists();
+        try (Reader reader = new FileReader(STORE, StandardCharsets.UTF_8)) {
+            JsonArray arr = GSON.fromJson(reader, JsonArray.class);
+            return arr != null ? arr : new JsonArray();
+        } catch (Exception e) {
+            logger.warn("Failed to read QR store ({}): {}", STORE.getAbsolutePath(), e.getMessage());
+            Main.logUtils.addLog("Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
+            return new JsonArray();
+        }
     }
 
     /**
@@ -83,8 +135,11 @@ public class QRCodeUtils {
         if (serverUrl == null || serverUrl.trim().isEmpty()) {
             serverUrl = "https://framedev.ch/vebo/scans.json";
         }
+        if(serverUrl.equalsIgnoreCase("https://framedev.ch/vebo")) {
+            serverUrl = serverUrl + "/scans.json";
+        }
         String urlString = serverUrl;
-        Gson gson = new Gson();
+
         List<Map<String, Object>> mapList = new ArrayList<>();
         HttpURLConnection connection = null;
         try {
@@ -99,11 +154,11 @@ public class QRCodeUtils {
             int responseCode = connection.getResponseCode();
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 try (InputStreamReader reader = new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8)) {
-                    JsonArray yamlData = gson.fromJson(reader, JsonArray.class);
-                    if (yamlData != null) {
-                        for (JsonElement e : yamlData) {
+                    JsonArray jsonArray = GSON.fromJson(reader, JsonArray.class);
+                    if (jsonArray != null) {
+                        for (JsonElement e : jsonArray) {
                             JsonObject obj = e.getAsJsonObject();
-                            Map<String, Object> map = gson.fromJson(gson.toJson(obj), Map.class);
+                            Map<String, Object> map = GSON.fromJson(GSON.toJson(obj), Map.class);
                             mapList.add(map);
                         }
                     }
@@ -116,8 +171,8 @@ public class QRCodeUtils {
             logger.error("Error while fetching QR code data from website", e);
             Main.logUtils.addLog("Fehler beim Abrufen der QR-Code-Daten von der Webseite: " + e.getMessage());
         } catch (URISyntaxException e) {
+            logger.error("Invalid server URL syntax: {}", urlString, e);
             Main.logUtils.addLog("Ungültige URL-Syntax: " + e.getMessage());
-            throw new RuntimeException(e);
         } finally {
             if (connection != null) {
                 connection.disconnect();
@@ -132,20 +187,14 @@ public class QRCodeUtils {
      * @return List of QR code data strings
      */
     public static List<String> getDataFromQRCode() {
-        Gson gson = new Gson();
         List<String> dataList = new ArrayList<>();
-        try {
-            JsonArray yamlData = gson.fromJson(new FileReader(STORE), JsonArray.class);
-            for (JsonElement e : yamlData) {
-                JsonObject obj = e.getAsJsonObject();
-                if (obj.has("data")) {
-                    String data = obj.get("data").getAsString();
-                    dataList.add(data);
-                }
+        JsonArray jsonArray = readStoreArray();
+        for (JsonElement e : jsonArray) {
+            if (e == null || !e.isJsonObject()) continue;
+            JsonObject obj = e.getAsJsonObject();
+            if (obj.has("data") && !obj.get("data").isJsonNull()) {
+                dataList.add(obj.get("data").getAsString());
             }
-        } catch (FileNotFoundException e) {
-            Main.logUtils.addLog("Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
-            throw new RuntimeException(e);
         }
         return dataList;
     }
@@ -156,17 +205,11 @@ public class QRCodeUtils {
      * @return List of QR code JSON strings
      */
     public static List<String> getQRCodes() {
-        Gson gson = new Gson();
         List<String> qrCodeList = new ArrayList<>();
-        try {
-            JsonArray yamlData = gson.fromJson(new FileReader(STORE), JsonArray.class);
-            for (JsonElement e : yamlData) {
-                JsonObject obj = e.getAsJsonObject();
-                qrCodeList.add(gson.toJson(obj));
-            }
-        } catch (FileNotFoundException e) {
-            Main.logUtils.addLog("Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
-            throw new RuntimeException(e);
+        JsonArray jsonArray = readStoreArray();
+        for (JsonElement e : jsonArray) {
+            if (e == null || !e.isJsonObject()) continue;
+            qrCodeList.add(GSON.toJson(e.getAsJsonObject()));
         }
         return qrCodeList;
     }
@@ -177,18 +220,15 @@ public class QRCodeUtils {
      * @return Latest QR code data string, or null if not found
      */
     public static String getLatestQRCodeData() {
-        Gson gson = new Gson();
-        try {
-            JsonArray yamlData = gson.fromJson(new FileReader(STORE), JsonArray.class);
-            if (!yamlData.isEmpty()) {
-                JsonObject obj = yamlData.get(yamlData.size() - 1).getAsJsonObject();
-                if (obj.has("data")) {
+        JsonArray jsonArray = readStoreArray();
+        if (!jsonArray.isEmpty()) {
+            JsonElement last = jsonArray.get(jsonArray.size() - 1);
+            if (last != null && last.isJsonObject()) {
+                JsonObject obj = last.getAsJsonObject();
+                if (obj.has("data") && !obj.get("data").isJsonNull()) {
                     return obj.get("data").getAsString();
                 }
             }
-        } catch (FileNotFoundException e) {
-            Main.logUtils.addLog("Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
-            throw new RuntimeException(e);
         }
         return null;
     }
@@ -211,31 +251,29 @@ public class QRCodeUtils {
      */
     @SuppressWarnings("unchecked")
     public static List<Map<String, String>> getListMapFromJsonQRCode() {
-        Gson gson = new Gson();
         List<Map<String, String>> mapList = new ArrayList<>();
-        try {
-            JsonArray yamlData = gson.fromJson(new FileReader(STORE), JsonArray.class);
-            for (JsonElement e : yamlData) {
-                JsonObject obj = e.getAsJsonObject();
-                Map<String, String> map = gson.fromJson(gson.toJson(obj), Map.class);
-                mapList.add(map);
-            }
-        } catch (FileNotFoundException e) {
-            Main.logUtils.addLog("Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
-            throw new RuntimeException(e);
+        JsonArray jsonArray = readStoreArray();
+        for (JsonElement e : jsonArray) {
+            if (e == null || !e.isJsonObject()) continue;
+            JsonObject obj = e.getAsJsonObject();
+            @SuppressWarnings("unchecked")
+            Map<String, String> map = GSON.fromJson(GSON.toJson(obj), Map.class);
+            mapList.add(map);
         }
         return mapList;
     }
 
     /**
-     * Deletes the local scans.json file containing stored QR codes.
+     * Clears the local scans.json store by resetting it to an empty JSON array.
+     * This avoids FileNotFound issues for callers that expect the store to exist.
      */
     public static void clearStoredQRCodes() {
-        if (STORE.exists()) {
-            if(!STORE.delete()) {
-                System.err.println("Konnte gespeicherte QR-Codes nicht löschen: " + STORE.getAbsolutePath());
-                Main.logUtils.addLog("Konnte gespeicherte QR-Codes nicht löschen: " + STORE.getAbsolutePath());
-            }
+        ensureStoreExists();
+        try {
+            Files.writeString(STORE.toPath(), "[]", StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            logger.error("Could not clear stored QR codes: {}", e.getMessage(), e);
+            Main.logUtils.addLog("Konnte gespeicherte QR-Codes nicht löschen: " + e.getMessage());
         }
     }
 }

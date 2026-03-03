@@ -7,8 +7,8 @@ import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.FontUIResource;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * Centralized theme manager for the Swing application.
@@ -33,7 +33,9 @@ public class ThemeManager {
     private static Color customAccentColor;
     private static Color customHeaderColor;
     private static Color customButtonColor;
-    private final List<Window> registeredWindows = new ArrayList<>();
+    // Use WeakHashMap to avoid memory leaks if unregisterWindow is forgotten.
+    // Windows are automatically removed when they become unreachable.
+    private final Map<Window, Boolean> registeredWindows = new WeakHashMap<>();
 
     /**
      * Available application themes.
@@ -267,14 +269,22 @@ public class ThemeManager {
      * @param theme new theme to apply
      */
     public void setTheme(Theme theme) {
-        currentTheme = theme;
+        Runnable apply = () -> {
+            currentTheme = theme;
 
-        if (Main.settings != null) {
-            Main.settings.setProperty("dark_mode", String.valueOf(theme == Theme.DARK));
+            if (Main.settings != null) {
+                Main.settings.setProperty("dark_mode", String.valueOf(theme == Theme.DARK));
+            }
+
+            applyUIDefaults();
+            updateAllWindows();
+        };
+
+        if (SwingUtilities.isEventDispatchThread()) {
+            apply.run();
+        } else {
+            SwingUtilities.invokeLater(apply);
         }
-
-        applyUIDefaults();
-        updateAllWindows();
     }
 
     /**
@@ -285,11 +295,19 @@ public class ThemeManager {
      * @param button custom button color (nullable)
      */
     public static void setCustomColors(Color accent, Color header, Color button) {
-        customAccentColor = accent;
-        customHeaderColor = header;
-        customButtonColor = button;
-        applyUIDefaults();
-        getInstance().updateAllWindows();
+        Runnable apply = () -> {
+            customAccentColor = accent;
+            customHeaderColor = header;
+            customButtonColor = button;
+            applyUIDefaults();
+            getInstance().updateAllWindows();
+        };
+
+        if (SwingUtilities.isEventDispatchThread()) {
+            apply.run();
+        } else {
+            SwingUtilities.invokeLater(apply);
+        }
     }
 
     public static Color getCustomAccentColor() {
@@ -386,7 +404,7 @@ public class ThemeManager {
 
             // Buttons - use proper button colors with white text for visibility
             Color btnBg = ThemeManager.getButtonBackgroundColor();
-            Color btnFg = Color.WHITE;  // Always white text on blue buttons for best contrast
+            Color btnFg = ThemeManager.getButtonForegroundColor();
             Color btnHover = ThemeManager.getButtonHoverColor();
             Color btnPressed = ThemeManager.getButtonPressedColor();
 
@@ -506,13 +524,13 @@ public class ThemeManager {
             UIManager.put("Tree.selectionForeground", new ColorUIResource(selFg));
 
             // ---- Table ----
-            UIManager.put("Table.background", new ColorUIResource(inputBg));
+            UIManager.put("Table.background", new ColorUIResource(ThemeManager.getCardBackgroundColor()));
             UIManager.put("Table.foreground", new ColorUIResource(fg));
-            UIManager.put("Table.selectionBackground", new ColorUIResource(selBg));
+            UIManager.put("Table.selectionBackground", new ColorUIResource(ThemeManager.getTableRowSelectedColor()));
             UIManager.put("Table.selectionForeground", new ColorUIResource(selFg));
-            UIManager.put("Table.gridColor", new ColorUIResource(border));
-            UIManager.put("TableHeader.background", new ColorUIResource(bg));
-            UIManager.put("TableHeader.foreground", new ColorUIResource(fg));
+            UIManager.put("Table.gridColor", new ColorUIResource(ThemeManager.getTableGridColor()));
+            UIManager.put("TableHeader.background", new ColorUIResource(ThemeManager.getTableHeaderBackgroundColor()));
+            UIManager.put("TableHeader.foreground", new ColorUIResource(ThemeManager.getTableHeaderForegroundColor()));
 
             // ---- TabbedPane ----
             UIManager.put("TabbedPane.background", new ColorUIResource(bg));
@@ -808,8 +826,8 @@ public class ThemeManager {
      * @param window window to track
      */
     public void registerWindow(Window window) {
-        if (window != null && !registeredWindows.contains(window)) {
-            registeredWindows.add(window);
+        if (window != null) {
+            registeredWindows.put(window, Boolean.TRUE);
         }
     }
 
@@ -826,15 +844,23 @@ public class ThemeManager {
      * Refreshes all registered windows so the new theme is applied immediately.
      */
     public void updateAllWindows() {
-        registeredWindows.removeIf(w -> w == null || !w.isDisplayable());
-
-        for (Window window : registeredWindows) {
-            SwingUtilities.invokeLater(() -> {
+        Runnable refresh = () -> {
+            // Snapshot to avoid concurrent modification while iterating
+            for (Window window : java.util.List.copyOf(registeredWindows.keySet())) {
+                if (window == null || !window.isDisplayable()) {
+                    continue;
+                }
                 SwingUtilities.updateComponentTreeUI(window);
                 updateComponentTree(window);
                 window.revalidate();
                 window.repaint();
-            });
+            }
+        };
+
+        if (SwingUtilities.isEventDispatchThread()) {
+            refresh.run();
+        } else {
+            SwingUtilities.invokeLater(refresh);
         }
     }
 
@@ -983,6 +1009,10 @@ public class ThemeManager {
     }
 
     public static Color getButtonForegroundColor() {
+        // If user overrides the button background, ensure readable text.
+        if (customButtonColor != null) {
+            return getContrastingTextColor(customButtonColor);
+        }
         return isDarkMode() ? Dark.BUTTON_FG : Light.BUTTON_FG;
     }
 
@@ -1159,7 +1189,7 @@ public class ThemeManager {
     }
 
     public static Color getAccentColor() {
-        return customAccentColor != null ? customAccentColor : new Color(52, 152, 219);
+        return customAccentColor != null ? customAccentColor : (isDarkMode() ? Dark.TEXT_LINK : Light.TEXT_LINK);
     }
 
     public static Color getTableSelectionColor() {
@@ -1261,5 +1291,21 @@ public class ThemeManager {
 
     public static Color getSurfaceDarkerColor() {
         return isDarkMode() ? Dark.SURFACE_DARKER : Light.SURFACE_DARKER;
+    }
+
+    private static Color getContrastingTextColor(Color bg) {
+        if (bg == null) return Color.WHITE;
+
+        // Relative luminance (sRGB)
+        double r = bg.getRed() / 255.0;
+        double g = bg.getGreen() / 255.0;
+        double b = bg.getBlue() / 255.0;
+
+        r = (r <= 0.03928) ? (r / 12.92) : Math.pow((r + 0.055) / 1.055, 2.4);
+        g = (g <= 0.03928) ? (g / 12.92) : Math.pow((g + 0.055) / 1.055, 2.4);
+        b = (b <= 0.03928) ? (b / 12.92) : Math.pow((b + 0.055) / 1.055, 2.4);
+
+        double luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        return luminance > 0.5 ? Color.BLACK : Color.WHITE;
     }
 }

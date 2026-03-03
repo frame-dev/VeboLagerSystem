@@ -29,6 +29,7 @@ public class ConverterGUI extends JFrame {
     private JTextField amountField;
     private JComboBox<String> unitBox;
     private JLabel resultLabel;
+    private JButton calcButton;
 
     /**
      * Create a new converter GUI for the given article. The article's name and sell price will be displayed,
@@ -58,6 +59,24 @@ public class ConverterGUI extends JFrame {
 
         root.add(card);
         setContentPane(root);
+
+        // Make Enter trigger the primary action when possible
+        if (getRootPane() != null) {
+            getRootPane().setDefaultButton(calcButton);
+
+            // ESC closes the window
+            getRootPane().registerKeyboardAction(
+                    e -> dispose(),
+                    KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                    JComponent.WHEN_IN_FOCUSED_WINDOW
+            );
+        }
+
+        // Disable interaction when no article is provided
+        boolean enabled = (this.article != null);
+        amountField.setEnabled(enabled);
+        unitBox.setEnabled(enabled);
+        if (calcButton != null) calcButton.setEnabled(enabled);
 
         amountField.addActionListener(e -> calculate());
     }
@@ -195,10 +214,10 @@ public class ConverterGUI extends JFrame {
         actions.setOpaque(false);
 
         JButton reset = createBigButton("Zurücksetzen", false);
-        JButton calc  = createBigButton("Berechnen", true);
+        calcButton  = createBigButton("Berechnen", true);
         JButton close = createBigButton("Schließen", false);
 
-        calc.addActionListener(e -> calculate());
+        calcButton.addActionListener(e -> calculate());
         reset.addActionListener(e -> {
             amountField.setText("");
             resultLabel.setText("Preis: —");
@@ -206,7 +225,7 @@ public class ConverterGUI extends JFrame {
         close.addActionListener(e -> dispose());
 
         actions.add(reset);
-        actions.add(calc);
+        actions.add(calcButton);
         actions.add(close);
 
         bottom.add(actions, BorderLayout.EAST);
@@ -228,9 +247,12 @@ public class ConverterGUI extends JFrame {
         }
 
         try {
-            double amount = Double.parseDouble(txt);
-            if (amount <= 0) throw new NumberFormatException();
+            java.math.BigDecimal amountBd = new java.math.BigDecimal(txt);
+            if (amountBd.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                throw new NumberFormatException();
+            }
 
+            double amount = amountBd.doubleValue();
             boolean liters = "l".equals(unitBox.getSelectedItem());
 
             double price = ArticleUtils.calculatePriceForFilling(
@@ -239,16 +261,23 @@ public class ConverterGUI extends JFrame {
                     liters ? ArticleUtils.VolumeUnit.LITER : ArticleUtils.VolumeUnit.MILLILITER
             );
 
-            resultLabel.setText("Preis: " + formatCHF(price));
+            // Normalize to 2 decimals for display
+            java.math.BigDecimal priceBd = java.math.BigDecimal.valueOf(price)
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
 
-        } catch (Exception ex) {
+            resultLabel.setText("Preis: " + formatCHF(priceBd.doubleValue()));
+
+        } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Ungültige Eingabe.", "Fehler", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Fehler beim Berechnen.", "Fehler", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     // ---------- HELPERS -----------------------------------------------------
 
     private JButton createBigButton(String text, boolean primary){
+        if(text == null) throw new NullPointerException("text must not be null");
         JButton b = new JButton(text);
         b.setFont(SettingsUtils.getFontByName(Font.BOLD,15));
         b.setPreferredSize(new Dimension(160,46));
@@ -271,12 +300,16 @@ public class ConverterGUI extends JFrame {
     }
 
     private static String formatCHF(double v){
-        return new DecimalFormat("0.00").format(v)+" CHF";
+        java.text.DecimalFormatSymbols symbols = new java.text.DecimalFormatSymbols(java.util.Locale.ROOT);
+        symbols.setDecimalSeparator('.');
+        java.text.DecimalFormat df = new java.text.DecimalFormat("0.00", symbols);
+        return df.format(v) + " CHF";
     }
 
     // ---------- COMBOBOX (WITH HOVER) --------------------------------------
 
     private JComboBox<String> createStyledComboBox(String[] values) {
+        if(values == null) throw new NullPointerException("values must not be null");
         JComboBox<String> box = new JComboBox<>(values);
 
         box.setFont(SettingsUtils.getFontByName(Font.PLAIN, 15));
@@ -330,6 +363,7 @@ public class ConverterGUI extends JFrame {
     }
 
     private void installComboHover(JComboBox<?> box) {
+        if(box == null) throw new NullPointerException("box must not be null");
         box.addMouseListener(new MouseAdapter() {
             @Override public void mouseEntered(MouseEvent e) { box.setBorder(compoundFieldBorder(true)); }
             @Override public void mouseExited(MouseEvent e)  { box.setBorder(compoundFieldBorder(false)); }
@@ -339,6 +373,7 @@ public class ConverterGUI extends JFrame {
     // ---------- TEXT FIELD HOVER/FOCUS -------------------------------------
 
     private void installFieldHoverAndFocus(JTextField field) {
+        if(field == null) throw new NullPointerException("field must not be null");
         field.addMouseListener(new MouseAdapter() {
             @Override public void mouseEntered(MouseEvent e) {
                 if (!field.isFocusOwner()) field.setBorder(compoundFieldBorder(true));
@@ -374,6 +409,7 @@ public class ConverterGUI extends JFrame {
      * @return A new brightened color
      */
     private static Color brighten(Color c, float amount) {
+        if (c == null) throw new NullPointerException("c must not be null");
         amount = Math.max(0f, Math.min(1f, amount));
         int r = c.getRed() + Math.round((255 - c.getRed()) * amount);
         int g = c.getGreen() + Math.round((255 - c.getGreen()) * amount);

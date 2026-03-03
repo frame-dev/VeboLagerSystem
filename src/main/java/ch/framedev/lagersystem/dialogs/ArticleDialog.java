@@ -18,7 +18,7 @@ import java.text.NumberFormat;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static ch.framedev.lagersystem.guis.ArticleGUI.getHeaderPanel;
+import static ch.framedev.lagersystem.utils.ArticleUtils.getHeaderPanel;
 
 /**
  * This class provides static methods to display dialogs for adding and updating articles. It includes methods to create and style dialog components such as headers, form fields, buttons, and scroll panes. The dialogs are designed with a modern look using gradients, shadows, and blue accents for required fields. The main methods are showUpdateArticleDialog() for editing existing articles and showAddArticleDialog() for creating new articles. Both methods return the entered data in a structured format or null if the dialog is canceled.
@@ -261,6 +261,7 @@ public class ArticleDialog {
         // Lieferant
         gbc.gridy = row++;
         contentCard.add(createLabel.apply(UnicodeSymbols.TRUCK + " Lieferant"), gbc);
+        gbc.gridy = row++;
         JTextField lieferantField = new JTextField(existingData != null && existingData.length > 8 && existingData[8] != null ? existingData[8].toString() : "", 25);
         styleTextField.accept(lieferantField);
         contentCard.add(lieferantField, gbc);
@@ -504,7 +505,7 @@ public class ArticleDialog {
      * Creates the dialog header with title and close button - modern blue gradient design
      */
     public static JPanel createDialogHeader(JDialog dialog, Object[][] resultHolder) {
-        // Create gradient panel for modern look
+        // Create a gradient panel for modern look
         JPanel headerPanel = getHeaderPanel();
 
         // Icon and title panel
@@ -624,22 +625,29 @@ public class ArticleDialog {
         gbc.gridy = row++;
         JPanel pricePanel = createPriceFieldsPanel();
         contentCard.add(pricePanel, gbc);
-        JFormattedTextField verkaufField = findFormattedField((JPanel) pricePanel.getComponent(0));
-        JFormattedTextField einkaufField = findFormattedField((JPanel) pricePanel.getComponent(1));
+        JPanel verkaufPanel = (JPanel) pricePanel.getComponent(0);
+        JPanel einkaufPanel = (JPanel) pricePanel.getComponent(1);
+
+        JFormattedTextField verkaufField = findFormattedField(verkaufPanel);
+        JFormattedTextField einkaufField = findFormattedField(einkaufPanel);
+
         if (verkaufField == null) {
             verkaufField = new JFormattedTextField(createPriceFormatter());
             verkaufField.setColumns(10);
+            verkaufPanel.add(verkaufField, BorderLayout.CENTER);
         }
         if (einkaufField == null) {
             einkaufField = new JFormattedTextField(createPriceFormatter());
             einkaufField.setColumns(10);
+            einkaufPanel.add(einkaufField, BorderLayout.CENTER);
         }
 
         // Supplier field
         gbc.insets = new Insets(6, 6, 6, 6);
         gbc.gridy = row++;
         contentCard.add(createDialogLabel(UnicodeSymbols.TRUCK + " Lieferant"), gbc);
-        gbc.gridy = row;
+
+        gbc.gridy = row++;
         gbc.insets = new Insets(2, 6, 6, 6);
         JTextField lieferantField = createDialogTextField();
         contentCard.add(lieferantField, gbc);
@@ -664,6 +672,9 @@ public class ArticleDialog {
      * Creates a styled label for dialog forms with blue accent for required fields
      */
     private static JLabel createDialogLabel(String text) {
+        if (text == null) {
+            throw new IllegalArgumentException("Text cannot be null");
+        }
         JLabel label = new JLabel(text);
         label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
 
@@ -739,6 +750,9 @@ public class ArticleDialog {
      * Creates a panel with label and spinner
      */
     private static JPanel createLabeledSpinnerPanel(String labelText) {
+        if (labelText == null) {
+            throw new IllegalArgumentException("Label text cannot be null");
+        }
         JPanel panel = new JPanel(new BorderLayout(0, 4));
         panel.setOpaque(false);
         panel.add(createDialogLabel(labelText), BorderLayout.NORTH);
@@ -753,9 +767,12 @@ public class ArticleDialog {
     }
 
     /**
-     * Styles a spinner for dialog forms with blue focus effect
+     * Styles a spinner for dialog forms with a blue focus effect
      */
     private static void styleDialogSpinner(JSpinner spinner) {
+        if (spinner == null) {
+            throw new IllegalArgumentException("Spinner cannot be null.");
+        }
         spinner.setBackground(ThemeManager.getInputBackgroundColor());
 
         Color normalBorder = ThemeManager.getBorderColor();
@@ -799,12 +816,19 @@ public class ArticleDialog {
     private static JFormattedTextField findFormattedField(Container root) {
         if (root == null) return null;
         for (Component c : root.getComponents()) {
-            if (c instanceof JFormattedTextField f) {
-                return f;
-            }
-            if (c instanceof Container child) {
-                JFormattedTextField nested = findFormattedField(child);
-                if (nested != null) return nested;
+            switch (c) {
+                case null -> {
+                    continue;
+                }
+                case JFormattedTextField f -> {
+                    return f;
+                }
+                case Container child -> {
+                    JFormattedTextField nested = findFormattedField(child);
+                    if (nested != null) return nested;
+                }
+                default -> {
+                }
             }
         }
         return null;
@@ -951,7 +975,7 @@ public class ArticleDialog {
 
 
     /**
-     * Shows the dialog and sets initial focus
+     * Shows the dialog and sets the initial focus
      */
     private static void showDialog(JFrame frame, JDialog dialog, JTextField initialFocusField) {
         dialog.pack();

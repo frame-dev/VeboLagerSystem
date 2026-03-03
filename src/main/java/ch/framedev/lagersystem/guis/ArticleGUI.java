@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.utils.*;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import org.apache.logging.log4j.Level;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -25,10 +26,9 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import static ch.framedev.lagersystem.main.Main.articleListGUI;
-import static ch.framedev.lagersystem.utils.ArticleUtils.categories;
-import static ch.framedev.lagersystem.utils.ArticleUtils.loadCategories;
-import static ch.framedev.lagersystem.utils.JFrameUtils.applyButtonPalette;
-import static ch.framedev.lagersystem.utils.JFrameUtils.createSecondaryButton;
+import static ch.framedev.lagersystem.main.Main.logUtils;
+import static ch.framedev.lagersystem.utils.ArticleUtils.*;
+import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 
 /**
  * ArticleGUI with category support for better organization.
@@ -37,7 +37,7 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.createSecondaryButton;
 @SuppressWarnings("DuplicatedCode")
 public class ArticleGUI extends JFrame {
 
-    private final JTable articleTable;
+    public final JTable articleTable;
     // scroll pane reference so we can read viewport width on resize
     private final JScrollPane tableScrollPane;
     // base column widths - added category column between Name and Details
@@ -52,36 +52,6 @@ public class ArticleGUI extends JFrame {
 
     // Category management
     private JComboBox<String> categoryFilter;
-
-    /**
-     * Helper class to represent a category and its associated article number range. Loaded from categories.json.
-     */
-    public static class CategoryRange {
-        /**
-         * The name of the category (e.g., "Getränke")
-         */
-        public String category;
-        /**
-         * The starting article number for this category (inclusive)
-         */
-        public int rangeStart;
-        /**
-         * The ending article number for this category (inclusive)
-         */
-        public int rangeEnd;
-
-        /**
-         * Creates a new CategoryRange with the specified category name and article number range.
-         * @param category The name of the category (e.g., "Getränke")
-         * @param start The starting article number for this category (inclusive)
-         * @param end The ending article number for this category (inclusive)
-         */
-        public CategoryRange(String category, int start, int end) {
-            this.category = category;
-            this.rangeStart = start;
-            this.rangeEnd = end;
-        }
-    }
 
     /**
      * Initializes the ArticleGUI, sets up the layout, loads categories and articles, and configures interactions.
@@ -173,6 +143,8 @@ public class ArticleGUI extends JFrame {
         addArticleButton.addActionListener(e -> {
             Object[] row = showAddArticleDialog();
             if (row != null) {
+                if (row.length != 8)
+                    throw new IllegalArgumentException("Invalid number of fields in add article dialog");
                 ArticleManager articleManager = ArticleManager.getInstance();
                 Article article = new Article(
                         (String) row[0],
@@ -215,6 +187,8 @@ public class ArticleGUI extends JFrame {
 
             Object[] updatedRow = showUpdateArticleDialog(existingData);
             if (updatedRow != null) {
+                if (updatedRow.length != 8)
+                    throw new IllegalArgumentException("Invalid number of fields in update article dialog");
                 // updatedRow: [artikelNr, name, details, lager, mindest, verkauf, einkauf, lieferant]
                 DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
 
@@ -279,7 +253,7 @@ public class ArticleGUI extends JFrame {
 
         JButton bulkExportButton = createRoundedButton(UnicodeSymbols.DOWNLOAD + " Auswahl exportieren");
         bulkExportButton.setToolTipText("Exportiert die ausgewählten Artikel");
-        bulkExportButton.addActionListener(e -> exportSelectedArticles());
+        bulkExportButton.addActionListener(e -> exportSelectedArticles(this, articleTable));
 
         // Retrieve QR-Code Data button
         JButton retrieveQrCodeDataButton = createRoundedButton(UnicodeSymbols.PHONE + " QR-Code Daten abrufen");
@@ -403,10 +377,10 @@ public class ArticleGUI extends JFrame {
         styleCountBadge(countLabel);
         updateCountLabel();
 
-        // Actions (use secondary palette to keep bottom bar light)
+        // Actions (use secondary palette to keep the bottom bar light)
         JButton addToClientOrder = createSecondaryButton(UnicodeSymbols.SHOPPING_CART + " Zur Kundenbestellung");
         addToClientOrder.setToolTipText("Fügt die ausgewählten Artikel zur aktuellen Kundenbestellung hinzu");
-        addToClientOrder.addActionListener(e -> addSelectedArticlesToClientOrder());
+        addToClientOrder.addActionListener(e -> addSelectedArticlesToClientOrder(this, articleTable));
 
         JButton exportTableAsPdfBtn = createSecondaryButton(UnicodeSymbols.DOWNLOAD + " Tabelle als PDF");
         exportTableAsPdfBtn.setToolTipText("Exportiert die Tabelle als PDF");
@@ -516,55 +490,13 @@ public class ArticleGUI extends JFrame {
         ComponentAdapter resizeListener = new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                adjustColumnWidths();
+                adjustColumnWidths(articleTable, tableScrollPane, baseColumnWidths);
             }
         };
         this.addComponentListener(resizeListener);
         tableScrollPane.getViewport().addComponentListener(resizeListener);
 
-        SwingUtilities.invokeLater(this::adjustColumnWidths);
-    }
-
-    private void addSelectedArticlesToClientOrder() {
-        int[] selectedRows = articleTable.getSelectedRows();
-        if (selectedRows.length == 0) {
-            JOptionPane.showMessageDialog(this,
-                    "Bitte wählen Sie mindestens einen Artikel aus, um ihn zur Kundenbestellung hinzuzufügen.",
-                    "Keine Auswahl", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
-            return;
-        }
-
-        List<Article> articlesToAdd = new ArrayList<>();
-        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-
-        for (int selectedRow : selectedRows) {
-            int modelRow = articleTable.convertRowIndexToModel(selectedRow);
-            String artikelNr = (String) model.getValueAt(modelRow, 0);
-            Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
-            if (article != null) {
-                String input = JOptionPane.showInputDialog("Menge für Artikel (" + artikelNr + ")" + article.getName() + " eingeben:", "1");
-                if (input != null) {
-                    try {
-                        int menge = Integer.parseInt(input);
-                        ArticleListGUI.addArticle(article, menge);
-                        articlesToAdd.add(article);
-                    } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(this,
-                                "Bitte geben Sie eine gültige Zahl für die Menge ein.",
-                                "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
-                    }
-                }
-            }
-        }
-
-        if (articlesToAdd.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Keine gültigen Artikel zum Hinzufügen gefunden.",
-                    "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
-            return;
-        }
-        JOptionPane.showMessageDialog(null, "Artikel zur Kundenbestellung hinzugefügt.",
-                "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+        SwingUtilities.invokeLater(() -> adjustColumnWidths(articleTable, tableScrollPane, baseColumnWidths));
     }
 
     @Override
@@ -584,40 +516,10 @@ public class ArticleGUI extends JFrame {
         return ArticleDialog.showAddArticleDialog(this);
     }
 
-    /**
-     * Creates a custom header panel with a horizontal gradient background for the article management section.
-     * @return A JPanel with a custom gradient background that can be used as a header for the article management section.
-     */
-    public static JPanel getHeaderPanel() {
-        JPanel headerPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-
-                GradientPaint gradient = getGradientPaint();
-                g2d.setPaint(gradient);
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-                g2d.dispose();
-            }
-
-            private GradientPaint getGradientPaint() {
-                Color color1 = ThemeManager.getHeaderBackgroundColor();
-                Color color2 = ThemeManager.getHeaderGradientColor();
-
-                return new GradientPaint(
-                        0, 0, color1,
-                        getWidth(), 0, color2
-                );
-            }
-        };
-        headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
-        return headerPanel;
-    }
-
     private void initializeTable() {
+        if (articleTable == null) {
+            throw new IllegalStateException("Article table has not been initialized");
+        }
         // Provide a typed, non-editable table model so sorting & renderers behave correctly
         DefaultTableModel model = getDefaultTableModel();
 
@@ -717,7 +619,7 @@ public class ArticleGUI extends JFrame {
 
     /**
      * Export the article table as a PDF with all data on a single page.
-     * Uses landscape A3 format for maximum space and dynamically scales content to fit.
+     * Uses a landscape A3 format for maximum space and dynamically scales content to fit.
      */
     private void exportTableAsPDF() {
         ArticleExporter.exportTableAsPdf(this, articleTable, baseColumnWidths, Main.iconSmall);
@@ -753,69 +655,16 @@ public class ArticleGUI extends JFrame {
     }
 
     /**
-     * Adjust table column widths proportionally to the available viewport width using baseColumnWidths as weights.
-     */
-    private void adjustColumnWidths() {
-        if (tableScrollPane == null || articleTable.getColumnCount() == 0) return;
-        int available = tableScrollPane.getViewport().getWidth();
-        if (available <= 0) {
-            // try the scrollpane size if viewport isn't ready
-            available = tableScrollPane.getWidth();
-        }
-        if (available <= 0) return;
-
-        int totalBase = 0;
-        for (int w : baseColumnWidths) totalBase += w;
-
-        TableColumnModel tcm = articleTable.getColumnModel();
-        int colCount = tcm.getColumnCount();
-
-        // Compute scaled widths
-        int used = 0;
-        int[] newWidths = new int[colCount];
-        for (int i = 0; i < colCount; i++) {
-            int base = i < baseColumnWidths.length ? baseColumnWidths[i] : 100;
-            int w = Math.max(50, (int) Math.round((base / (double) totalBase) * available));
-            newWidths[i] = w;
-            used += w;
-        }
-
-        // adjust rounding error: distribute remaining pixels
-        int diff = available - used;
-        int idx = 0;
-        while (diff != 0 && colCount > 0) {
-            newWidths[idx % colCount] += (diff > 0) ? 1 : -1;
-            diff += (diff > 0) ? -1 : 1;
-            idx++;
-        }
-
-        // Apply widths
-        for (int i = 0; i < colCount; i++) {
-            TableColumn col = tcm.getColumn(i);
-            col.setPreferredWidth(newWidths[i]);
-        }
-        articleTable.revalidate();
-    }
-
-    /**
      * Displays the ArticleGUI window. This method can be called from the main menu or other parts of the application to show the article management interface.
      */
     public void display() {
         setVisible(true);
     }
 
-    /**
-     * Entry point to launch the ArticleGUI independently for testing. In the full application, this would be launched from the main menu or another part of the app.
-     * @param args not used
-     */
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            ArticleGUI gui = new ArticleGUI();
-            gui.display();
-        });
-    }
-
     private JButton createRoundedButton(String text) {
+        if(text == null) {
+            throw new IllegalArgumentException("Text must not be null");
+        }
         JButton button = new JButton(text);
         button.setFocusPainted(false);
         button.setBorderPainted(true);
@@ -870,6 +719,9 @@ public class ArticleGUI extends JFrame {
     }
 
     private void styleTextField(JTextField tf) {
+        if(tf == null) {
+            throw new IllegalArgumentException("Textfield cannot be null");
+        }
         tf.setBackground(ThemeManager.getInputBackgroundColor());
         tf.setForeground(ThemeManager.getTextPrimaryColor());
         tf.setCaretColor(ThemeManager.getTextPrimaryColor());
@@ -887,6 +739,7 @@ public class ArticleGUI extends JFrame {
         isUpdatingTable = true;
         model.setRowCount(0);
         for (Article a : articles) {
+            if (a == null) throw new NullPointerException("Article is null");
             String category = getCategoryForArticle(a.getArticleNumber());
             model.addRow(new Object[]{
                     a.getArticleNumber(),
@@ -985,6 +838,7 @@ public class ArticleGUI extends JFrame {
     private void reloadRowFromDb(String articleNumber, int modelRow) {
         Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
         if (article == null) {
+            logUtils.addLog(Level.ERROR, "Article not found in database: " + articleNumber);
             return;
         }
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
@@ -1047,10 +901,10 @@ public class ArticleGUI extends JFrame {
         int modelRow = articleTable.convertRowIndexToModel(selectedRow);
         String artikelnummer = (String) model.getValueAt(modelRow, 0);
 
-        // Remove from database first
+        // Remove from a database first
         ArticleManager articleManager = ArticleManager.getInstance();
         if (articleManager.deleteArticleByNumber(artikelnummer)) {
-            // Only remove from table if DB deletion succeeded
+            // Only remove from the table if DB deletion succeeded
             model.removeRow(modelRow);
             updateCountLabel();
             JOptionPane.showMessageDialog(this, "Artikel erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
@@ -1100,7 +954,7 @@ public class ArticleGUI extends JFrame {
     }
 
     private void adjustStockForSelectedArticles() {
-        List<Article> selected = getSelectedArticles();
+        List<Article> selected = getSelectedArticles(articleTable);
         if (selected.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "Bitte wählen Sie mindestens einen Artikel aus.",
@@ -1129,6 +983,9 @@ public class ArticleGUI extends JFrame {
 
         boolean hasNegative = false;
         for (Article article : selected) {
+            if(article == null) {
+                throw new IllegalArgumentException("Artikel ist null.");
+            }
             if (article.getStockQuantity() + delta < 0) {
                 hasNegative = true;
                 break;
@@ -1174,122 +1031,12 @@ public class ArticleGUI extends JFrame {
         isUpdatingTable = false;
     }
 
-    private void exportSelectedArticles() {
-        List<Article> selected = getSelectedArticles();
-        if (selected.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Bitte wählen Sie mindestens einen Artikel aus.",
-                    "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
-            return;
-        }
-
-        Object[] options = {"CSV", "PDF", "Abbrechen"};
-        int choice = JOptionPane.showOptionDialog(this,
-                "Auswahl exportieren als:",
-                "Export",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                Main.iconSmall,
-                options,
-                options[0]);
-        if (choice == 0) {
-            exportArticlesToCsv(selected);
-        } else if (choice == 1) {
-            exportArticlesToPdf(selected);
-        }
-    }
-
-    private void exportArticlesToCsv(List<Article> articles) {
-        ArticleExporter.exportArticlesToCsv(articles);
-    }
-
-    private void exportArticlesToPdf(List<Article> articles) {
-        ArticleExporter.exportArticlesToPdf(articles);
-    }
-
-    /**
-     * This method retrieves the currently selected articles from the JTable, converting the selected rows into Article objects.
-     *
-     * @return A list of Article objects corresponding to the selected rows in the table. If no rows are selected, returns an empty list.
-     */
-    public List<Article> getSelectedArticles() {
-        int[] selectedRows = articleTable.getSelectedRows();
-        if (selectedRows == null || selectedRows.length == 0) {
-            return Collections.emptyList();
-        }
-
-        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-        List<Article> selectedArticles = new ArrayList<>();
-        for (int selectedRow : selectedRows) {
-            int modelRow = articleTable.convertRowIndexToModel(selectedRow);
-            Object articleNumber = model.getValueAt(modelRow, 0);
-            Object name = model.getValueAt(modelRow, 1);
-            Object details = model.getValueAt(modelRow, 3);
-            Object stockQuantity = model.getValueAt(modelRow, 4);
-            Object minStockLevel = model.getValueAt(modelRow, 5);
-            Object sellPrice = model.getValueAt(modelRow, 6);
-            if (sellPrice instanceof String str) {
-                sellPrice = str.replace(" CHF", "").trim();
-            }
-            Object purchasePrice = model.getValueAt(modelRow, 7);
-            if (purchasePrice instanceof String str) {
-                purchasePrice = str.replace(" CHF", "").trim();
-            }
-            Object vendorName = model.getValueAt(modelRow, 8);
-
-            Article article = new Article(
-                    String.valueOf(articleNumber),
-                    String.valueOf(name),
-                    String.valueOf(details),
-                    toInt(stockQuantity),
-                    toInt(minStockLevel),
-                    toDouble(sellPrice),
-                    toDouble(purchasePrice),
-                    String.valueOf(vendorName)
-            );
-            selectedArticles.add(article);
-        }
-        return selectedArticles;
-    }
-
-    private static int toInt(Object value) {
-        if (value instanceof Number number) {
-            return number.intValue();
-        }
-        if (value instanceof String str) {
-            str = str.replace(" CHF", "").trim();
-            try {
-                return Integer.parseInt(str.trim());
-            } catch (NumberFormatException ignored) {
-                return 0;
-            }
-        }
-        return 0;
-    }
-
-    private static double toDouble(Object value) {
-        if (value instanceof Number number) {
-            return number.doubleValue();
-        }
-        if (value instanceof String str) {
-            str = str.replace(" CHF", "").trim();
-            try {
-                return Double.parseDouble(str.trim());
-            } catch (NumberFormatException ignored) {
-                return 0.0;
-            }
-        }
-        return 0.0;
-    }
-
     /**
      * Generate QR codes for the selected articles and save them to disk, showing a progress dialog during generation.
      * Uses a SwingWorker to keep the UI responsive and handles errors gracefully.
      */
     private void generateQrCodesForSelectedArticles() {
-        List<Article> selectedArticles = getSelectedArticles();
+        List<Article> selectedArticles = getSelectedArticles(articleTable);
         if (selectedArticles.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "Bitte wählen Sie mindestens einen Artikel aus.",
@@ -1368,7 +1115,7 @@ public class ArticleGUI extends JFrame {
      * Show a preview dialog for the QR codes of the selected articles, allowing users to see and print them without saving to disk.
      */
     private void showQrCodePreviewDialog() {
-        ArticleQrPreviewDialog.show(this, getSelectedArticles());
+        ArticleQrPreviewDialog.show(this, getSelectedArticles(articleTable));
     }
 
     /**
@@ -1380,7 +1127,8 @@ public class ArticleGUI extends JFrame {
 
         /**
          * Create a panel with rounded corners and a custom background color.
-         * @param bg The background color of the panel
+         *
+         * @param bg     The background color of the panel
          * @param radius The radius of the rounded corners in pixels
          */
         public RoundedPanel(Color bg, int radius) {
@@ -1527,36 +1275,6 @@ public class ArticleGUI extends JFrame {
      */
     private void showAllWarnings() {
         DisplayWarningDialog.showAllWarnings(this);
-    }
-
-    /**
-     * Get a category for an article based on its article number
-     */
-    private String getCategoryForArticle(String articleNumber) {
-        if (categories == null || articleNumber == null) {
-            return "Unbekannt";
-        }
-
-        try {
-            // Extract the numeric part from the article number (e.g., "1101" from "1101-ABC")
-            String numericPart = articleNumber.replaceAll("[^0-9]", "");
-            if (numericPart.isEmpty()) {
-                return "Unbekannt";
-            }
-
-            int articleNum = Integer.parseInt(numericPart);
-
-            // Find matching category range
-            for (CategoryRange range : categories.values()) {
-                if (articleNum >= range.rangeStart && articleNum <= range.rangeEnd) {
-                    return range.category;
-                }
-            }
-        } catch (NumberFormatException e) {
-            // Article number doesn't contain valid number
-        }
-
-        return "Unbekannt";
     }
 
     private void applyAdvancedFilters() {
@@ -1839,6 +1557,9 @@ public class ArticleGUI extends JFrame {
      * Handles background, foreground, editor, popup list styling, and hover effects
      */
     private void styleComboBox(JComboBox<String> combo) {
+        if (combo == null) {
+            throw new IllegalArgumentException("ComboBox cannot be null");
+        }
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
         Color border = ThemeManager.getInputBorderColor();
@@ -1942,6 +1663,9 @@ public class ArticleGUI extends JFrame {
     }
 
     private void styleCountBadge(JLabel label) {
+        if (label == null) {
+            throw new IllegalArgumentException("Label cannot be null");
+        }
         label.setOpaque(true);
         label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
         label.setForeground(ThemeManager.getTextPrimaryColor());

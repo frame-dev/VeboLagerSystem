@@ -9,6 +9,7 @@ import ch.framedev.lagersystem.utils.QRCodeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.swing.SwingUtilities;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -20,12 +21,15 @@ import java.util.concurrent.TimeUnit;
 import static ch.framedev.lagersystem.dialogs.DisplayWarningDialog.displayWarning;
 
 /**
- * Verwaltet geplante Aufgaben wie die Überprüfung des Lagerbestands.
- * Optimiert durch:
- * - Vermeidung von GUI-Popups während Scheduler-Läufen
- * - Batch-Verarbeitung von Warnungen
- * - Thread-sicheres Singleton-Pattern
- * - Effiziente Datenbankabfragen
+ * Manages scheduled background tasks (stock checks, warning display, and optional QR-code auto import).
+ *
+ * <p>Design goals:
+ * <ul>
+ *   <li>Avoid GUI popups during scheduler runs (EDT-safe UI updates)</li>
+ *   <li>Keep scheduling thread-safe (double-checked locking singleton)</li>
+ *   <li>Fail safely on bad settings values</li>
+ *   <li>Minimize expensive per-article DB checks where possible</li>
+ * </ul>
  */
 @SuppressWarnings("unused")
 public class SchedulerManager {
@@ -38,12 +42,55 @@ public class SchedulerManager {
     private ScheduledExecutorService executor;
     private final WarningManager warningManager = WarningManager.getInstance();
 
+    /**
+     * Ensures that scheduling calls are serialized.
+     *
+     * <p>Note: the singleton creation is already thread-safe, but the executor lifecycle can be
+     * interacted with from different code paths (start/shutdown/restart).
+     */
+    private final Object scheduleLock = new Object();
+
+    /** Default stock check interval in minutes when no setting is present or parsing fails. */
+    private static final long DEFAULT_STOCK_CHECK_MINUTES = 30;
+
+    /** Default warning display interval in hours when no setting is present or parsing fails. */
+    private static final long DEFAULT_WARNING_DISPLAY_HOURS = 1;
+
+    /**
+     * Parses a long setting value safely.
+     *
+     * @param raw          raw string value from settings
+     * @param defaultValue value to use when {@code raw} is null/blank/invalid
+     * @return parsed long or {@code defaultValue}
+     */
+    private static long parseLongOrDefault(String raw, long defaultValue) {
+        if (raw == null || raw.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            return Long.parseLong(raw.trim());
+        } catch (NumberFormatException ex) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * Ensures the executor exists and is usable (recreates it after shutdown).
+     */
+    private void ensureExecutor() {
+        if (executor == null || executor.isShutdown() || executor.isTerminated()) {
+            executor = Executors.newScheduledThreadPool(1);
+        }
+    }
+
     private SchedulerManager() {
         this.executor = Executors.newScheduledThreadPool(1);
     }
 
     /**
-     * Thread-sichere Singleton-Implementierung
+     * Returns the singleton instance using double-checked locking.
+     *
+     * @return scheduler manager instance
      */
     public static SchedulerManager getInstance() {
         if (instance == null) {
@@ -57,76 +104,99 @@ public class SchedulerManager {
     }
 
     /**
-     * Startet die geplante Überprüfung des Lagerbestands.
-     * Standard: Alle 30 Minuten
+     * Starts the scheduled stock check.
+     *
+     * <p>Default: every 30 minutes.
      */
     public void startScheduledStockCheck() {
-        String periodString = Main.settings.getProperty("stock_check_interval");
-
-        long period = periodString != null ? Long.parseLong(periodString) : 30;
-
+        long period = parseLongOrDefault(Main.settings.getProperty("stock_check_interval"), DEFAULT_STOCK_CHECK_MINUTES);
         startScheduledStockCheck(period, TimeUnit.MINUTES);
     }
 
     /**
-     * Startet die geplante Überprüfung des Lagerbestands mit benutzerdefiniertem Intervall.
+     * Starts the scheduled stock check with a custom interval.
      *
-     * @param period Das Intervall zwischen den Überprüfungen
-     * @param unit   Die Zeiteinheit für das Intervall
+     * @param period interval amount (must be > 0)
+     * @param unit   time unit for the interval
      */
     public void startScheduledStockCheck(long period, TimeUnit unit) {
-        executor.scheduleAtFixedRate(
-                this::checkLowStock,
-                0, // Sofort starten
-                period,
-                unit
-        );
-        logger.info("Lagerbestandsprüfung gestartet (Intervall: {} {}", period, unit.toString().toLowerCase());
+        if (period <= 0 || unit == null) {
+            logger.warn("Ignoring stock check scheduling due to invalid arguments: period={}, unit={}", period, unit);
+            return;
+        }
+        synchronized (scheduleLock) {
+            ensureExecutor();
+            executor.scheduleAtFixedRate(
+                    this::checkLowStock,
+                    0, // start immediately
+                    period,
+                    unit
+            );
+        }
+        logger.info("Stock check started (interval: {} {})", period, unit.toString().toLowerCase());
     }
 
     /**
-     * Startet die stündliche Anzeige von Warnungen.
-     * Diese Methode zeigt alle ungelesenen Warnungen basierend auf den Einstellungen an.
-     * Standard: Jede Stunde
+     * Starts periodic warning display.
+     *
+     * <p>Default: every 1 hour.
      */
     public void startHourlyWarningDisplay() {
-        String intervalString = Main.settings.getProperty("warning_display_interval");
-
-        long interval = intervalString != null ? Long.parseLong(intervalString) : 1;
-
-        executor.scheduleAtFixedRate(
-                this::displayPendingWarnings,
-                interval, // Nach der ersten Intervall-Zeit starten
-                interval, // Wiederholen nach Intervall
-                TimeUnit.HOURS
-        );
-        logger.info("Warnanzeige gestartet (Intervall: {} Stunde(n))", interval);
+        long interval = parseLongOrDefault(Main.settings.getProperty("warning_display_interval"), DEFAULT_WARNING_DISPLAY_HOURS);
+        executorScheduleWarningDisplay(interval, TimeUnit.HOURS);
     }
 
     /**
-     * Startet die Anzeige von Warnungen mit benutzerdefiniertem Intervall.
+     * Starts warning display with a custom interval.
      *
-     * @param interval Das Intervall zwischen den Anzeigen
-     * @param unit Die Zeiteinheit für das Intervall
+     * @param interval interval amount (must be > 0)
+     * @param unit     time unit for the interval
      */
     public void startWarningDisplay(long interval, TimeUnit unit) {
-        executor.scheduleAtFixedRate(
-                this::displayPendingWarnings,
-                interval, // Nach der ersten Intervall-Zeit starten
-                interval, // Wiederholen nach Intervall
-                unit
-        );
-        logger.info("Warnanzeige gestartet (Intervall: {} {})", interval, unit.toString().toLowerCase());
+        executorScheduleWarningDisplay(interval, unit);
     }
 
+    /**
+     * Internal helper to schedule warning display safely.
+     */
+    private void executorScheduleWarningDisplay(long interval, TimeUnit unit) {
+        if (interval <= 0 || unit == null) {
+            logger.warn("Ignoring warning display scheduling due to invalid arguments: interval={}, unit={}", interval, unit);
+            return;
+        }
+        synchronized (scheduleLock) {
+            ensureExecutor();
+            executor.scheduleAtFixedRate(
+                    this::displayPendingWarnings,
+                    interval, // first run after one interval
+                    interval,
+                    unit
+            );
+        }
+        logger.info("Warning display started (interval: {} {})", interval, unit.toString().toLowerCase());
+    }
+
+    /**
+     * Starts periodic QR-code auto import.
+     *
+     * @param interval interval amount (must be > 0)
+     * @param unit     time unit for the interval
+     */
     public void startAutoImportQrCodes(long interval, TimeUnit unit) {
-        executor.scheduleAtFixedRate(
-                this::autoImportQrCodes,
-                0,
-                interval,
-                unit
-        );
-        logger.info("Automatischer QR-Code Import gestartet (Intervall: {} {})", interval, unit.toString().toLowerCase());
+        if (interval <= 0 || unit == null) {
+            logger.warn("Ignoring QR auto import scheduling due to invalid arguments: interval={}, unit={}", interval, unit);
+            return;
+        }
+        synchronized (scheduleLock) {
+            ensureExecutor();
+            executor.scheduleAtFixedRate(
+                    this::autoImportQrCodes,
+                    0,
+                    interval,
+                    unit
+            );
+        }
+        logger.info("QR-code auto import started (interval: {} {})", interval, unit.toString().toLowerCase());
     }
 
     /**
@@ -144,6 +214,7 @@ public class SchedulerManager {
                 return;
             }
 
+            // Use a per-run formatter (thread-confined) and a single timestamp for all warnings in this run.
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             String currentDateTime = dateFormat.format(new Date());
             int warningsCreated = 0;
@@ -235,38 +306,45 @@ public class SchedulerManager {
     }
 
     /**
-     * Beendet den Scheduler ordnungsgemäß.
+     * Shuts down the scheduler gracefully.
+     *
+     * <p>If the executor is stopped, a fresh executor is created so scheduling can be started again
+     * without constructing a new instance.
      */
     public void shutdown() {
-        if (executor != null && !executor.isShutdown()) {
-            executor.shutdown();
-            try {
-                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+        synchronized (scheduleLock) {
+            if (executor != null && !executor.isShutdown()) {
+                executor.shutdown();
+                try {
+                    if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                        executor.shutdownNow();
+                    }
+                    logger.info("Scheduler shut down cleanly");
+                } catch (InterruptedException e) {
                     executor.shutdownNow();
+                    Thread.currentThread().interrupt();
+                } finally {
+                    // Recreate executor for restart capability
+                    ensureExecutor();
                 }
-                logger.info("Scheduler ordnungsgemäß beendet");
-
-                // Recreate executor for restart capability
-                this.executor = Executors.newScheduledThreadPool(1);
-            } catch (InterruptedException e) {
-                executor.shutdownNow();
-                Thread.currentThread().interrupt();
-                // Recreate executor even after interruption
-                this.executor = Executors.newScheduledThreadPool(1);
+            } else {
+                // Ensure we always end in a usable state
+                ensureExecutor();
             }
         }
     }
 
     /**
-     * Zeigt alle noch nicht angezeigten Warnungen an.
-     * Diese Methode wird jede Stunde vom Scheduler aufgerufen.
+     * Displays all warnings that are not yet displayed and not resolved.
+     *
+     * <p>This is called by the scheduler. UI operations are dispatched onto the Swing EDT.
      */
     private void displayPendingWarnings() {
         try {
             List<Warning> allWarnings = warningManager.getAllWarnings();
 
             if (allWarnings == null || allWarnings.isEmpty()) {
-                logger.error("Keine Warnungen vorhanden");
+                logger.info("No pending warnings to display");
                 return;
             }
 
@@ -276,7 +354,7 @@ public class SchedulerManager {
                     .toList();
 
             if (pendingWarnings.isEmpty()) {
-                logger.error("Keine Warnungen vorhanden");
+                logger.info("No pending warnings to display");
                 return;
             }
 
@@ -284,15 +362,23 @@ public class SchedulerManager {
 
             // Zeige Warnungen nacheinander an (nur wenn GUI verfügbar ist)
             for (Warning warning : pendingWarnings) {
-                displayWarning(MainGUI.articleGUI, warning);
-                // Markiere als angezeigt
+                // Display dialog on the EDT to avoid Swing threading issues.
+                SwingUtilities.invokeLater(() -> {
+                    if (MainGUI.articleGUI != null) {
+                        displayWarning(MainGUI.articleGUI, warning);
+                    } else {
+                        logger.warn("Cannot display warning dialog because MainGUI.articleGUI is null: {}", warning.getTitle());
+                    }
+                });
+
+                // Mark as displayed and persist state (even if UI is currently unavailable).
                 warning.setDisplayed(true);
-                if(warningManager.updateWarning(warning)) {
-                    logger.info("Warnung {} angezeigt", warning.getTitle());
-                    Main.logUtils.addLog("Warnung " + warning.getTitle() + " angezeigt");
+                if (warningManager.updateWarning(warning)) {
+                    logger.info("Warning displayed: {}", warning.getTitle());
+                    Main.logUtils.addLog("Warning displayed: " + warning.getTitle());
                 } else {
-                    logger.error("Fehler beim Anzeigen der Warnung {}", warning.getTitle());
-                    Main.logUtils.addLog("Fehler beim Anzeigen der Warnung " + warning.getTitle());
+                    logger.error("Failed to update warning as displayed: {}", warning.getTitle());
+                    Main.logUtils.addLog("Failed to update warning as displayed: " + warning.getTitle());
                 }
             }
 
@@ -302,27 +388,63 @@ public class SchedulerManager {
         }
     }
 
+    /**
+     * Pulls QR-code data from the website and applies stock changes for non-imported "buy" entries.
+     *
+     * <p>Runs on the scheduler thread; keep it robust against malformed payloads.
+     */
     private void autoImportQrCodes() {
         List<Map<String, Object>> qrData = QRCodeUtils.retrieveQrCodeDataFromWebsite();
-        if(qrData.isEmpty())
+        if (qrData.isEmpty()) {
             return;
+        }
+
         ArticleManager articleManager = ArticleManager.getInstance();
-        for(Map<String, Object> data : qrData) {
-            if(data.get("type").equals("buy")) {
-                String[] parts = QRCodeUtils.getPartsFromData((String) data.get("data"));
-                if(parts.length < 2)
-                    continue;
-                String articleNumber = parts[0];
-                int quantity = (int) data.get("quantity");
-                String id = data.get("id").toString();
-                if(!ImportUtils.getImportedQrCodes().contains(id)) {
-                    if (!articleManager.addToStock(articleNumber, quantity)) {
-                        logger.error("Fehler beim automatischen Importieren des QR-Codes für Artikel {}", articleNumber);
-                        Main.logUtils.addLog("Fehler beim automatischen Importieren des QR-Codes für Artikel " + articleNumber);
-                    } else {
-                        logger.info("Erfolgreich automatisch {} Einheiten zu Artikel {} hinzugefügt.", quantity, articleNumber);
-                        ImportUtils.addQrCodeImport(id);
-                    }
+
+        for (Map<String, Object> data : qrData) {
+            if (data == null) {
+                continue;
+            }
+
+            // Only process "buy" events (stock increase)
+            Object type = data.get("type");
+            if (!"buy".equals(type)) {
+                continue;
+            }
+
+            Object rawPayload = data.get("data");
+            if (!(rawPayload instanceof String payload)) {
+                continue;
+            }
+
+            String[] parts = QRCodeUtils.getPartsFromData(payload);
+            if (parts.length < 2) {
+                continue;
+            }
+
+            String articleNumber = parts[0];
+
+            int quantity;
+            Object rawQty = data.get("quantity");
+            if (rawQty instanceof Number n) {
+                quantity = n.intValue();
+            } else {
+                continue;
+            }
+
+            Object rawId = data.get("id");
+            if (rawId == null) {
+                continue;
+            }
+            String id = rawId.toString();
+
+            if (!ImportUtils.getImportedQrCodes().contains(id)) {
+                if (!articleManager.addToStock(articleNumber, quantity)) {
+                    logger.error("Failed to auto-import QR-code for article {}", articleNumber);
+                    Main.logUtils.addLog("Failed to auto-import QR-code for article " + articleNumber);
+                } else {
+                    logger.info("Auto-imported {} units to article {}", quantity, articleNumber);
+                    ImportUtils.addQrCodeImport(id);
                 }
             }
         }

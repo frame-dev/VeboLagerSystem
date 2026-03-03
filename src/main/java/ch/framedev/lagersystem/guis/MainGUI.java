@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.Supplier;
 
+import static ch.framedev.lagersystem.utils.JFrameUtils.getSelectedArticles;
+
 /**
  * Modern Main Dashboard for VEBO Lagersystem with Tabbed Interface
  */
@@ -41,9 +43,9 @@ public class MainGUI extends JFrame {
 
     // Tab wrappers
     private final JPanel articleWrapper = createTabWrapper();
-    private final JPanel vendorWrapper  = createTabWrapper();
-    private final JPanel orderWrapper   = createTabWrapper();
-    private final JPanel clientWrapper  = createTabWrapper();
+    private final JPanel vendorWrapper = createTabWrapper();
+    private final JPanel orderWrapper = createTabWrapper();
+    private final JPanel clientWrapper = createTabWrapper();
     private final JPanel supplierOrderWrapper = createTabWrapper();
     private final JPanel logsWrapper = createTabWrapper();
 
@@ -102,7 +104,7 @@ public class MainGUI extends JFrame {
 
     /**
      * Loads the content for a specific tab into the wrapper.
-     * IMPORTANT: We do NOT dispose the child frames. Disposing kills listeners/resources.
+     * IMPORTANT: We do NOT dispose of the child frames. Disposing kills listeners/resources.
      */
     private void loadTabContent(int tabIndex, JPanel wrapper) {
         wrapper.removeAll();
@@ -125,7 +127,7 @@ public class MainGUI extends JFrame {
                 yield clientGUI;
             }
             case 4 -> {
-                if( supplierOrderGUI == null) supplierOrderGUI = new SupplierOrderGUI();
+                if (supplierOrderGUI == null) supplierOrderGUI = new SupplierOrderGUI();
                 yield supplierOrderGUI;
             }
             case 5 -> {
@@ -176,8 +178,8 @@ public class MainGUI extends JFrame {
 
     private static JFrameUtils.GradientPanel getGradientPanel() {
         JFrameUtils.GradientPanel headerPanel = new JFrameUtils.GradientPanel(
-            ThemeManager.getHeaderBackgroundColor(),
-            ThemeManager.getHeaderGradientColor()
+                ThemeManager.getHeaderBackgroundColor(),
+                ThemeManager.getHeaderGradientColor()
         );
         headerPanel.setLayout(new BorderLayout());
         headerPanel.setPreferredSize(new Dimension(0, 180));
@@ -260,12 +262,12 @@ public class MainGUI extends JFrame {
         styleHeaderButton(converterButton);
         converterButton.setToolTipText("Einheitenrechner und Befüllungshilfe öffnen");
         converterButton.addActionListener(e -> {
-            if(articleGUI.getSelectedArticles().isEmpty()) {
+            if (getSelectedArticles(articleGUI.articleTable).isEmpty()) {
                 JOptionPane.showMessageDialog(MainGUI.this, "Keine Artikel gefunden!");
                 return;
             }
-            List<Article> articles = articleGUI.getSelectedArticles();
-            if(articles.size() == 1) {
+            List<Article> articles = getSelectedArticles(articleGUI.articleTable);
+            if (articles.size() == 1) {
                 ConverterGUI converterGUI = new ConverterGUI(articles.getFirst());
                 converterGUI.setVisible(true);
             } else {
@@ -569,15 +571,67 @@ public class MainGUI extends JFrame {
      */
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
+
+        JMenu helpMenu = new JMenu("Hilfe");
+        JMenuItem settingsMenuItem = new JMenuItem("Einstellungen");
+        settingsMenuItem.addActionListener(e -> showOrCreateWindow(settingsGUI, SettingsGUI::new));
+        JMenuItem useHelpMenuItem = new JMenuItem("Hilfe zur anwendung");
+        useHelpMenuItem.addActionListener(e -> showHelp());
+
+        helpMenu.add(settingsMenuItem);
+        helpMenu.addSeparator();
+        helpMenu.add(useHelpMenuItem);
+
         JMenu toolsMenu = new JMenu("Werkzeuge");
         JMenuItem qrCodesGeneratorMenuItem = new JMenuItem("QR-Codes generieren");
         qrCodesGeneratorMenuItem.addActionListener(e -> generateQrCodesForArticles());
-        JMenuItem qrCodesSelectedMenuItem = new JMenuItem("QR-Codes fuer Auswahl");
+        JMenuItem qrCodesSelectedMenuItem = new JMenuItem("QR-Codes für Auswahl");
         qrCodesSelectedMenuItem.addActionListener(e -> generateQrCodesForSelectedArticles());
         toolsMenu.add(qrCodesGeneratorMenuItem);
         toolsMenu.add(qrCodesSelectedMenuItem);
+
+        menuBar.add(helpMenu);
         menuBar.add(toolsMenu);
         return menuBar;
+    }
+
+    public void showHelp() {
+        try {
+            java.net.URI helpUri = null;
+
+            // 1) Wenn du help.html später ins JAR packst: src/main/resources/help.html
+            java.net.URL res = getClass().getResource("/help.html");
+            if (res != null) {
+                helpUri = res.toURI();
+            } else {
+                // 2) Dev-Fallback: aus Projektordner /web/help.html
+                java.nio.file.Path p = java.nio.file.Paths.get("web", "help.html");
+                if (java.nio.file.Files.exists(p)) {
+                    helpUri = p.toAbsolutePath().toUri();
+                }
+            }
+
+            if (helpUri != null && java.awt.Desktop.isDesktopSupported()
+                    && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE)) {
+                java.awt.Desktop.getDesktop().browse(helpUri);
+                return;
+            }
+
+            javax.swing.JOptionPane.showMessageDialog(
+                    this,
+                    "Hilfe konnte nicht geöffnet werden (help.html nicht gefunden oder Browse nicht unterstützt).",
+                    "Hilfe",
+                    javax.swing.JOptionPane.WARNING_MESSAGE
+            );
+
+        } catch (Exception e) {
+            javax.swing.JOptionPane.showMessageDialog(
+                    this,
+                    "Hilfe konnte nicht geöffnet werden: " + e.getMessage(),
+                    "Hilfe",
+                    javax.swing.JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
 
     /**
@@ -621,13 +675,13 @@ public class MainGUI extends JFrame {
      * <p>
      * Postconditions:
      * - Invokes the {@code generateQrCodesForList} method to generate QR codes
-     *   for the list of selected articles, following confirmation from the user.
+     * for the list of selected articles, following confirmation from the user.
      * <p>
      * Warning messages:
      * - If the article GUI is not initialized, a dialog indicates that the article
-     *   tab must be opened.
+     * tab must be opened.
      * - If no articles are selected, a dialog indicates that at least one article
-     *   must be chosen.
+     * must be chosen.
      */
     private void generateQrCodesForSelectedArticles() {
         if (articleGUI == null) {
@@ -639,7 +693,7 @@ public class MainGUI extends JFrame {
             );
             return;
         }
-        List<Article> selectedArticles = articleGUI.getSelectedArticles();
+        List<Article> selectedArticles = getSelectedArticles(articleGUI.articleTable);
         if (selectedArticles.isEmpty()) {
             JOptionPane.showMessageDialog(
                     this,
@@ -660,10 +714,12 @@ public class MainGUI extends JFrame {
      * Upon completion, the user is notified about the result, including the number of QR codes
      * generated and the output directory.
      *
-     * @param articles the list of articles for which QR codes will be generated
+     * @param articles   the list of articles for which QR codes will be generated
      * @param promptText the text to display in the confirmation dialog prompt
      */
     private void generateQrCodesForList(List<Article> articles, String promptText) {
+        if (articles == null) return;
+        if (promptText == null) promptText = "";
         File outputDir = new File(Main.getAppDataDir(), "qr_codes");
         int result = JOptionPane.showConfirmDialog(
                 this,

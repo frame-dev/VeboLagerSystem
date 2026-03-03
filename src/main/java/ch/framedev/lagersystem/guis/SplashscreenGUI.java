@@ -2,9 +2,9 @@ package ch.framedev.lagersystem.guis;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.geom.RoundRectangle2D;
+import java.awt.event.*;
+import java.awt.geom.*;
+import java.util.Objects;
 import java.net.URL;
 
 /**
@@ -20,18 +20,22 @@ import java.net.URL;
 @SuppressWarnings("unused")
 public class SplashscreenGUI extends JFrame {
 
-    // Palette (refined + slightly more premium)
-    private static final Color ACCENT_BLUE = new Color(30, 136, 229);
-    private static final Color ACCENT_BLUE_DARK = new Color(20, 108, 190);
+    // Palette (more premium: deeper blue + softer background + better contrast)
+    private static final Color ACCENT_BLUE = new Color(23, 112, 238);
+    private static final Color ACCENT_BLUE_DARK = new Color(16, 84, 190);
+    private static final Color ACCENT_CYAN = new Color(64, 191, 255);
 
-    private static final Color BACKGROUND_TOP = new Color(206, 232, 255);
-    private static final Color BACKGROUND_MID = new Color(232, 244, 255);
-    private static final Color BACKGROUND_BOTTOM = new Color(249, 251, 255);
+    private static final Color BACKGROUND_TOP = new Color(192, 224, 255);
+    private static final Color BACKGROUND_MID = new Color(226, 242, 255);
+    private static final Color BACKGROUND_BOTTOM = new Color(250, 252, 255);
 
-    private static final Color GLOW_BLUE = new Color(72, 165, 255);
+    private static final Color GLOW_BLUE = new Color(74, 168, 255);
 
-    private static final Color TEXT_PRIMARY = new Color(26, 48, 74);
-    private static final Color TEXT_SECONDARY = new Color(86, 106, 128);
+    private static final Color TEXT_PRIMARY = new Color(18, 36, 58);
+    private static final Color TEXT_SECONDARY = new Color(86, 110, 138);
+
+    private static final Color CARD_TINT_TOP = new Color(255, 255, 255, 168);
+    private static final Color CARD_TINT_BOTTOM = new Color(74, 168, 255, 22);
 
     private final AnimatedProgressBar progressBar;
     private final JLabel statusLabel;
@@ -58,6 +62,8 @@ public class SplashscreenGUI extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setUndecorated(true);
+        // Nicer window behavior for undecorated splash
+        setBackground(new Color(0, 0, 0, 0));
 
         GradientPanel root = new GradientPanel();
         root.setLayout(new GridBagLayout());
@@ -126,6 +132,19 @@ public class SplashscreenGUI extends JFrame {
 
         setContentPane(root);
 
+        // ESC closes the splash (useful for debugging and UX)
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+                .put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "close");
+        root.getActionMap().put("close", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                close();
+            }
+        });
+
+        // Drag anywhere to move (undecorated window)
+        installWindowDrag(root);
+
         // Responsive tuning so everything always fits
         addComponentListener(new ComponentAdapter() {
             @Override
@@ -137,6 +156,27 @@ public class SplashscreenGUI extends JFrame {
 
         initParticles();
         startAnimation(root, card);
+    }
+
+    /**
+     * Enables window dragging by mouse on a given component (for undecorated windows).
+     */
+    private void installWindowDrag(JComponent target) {
+        final Point[] start = new Point[1];
+        target.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                start[0] = e.getPoint();
+            }
+        });
+        target.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (start[0] == null) return;
+                Point p = e.getLocationOnScreen();
+                setLocation(p.x - start[0].x, p.y - start[0].y);
+            }
+        });
     }
 
     /**
@@ -190,8 +230,12 @@ public class SplashscreenGUI extends JFrame {
      * @param message status text to display; ignored if {@code null} or blank
      */
     public void updateProgress(int percent, String message) {
-        progressBar.setValue(percent);
-        if (message != null && !message.isBlank()) statusLabel.setText(message);
+        Runnable r = () -> {
+            progressBar.setValue(percent);
+            if (message != null && !message.isBlank()) statusLabel.setText(message);
+        };
+        if (SwingUtilities.isEventDispatchThread()) r.run();
+        else SwingUtilities.invokeLater(r);
     }
 
     /**
@@ -208,9 +252,14 @@ public class SplashscreenGUI extends JFrame {
     public void close() {
         SwingUtilities.invokeLater(() -> {
             setVisible(false);
-            stopAnimation();
             dispose();
         });
+    }
+
+    @Override
+    public void dispose() {
+        stopAnimation();
+        super.dispose();
     }
 
     /**
@@ -239,6 +288,7 @@ public class SplashscreenGUI extends JFrame {
             Graphics2D g2 = (Graphics2D) g.create();
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
                 GradientPaint gradientTop = new GradientPaint(
                         0, 0, BACKGROUND_TOP,
@@ -258,19 +308,19 @@ public class SplashscreenGUI extends JFrame {
                 int drift = (int) (Math.sin(ph) * 7);
                 int driftY = (int) (Math.cos(ph * 0.85) * 5);
 
-                // Big soft blobs for depth
-                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 52));
-                g2.fillOval(-220 + drift, -240 + driftY, 610, 610);
+                // Big soft blobs for depth (premium, less "flat")
+                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 58));
+                g2.fillOval(-240 + drift, -260 + driftY, 660, 660);
 
-                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 36));
-                g2.fillOval(getWidth() - 430 - drift, getHeight() - 380 + driftY, 640, 640);
+                g2.setColor(new Color(ACCENT_CYAN.getRed(), ACCENT_CYAN.getGreen(), ACCENT_CYAN.getBlue(), 34));
+                g2.fillOval(getWidth() - 520 - drift, getHeight() - 440 + driftY, 740, 740);
 
-                // White haze
-                g2.setColor(new Color(255, 255, 255, 105));
-                g2.fillOval(getWidth() - 270 - drift, -35 + driftY, 340, 340);
+                // White haze highlights
+                g2.setColor(new Color(255, 255, 255, 110));
+                g2.fillOval(getWidth() - 300 - drift, -60 + driftY, 380, 380);
 
-                g2.setColor(new Color(255, 255, 255, 75));
-                g2.fillOval(drift, getHeight() - 280 + driftY, 320, 320);
+                g2.setColor(new Color(255, 255, 255, 70));
+                g2.fillOval(drift - 40, getHeight() - 310 + driftY, 360, 360);
 
                 paintAuroraBands(g2);
                 SplashscreenGUI.this.paintLightStreaks(g2);
@@ -288,13 +338,21 @@ public class SplashscreenGUI extends JFrame {
             double ph = SplashscreenGUI.this.getPhase();
             float cx = (float) ((Math.sin(ph * 0.35) * 0.5 + 0.5) * w);
 
-            // Soft "aurora" band
+            // Soft "aurora" band (two-pass for richer gradient)
             GradientPaint aurora = new GradientPaint(
-                    cx - w * 0.45f, 0, new Color(255, 255, 255, 0),
-                    cx + w * 0.45f, h, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 38)
+                    cx - w * 0.55f, 0, new Color(255, 255, 255, 0),
+                    cx + w * 0.55f, h, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 42)
             );
             g2.setPaint(aurora);
             g2.fillRect(0, 0, w, h);
+
+            GradientPaint aurora2 = new GradientPaint(
+                    cx - w * 0.35f, 0, new Color(ACCENT_CYAN.getRed(), ACCENT_CYAN.getGreen(), ACCENT_CYAN.getBlue(), 0),
+                    cx + w * 0.35f, h, new Color(ACCENT_CYAN.getRed(), ACCENT_CYAN.getGreen(), ACCENT_CYAN.getBlue(), 26)
+            );
+            g2.setPaint(aurora2);
+            g2.fillRect(0, 0, w, h);
+            return;
         }
     }
 
@@ -352,13 +410,13 @@ public class SplashscreenGUI extends JFrame {
                 g2.setClip(glass);
 
                 // Base frosted glass
-                g2.setColor(new Color(255, 255, 255, 145));
+                g2.setColor(CARD_TINT_TOP);
                 g2.fill(glass);
 
                 // Inner gradient tint (top brighter, bottom slightly blue)
                 GradientPaint inner = new GradientPaint(
-                        x, y, new Color(255, 255, 255, 115),
-                        x, y + h, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 22)
+                        x, y, new Color(255, 255, 255, 128),
+                        x, y + h, CARD_TINT_BOTTOM
                 );
                 g2.setPaint(inner);
                 g2.fill(glass);
@@ -386,7 +444,7 @@ public class SplashscreenGUI extends JFrame {
 
                 // Border
                 g2.setStroke(new BasicStroke(scale()));
-                g2.setColor(new Color(255, 255, 255, 210));
+                g2.setColor(new Color(255, 255, 255, 220));
                 g2.drawRoundRect(x, y, w - 1, h - 1, arc, arc);
 
                 // Inner glow border
@@ -417,7 +475,9 @@ public class SplashscreenGUI extends JFrame {
             GraphicsConfiguration gc = getGraphicsConfiguration();
             if (gc == null) return GlassPanel.STROKE;
             double sx = gc.getDefaultTransform().getScaleX();
-            return (float) (GlassPanel.STROKE * sx);
+            double sy = gc.getDefaultTransform().getScaleY();
+            double s = (sx + sy) / 2.0;
+            return (float) (GlassPanel.STROKE * s);
         }
     }
 
@@ -437,16 +497,17 @@ public class SplashscreenGUI extends JFrame {
      * @param components additional components to repaint (e.g. root/card)
      */
     private void startAnimation(JComponent... components) {
-        animationTimer = new Timer(16, event -> {
-            phase += 0.072;
-            advanceParticles();
+        synchronized (this) {
+            animationTimer = new Timer(16, event -> {
+                phase += 0.072;
+                advanceParticles();
 
-            // repaint only what’s needed
-            logoLabel.repaint();
-            statusLabel.repaint();
-            progressBar.repaint();
-            for (JComponent component : components) component.repaint();
-        });
+                // repaint only what’s needed (statusLabel does not need 60fps repaints)
+                logoLabel.repaint();
+                progressBar.repaint();
+                for (JComponent component : components) component.repaint();
+            });
+        }
         animationTimer.start();
     }
 
@@ -467,8 +528,10 @@ public class SplashscreenGUI extends JFrame {
     }
 
     private void initParticles() {
+        int w = Math.max(getWidth(), 1);
+        int h = Math.max(getHeight(), 1);
         for (int i = 0; i < particles.length; i++) {
-            particles[i] = Particle.random();
+            particles[i] = Particle.random(w, h);
         }
     }
 
@@ -499,16 +562,19 @@ public class SplashscreenGUI extends JFrame {
                 int bob = (int) (Math.sin(SplashscreenGUI.this.getPhase()) * 3);
                 g2.translate(0, bob);
 
-                // Softer glow behind logo
+                // Softer glow behind logo (less "disky")
                 int cx = getWidth() / 2;
                 int cy = getHeight() / 2;
                 int r = Math.max(getWidth(), getHeight());
 
-                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 36));
+                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 30));
                 g2.fillOval(cx - r / 2, cy - r / 2, r, r);
 
-                g2.setColor(new Color(255, 255, 255, 70));
+                g2.setColor(new Color(ACCENT_CYAN.getRed(), ACCENT_CYAN.getGreen(), ACCENT_CYAN.getBlue(), 18));
                 g2.fillOval(cx - r / 3, cy - r / 3, (r * 2) / 3, (r * 2) / 3);
+
+                g2.setColor(new Color(255, 255, 255, 62));
+                g2.fillOval(cx - r / 4, cy - r / 4, r / 2, r / 2);
 
                 super.paintComponent(g2);
             } finally {
@@ -544,7 +610,7 @@ public class SplashscreenGUI extends JFrame {
                 int arc = Math.min(16, h);
 
                 // Track (with subtle depth)
-                g2.setColor(new Color(255, 255, 255, 175));
+                g2.setColor(new Color(255, 255, 255, 185));
                 g2.fillRoundRect(x, y, w, h, arc, arc);
 
                 GradientPaint trackShade = new GradientPaint(
@@ -560,8 +626,8 @@ public class SplashscreenGUI extends JFrame {
                 if (fillW > 0) {
                     // base fill gradient
                     GradientPaint fillGrad = new GradientPaint(
-                            x, y, getForeground(),
-                            x, y + h, ACCENT_BLUE_DARK
+                            x, y, ACCENT_BLUE,
+                            x + fillW, y + h, ACCENT_BLUE_DARK
                     );
                     g2.setPaint(fillGrad);
                     g2.fillRoundRect(x, y, fillW, h, arc, arc);
@@ -628,16 +694,20 @@ public class SplashscreenGUI extends JFrame {
             this.color = color;
         }
 
-        static Particle random() {
+        static Particle random(int width, int height) {
             double radius = 5 + Math.random() * 15;
             double speed = 0.10 + Math.random() * 0.30;
             double drift = (Math.random() * 2.0) - 1.0;
             int alpha = 16 + (int) (Math.random() * 55);
             int tint = 205 + (int) (Math.random() * 50);
-            Color color = new Color(tint, tint, 255);
+            Color color = new Color(tint, tint, 248);
+
+            int w = Math.max(width, 1);
+            int h = Math.max(height, 1);
+
             return new Particle(
-                    Math.random() * 900,
-                    Math.random() * 700,
+                    Math.random() * w,
+                    Math.random() * h,
                     radius,
                     speed,
                     drift,
@@ -651,8 +721,10 @@ public class SplashscreenGUI extends JFrame {
             x += drift * 0.12;
 
             if (y + radius < 0) {
-                y = height + radius;
-                x = Math.random() * Math.max(width, 1);
+                int w = Math.max(width, 1);
+                int h = Math.max(height, 1);
+                y = h + radius;
+                x = Math.random() * w;
             }
             if (x + radius < 0) x = width + radius;
             if (x - radius > width) x = -radius;

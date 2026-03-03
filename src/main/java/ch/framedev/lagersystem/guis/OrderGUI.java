@@ -23,6 +23,7 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 
 /**
  * The OrderGUI class provides a graphical user interface for managing orders in the inventory system. It allows users to view, filter, create, edit, delete, and complete orders. The GUI displays a list of orders in a table format, with options to search and filter the orders based on various criteria. Users can also access detailed information about each order and perform actions such as editing or deleting orders directly from the interface. The class implements caching for order data to improve performance and reduce database load, while ensuring that the displayed information is up-to-date when necessary.
+ *
  * @author framedev
  */
 @SuppressWarnings("DuplicatedCode")
@@ -280,9 +281,20 @@ public class OrderGUI extends JFrame {
 
         // Live filter while typing
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { doSearch.run(); }
-            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { doSearch.run(); }
-            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { doSearch.run(); }
+            @Override
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                doSearch.run();
+            }
+
+            @Override
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                doSearch.run();
+            }
+
+            @Override
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                doSearch.run();
+            }
         });
 
         searchBtn.addActionListener(e -> doSearch.run());
@@ -335,6 +347,7 @@ public class OrderGUI extends JFrame {
         model.setRowCount(0);
 
         for (Order o : orders) {
+            if (o == null) continue;
             model.addRow(new Object[]{
                     o.getOrderId(),
                     o.getReceiverName(),
@@ -356,6 +369,7 @@ public class OrderGUI extends JFrame {
         model.setRowCount(0);
 
         for (Order o : orders) {
+            if (o == null) continue;
             model.addRow(new Object[]{
                     o.getOrderId(),
                     o.getReceiverName(),
@@ -613,6 +627,7 @@ public class OrderGUI extends JFrame {
     // -------------------- UI helpers --------------------
 
     private void styleTextField(JTextField tf) {
+        if (tf == null) return;
         tf.setBackground(ThemeManager.getInputBackgroundColor());
         tf.setForeground(ThemeManager.getTextPrimaryColor());
         tf.setCaretColor(ThemeManager.getTextPrimaryColor());
@@ -624,23 +639,39 @@ public class OrderGUI extends JFrame {
 
     /**
      * Adds hover and press effects to a button by changing its background color. The button's original background color should be set to 'base' for this to work properly.
-     * @param button The JButton to which the hover effects should be added.
-     * @param base The base background color of the button when it is in its normal state.
-     * @param hover The background color of the button when the mouse is hovering over it.
+     *
+     * @param button  The JButton to which the hover effects should be added.
+     * @param base    The base background color of the button when it is in its normal state.
+     * @param hover   The background color of the button when the mouse is hovering over it.
      * @param pressed The background color of the button when it is being pressed (mouse click).
      */
     public static void addHoverEffects(JButton button, Color base, Color hover, Color pressed) {
+        if (button == null) return;
         button.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { button.setBackground(hover); }
-            @Override public void mouseExited(MouseEvent e) { button.setBackground(base); }
-            @Override public void mousePressed(MouseEvent e) { button.setBackground(pressed); }
-            @Override public void mouseReleased(MouseEvent e) {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(hover);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(base);
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                button.setBackground(pressed);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
                 button.setBackground(button.contains(e.getPoint()) ? hover : base);
             }
         });
     }
 
     private void showOrderDetailsDialog(Order order) {
+        if (order == null) return;
         JDialog detailsDialog = new JDialog(this, "Bestelldetails - " + order.getOrderId(), true);
         detailsDialog.setSize(600, 500);
         detailsDialog.setLocationRelativeTo(this);
@@ -655,6 +686,7 @@ public class OrderGUI extends JFrame {
         StringBuilder articlesHtml = new StringBuilder();
 
         for (Article a : articles) {
+            if (a == null) continue;
             int quantity = order.getOrderedArticles().getOrDefault(a.getArticleNumber(), 0);
             if (quantity == 0) {
                 quantity = order.getOrderedArticles().getOrDefault(a.getName(), 0);
@@ -695,6 +727,7 @@ public class OrderGUI extends JFrame {
     }
 
     private void createPDFExport(Order order) {
+        if (order == null) return;
         OrderExport.createPDFExport(this, order);
     }
 

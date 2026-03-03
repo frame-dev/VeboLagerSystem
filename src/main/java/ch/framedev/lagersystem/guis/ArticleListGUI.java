@@ -57,8 +57,7 @@ public class ArticleListGUI extends JFrame {
      * Constructs the ArticleListGUI window, initializes the UI components, and sets up event listeners. The window displays a list of articles with their quantities, allows searching/filtering, and provides actions to edit quantities, remove articles, or clear the list. It also integrates with the ThemeManager for dynamic theming and applies a modern design with rounded panels and styled buttons.
      */
     public ArticleListGUI() {
-        ThemeManager tm = ThemeManager.getInstance();
-        tm.registerWindow(this);
+        ThemeManager.getInstance().registerWindow(this);
 
         setTitle("📋 Artikel Liste");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -282,6 +281,7 @@ public class ArticleListGUI extends JFrame {
     }
 
     private JButton createStyledButton(String text, Color bg) {
+        if(text == null) throw new IllegalArgumentException("text must not be null");
         JButton b = new JButton(text);
         b.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         b.setBackground(bg);
@@ -535,6 +535,7 @@ public class ArticleListGUI extends JFrame {
     }
 
     private ArticleDisplay createDisplay(Article article, int quantity) {
+        if(article == null) throw new IllegalArgumentException("article must not be null");
         String name = safe(article::getName);
         String number = safe(article::getArticleNumber);
         String details = safe(article::getDetails);

@@ -21,13 +21,19 @@ public class DepartmentManager {
 
     private final Logger logger = LogManager.getLogger(DepartmentManager.class);
 
-    private static DepartmentManager instance;
+    private static volatile DepartmentManager instance;
     private final DatabaseManager databaseManager;
 
     // ==================== Cache ====================
     private final ConcurrentHashMap<String, Map<String, Object>> cache = new ConcurrentHashMap<>();
     private volatile List<Map<String, Object>> allDepartmentsCache = null;
     private volatile long allDepartmentsCacheTime = 0L;
+    private static final long CACHE_TTL_MILLIS = 5 * 60 * 1000;
+
+    private void invalidateCaches() {
+        allDepartmentsCache = null;
+        allDepartmentsCacheTime = 0L;
+    }
 
     private DepartmentManager() {
         databaseManager = Main.databaseManager;
@@ -40,10 +46,17 @@ public class DepartmentManager {
      * @return the singleton instance of DepartmentManager.
      */
     public static DepartmentManager getInstance() {
-        if (instance == null) {
-            instance = new DepartmentManager();
+        DepartmentManager local = instance;
+        if (local == null) {
+            synchronized (DepartmentManager.class) {
+                local = instance;
+                if (local == null) {
+                    local = new DepartmentManager();
+                    instance = local;
+                }
+            }
         }
-        return instance;
+        return local;
     }
 
     /**
@@ -52,7 +65,7 @@ public class DepartmentManager {
      */
     private void createTable() {
         String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_DEPARTMENTS + " (" +
-                "departmentName TEXT," +
+                "departmentName TEXT PRIMARY KEY," +
                 "kontoNumber TEXT" +
                 ");";
         databaseManager.executeUpdate(sql);
@@ -66,6 +79,10 @@ public class DepartmentManager {
      * @return true if successful, false otherwise.
      */
     public boolean insertDepartment(String departmentName, String kontoNumber) {
+        if (departmentName == null || departmentName.trim().isEmpty()) return false;
+        departmentName = departmentName.trim();
+        if (kontoNumber != null) kontoNumber = kontoNumber.trim();
+
         if (existsDepartment(departmentName)) {
             return false;
         }
@@ -77,8 +94,7 @@ public class DepartmentManager {
             // update cache
             Map<String, Object> entry = Map.of("department", departmentName, "kontoNumber", kontoNumber);
             cache.put(departmentName, entry);
-            allDepartmentsCache = null;
-            allDepartmentsCacheTime = 0L;
+            invalidateCaches();
         } else {
             Main.logUtils.addLog(String.format("Could not insert new department with name '%s'", departmentName));
         }
@@ -93,13 +109,17 @@ public class DepartmentManager {
      */
     public boolean existsDepartment(String departmentName) {
         if (departmentName == null) return false;
+        departmentName = departmentName.trim();
+        if (departmentName.isEmpty()) return false;
+
         // prefer cache
         if (cache.containsKey(departmentName)) return true;
 
-        String sql = "SELECT * FROM " + DatabaseManager.TABLE_DEPARTMENTS + " WHERE departmentName = '" + departmentName + "';";
-        try (var resultSet = databaseManager.executeQuery(sql)) {
+        String sql = "SELECT 1 FROM " + DatabaseManager.TABLE_DEPARTMENTS + " WHERE departmentName = ? LIMIT 1;";
+        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{departmentName})) {
             return resultSet.next();
         } catch (Exception e) {
+            logger.error("Error while checking if department exists: {}", departmentName, e);
             return false;
         }
     }
@@ -111,6 +131,10 @@ public class DepartmentManager {
      * @return true if the deletion was successful, false otherwise.
      */
     public boolean deleteDepartment(String departmentName) {
+        if (departmentName == null) return false;
+        departmentName = departmentName.trim();
+        if (departmentName.isEmpty()) return false;
+
         if (!existsDepartment(departmentName)) {
             return false;
         }
@@ -120,8 +144,7 @@ public class DepartmentManager {
             Main.logUtils.addLog(String.format("Deleted department with name '%s'", departmentName));
             // invalidate cache
             cache.remove(departmentName);
-            allDepartmentsCache = null;
-            allDepartmentsCacheTime = 0L;
+            invalidateCaches();
         } else {
             Main.logUtils.addLog(String.format("Could not delete department with name '%s'", departmentName));
         }
@@ -136,6 +159,11 @@ public class DepartmentManager {
      * @return true if the update was successful, false otherwise.
      */
     public boolean updateDepartment(String departmentName, String newKontoNumber) {
+        if (departmentName == null) return false;
+        departmentName = departmentName.trim();
+        if (departmentName.isEmpty()) return false;
+        if (newKontoNumber != null) newKontoNumber = newKontoNumber.trim();
+
         if (!existsDepartment(departmentName)) {
             return false;
         }
@@ -146,8 +174,7 @@ public class DepartmentManager {
             // update cache
             Map<String, Object> entry = Map.of("department", departmentName, "kontoNumber", newKontoNumber);
             cache.put(departmentName, entry);
-            allDepartmentsCache = null;
-            allDepartmentsCacheTime = 0L;
+            invalidateCaches();
         } else {
             Main.logUtils.addLog(String.format("Could not update department with name '%s'", departmentName));
         }
@@ -162,6 +189,8 @@ public class DepartmentManager {
      */
     public Map<String, Object> getDepartment(String departmentName) {
         if (departmentName == null) return null;
+        departmentName = departmentName.trim();
+        if (departmentName.isEmpty()) return null;
         // try cache first
         Map<String, Object> cached = cache.get(departmentName);
         if (cached != null) return cached;
@@ -191,8 +220,6 @@ public class DepartmentManager {
      */
     public List<Map<String, Object>> getAllDepartments() {
         long now = System.currentTimeMillis();
-        // 5 minutes
-        long CACHE_TTL_MILLIS = 5 * 60 * 1000;
         if (allDepartmentsCache != null && (now - allDepartmentsCacheTime) < CACHE_TTL_MILLIS) {
             return allDepartmentsCache;
         }
@@ -223,7 +250,6 @@ public class DepartmentManager {
      */
     public void clearCache() {
         cache.clear();
-        allDepartmentsCache = null;
-        allDepartmentsCacheTime = 0L;
+        invalidateCaches();
     }
 }
