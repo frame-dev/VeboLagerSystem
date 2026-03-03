@@ -441,7 +441,6 @@ public final class ArticleQrCodeDialog {
 
                     for (Map<String, Object> dataMap : qrCodeDataList) {
                         if (dataMap.isEmpty()) continue;
-                        if (dataMap == null) continue;
                         Object[] rowData = new Object[6];
                         rowData[0] = dataMap.getOrDefault("timestamp", "N/A");
                         rowData[1] = dataMap.getOrDefault("data", "N/A");
@@ -864,9 +863,19 @@ public final class ArticleQrCodeDialog {
     }
 
     private static boolean parseOwnUse(Object ownUseObj) {
-        if (ownUseObj == null) return false;
-        if (ownUseObj instanceof Boolean b) return b;
-        if (ownUseObj instanceof Number n) return n.intValue() != 0;
+        switch (ownUseObj) {
+            case null -> {
+                return false;
+            }
+            case Boolean b -> {
+                return b;
+            }
+            case Number n -> {
+                return n.intValue() != 0;
+            }
+            default -> {
+            }
+        }
 
         String s = ownUseObj.toString().trim();
         if (s.isEmpty()) return false;
@@ -875,9 +884,7 @@ public final class ArticleQrCodeDialog {
         if (s.equalsIgnoreCase("true")) return true;
         if (s.equalsIgnoreCase("yes") || s.equalsIgnoreCase("y")) return true;
         if (s.equalsIgnoreCase("ja")) return true;
-        if (s.equals("1")) return true;
-
-        return false;
+        return s.equals("1");
     }
 
     private static Article retrieveParts(String[] parts) {
