@@ -14,6 +14,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.concurrent.Executors;
 
+@SuppressWarnings("SameReturnValue")
 public class ScanServer {
 
     // Single JSON file containing an array: [ {ts,data,quantity,ownUse}, ... ]

@@ -112,7 +112,7 @@ public class ArticleListGUI extends JFrame {
         root.setBorder(BorderFactory.createEmptyBorder(22, 22, 22, 22));
 
         // Header
-        RoundedPanel header = new RoundedPanel(ThemeManager.getHeaderBackgroundColor(), 22);
+        RoundedPanel header = new RoundedPanel(ThemeManager.getHeaderBackgroundColor());
         header.setLayout(new BorderLayout(16, 0));
         header.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
@@ -152,7 +152,7 @@ public class ArticleListGUI extends JFrame {
         root.add(header, BorderLayout.NORTH);
 
         // Card
-        RoundedPanel card = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 22);
+        RoundedPanel card = new RoundedPanel(ThemeManager.getCardBackgroundColor());
         card.setLayout(new BorderLayout(0, 0));
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createEmptyBorder(16, 0, 0, 0),
@@ -563,8 +563,8 @@ public class ArticleListGUI extends JFrame {
         try { return supplier.getAsDouble(); } catch (Exception e) { return 0.0; }
     }
 
-    @FunctionalInterface private interface IntSupplierEx { int getAsInt() throws Exception; }
-    @FunctionalInterface private interface DoubleSupplierEx { double getAsDouble() throws Exception; }
+    @FunctionalInterface private interface IntSupplierEx { int getAsInt(); }
+    @FunctionalInterface private interface DoubleSupplierEx { double getAsDouble(); }
 
     // ---------- Theme / lifecycle ----------
 
@@ -747,9 +747,9 @@ public class ArticleListGUI extends JFrame {
         private final Color backgroundColor;
         private final int radius;
 
-        RoundedPanel(Color bg, int radius) {
+        RoundedPanel(Color bg) {
             this.backgroundColor = bg;
-            this.radius = radius;
+            this.radius = 22;
             setOpaque(false);
         }
 

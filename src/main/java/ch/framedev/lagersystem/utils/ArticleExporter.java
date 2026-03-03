@@ -59,9 +59,8 @@ public final class ArticleExporter {
         }
 
         File fileToSave = chooseSaveFile(parent,
-                "PDF Speichern",
-                "Artikel_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf",
-                "pdf");
+                "Artikel_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"
+        );
         if (fileToSave == null) {
             return;
         }
@@ -682,9 +681,8 @@ public final class ArticleExporter {
     public static void exportArticlesToPdf(java.util.List<Article> articles) {
         if(articles == null) throw new IllegalArgumentException("Articles cannot be null");
         File fileToSave = chooseSaveFile(MainGUI.articleGUI,
-                "PDF Speichern",
-                "Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf",
-                "pdf");
+                "Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"
+        );
         if (fileToSave == null) {
             return;
         }
@@ -868,9 +866,8 @@ public final class ArticleExporter {
         }
 
         File fileToSave = chooseSaveFile(frame,
-                "PDF Speichern",
-                "Logs_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf",
-                "pdf");
+                "Logs_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"
+        );
         if (fileToSave == null) {
             return;
         }
@@ -939,15 +936,15 @@ public final class ArticleExporter {
     }
 
     // Helper to choose a save file with extension filter and overwrite confirmation
-    private static File chooseSaveFile(Component parent, String dialogTitle, String defaultFileName, String extension) {
+    private static File chooseSaveFile(Component parent, String defaultFileName) {
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle(dialogTitle);
+        fileChooser.setDialogTitle("PDF Speichern");
         fileChooser.setSelectedFile(new File(defaultFileName));
 
-        if (extension != null && !extension.isBlank()) {
+        if ("pdf" != null && !"pdf".isBlank()) {
             fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-                    extension.toUpperCase(Locale.ROOT) + " Dateien (*." + extension.toLowerCase(Locale.ROOT) + ")",
-                    extension.toLowerCase(Locale.ROOT)
+                    "pdf".toUpperCase(Locale.ROOT) + " Dateien (*." + "pdf".toLowerCase(Locale.ROOT) + ")",
+                    "pdf".toLowerCase(Locale.ROOT)
             ));
         }
 
@@ -962,7 +959,7 @@ public final class ArticleExporter {
         }
 
         String nameLower = selected.getName().toLowerCase(Locale.ROOT);
-        String extLower = extension == null ? "" : extension.toLowerCase(Locale.ROOT);
+        String extLower = "pdf" == null ? "" : "pdf".toLowerCase(Locale.ROOT);
         if (!extLower.isBlank() && !nameLower.endsWith("." + extLower)) {
             selected = new File(selected.getAbsolutePath() + "." + extLower);
         }

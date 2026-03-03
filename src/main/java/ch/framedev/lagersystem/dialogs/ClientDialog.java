@@ -58,7 +58,7 @@ public class ClientDialog {
         );
         mainContainer.add(headerPanel, BorderLayout.NORTH);
 
-        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
+        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor());
         contentCard.setBorder(BorderFactory.createEmptyBorder(28, 32, 24, 32));
         contentCard.setLayout(new GridBagLayout());
 
@@ -172,7 +172,7 @@ public class ClientDialog {
         );
         mainContainer.add(headerPanel, BorderLayout.NORTH);
 
-        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
+        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor());
         contentCard.setBorder(BorderFactory.createEmptyBorder(28, 32, 24, 32));
         contentCard.setLayout(new GridBagLayout());
 
@@ -654,9 +654,9 @@ public class ClientDialog {
         private final Color bg;
         private final int radius;
 
-        RoundedPanel(Color bg, int radius) {
+        RoundedPanel(Color bg) {
             this.bg = bg;
-            this.radius = radius;
+            this.radius = 14;
             setOpaque(false);
         }
 

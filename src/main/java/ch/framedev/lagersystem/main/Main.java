@@ -60,7 +60,7 @@ public class Main {
     /**
      * Log utility instance, responsible for managing application logs. Initialized at startup and used for logging important events and errors throughout the application.
      */
-    public static LogUtils logUtils = new LogUtils();
+    public static final LogUtils logUtils = new LogUtils();
     /**
      * Application settings loaded from properties file, accessible throughout the application.
      */

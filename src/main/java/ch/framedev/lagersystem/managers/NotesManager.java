@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author framedev
  */
-@SuppressWarnings("deprecation")
+@SuppressWarnings({"deprecation", "BooleanMethodIsAlwaysInverted"})
 public class NotesManager {
 
     private final Logger LOGGER = LogManager.getLogger(NotesManager.class);

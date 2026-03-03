@@ -34,7 +34,7 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
  * ArticleGUI with category support for better organization.
  * Categories are loaded from categories.json and mapped to articles based on article number ranges.
  */
-@SuppressWarnings("DuplicatedCode")
+@SuppressWarnings({"ALL", "unused"})
 public class ArticleGUI extends JFrame {
 
     public final JTable articleTable;

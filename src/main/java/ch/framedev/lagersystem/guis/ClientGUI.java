@@ -703,8 +703,8 @@ public class ClientGUI extends JFrame {
 
     // Simple Client data class
     private static class Client {
-        String name;
-        String department;
+        final String name;
+        final String department;
 
         Client(String name, String department) {
             this.name = name;

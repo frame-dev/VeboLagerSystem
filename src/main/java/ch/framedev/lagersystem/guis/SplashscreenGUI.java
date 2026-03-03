@@ -4,7 +4,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
-import java.util.Objects;
 import java.net.URL;
 
 /**
@@ -17,7 +16,7 @@ import java.net.URL;
  * <p>Progress and status can be updated at runtime via {@link #updateProgress(int, String)}.
  * The animation is driven by a {@link Timer} that periodically repaints the relevant components.
  */
-@SuppressWarnings("unused")
+@SuppressWarnings("ALL")
 public class SplashscreenGUI extends JFrame {
 
     // Palette (more premium: deeper blue + softer background + better contrast)
@@ -352,7 +351,6 @@ public class SplashscreenGUI extends JFrame {
             );
             g2.setPaint(aurora2);
             g2.fillRect(0, 0, w, h);
-            return;
         }
     }
 

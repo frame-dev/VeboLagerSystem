@@ -180,7 +180,7 @@ public class VendorDialog {
         gbc.gridy = ++row;
         gbc.insets = new Insets(2, 8, 16, 8);
         JFormattedTextField minOrderField = createMoneyField();
-        minOrderField.setValue(safeDouble(existing, 6, 0.0));
+        minOrderField.setValue(safeDouble(existing));
         contentCard.add(minOrderField, gbc);
 
         mainContainer.add(contentCard, BorderLayout.CENTER);
@@ -472,15 +472,15 @@ public class VendorDialog {
         return v == null ? "" : v.toString();
     }
 
-    private static double safeDouble(Object[] existing, int idx, double fallback) {
-        if (existing == null || idx < 0 || idx >= existing.length) return fallback;
-        Object v = existing[idx];
-        if (v == null) return fallback;
+    private static double safeDouble(Object[] existing) {
+        if (existing == null || 6 < 0 || 6 >= existing.length) return 0.0;
+        Object v = existing[6];
+        if (v == null) return 0.0;
         if (v instanceof Number n) return n.doubleValue();
         try {
             return Double.parseDouble(v.toString().trim());
         } catch (Exception ignored) {
-            return fallback;
+            return 0.0;
         }
     }
 }

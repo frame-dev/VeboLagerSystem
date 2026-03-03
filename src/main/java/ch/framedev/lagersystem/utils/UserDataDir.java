@@ -33,6 +33,7 @@ import static org.apache.commons.lang3.SystemUtils.*;
  * </li>
  * </ul>
  */
+@SuppressWarnings("SameReturnValue")
 public final class UserDataDir {
 
     private static final Path UNDEFINED = Path.of( "/" );

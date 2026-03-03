@@ -640,9 +640,8 @@ public class DatabaseManager {
          *
          * @param rs ResultSet positioned at the current row; caller is responsible for closing it.
          * @return mapped object of type T
-         * @throws SQLException if a database access error occurs or this method is called on a closed ResultSet
          */
-        T map(ResultSet rs) throws SQLException;
+        T map(ResultSet rs);
     }
 
     /**

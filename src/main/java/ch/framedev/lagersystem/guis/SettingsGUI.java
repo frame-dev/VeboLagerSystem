@@ -51,6 +51,7 @@ import static ch.framedev.lagersystem.utils.ArticleUtils.loadCategories;
  * <p>Änderungen werden typischerweise über {@code saveSettings()} persistiert und nach dem Speichern
  * in der Anwendung angewendet.
  */
+@SuppressWarnings("deprecation")
 public class SettingsGUI extends JFrame {
     /**
      * Logger für UI- und Einstellungsaktionen innerhalb dieser GUI.
@@ -157,7 +158,7 @@ public class SettingsGUI extends JFrame {
          */
         ENABLE_AUTO_STOCK_CHECK(settings.getProperty("enable_auto_stock_check")),
         /**
-         * Die URL, von der die Anwendung Warnungsdaten (z.B. Lagerwarnungen) abruft. Beeinflusst, wo die Anwendung nach Warnungsinformationen sucht. Standard ist "https://framedev.ch/vebo/scans.json", was auf eine Beispiel-URL verweist. Benutzer können hier eine benutzerdefinierte URL angeben, z.B. die Adresse eines eigenen Servers oder einer API, von der die Anwendung Warnungsdaten abrufen soll. Es ist wichtig, dass die angegebene URL korrekt formatiert ist und auf eine gültige Ressource zeigt, damit die Anwendung Warnungsinformationen erfolgreich abrufen kann.
+         * Die URL, von der die Anwendung Warnungsdaten (z.B. Lagerwarnungen) abruft. Beeinflusst, wo die Anwendung nach Warnungsinformationen sucht. Standard ist "<a href="https://framedev.ch/vebo/scans.json">...</a>", was auf eine Beispiel-URL verweist. Benutzer können hier eine benutzerdefinierte URL angeben, z.B. die Adresse eines eigenen Servers oder einer API, von der die Anwendung Warnungsdaten abrufen soll. Es ist wichtig, dass die angegebene URL korrekt formatiert ist und auf eine gültige Ressource zeigt, damit die Anwendung Warnungsinformationen erfolgreich abrufen kann.
          */
         SERVER_URL(settings.getProperty("server_url")),
         /**
@@ -1609,7 +1610,6 @@ public class SettingsGUI extends JFrame {
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE);
             Main.logUtils.addLog("Fehler beim Löschen alter Protokolle: " + ex.getMessage());
-            return;
         }
     }
 
@@ -1766,15 +1766,19 @@ public class SettingsGUI extends JFrame {
         hexLabel.setFont(getFontByName(Font.PLAIN, 12));
         hexLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        if ("theme_accent_color".equals(key)) {
-            accentColorButton = colorButton;
-            accentHexLabel = hexLabel;
-        } else if ("theme_header_color".equals(key)) {
-            headerColorButton = colorButton;
-            headerHexLabel = hexLabel;
-        } else if ("theme_button_color".equals(key)) {
-            buttonColorButton = colorButton;
-            buttonHexLabel = hexLabel;
+        switch (key) {
+            case "theme_accent_color" -> {
+                accentColorButton = colorButton;
+                accentHexLabel = hexLabel;
+            }
+            case "theme_header_color" -> {
+                headerColorButton = colorButton;
+                headerHexLabel = hexLabel;
+            }
+            case "theme_button_color" -> {
+                buttonColorButton = colorButton;
+                buttonHexLabel = hexLabel;
+            }
         }
 
         colorButton.addActionListener(e -> {
@@ -1807,26 +1811,20 @@ public class SettingsGUI extends JFrame {
 
     private Color getSelectedColorForKey(String key) {
         if(key == null) throw new NullPointerException("Key cannot be null");
-        if ("theme_accent_color".equals(key)) {
-            return selectedAccentColor;
-        }
-        if ("theme_header_color".equals(key)) {
-            return selectedHeaderColor;
-        }
-        if ("theme_button_color".equals(key)) {
-            return selectedButtonColor;
-        }
-        return null;
+        return switch (key) {
+            case "theme_accent_color" -> selectedAccentColor;
+            case "theme_header_color" -> selectedHeaderColor;
+            case "theme_button_color" -> selectedButtonColor;
+            default -> null;
+        };
     }
 
     private void setSelectedColorForKey(String key, Color color) {
         if(key == null) throw new NullPointerException("Key cannot be null");
-        if ("theme_accent_color".equals(key)) {
-            selectedAccentColor = color;
-        } else if ("theme_header_color".equals(key)) {
-            selectedHeaderColor = color;
-        } else if ("theme_button_color".equals(key)) {
-            selectedButtonColor = color;
+        switch (key) {
+            case "theme_accent_color" -> selectedAccentColor = color;
+            case "theme_header_color" -> selectedHeaderColor = color;
+            case "theme_button_color" -> selectedButtonColor = color;
         }
     }
 

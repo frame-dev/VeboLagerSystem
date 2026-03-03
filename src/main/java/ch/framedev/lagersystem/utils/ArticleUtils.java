@@ -60,15 +60,15 @@ public class ArticleUtils {
         /**
          * The name of the category (e.g., "Getränke")
          */
-        public String category;
+        public final String category;
         /**
          * The starting article number for this category (inclusive)
          */
-        public int rangeStart;
+        public final int rangeStart;
         /**
          * The ending article number for this category (inclusive)
          */
-        public int rangeEnd;
+        public final int rangeEnd;
 
         /**
          * Creates a new CategoryRange with the specified category name and article number range.

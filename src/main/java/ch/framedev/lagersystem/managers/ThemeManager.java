@@ -25,7 +25,7 @@ import java.util.WeakHashMap;
  * <p>The manager is implemented as a singleton and integrates with
  * {@link UIManager} to apply consistent defaults across the entire UI.
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "SameReturnValue"})
 public class ThemeManager {
 
     private static ThemeManager instance;
@@ -847,7 +847,7 @@ public class ThemeManager {
         Runnable refresh = () -> {
             // Snapshot to avoid concurrent modification while iterating
             for (Window window : java.util.List.copyOf(registeredWindows.keySet())) {
-                if (window == null || !window.isDisplayable()) {
+                if (!window.isDisplayable()) {
                     continue;
                 }
                 SwingUtilities.updateComponentTreeUI(window);
