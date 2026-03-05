@@ -43,3 +43,4 @@ scans.jsonl
 /logs/application.log
 /Docs
 ignored.txt
+log.txt
