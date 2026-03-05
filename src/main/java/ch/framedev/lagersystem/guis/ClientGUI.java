@@ -703,7 +703,9 @@ public class ClientGUI extends JFrame {
 
     // Simple Client data class
     private static class Client {
+        @SuppressWarnings("unused")
         final String name;
+        @SuppressWarnings("unused")
         final String department;
 
         Client(String name, String department) {

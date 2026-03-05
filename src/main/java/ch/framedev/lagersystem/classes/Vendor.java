@@ -6,7 +6,6 @@ import java.util.List;
 /**
  * Represents a vendor with contact details and supplied articles.
  */
-@SuppressWarnings("unused")
 public class Vendor {
 
     /** Vendor name. */

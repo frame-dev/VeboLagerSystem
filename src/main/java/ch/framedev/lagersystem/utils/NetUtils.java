@@ -1,4 +1,4 @@
-package ch.framedev.lagersystem.utils;
+ package ch.framedev.lagersystem.utils;
 
 import com.sun.net.httpserver.HttpExchange;
 
@@ -11,7 +11,6 @@ import java.util.Enumeration;
  * The NetUtils class provides utility methods for network-related operations, such as checking for active network interfaces, retrieving the client's IP address from an HttpExchange object, obtaining the local IP address of the host, and fetching the public IP address using an external service. The class is designed to be a final utility class with static methods, and it includes error handling to ensure that exceptions do not propagate and instead return null or false as appropriate. The methods in this class can be used in various parts of the application where network information is needed.
  * @author framedev
  */
-@SuppressWarnings("unused")
 public final class NetUtils {
 
     private NetUtils() {

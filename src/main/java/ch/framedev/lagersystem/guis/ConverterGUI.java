@@ -15,7 +15,6 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.text.DecimalFormat;
 
 /**
  * A GUI for calculating the price of filling an article with a certain amount. The user can enter the desired

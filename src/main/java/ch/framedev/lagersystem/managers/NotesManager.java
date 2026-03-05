@@ -135,7 +135,12 @@ public class NotesManager {
      */
     public boolean updateNote(String title, String content) {
         String t = normalizeTitle(title);
-        if(!normalizeTextNotNull(title)) return false;
+        if (t == null) return false;
+        // Only update if note exists
+        if (!exists(t)) {
+            Main.logUtils.addLog("Notiz mit Titel '" + t + "' existiert nicht.");
+            return false;
+        }
         String sql = "UPDATE " + TABLE + " SET content = ? WHERE title = ?;";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{content, t});
         if (result) {

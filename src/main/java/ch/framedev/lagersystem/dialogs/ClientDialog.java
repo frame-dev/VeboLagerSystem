@@ -21,11 +21,79 @@ import java.awt.event.MouseEvent;
  * The ClientDialog class provides static methods to display dialogs for adding and updating client information. It uses Swing components to create a user-friendly interface that allows users to input client details such as name and department. The dialogs are designed with a consistent theme and include validation to ensure that required fields are filled out correctly. The class interacts with the ClientManager to perform database operations for inserting and updating client records.
  * @author framedev
  */
-@SuppressWarnings({"DuplicatedCode", "ReassignedVariable", "UnusedAssignment"})
+@SuppressWarnings({"ReassignedVariable", "UnusedAssignment"})
 public class ClientDialog {
+    /**
+     * Shared dialog UI builder for add/update client dialogs.
+     * Returns an array: [mainContainer, nameField, departmentCombobox]
+     */
+    private static Object[] buildClientDialogUI(JDialog dialog, String headerIcon, String headerTitle, String initialName, String initialDept) {
+        JPanel mainContainer = createDialogChrome();
+        mainContainer.add(createGradientHeader(
+                headerIcon,
+                headerTitle,
+                dialog,
+                dialog::dispose
+        ), BorderLayout.NORTH);
 
-    private ClientDialog() {
+        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor());
+        contentCard.setBorder(BorderFactory.createEmptyBorder(CARD_BORDER_TOP, CARD_BORDER_LEFT, CARD_BORDER_BOTTOM, CARD_BORDER_RIGHT));
+        contentCard.setLayout(new GridBagLayout());
+
+        GridBagConstraints gbc = baseGbc();
+        int row = 0;
+
+        // Name
+        gbc.gridy = row++;
+        contentCard.add(createRequiredLabel(UnicodeSymbols.PERSON + " Vorname und Nachname *"), gbc);
+
+        gbc.gridy = row++;
+        gbc.insets = FIELD_INSETS;
+        JTextField nameField = createTextField();
+        if (initialName != null) nameField.setText(initialName);
+        contentCard.add(nameField, gbc);
+
+        // Department
+        gbc.insets = LABEL_INSETS;
+        gbc.gridy = row++;
+        contentCard.add(createLabel(UnicodeSymbols.DEPARTMENT + " Abteilung"), gbc);
+
+        gbc.gridy = row++;
+        gbc.insets = COMBOBOX_INSETS;
+        JComboBox<String> departmentCombobox = new JComboBox<>();
+        fillDepartmentList(departmentCombobox);
+        departmentCombobox.setPreferredSize(new Dimension(COMBOBOX_WIDTH, COMBOBOX_HEIGHT));
+        styleComboBox(departmentCombobox);
+        if (initialDept != null && !initialDept.isEmpty()) {
+            for (int i = 0; i < departmentCombobox.getItemCount(); i++) {
+                if (initialDept.equals(departmentCombobox.getItemAt(i))) {
+                    departmentCombobox.setSelectedIndex(i);
+                    break;
+                }
+            }
+        }
+        contentCard.add(departmentCombobox, gbc);
+
+        mainContainer.add(contentCard, BorderLayout.CENTER);
+        return new Object[]{mainContainer, nameField, departmentCombobox};
     }
+
+    private ClientDialog() {}
+
+    // Layout and style constants
+    private static final int DIALOG_WIDTH = 720;
+    private static final int DIALOG_HEIGHT_ADD = 460;
+    private static final int DIALOG_MIN_WIDTH = 640;
+    private static final int DIALOG_MIN_HEIGHT_ADD = 420;
+    private static final int CARD_BORDER_TOP = 28;
+    private static final int CARD_BORDER_LEFT = 32;
+    private static final int CARD_BORDER_BOTTOM = 24;
+    private static final int CARD_BORDER_RIGHT = 32;
+    private static final int COMBOBOX_WIDTH = 420;
+    private static final int COMBOBOX_HEIGHT = 40;
+    private static final Insets FIELD_INSETS = new Insets(4, 8, 18, 8);
+    private static final Insets LABEL_INSETS = new Insets(8, 8, 8, 8);
+    private static final Insets COMBOBOX_INSETS = new Insets(4, 8, 8, 8);
 
     /**
      * Shows a dialog to add a new client. The method returns an array containing the name and department of the newly added client if the user clicks "Add", or null if the user cancels the operation.
@@ -40,98 +108,66 @@ public class ClientDialog {
         JDialog dialog = new JDialog(frame, UnicodeSymbols.CLIENT + " Neuen Kunden hinzufügen", true);
         dialog.setUndecorated(true);
         dialog.getRootPane().registerKeyboardAction(
-                e -> dialog.dispose(),
-                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
-                JComponent.WHEN_IN_FOCUSED_WINDOW
+            e -> dialog.dispose(),
+            KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW
         );
 
-        JPanel mainContainer = createDialogChrome();
-
-        JPanel headerPanel = createGradientHeader(
-                UnicodeSymbols.HEAVY_PLUS,
-                "Neuen Kunden hinzufügen",
-                dialog,
-                () -> {
-                    holder[0] = null;
-                    dialog.dispose();
-                }
-        );
-        mainContainer.add(headerPanel, BorderLayout.NORTH);
-
-        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor());
-        contentCard.setBorder(BorderFactory.createEmptyBorder(28, 32, 24, 32));
-        contentCard.setLayout(new GridBagLayout());
-
-        GridBagConstraints gbc = baseGbc();
-        int row = 0;
-
-        // Name
-        gbc.gridy = row++;
-        contentCard.add(createRequiredLabel(UnicodeSymbols.PERSON + " Vorname und Nachname *"), gbc);
-
-        gbc.gridy = row++;
-        gbc.insets = new Insets(4, 8, 18, 8);
-        JTextField nameField = createTextField();
-        contentCard.add(nameField, gbc);
-
-        // Department
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.gridy = row++;
-        contentCard.add(createLabel(UnicodeSymbols.DEPARTMENT + " Abteilung"), gbc);
-
-        gbc.gridy = row++;
-        gbc.insets = new Insets(4, 8, 8, 8);
-        JComboBox<String> departmentCombobox = new JComboBox<>();
-        fillDepartmentList(departmentCombobox);
-        departmentCombobox.setPreferredSize(new Dimension(420, 40));
-        styleComboBox(departmentCombobox);
-        contentCard.add(departmentCombobox, gbc);
-
-        mainContainer.add(contentCard, BorderLayout.CENTER);
+        Object[] ui = buildClientDialogUI(dialog, UnicodeSymbols.HEAVY_PLUS, "Neuen Kunden hinzufügen", null, null);
+        JPanel mainContainer = (JPanel) ui[0];
+        JTextField nameField = (JTextField) ui[1];
+        @SuppressWarnings("unchecked")
+        JComboBox<String> departmentCombobox = (JComboBox<String>) ui[2];
 
         // Buttons
         JPanel buttonPanel = createFooterBar();
-
-        JButton cancelBtn = createDangerButton(UnicodeSymbols.CLOSE + " Abbrechen", "Das Hinzufügen des neuen Kunden abbrechen");
-        cancelBtn.addActionListener(ae -> {
-            holder[0] = null;
-            dialog.dispose();
-        });
-
-        JButton okBtn = createPrimaryButton(UnicodeSymbols.CHECKMARK + " Hinzufügen");
-        okBtn.addActionListener(ae -> {
-            String name = nameField.getText().trim();
-            String selectedDept = (String) departmentCombobox.getSelectedItem();
-            if (selectedDept == null) selectedDept = "";
-            String dept = selectedDept.trim();
-
-            if (name.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler",
-                        JOptionPane.ERROR_MESSAGE, Main.iconSmall);
-                return;
+        buttonPanel.add(createDialogButton(
+            UnicodeSymbols.CLOSE + " Abbrechen",
+            "Das Hinzufügen des neuen Kunden abbrechen",
+            ThemeManager.getErrorColor(),
+            ae -> {
+                holder[0] = null;
+                dialog.dispose();
             }
+        ));
+        buttonPanel.add(createDialogButton(
+            UnicodeSymbols.CHECKMARK + " Hinzufügen",
+            "Den neuen Kunden zur Datenbank hinzufügen",
+            ThemeManager.getButtonBackgroundColor(),
+            ae -> {
+                String name = nameField.getText().trim();
+                String selectedDept = (String) departmentCombobox.getSelectedItem();
+                if (selectedDept == null) selectedDept = "";
+                String dept = selectedDept.trim();
 
-            ClientManager clientManager = ClientManager.getInstance();
-            if (!clientManager.insertClient(name, dept)) {
+                if (name.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler",
+                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                return;
+                }
+
+                ClientManager clientManager = ClientManager.getInstance();
+                if (!clientManager.insertClient(name, dept)) {
                 JOptionPane.showMessageDialog(dialog, "Fehler beim Hinzufügen des Kunden zur Datenbank.", "Fehler",
-                        JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                 holder[0] = null;
                 return;
+                }
+
+                holder[0] = new Object[]{name, dept};
+                dialog.dispose();
             }
-
-            holder[0] = new Object[]{name, dept};
-            dialog.dispose();
-        });
-
-        buttonPanel.add(cancelBtn);
-        buttonPanel.add(okBtn);
+        ));
         mainContainer.add(buttonPanel, BorderLayout.SOUTH);
 
         dialog.getContentPane().add(mainContainer);
-        dialog.getRootPane().setDefaultButton(okBtn);
+        // Set default button to the 'Add' button (second button in panel)
+        if (buttonPanel.getComponentCount() > 1 && buttonPanel.getComponent(1) instanceof JButton addBtn) {
+            dialog.getRootPane().setDefaultButton(addBtn);
+        }
 
-        dialog.setSize(720, 460);
-        dialog.setMinimumSize(new Dimension(640, 420));
+        dialog.setSize(DIALOG_WIDTH, DIALOG_HEIGHT_ADD);
+        dialog.setMinimumSize(new Dimension(DIALOG_MIN_WIDTH, DIALOG_MIN_HEIGHT_ADD));
         dialog.setLocationRelativeTo(frame);
         SwingUtilities.invokeLater(nameField::requestFocusInWindow);
         dialog.setVisible(true);
@@ -159,117 +195,75 @@ public class ClientDialog {
                 JComponent.WHEN_IN_FOCUSED_WINDOW
         );
 
-        JPanel mainContainer = createDialogChrome();
+        String initialName = (existing.length > 0 && existing[0] != null) ? existing[0].toString() : "";
+        String initialDept = (existing.length > 1 && existing[1] != null) ? existing[1].toString() : "";
+        Object[] ui = buildClientDialogUI(dialog, UnicodeSymbols.EDIT, "Kunde bearbeiten", initialName, initialDept);
+        JPanel mainContainer = (JPanel) ui[0];
+        JTextField nameField = (JTextField) ui[1];
+        @SuppressWarnings("unchecked")
+        JComboBox<String> departmentCombobox = (JComboBox<String>) ui[2];
+        final String originalName = nameField.getText().trim();
 
-        JPanel headerPanel = createGradientHeader(
-                UnicodeSymbols.EDIT,
-                "Kunde bearbeiten",
-                dialog,
-                () -> {
+        JPanel buttonPanel = createFooterBar();
+        buttonPanel.add(createDialogButton(
+                UnicodeSymbols.CLOSE + "  Abbrechen",
+                "Das Bearbeiten des Kunden abbrechen",
+                ThemeManager.getErrorColor(),
+                ae -> {
                     holder[0] = null;
                     dialog.dispose();
                 }
-        );
-        mainContainer.add(headerPanel, BorderLayout.NORTH);
+        ));
+        buttonPanel.add(createDialogButton(
+                UnicodeSymbols.FLOPPY + "  Speichern",
+                "Die Änderungen am Kunden speichern",
+                ThemeManager.getSuccessColor(),
+                ae -> {
+                    String name = nameField.getText().trim();
+                    if (!originalName.isEmpty() && !name.equals(originalName)) {
+                        JOptionPane.showMessageDialog(dialog,
+                                "Der Kundenname kann aktuell nicht geändert werden.\nBitte erstellen Sie einen neuen Kunden oder lassen Sie den Namen unverändert.",
+                                "Hinweis",
+                                JOptionPane.WARNING_MESSAGE,
+                                Main.iconSmall);
+                        return;
+                    }
+                    String selectedDept = (String) departmentCombobox.getSelectedItem();
+                    if (selectedDept == null) selectedDept = "";
+                    String dept = selectedDept.trim();
 
-        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor());
-        contentCard.setBorder(BorderFactory.createEmptyBorder(28, 32, 24, 32));
-        contentCard.setLayout(new GridBagLayout());
+                    if (name.isEmpty()) {
+                        JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler",
+                                JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                        return;
+                    }
 
-        GridBagConstraints gbc = baseGbc();
-        int row = 0;
+                    ClientManager clientManager = ClientManager.getInstance();
+                    if (!clientManager.existsClient(name)) {
+                        if (!clientManager.insertClient(name, dept)) {
+                            JOptionPane.showMessageDialog(dialog, "Fehler beim Hinzufügen des Kunden zur Datenbank.", "Fehler",
+                                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                            return;
+                        }
+                    } else {
+                        if (!clientManager.updateClient(name, dept)) {
+                            JOptionPane.showMessageDialog(dialog, "Fehler beim Aktualisieren des Kunden in der Datenbank.", "Fehler",
+                                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                            return;
+                        }
+                    }
 
-        // Name
-        gbc.gridy = row++;
-        contentCard.add(createRequiredLabel(UnicodeSymbols.PERSON + " Vorname und Nachname *"), gbc);
-
-        gbc.gridy = row++;
-        gbc.insets = new Insets(4, 8, 18, 8);
-        JTextField nameField = createTextField();
-        nameField.setText(existing.length > 0 && existing[0] != null ? existing[0].toString() : "");
-        final String originalName = nameField.getText().trim();
-        contentCard.add(nameField, gbc);
-
-        // Department
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.gridy = row++;
-        contentCard.add(createLabel(UnicodeSymbols.DEPARTMENT + " Abteilung"), gbc);
-
-        gbc.gridy = row++;
-        gbc.insets = new Insets(4, 8, 8, 8);
-        JComboBox<String> departmentCombobox = new JComboBox<>();
-        fillDepartmentList(departmentCombobox);
-        departmentCombobox.setPreferredSize(new Dimension(420, 40));
-        styleComboBox(departmentCombobox);
-
-        // Pre-select existing department
-        if (existing.length > 1 && existing[1] != null) {
-            String existingDept = existing[1].toString();
-            for (int i = 0; i < departmentCombobox.getItemCount(); i++) {
-                if (existingDept.equals(departmentCombobox.getItemAt(i))) {
-                    departmentCombobox.setSelectedIndex(i);
-                    break;
+                    holder[0] = new Object[]{name, dept};
+                    dialog.dispose();
                 }
-            }
-        }
-
-        contentCard.add(departmentCombobox, gbc);
-        mainContainer.add(contentCard, BorderLayout.CENTER);
-
-        JPanel buttonPanel = createFooterBar();
-
-        JButton cancelBtn = createDangerButton(UnicodeSymbols.CLOSE + "  Abbrechen", "Das Bearbeiten des Kunden abbrechen");
-        cancelBtn.addActionListener(ae -> {
-            holder[0] = null;
-            dialog.dispose();
-        });
-
-        JButton okBtn = createSuccessButton(UnicodeSymbols.FLOPPY + "  Speichern");
-        okBtn.addActionListener(ae -> {
-            String name = nameField.getText().trim();
-            if (!originalName.isEmpty() && !name.equals(originalName)) {
-                JOptionPane.showMessageDialog(dialog,
-                        "Der Kundenname kann aktuell nicht geändert werden.\nBitte erstellen Sie einen neuen Kunden oder lassen Sie den Namen unverändert.",
-                        "Hinweis",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
-                return;
-            }
-            String selectedDept = (String) departmentCombobox.getSelectedItem();
-            if (selectedDept == null) selectedDept = "";
-            String dept = selectedDept.trim();
-
-            if (name.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler",
-                        JOptionPane.ERROR_MESSAGE, Main.iconSmall);
-                return;
-            }
-
-            ClientManager clientManager = ClientManager.getInstance();
-            if (!clientManager.existsClient(name)) {
-                if (!clientManager.insertClient(name, dept)) {
-                    JOptionPane.showMessageDialog(dialog, "Fehler beim Hinzufügen des Kunden zur Datenbank.", "Fehler",
-                            JOptionPane.ERROR_MESSAGE, Main.iconSmall);
-                    return;
-                }
-            } else {
-                if (!clientManager.updateClient(name, dept)) {
-                    JOptionPane.showMessageDialog(dialog, "Fehler beim Aktualisieren des Kunden in der Datenbank.", "Fehler",
-                            JOptionPane.ERROR_MESSAGE, Main.iconSmall);
-                    return;
-                }
-            }
-
-            holder[0] = new Object[]{name, dept};
-            dialog.dispose();
-        });
-
-        buttonPanel.add(cancelBtn);
-        buttonPanel.add(okBtn);
+        ));
         mainContainer.add(buttonPanel, BorderLayout.SOUTH);
 
         dialog.getContentPane().add(mainContainer);
-        dialog.getRootPane().setDefaultButton(okBtn);
+        // Set default button to the 'Speichern' button (second button in panel)
+        if (buttonPanel.getComponentCount() > 1 && buttonPanel.getComponent(1) instanceof JButton saveBtn) {
+            dialog.getRootPane().setDefaultButton(saveBtn);
+        }
 
         dialog.setSize(720, 480);
         dialog.setMinimumSize(new Dimension(640, 440));
@@ -281,6 +275,52 @@ public class ClientDialog {
     }
 
     // ------------------------- UI building blocks -------------------------
+    private static JButton createDialogButton(String text, String tooltip, Color base, java.awt.event.ActionListener action) {
+        Color hover = ThemeManager.getButtonHoverColor(base);
+        Color pressed = ThemeManager.getButtonPressedColor(base);
+        Color fg = ThemeManager.getTextOnPrimaryColor();
+        JButton btn = new JButton(text);
+        btn.setToolTipText(tooltip);
+        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        btn.setForeground(fg);
+        btn.setBackground(base);
+        btn.setOpaque(true);
+        btn.setContentAreaFilled(true);
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(base.darker(), 1, true),
+                BorderFactory.createEmptyBorder(12, 26, 12, 26)
+        ));
+        btn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btn.setBackground(hover);
+                btn.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(hover.darker(), 1, true),
+                        BorderFactory.createEmptyBorder(12, 26, 12, 26)
+                ));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btn.setBackground(base);
+                btn.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(base.darker(), 1, true),
+                        BorderFactory.createEmptyBorder(12, 26, 12, 26)
+                ));
+            }
+            @Override
+            public void mousePressed(MouseEvent e) {
+                btn.setBackground(pressed);
+            }
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                btn.setBackground(btn.contains(e.getPoint()) ? hover : base);
+            }
+        });
+        btn.addActionListener(action);
+        return btn;
+    }
 
     private static JPanel createDialogChrome() {
         JPanel mainContainer = new JPanel(new BorderLayout());
@@ -454,74 +494,7 @@ public class ClientDialog {
         return field;
     }
 
-    private static JButton createPrimaryButton(String text) {
-        if(text == null) throw new IllegalArgumentException("Text must not be null");
-        Color base = ThemeManager.getButtonBackgroundColor();
-        return createFilledButton(text, "Den neuen Kunden zur Datenbank hinzufügen", base, ThemeManager.getTextOnPrimaryColor());
-    }
-
-    private static JButton createSuccessButton(String text) {
-        if(text == null) throw new IllegalArgumentException("Text must not be null");
-        Color base = ThemeManager.getSuccessColor();
-        return createFilledButton(text, "Die Änderungen am Kunden speichern", base, ThemeManager.getTextOnPrimaryColor());
-    }
-
-    private static JButton createDangerButton(String text, String tooltip) {
-        if(text == null) throw new IllegalArgumentException("Text must not be null");
-        Color base = ThemeManager.getErrorColor();
-        return createFilledButton(text, tooltip, base, ThemeManager.getTextOnPrimaryColor());
-    }
-
-    private static JButton createFilledButton(String text, String tooltip, Color base, Color fg) {
-        Color hover = ThemeManager.getButtonHoverColor(base);
-        Color pressed = ThemeManager.getButtonPressedColor(base);
-
-        JButton btn = new JButton(text);
-        btn.setToolTipText(tooltip);
-        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        btn.setForeground(fg);
-        btn.setBackground(base);
-        btn.setOpaque(true);
-        btn.setContentAreaFilled(true);
-        btn.setFocusPainted(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(base.darker(), 1, true),
-                BorderFactory.createEmptyBorder(12, 26, 12, 26)
-        ));
-
-        btn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                btn.setBackground(hover);
-                btn.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(hover.darker(), 1, true),
-                        BorderFactory.createEmptyBorder(12, 26, 12, 26)
-                ));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btn.setBackground(base);
-                btn.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(base.darker(), 1, true),
-                        BorderFactory.createEmptyBorder(12, 26, 12, 26)
-                ));
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                btn.setBackground(pressed);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                btn.setBackground(btn.contains(e.getPoint()) ? hover : base);
-            }
-        });
-
-        return btn;
-    }
+    // Removed unused button creation methods
 
     // ------------------------- Existing helpers -------------------------
 

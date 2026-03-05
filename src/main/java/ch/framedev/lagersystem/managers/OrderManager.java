@@ -1,14 +1,20 @@
 package ch.framedev.lagersystem.managers;
 
-import ch.framedev.lagersystem.classes.Article;
-import ch.framedev.lagersystem.classes.Order;
-import ch.framedev.lagersystem.main.Main;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.classes.Order;
+import ch.framedev.lagersystem.main.Main;
 
 @SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
 public class OrderManager {
@@ -67,8 +73,15 @@ public class OrderManager {
         if (orderedArticles == null || orderedArticles.isEmpty()) return "";
         return orderedArticles.entrySet().stream()
                 .filter(e -> e.getKey() != null)
-                .map(e -> e.getKey().trim() + ":" + Math.max(0, e.getValue() == null ? 0 : e.getValue()))
+                .map(OrderManager::extracted)
                 .collect(Collectors.joining(","));
+    }
+
+    private static String extracted(Entry<String, Integer> e) {
+        if(e.getValue() == null) {
+            return e.getKey().trim() + ":0";
+        }
+        return e.getKey().trim() + ":" + Math.max(0, e.getValue());
     }
 
     private static Map<String, Integer> parseOrderedArticles(String orderedArticlesStr) {

@@ -23,348 +23,491 @@ if (file_exists($jsonFile)) {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Scanner - Start</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
+
+        :root {
+            --bg-top: #eef4ff;
+            --bg-bottom: #dde8ff;
+            --ink: #142033;
+            --muted: #5a6b86;
+            --surface: rgba(255, 255, 255, 0.88);
+            --surface-strong: #ffffff;
+            --border: rgba(20, 32, 51, 0.14);
+            --shadow-soft: 0 12px 34px rgba(16, 36, 92, 0.10);
+            --shadow-hover: 0 20px 46px rgba(16, 36, 92, 0.2);
+            --brand: #2b63f6;
+            --brand-dark: #214cc7;
+            --warn: #c0392b;
+            --buy: #1f8bff;
+            --sell: #4c6dff;
+            --order: #6a5cff;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-top: #070e20;
+                --bg-bottom: #040917;
+                --ink: #e8eeff;
+                --muted: #9fb1d6;
+                --surface: rgba(16, 24, 43, 0.88);
+                --surface-strong: #121b33;
+                --border: rgba(149, 174, 226, 0.2);
+                --shadow-soft: 0 12px 34px rgba(1, 8, 28, 0.45);
+                --shadow-hover: 0 20px 46px rgba(1, 8, 28, 0.58);
+                --brand: #6b95ff;
+                --brand-dark: #9eb9ff;
+                --buy: #57b1ff;
+                --sell: #7f93ff;
+                --order: #9b88ff;
+            }
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        body,
+        button,
+        input {
+            font-family: "Sora", "Avenir Next", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+            font-family: "Trebuchet MS", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(950px 460px at 5% -10%, rgba(43, 99, 246, 0.18), transparent 60%),
+                radial-gradient(760px 420px at 100% 0%, rgba(72, 168, 255, 0.2), transparent 55%),
+                linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+            padding: 14px;
+            padding-bottom: calc(18px + env(safe-area-inset-bottom));
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background:
+                    radial-gradient(950px 460px at 5% -10%, rgba(103, 139, 255, 0.22), transparent 60%),
+                    radial-gradient(760px 420px at 100% 0%, rgba(34, 77, 153, 0.28), transparent 55%),
+                    linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+            }
         }
 
         .container {
-            max-width: 900px;
-            width: 100%;
+            max-width: 980px;
+            margin: 0 auto;
+            animation: fadeIn 260ms ease-out;
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            position: relative;
-        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
 
-        .logo {
-            font-size: 128px;
-            margin-bottom: 15px;
-            animation: fadeInDown 0.6s ease-out, float 3s ease-in-out infinite;
-            display: inline-block;
-        }
-
-        @keyframes float {
-            0%, 100% {
+            to {
+                opacity: 1;
                 transform: translateY(0);
             }
-            50% {
-                transform: translateY(-10px);
+        }
+
+        .hero {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.76));
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            box-shadow: var(--shadow-soft);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            flex-direction: column;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .hero {
+                background: linear-gradient(145deg, rgba(18, 27, 49, 0.95), rgba(12, 19, 38, 0.92));
             }
+        }
+
+        .vebo-logo {
+            width: min(100%, 250px);
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+        }
+
+        .hero-copy {
+            flex: 1;
+            min-width: 0;
         }
 
         h1 {
-            color: white;
-            font-size: 48px;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            font-weight: 700;
-            letter-spacing: -1px;
-            animation: fadeInDown 0.6s ease-out 0.1s both;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            font-size: clamp(1.45rem, 5vw, 2.3rem);
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
         }
 
         .subtitle {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 18px;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+            color: var(--muted);
+            font-size: 0.95rem;
+            line-height: 1.45;
         }
 
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .menu-card:nth-child(1) {
-            animation: fadeInUp 0.6s ease-out 0.3s both;
-        }
-
-        .menu-card:nth-child(2) {
-            animation: fadeInUp 0.6s ease-out 0.4s both;
-        }
-
-        .menu-card:nth-child(3) {
-            animation: fadeInUp 0.6s ease-out 0.5s both;
-        }
-
-        .menu-card:nth-child(4) {
-            animation: fadeInUp 0.6s ease-out 0.6s both;
-        }
-
-        .menu-card {
-            background: white;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            text-align: center;
-            text-decoration: none;
-            color: #333;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .menu-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
-            transition: left 0.5s;
-        }
-
-        .menu-card:hover::before {
-            left: 100%;
-        }
-
-        .menu-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 15px 45px rgba(102, 126, 234, 0.3);
-        }
-
-        .menu-card:hover .menu-icon {
-            transform: rotate(10deg) scale(1.1);
-        }
-
-        .menu-card:active {
-            transform: translateY(-4px) scale(0.98);
-        }
-
-        .menu-icon {
-            font-size: 48px;
-            margin-bottom: 15px;
-            height: 80px;
-            width: 80px;
-            margin: 0 auto 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .menu-title {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: #667eea;
-        }
-
-        .menu-description {
-            color: #666;
-            font-size: 14px;
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-soft);
+            padding: 14px;
         }
 
         .stats-card {
-            background: white;
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            margin-bottom: 30px;
-            animation: fadeInUp 0.6s ease-out 0.2s both;
+            margin-bottom: 12px;
         }
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .stats-header {
-            font-size: 20px;
-            font-weight: 600;
-            color: #667eea;
-            margin-bottom: 20px;
-            text-align: center;
+        .stats-header,
+        .recent-header {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: var(--brand-dark);
         }
 
         .stats-content {
-            display: flex;
-            justify-content: space-around;
-            flex-wrap: wrap;
-            gap: 20px;
+            display: grid;
+            gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
         }
 
         .stat-item {
+            background: var(--surface-strong);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px;
             text-align: center;
         }
 
         .stat-number {
-            font-size: 48px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 5px;
-            animation: countUp 1s ease-out;
-        }
-
-        @keyframes countUp {
-            from {
-                opacity: 0;
-                transform: scale(0.5);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
+            font-size: clamp(1.7rem, 2.3vw + 0.8rem, 2.4rem);
+            font-weight: 700;
+            color: var(--brand);
+            margin-bottom: 4px;
         }
 
         .stat-label {
-            color: #666;
-            font-size: 14px;
+            color: var(--muted);
             text-transform: uppercase;
+            font-size: 0.78rem;
+            letter-spacing: 0.08em;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .menu-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            color: inherit;
+            padding: 14px;
+            display: grid;
+            grid-template-columns: 48px 1fr;
+            gap: 10px;
+            align-items: center;
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+            box-shadow: var(--shadow-soft);
+            min-height: 90px;
+            touch-action: manipulation;
+        }
+
+        .menu-card:hover,
+        .menu-card:focus-visible {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+            border-color: rgba(31, 91, 48, 0.4);
+            outline: none;
+        }
+
+        .menu-card:active {
+            transform: translateY(0);
+        }
+
+        .menu-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            background: linear-gradient(135deg, var(--brand), #3c73ff);
+        }
+
+        .menu-card.warn .menu-icon {
+            background: linear-gradient(135deg, #c0392b, #d35400);
+        }
+
+        .menu-title {
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: var(--brand-dark);
+        }
+
+        .menu-description {
+            font-size: 0.88rem;
+            color: var(--muted);
+            line-height: 1.35;
         }
 
         .recent-scans {
-            background: white;
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            animation: fadeInUp 0.6s ease-out 0.6s both;
-        }
-
-        .recent-header {
-            font-size: 20px;
-            font-weight: 600;
-            color: #667eea;
-            margin-bottom: 15px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-soft);
+            padding: 14px;
         }
 
         .recent-item {
-            padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface-strong);
+            padding: 12px;
             display: flex;
+            align-items: flex-start;
+            gap: 10px;
             justify-content: space-between;
-            align-items: center;
-            transition: all 0.3s ease;
-            border-radius: 8px;
+            flex-direction: column;
         }
 
-        .recent-item:hover {
-            background: #f8f9ff;
-            transform: translateX(5px);
-            padding-left: 20px;
-        }
-
-        .recent-item:last-child {
-            border-bottom: none;
+        .recent-item+.recent-item {
+            margin-top: 10px;
         }
 
         .recent-content {
             flex: 1;
+            min-width: 0;
+        }
+
+        .recent-time {
+            color: var(--muted);
+            font-size: 0.88rem;
+            margin-bottom: 8px;
         }
 
         .recent-data {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 10px;
-            margin-top: 8px;
+            grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+            gap: 8px 10px;
         }
 
         .recent-field {
-            font-size: 13px;
+            padding: 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(31, 42, 31, 0.08);
+            background: rgba(248, 250, 247, 0.95);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .recent-field {
+                border-color: rgba(149, 174, 226, 0.16);
+                background: rgba(23, 33, 62, 0.9);
+            }
         }
 
         .recent-field-label {
-            color: #999;
-            font-size: 11px;
+            color: #6e7d9d;
+            font-size: 0.7rem;
             text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 3px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .recent-field-label {
+                color: #9fb0a2;
+            }
         }
 
         .recent-field-value {
-            color: #333;
+            color: var(--ink);
+            font-size: 0.92rem;
             font-weight: 600;
-        }
-
-        .recent-time {
-            color: #666;
-            font-size: 14px;
+            overflow-wrap: anywhere;
         }
 
         .recent-badge {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .recent-item:hover .recent-badge {
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 86px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            align-self: flex-start;
         }
 
         .badge-sell {
-            background: #4caf50;
-            color: white;
+            background: linear-gradient(135deg, var(--sell), #2e964a);
         }
 
         .badge-buy {
-            background: #2196f3;
-            color: white;
+            background: linear-gradient(135deg, var(--buy), #2f8ade);
+        }
+
+        .badge-order {
+            background: linear-gradient(135deg, var(--order), #b37217);
         }
 
         .no-data {
+            color: var(--muted);
             text-align: center;
-            color: #999;
-            padding: 20px;
+            padding: 16px;
         }
 
-        .vebo-logo {
-            max-width: 400px;
-            height: auto;
-            margin: auto;
-            display: block;
-            animation: fadeInDown 0.6s ease-out;
-            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 36px;
+        @media (min-width: 680px) {
+            .menu-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
-            .menu-grid {
+            .menu-card {
                 grid-template-columns: 1fr;
+                align-items: start;
+                min-height: 0;
+            }
+        }
+
+        @media (min-width: 760px) {
+            body {
+                padding: 20px;
+                padding-bottom: calc(24px + env(safe-area-inset-bottom));
+            }
+
+            .hero {
+                flex-direction: row;
+                align-items: center;
+                padding: 22px;
+                gap: 18px;
+            }
+
+            .vebo-logo {
+                width: min(45vw, 340px);
+            }
+
+            .recent-item {
+                flex-direction: row;
+                align-items: center;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .menu-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        /* Visual polish layer */
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            z-index: 0;
+            pointer-events: none;
+            filter: blur(12px);
+            opacity: 0.45;
+        }
+
+        body::before {
+            width: 280px;
+            height: 280px;
+            top: -70px;
+            right: -80px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(74, 129, 255, 0.34), transparent 65%);
+        }
+
+        body::after {
+            width: 300px;
+            height: 300px;
+            bottom: -120px;
+            left: -120px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(47, 122, 255, 0.28), transparent 68%);
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero,
+        .panel,
+        .recent-scans,
+        .menu-card {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .hero {
+            border: 1px solid rgba(255, 255, 255, 0.35);
+        }
+
+        .menu-card {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(125deg, rgba(255, 255, 255, 0.16), transparent 35%, transparent 65%, rgba(43, 99, 246, 0.08));
+            pointer-events: none;
+        }
+
+        .menu-title {
+            letter-spacing: -0.01em;
+        }
+
+        .menu-icon {
+            box-shadow: 0 10px 18px rgba(39, 72, 166, 0.32);
+        }
+
+        .stat-number {
+            text-shadow: 0 6px 16px rgba(43, 99, 246, 0.2);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body::before {
+                background: radial-gradient(circle, rgba(117, 167, 255, 0.3), transparent 65%);
+            }
+
+            body::after {
+                background: radial-gradient(circle, rgba(90, 140, 255, 0.25), transparent 68%);
+            }
+
+            .hero {
+                border-color: rgba(150, 184, 160, 0.35);
+            }
+
+            .menu-card::after {
+                background: linear-gradient(125deg, rgba(255, 255, 255, 0.06), transparent 35%, transparent 65%, rgba(124, 150, 255, 0.1));
             }
         }
     </style>
@@ -372,13 +515,15 @@ if (file_exists($jsonFile)) {
 
 <body>
     <div class="container">
-        <div class="header">
+        <div class="hero">
             <img src="logo.png" alt="VEBO Logo" class="vebo-logo">
-            <h1>Scanner System</h1>
-            <p class="subtitle">Willkommen beim Scan-Verwaltungssystem</p>
+            <div class="hero-copy">
+                <h1>Scanner System</h1>
+                <p class="subtitle">Willkommen beim Scan-Verwaltungssystem</p>
+            </div>
         </div>
 
-        <div class="stats-card">
+        <div class="panel stats-card">
             <div class="stats-header">Statistiken</div>
             <div class="stats-content">
                 <div class="stat-item">
@@ -401,7 +546,7 @@ if (file_exists($jsonFile)) {
                 <div class="menu-description">Alle erfassten Scans anzeigen</div>
             </a>
 
-            <a href="delete.php" class="menu-card" onclick="return confirm('Moechten Sie wirklich alle Daten loeschen?')">
+            <a href="delete.php" class="menu-card warn" onclick="return confirm('Moechten Sie wirklich alle Daten loeschen?')">
                 <div class="menu-icon">X</div>
                 <div class="menu-title">Daten loeschen</div>
                 <div class="menu-description">Alle gespeicherten Daten entfernen</div>
@@ -422,7 +567,7 @@ if (file_exists($jsonFile)) {
                     // Parse structured data
                     $dataStr = $scan['data'];
                     $parsedData = [];
-                    
+
                     // Split by comma or semicolon
                     $parts = preg_split('/[,;]/', $dataStr);
                     foreach ($parts as $part) {
@@ -478,7 +623,7 @@ if (file_exists($jsonFile)) {
                             </div>
                         </div>
                         <span class="recent-badge badge-<?php echo htmlspecialchars($scan['type']); ?>">
-                            <?php echo ($scan['type'] === 'sell') ? 'Verkauf' : 'Lagern'; ?>
+                            <?php echo ($scan['type'] === 'sell') ? 'Verkauf' : (($scan['type'] === 'buy') ? 'Lagern' : 'Bestellen'); ?>
                         </span>
                     </div>
                 <?php } ?>

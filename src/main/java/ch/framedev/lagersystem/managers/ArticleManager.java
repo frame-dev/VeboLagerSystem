@@ -1,16 +1,23 @@
 package ch.framedev.lagersystem.managers;
 
-import ch.framedev.lagersystem.classes.Article;
-import ch.framedev.lagersystem.classes.Vendor;
-import ch.framedev.lagersystem.main.Main;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.classes.Vendor;
+import ch.framedev.lagersystem.main.Main;
 
 /**
  * ArticleManager with intelligent caching for improved performance.
@@ -221,7 +228,7 @@ public class ArticleManager {
                 articleNumberIndex.add(articleNumber);
             }
             return exists;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             logger.error("Error while checking if article with number '{}' exists", articleNumber, e);
             Main.logUtils.addLog("Error while checking if article with number " + articleNumber + " exists");
             return false;
@@ -366,7 +373,7 @@ public class ArticleManager {
             resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber});
             if (resultSet == null) return null;
             return getArticle(resultSet);
-        } catch (Exception e) {
+        } catch (SQLException e) {
             logger.error("Error while getting article with number '{}'", articleNumber, e);
             Main.logUtils.addLog("Error while getting article with number '" + articleNumber + "'");
             return null;
@@ -415,7 +422,7 @@ public class ArticleManager {
             resultSet = databaseManager.executePreparedQuery(sql, new Object[]{name});
             if (resultSet == null) return null;
             return getArticle(resultSet);
-        } catch (Exception e) {
+        } catch (SQLException e) {
             logger.error("Error while getting article with name '{}'", name, e);
             Main.logUtils.addLog("Error while getting article with name '" + name + "'");
             return null;
@@ -481,7 +488,7 @@ public class ArticleManager {
             }
 
             return new ArrayList<>(articles);
-        } catch (Exception e) {
+        } catch (SQLException e) {
             logger.error("Error while getting all articles", e);
             Main.logUtils.addLog("Error while getting all articles");
             return List.of();

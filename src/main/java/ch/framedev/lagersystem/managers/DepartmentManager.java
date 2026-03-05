@@ -1,14 +1,15 @@
 package ch.framedev.lagersystem.managers;
 
-import ch.framedev.lagersystem.main.Main;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import ch.framedev.lagersystem.main.Main;
 
 /**
  * This class manages the departments in the database. It provides methods to create, read, update and delete departments.
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author framedev
  */
-@SuppressWarnings({"unused", "deprecation"})
+@SuppressWarnings({"deprecation"})
 public class DepartmentManager {
 
     private final Logger logger = LogManager.getLogger(DepartmentManager.class);

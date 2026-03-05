@@ -256,7 +256,6 @@ public class QRCodeUtils {
         for (JsonElement e : jsonArray) {
             if (e == null || !e.isJsonObject()) continue;
             JsonObject obj = e.getAsJsonObject();
-            @SuppressWarnings("unchecked")
             Map<String, String> map = GSON.fromJson(GSON.toJson(obj), Map.class);
             mapList.add(map);
         }

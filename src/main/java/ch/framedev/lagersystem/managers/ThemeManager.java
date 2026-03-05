@@ -1,14 +1,33 @@
 package ch.framedev.lagersystem.managers;
 
-import ch.framedev.lagersystem.main.Main;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Font;
+import java.awt.Insets;
+import java.awt.Window;
+import java.util.Map;
+import java.util.WeakHashMap;
 
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.UIDefaults;
+import javax.swing.UIManager;
 import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.FontUIResource;
 import javax.swing.table.JTableHeader;
-import java.awt.*;
-import java.util.Map;
-import java.util.WeakHashMap;
+
+import ch.framedev.lagersystem.main.Main;
 
 /**
  * Centralized theme manager for the Swing application.
@@ -641,7 +660,7 @@ public class ThemeManager {
                 toolTipFont = new Font("Dialog", Font.PLAIN, 16);
             }
             UIManager.put("ToolTip.font", toolTipFont.deriveFont(Font.BOLD, 16f));
-            //UIManager.put("TabbedPane.tabInsets", new Insets(18, 25, 18, 25));
+            UIManager.put("TabbedPane.tabInsets", new Insets(18, 25, 18, 25));
             UIManager.put("TabbedPane.selectedTabPadInsets", new Insets(2, 2, 2, 2));
             UIManager.put("TabbedPane.tabAreaInsets", new Insets(2, 2, 0, 2));
         }
@@ -871,8 +890,8 @@ public class ThemeManager {
         applyThemeToComponent(container);
         for (Component comp : container.getComponents()) {
             applyThemeToComponent(comp);
-            if (comp instanceof Container) {
-                updateComponentTree((Container) comp);
+            if (comp instanceof Container container1) {
+                updateComponentTree(container1);
             }
         }
     }

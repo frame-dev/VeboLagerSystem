@@ -5,7 +5,6 @@ import ch.framedev.lagersystem.utils.ArticleUtils;
 /**
  * Represents a catalog article with inventory and pricing data.
  */
-@SuppressWarnings("unused")
 public class Article {
 
     /**

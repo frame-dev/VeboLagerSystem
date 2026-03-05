@@ -1,13 +1,5 @@
 package ch.framedev.lagersystem.managers;
 
-import ch.framedev.lagersystem.main.Main;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,6 +8,17 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
+
+import ch.framedev.lagersystem.main.Main;
 
 /**
  * Manages application updates by checking GitHub releases.
@@ -26,8 +29,7 @@ import java.util.concurrent.TimeUnit;
  * - Provides JAR download URLs
  * - Thread-safe singleton pattern
  */
-@SuppressWarnings("unused")
-public class UpdateManager {
+public final class UpdateManager {
 
     private static final Logger logger = LogManager.getLogger(UpdateManager.class);
     private static final String GITHUB_API_BASE = "https://api.github.com/repos/frame-dev/VeboLagerSystem";
@@ -66,6 +68,7 @@ public class UpdateManager {
     /**
      * Thread-safe singleton instance retrieval
      */
+    @SuppressWarnings("DoubleCheckedLocking")
     public static UpdateManager getInstance() {
         if (instance == null) {
             synchronized (lock) {
@@ -137,16 +140,20 @@ public class UpdateManager {
             int responseCode = connection.getResponseCode();
             if (responseCode != 200) {
                 String errorMessage = readErrorResponse(connection);
-                if (responseCode == 404) {
-                    logger.warn("GitHub API 404 Not Found: Repository '{}' not found or has no releases. Response: {}",
-                            GITHUB_RELEASES_URL, errorMessage);
-                    Main.logUtils.addLog("GitHub API 404 Not Found: Repository not found or has no releases.");
-                } else if (responseCode == 403) {
-                    logger.warn("GitHub API rate limit exceeded (HTTP 403). Consider adding a personal token.");
-                    Main.logUtils.addLog("GitHub API rate limit exceeded (HTTP 403). Consider adding a personal token.");
-                } else {
-                    logger.error("GitHub API error: HTTP {} - {}", responseCode, errorMessage);
-                    Main.logUtils.addLog("GitHub API error: HTTP " + responseCode + " - " + errorMessage);
+                switch (responseCode) {
+                    case 404 -> {
+                        logger.warn("GitHub API 404 Not Found: Repository '{}' not found or has no releases. Response: {}",
+                                GITHUB_RELEASES_URL, errorMessage);
+                        Main.logUtils.addLog("GitHub API 404 Not Found: Repository not found or has no releases.");
+                    }
+                    case 403 -> {
+                        logger.warn("GitHub API rate limit exceeded (HTTP 403). Consider adding a personal token.");
+                        Main.logUtils.addLog("GitHub API rate limit exceeded (HTTP 403). Consider adding a personal token.");
+                    }
+                    default -> {
+                        logger.error("GitHub API error: HTTP {} - {}", responseCode, errorMessage);
+                        Main.logUtils.addLog("GitHub API error: HTTP " + responseCode + " - " + errorMessage);
+                    }
                 }
                 connection.disconnect();
                 return cachedLatestVersion; // Return the cached version if available
@@ -177,7 +184,7 @@ public class UpdateManager {
             Main.logUtils.addLog("No tag_name found in GitHub response");
             return cachedLatestVersion;
 
-        } catch (Exception e) {
+        } catch (JsonSyntaxException | IOException e) {
             logger.error("Error fetching latest version from GitHub: {}", e.getMessage(), e);
             Main.logUtils.addLog("Error fetching latest version from GitHub: " + e.getMessage());
             return cachedLatestVersion; // Return cached version on error
@@ -208,19 +215,14 @@ public class UpdateManager {
             // Find the latest version matching the channel
             String channelPrefix;
             switch (channel) {
-                case BETA:
-                    channelPrefix = "beta";
-                    break;
-                case ALPHA:
-                    channelPrefix = "alpha";
-                    break;
-                case TESTING:
-                    channelPrefix = "testing";
-                    break;
-                default:
+                case BETA -> channelPrefix = "beta";
+                case ALPHA -> channelPrefix = "alpha";
+                case TESTING -> channelPrefix = "testing";
+                default -> {
                     logger.warn("Unsupported channel for this method: {}", channel);
                     Main.logUtils.addLog("Unsupported channel for this method: " + channel);
                     return null;
+                }
             }
 
             for (JsonElement element : releasesArray) {
@@ -241,7 +243,7 @@ public class UpdateManager {
             Main.logUtils.addLog(String.format("No %s releases found", channel));
             return null;
 
-        } catch (Exception e) {
+        } catch (JsonSyntaxException | IOException e) {
             logger.error("Error fetching {} version: {}", channel, e.getMessage(), e);
             Main.logUtils.addLog(String.format("Error fetching %s version: %s", channel, e.getMessage()));
             return null;
@@ -323,7 +325,7 @@ public class UpdateManager {
                 Main.logUtils.addLog(String.format("Repository verification failed: HTTP %d", responseCode));
                 return false;
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             logger.error("Error verifying repository: {}", e.getMessage());
             Main.logUtils.addLog("Error verifying repository: " + e.getMessage());
             return false;
@@ -374,7 +376,7 @@ public class UpdateManager {
             Main.logUtils.addLog("No release notes found");
             return null;
 
-        } catch (Exception e) {
+        } catch (JsonSyntaxException | IOException e) {
             logger.error("Error fetching release notes: {}", e.getMessage(), e);
             Main.logUtils.addLog(String.format("Error fetching release notes: %s", e.getMessage()));
             return null;
@@ -411,7 +413,7 @@ public class UpdateManager {
 
             return null;
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             logger.error("Error fetching release info: {}", e.getMessage(), e);
             Main.logUtils.addLog(String.format("Error fetching release info: %s", e.getMessage()));
             return null;
@@ -570,7 +572,7 @@ public class UpdateManager {
     /**
      * Result of checking all release channels
      */
-    public record ChannelUpdateResult(String currentVersion, ReleaseChannel currentChannel, String stableVersion,
+    public static record ChannelUpdateResult(String currentVersion, ReleaseChannel currentChannel, String stableVersion,
                                       String betaVersion, String alphaVersion, String testingVersion) {
 
         public boolean hasStableUpdate() {
@@ -638,7 +640,7 @@ public class UpdateManager {
     /**
      * Result of version comparison
      */
-    public record VersionComparisonResult(String currentVersion, String latestVersion, boolean updateAvailable,
+    public static record VersionComparisonResult(String currentVersion, String latestVersion, boolean updateAvailable,
                                           boolean isCurrent, boolean isNewer) {
 
         @Override
@@ -761,7 +763,7 @@ public class UpdateManager {
             logger.warn("No JAR file found in release assets");
             return null;
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             logger.error("Error getting JAR download URL: {}", e.getMessage(), e);
             Main.logUtils.addLog(String.format("Error getting JAR download URL: %s", e.getMessage()));
             return null;

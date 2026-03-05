@@ -18,6 +18,10 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
 import javax.swing.*;
 import javax.swing.border.Border;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.*;
@@ -39,6 +43,59 @@ import static ch.framedev.lagersystem.utils.ArticleExporter.sanitizeForWinAnsi;
  */
 @SuppressWarnings("DuplicatedCode")
 public final class ArticleQrPreviewDialog {
+        // Reusable header panel builder
+        private static JPanel buildHeaderPanel(String title, String subtitle, Runnable onClose) {
+            JFrameUtils.RoundedPanel headerPanel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
+            headerPanel.setLayout(new BorderLayout());
+            headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                    BorderFactory.createEmptyBorder(14, 18, 14, 18)
+            ));
+            headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            JLabel titleLabel = new JLabel(title);
+            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+            titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+            JLabel subtitleLabel = new JLabel(subtitle);
+            subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+            subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+            JPanel headerText = new JPanel();
+            headerText.setOpaque(false);
+            headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            headerText.add(titleLabel);
+            headerText.add(Box.createVerticalStrut(4));
+            headerText.add(subtitleLabel);
+
+            JButton closeBtn = createHeaderCloseButton(onClose);
+
+            headerPanel.add(headerText, BorderLayout.WEST);
+            headerPanel.add(closeBtn, BorderLayout.EAST);
+
+            JPanel headerWrapper = new JPanel(new BorderLayout());
+            headerWrapper.setOpaque(false);
+            headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+            headerWrapper.add(headerPanel, BorderLayout.CENTER);
+            return headerWrapper;
+        }
+
+        // Reusable card builder for QR preview and fullscreen
+        private static JFrameUtils.RoundedPanel buildCard(int radius, int top, int left, int bottom, int right) {
+            JFrameUtils.RoundedPanel card = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), radius);
+            card.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                    BorderFactory.createEmptyBorder(top, left, bottom, right)
+            ));
+            return card;
+        }
+    private static final Dimension PREVIEW_DIALOG_SIZE = new Dimension(980, 640);
+    private static final Dimension PREVIEW_DIALOG_MIN_SIZE = new Dimension(820, 520);
+    private static final int TILE_SIZE = 170;
+    private static final int TILE_GAP = 16;
+    private static final int GRID_TARGET_CELL_WIDTH = 250;
 
     private ArticleQrPreviewDialog() {
     }
@@ -49,6 +106,9 @@ public final class ArticleQrPreviewDialog {
      * @param selectedArticles the list of articles to generate QR codes for and display in the preview
      */
     public static void show(Component parent, List<Article> selectedArticles) {
+        if (parent == null) {
+            throw new IllegalArgumentException("Parent component must not be null.");
+        }
         if (selectedArticles == null || selectedArticles.isEmpty()) {
             JOptionPane.showMessageDialog(parent,
                     "Bitte wählen Sie mindestens einen Artikel aus.",
@@ -61,6 +121,7 @@ public final class ArticleQrPreviewDialog {
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent), "QR-Code Vorschau", Dialog.ModalityType.APPLICATION_MODAL);
         ThemeManager.applyUIDefaults();
         dialog.setLayout(new BorderLayout());
+        dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         dialog.getContentPane().setBackground(ThemeManager.getBackgroundColor());
 
         // ===== Top area (Header + Toolbar) =====
@@ -68,143 +129,41 @@ public final class ArticleQrPreviewDialog {
         topContainer.setBackground(ThemeManager.getBackgroundColor());
         topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
         topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
-
-        // Header card
-        JFrameUtils.RoundedPanel headerPanel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-        headerPanel.setLayout(new BorderLayout());
-        headerPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(14, 18, 14, 18)
+        topContainer.add(buildHeaderPanel(
+            UnicodeSymbols.PHONE + " QR-Code Vorschau",
+            UnicodeSymbols.INFO + " Vorschau und PDF-Export für " + selectedArticles.size() + " Artikel",
+            dialog::dispose
         ));
-        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel titleLabel = new JLabel(UnicodeSymbols.PHONE + " QR-Code Vorschau");
-        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
-        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Vorschau und PDF-Export für " + selectedArticles.size() + " Artikel");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
-
-        JPanel headerText = new JPanel();
-        headerText.setOpaque(false);
-        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerText.add(titleLabel);
-        headerText.add(Box.createVerticalStrut(4));
-        headerText.add(subtitleLabel);
-
-        // Close button
-        JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
-        closeBtn.setToolTipText("Schließen");
-        closeBtn.setFocusPainted(false);
-        closeBtn.setBorderPainted(false);
-        closeBtn.setContentAreaFilled(false);
-        closeBtn.setOpaque(false);
-        closeBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
-        closeBtn.setForeground(ThemeManager.getTextSecondaryColor());
-        closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        closeBtn.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                closeBtn.setForeground(ThemeManager.getErrorColor());
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                closeBtn.setForeground(ThemeManager.getTextSecondaryColor());
-            }
-        });
-        closeBtn.addActionListener(e -> dialog.dispose());
-
-        headerPanel.add(headerText, BorderLayout.WEST);
-        headerPanel.add(closeBtn, BorderLayout.EAST);
-
-        JPanel headerWrapper = new JPanel(new BorderLayout());
-        headerWrapper.setOpaque(false);
-        headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerWrapper.add(headerPanel, BorderLayout.CENTER);
-
+        topContainer.add(Box.createVerticalStrut(10));
         // Toolbar card
-        JFrameUtils.RoundedPanel toolbar = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        JFrameUtils.RoundedPanel toolbar = buildCard(18, 10, 12, 10, 12);
         toolbar.setLayout(new BorderLayout(10, 0));
-        toolbar.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-
         JLabel infoLabel = new JLabel(UnicodeSymbols.CLOCK + " Lade Vorschau …");
         infoLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
         infoLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
         JProgressBar progress = new JProgressBar();
         progress.setIndeterminate(true);
         progress.setBorderPainted(false);
         progress.setOpaque(false);
-
         JPanel leftInfo = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         leftInfo.setOpaque(false);
         leftInfo.add(infoLabel);
         leftInfo.add(progress);
-
         JButton exportPdfButton = new JButton(UnicodeSymbols.DOWNLOAD + " Als PDF exportieren");
         exportPdfButton.setEnabled(false);
-        exportPdfButton.setFocusPainted(false);
-        exportPdfButton.setBorderPainted(true);
-        exportPdfButton.setContentAreaFilled(true);
-        exportPdfButton.setOpaque(true);
-        exportPdfButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         exportPdfButton.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-
-        // themed button palette (accent)
-        Color base = ThemeManager.getAccentColor();
-        Color hover = ThemeManager.getButtonHoverColor(base);
-        Color pressed = ThemeManager.getButtonPressedColor(base);
-        exportPdfButton.setBackground(base);
-        exportPdfButton.setForeground(ThemeManager.getTextOnPrimaryColor());
-        exportPdfButton.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(base.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 18, 10, 18)
-        ));
-        exportPdfButton.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                if (exportPdfButton.isEnabled()) exportPdfButton.setBackground(hover);
-            }
-
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                exportPdfButton.setBackground(base);
-            }
-
-            @Override
-            public void mousePressed(java.awt.event.MouseEvent e) {
-                if (exportPdfButton.isEnabled()) exportPdfButton.setBackground(pressed);
-            }
-
-            @Override
-            public void mouseReleased(java.awt.event.MouseEvent e) {
-                exportPdfButton.setBackground(exportPdfButton.contains(e.getPoint()) && exportPdfButton.isEnabled() ? hover : base);
-            }
-        });
-
+        styleAccentButton(exportPdfButton, ThemeManager.getAccentColor());
         toolbar.add(leftInfo, BorderLayout.CENTER);
         toolbar.add(exportPdfButton, BorderLayout.EAST);
-
         JPanel toolbarWrapper = new JPanel(new BorderLayout());
         toolbarWrapper.setOpaque(false);
         toolbarWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
         toolbarWrapper.add(toolbar, BorderLayout.CENTER);
-
-        topContainer.add(headerWrapper);
-        topContainer.add(Box.createVerticalStrut(10));
         topContainer.add(toolbarWrapper);
         dialog.add(topContainer, BorderLayout.NORTH);
 
         // ===== Main card with grid =====
-        JFrameUtils.RoundedPanel card = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
-        card.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        JFrameUtils.RoundedPanel card = buildCard(18, 12, 12, 12, 12);
         card.setLayout(new BorderLayout(8, 8));
 
         JPanel gridPanel = new JPanel(new GridLayout(0, 3, 16, 16));
@@ -218,6 +177,13 @@ public final class ArticleQrPreviewDialog {
         ));
         scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        scrollPane.getViewport().addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                updateGridColumns(gridPanel, scrollPane);
+            }
+        });
+        updateGridColumns(gridPanel, scrollPane);
 
         card.add(scrollPane, BorderLayout.CENTER);
 
@@ -233,6 +199,8 @@ public final class ArticleQrPreviewDialog {
         List<QrPreviewItem> previewItems = new ArrayList<>();
 
         SwingWorker<List<QrPreviewItem>, Void> worker = new SwingWorker<>() {
+            int failedCount = 0;
+
             @Override
             protected List<QrPreviewItem> doInBackground() {
                 List<QrPreviewItem> items = new ArrayList<>();
@@ -242,9 +210,9 @@ public final class ArticleQrPreviewDialog {
                         BufferedImage image = QRCodeGenerator.generateQRCodeBufferedImage(url, 220, 220);
                         items.add(new QrPreviewItem(article, image));
                     } catch (Exception ex) {
-                        // skip broken entries but continue
-                        // log for diagnostics (don’t spam UI)
-                        ex.printStackTrace();
+                        failedCount++;
+                        Main.logUtils.addLog("QR preview generation failed for article: " +
+                                (article == null ? "null" : article.getArticleNumber()));
                     }
                 }
                 return items;
@@ -260,88 +228,19 @@ public final class ArticleQrPreviewDialog {
                     gridPanel.removeAll();
 
                     for (QrPreviewItem item : items) {
-                        JFrameUtils.RoundedPanel cell = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
-                        cell.setLayout(new BorderLayout());
-
-                        // Subtle shadow (normal) + stronger shadow (hover)
-                        Color shadowNormal = new Color(0, 0, 0, 40);
-                        Color shadowHover = new Color(0, 0, 0, 80);
-
-                        Border normalBorder = BorderFactory.createCompoundBorder(
-                                // subtle drop shadow bottom/right
-                                BorderFactory.createMatteBorder(0, 0, 5, 5, shadowNormal),
-                                // real card border + padding
-                                BorderFactory.createCompoundBorder(
-                                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                                        BorderFactory.createEmptyBorder(10, 10, 10, 10)
-                                )
-                        );
-
-                        Border hoverBorder = BorderFactory.createCompoundBorder(
-                                // stronger drop shadow bottom/right
-                                BorderFactory.createMatteBorder(0, 0, 7, 7, shadowHover),
-                                // keep border, but shift padding up (top smaller, bottom larger) to simulate lift
-                                BorderFactory.createCompoundBorder(
-                                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                                        BorderFactory.createEmptyBorder(8, 10, 12, 10)
-                                )
-                        );
-
-                        cell.setBorder(normalBorder);
-                        cell.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-                        Image scaled = item.image().getScaledInstance(170, 170, Image.SCALE_SMOOTH);
-                        JLabel imageLabel = new JLabel(new ImageIcon(scaled));
-                        imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                        imageLabel.setBorder(BorderFactory.createEmptyBorder(6, 6, 8, 6));
-                        imageLabel.setToolTipText("Klicken zum Vergrößern");
-                        imageLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                        cell.add(imageLabel, BorderLayout.CENTER);
-
-                        String labelText = item.article().getArticleNumber() + " — " + item.article().getName();
-                        JLabel textLabel = new JLabel(labelText);
-                        textLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-                        textLabel.setForeground(ThemeManager.getTextPrimaryColor());
-                        textLabel.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
-                        cell.add(textLabel, BorderLayout.SOUTH);
-
-                        // Shared hover/click handler (needed because child components otherwise "steal" mouse events)
-                        MouseAdapter tileMouse = new MouseAdapter() {
-                            @Override
-                            public void mouseEntered(MouseEvent e) {
-                                cell.setBorder(hoverBorder);
-                                cell.repaint();
-                            }
-
-                            @Override
-                            public void mouseExited(MouseEvent e) {
-                                // Only revert when the mouse truly leaves the tile (not just moving between children)
-                                Point p = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), cell);
-                                if (!cell.contains(p)) {
-                                    cell.setBorder(normalBorder);
-                                    cell.repaint();
-                                }
-                            }
-
-                            @Override
-                            public void mouseClicked(MouseEvent e) {
-                                if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() >= 1) {
-                                    showQrCodeFullscreen(dialog, item);
-                                }
-                            }
-                        };
-
-                        cell.addMouseListener(tileMouse);
-                        imageLabel.addMouseListener(tileMouse);
-                        textLabel.addMouseListener(tileMouse);
-
-                        gridPanel.add(cell);
+                        gridPanel.add(createPreviewTile(dialog, item));
                     }
 
                     progress.setIndeterminate(false);
                     progress.setVisible(false);
 
-                    infoLabel.setText(UnicodeSymbols.CHECKMARK + " Geladen: " + items.size() + " / " + selectedArticles.size() + " QR-Codes");
+                    if (items.isEmpty()) {
+                        infoLabel.setText(UnicodeSymbols.WARNING + " Keine QR-Codes konnten erzeugt werden");
+                    } else if (failedCount > 0) {
+                        infoLabel.setText(UnicodeSymbols.WARNING + " Geladen: " + items.size() + " / " + selectedArticles.size() + " (" + failedCount + " Fehler)");
+                    } else {
+                        infoLabel.setText(UnicodeSymbols.CHECKMARK + " Geladen: " + items.size() + " / " + selectedArticles.size() + " QR-Codes");
+                    }
                     exportPdfButton.setEnabled(!items.isEmpty());
 
                     gridPanel.revalidate();
@@ -350,6 +249,8 @@ public final class ArticleQrPreviewDialog {
                     progress.setIndeterminate(false);
                     progress.setVisible(false);
                     infoLabel.setText(UnicodeSymbols.CLOSE + " Fehler beim Laden: " + ex.getMessage());
+                } finally {
+                    dialog.setCursor(Cursor.getDefaultCursor());
                 }
             }
         };
@@ -377,12 +278,26 @@ public final class ArticleQrPreviewDialog {
             if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
                 fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
             }
+            if (fileToSave.exists()) {
+                int overwrite = JOptionPane.showConfirmDialog(
+                        parent,
+                        "Die Datei existiert bereits. Überschreiben?",
+                        "Datei überschreiben",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE,
+                        Main.iconSmall
+                );
+                if (overwrite != JOptionPane.YES_OPTION) {
+                    return;
+                }
+            }
 
             // UI feedback
             exportPdfButton.setEnabled(false);
             progress.setVisible(true);
             progress.setIndeterminate(true);
             infoLabel.setText(UnicodeSymbols.CLOCK + " Exportiere PDF …");
+            dialog.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
 
             File finalFileToSave = fileToSave;
             new SwingWorker<Void, Void>() {
@@ -403,6 +318,7 @@ public final class ArticleQrPreviewDialog {
                     progress.setIndeterminate(false);
                     progress.setVisible(false);
                     exportPdfButton.setEnabled(true);
+                    dialog.setCursor(Cursor.getDefaultCursor());
 
                     if (error != null) {
                         JOptionPane.showMessageDialog(parent,
@@ -424,12 +340,190 @@ public final class ArticleQrPreviewDialog {
             }.execute();
         });
 
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+        dialog.getRootPane().registerKeyboardAction(
+                e -> {
+                    if (exportPdfButton.isEnabled()) {
+                        exportPdfButton.doClick();
+                    }
+                },
+                KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        dialog.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         worker.execute();
 
-        dialog.setSize(980, 640);
-        dialog.setMinimumSize(new Dimension(820, 520));
+        dialog.setSize(PREVIEW_DIALOG_SIZE);
+        dialog.setMinimumSize(PREVIEW_DIALOG_MIN_SIZE);
         dialog.setLocationRelativeTo(parent);
         dialog.setVisible(true);
+    }
+
+    private static JButton createHeaderCloseButton(Runnable onClose) {
+        JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
+        closeBtn.setToolTipText("Schließen");
+        closeBtn.setFocusPainted(false);
+        closeBtn.setBorderPainted(false);
+        closeBtn.setContentAreaFilled(false);
+        closeBtn.setOpaque(false);
+        closeBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
+        closeBtn.setForeground(ThemeManager.getTextSecondaryColor());
+        closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        closeBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                closeBtn.setForeground(ThemeManager.getErrorColor());
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                closeBtn.setForeground(ThemeManager.getTextSecondaryColor());
+            }
+        });
+        closeBtn.addActionListener(e -> {
+            if (onClose != null) {
+                onClose.run();
+            }
+        });
+        return closeBtn;
+    }
+
+    private static void styleAccentButton(JButton button, Color base) {
+        if (button == null || base == null) {
+            return;
+        }
+        Color hover = ThemeManager.getButtonHoverColor(base);
+        Color pressed = ThemeManager.getButtonPressedColor(base);
+        button.setFocusPainted(false);
+        button.setBorderPainted(true);
+        button.setContentAreaFilled(true);
+        button.setOpaque(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setBackground(base);
+        button.setForeground(ThemeManager.getTextOnPrimaryColor());
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(base.darker(), 1),
+                BorderFactory.createEmptyBorder(10, 18, 10, 18)
+        ));
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (button.isEnabled()) {
+                    button.setBackground(hover);
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(base);
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (button.isEnabled()) {
+                    button.setBackground(pressed);
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                button.setBackground(button.contains(e.getPoint()) && button.isEnabled() ? hover : base);
+            }
+        });
+    }
+
+    private static void updateGridColumns(JPanel gridPanel, JScrollPane scrollPane) {
+        if (gridPanel == null || scrollPane == null) {
+            return;
+        }
+        int viewportWidth = Math.max(0, scrollPane.getViewport().getWidth());
+        if (viewportWidth <= 0) {
+            return;
+        }
+        int columns = Math.max(1, viewportWidth / GRID_TARGET_CELL_WIDTH);
+        LayoutManager layout = gridPanel.getLayout();
+        if (layout instanceof GridLayout gridLayout && gridLayout.getColumns() != columns) {
+            gridLayout.setColumns(columns);
+            gridLayout.setHgap(TILE_GAP);
+            gridLayout.setVgap(TILE_GAP);
+            gridPanel.revalidate();
+        }
+    }
+
+    private static JPanel createPreviewTile(JDialog parentDialog, QrPreviewItem item) {
+        JFrameUtils.RoundedPanel cell = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
+        cell.setLayout(new BorderLayout());
+
+        Color shadowNormal = new Color(0, 0, 0, 40);
+        Color shadowHover = new Color(0, 0, 0, 80);
+
+        Border normalBorder = BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 5, 5, shadowNormal),
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                        BorderFactory.createEmptyBorder(10, 10, 10, 10)
+                )
+        );
+
+        Border hoverBorder = BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 7, 7, shadowHover),
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                        BorderFactory.createEmptyBorder(8, 10, 12, 10)
+                )
+        );
+
+        cell.setBorder(normalBorder);
+        cell.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        Image scaled = item.image().getScaledInstance(TILE_SIZE, TILE_SIZE, Image.SCALE_SMOOTH);
+        JLabel imageLabel = new JLabel(new ImageIcon(scaled));
+        imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        imageLabel.setBorder(BorderFactory.createEmptyBorder(6, 6, 8, 6));
+        imageLabel.setToolTipText("Klicken zum Vergrößern");
+        imageLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        cell.add(imageLabel, BorderLayout.CENTER);
+
+        String labelText = item.article().getArticleNumber() + " — " + item.article().getName();
+        JLabel textLabel = new JLabel(labelText);
+        textLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        textLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        textLabel.setBorder(BorderFactory.createEmptyBorder(0, 6, 0, 6));
+        cell.add(textLabel, BorderLayout.SOUTH);
+
+        MouseAdapter tileMouse = new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                cell.setBorder(hoverBorder);
+                cell.repaint();
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                Point p = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), cell);
+                if (!cell.contains(p)) {
+                    cell.setBorder(normalBorder);
+                    cell.repaint();
+                }
+            }
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() >= 1) {
+                    showQrCodeFullscreen(parentDialog, item);
+                }
+            }
+        };
+
+        cell.addMouseListener(tileMouse);
+        imageLabel.addMouseListener(tileMouse);
+        textLabel.addMouseListener(tileMouse);
+        return cell;
     }
 
     private static String buildQrCodeUrl(Article article) {
@@ -536,69 +630,20 @@ public final class ArticleQrPreviewDialog {
         preview.getContentPane().setBackground(ThemeManager.getBackgroundColor());
 
         // Header (same visual language as the main dialog)
-        JFrameUtils.RoundedPanel header = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
-        header.setLayout(new BorderLayout());
-        header.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)
-        ));
-
         String titleText = item.article().getArticleNumber() + " — " + item.article().getName();
-        JLabel title = new JLabel(UnicodeSymbols.PHONE + " QR-Code – " + titleText);
-        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        title.setForeground(ThemeManager.getTextPrimaryColor());
-
-        JLabel hint = new JLabel(UnicodeSymbols.INFO + " ESC zum Schließen");
-        hint.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        hint.setForeground(ThemeManager.getTextSecondaryColor());
-
-        JPanel titleStack = new JPanel();
-        titleStack.setOpaque(false);
-        titleStack.setLayout(new BoxLayout(titleStack, BoxLayout.Y_AXIS));
-        title.setAlignmentX(Component.LEFT_ALIGNMENT);
-        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
-        titleStack.add(title);
-        titleStack.add(Box.createVerticalStrut(2));
-        titleStack.add(hint);
-
-        JButton close = new JButton(UnicodeSymbols.CLOSE);
-        close.setToolTipText("Schließen");
-        close.setFocusPainted(false);
-        close.setBorderPainted(false);
-        close.setContentAreaFilled(false);
-        close.setOpaque(false);
-        close.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
-        close.setForeground(ThemeManager.getTextSecondaryColor());
-        close.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        close.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                close.setForeground(ThemeManager.getErrorColor());
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                close.setForeground(ThemeManager.getTextSecondaryColor());
-            }
-        });
-        close.addActionListener(e -> preview.dispose());
-
-        header.add(titleStack, BorderLayout.WEST);
-        header.add(close, BorderLayout.EAST);
-
         JPanel headerWrap = new JPanel(new BorderLayout());
         headerWrap.setOpaque(false);
         headerWrap.setBorder(BorderFactory.createEmptyBorder(12, 12, 10, 12));
-        headerWrap.add(header, BorderLayout.CENTER);
+        headerWrap.add(buildHeaderPanel(
+            UnicodeSymbols.PHONE + " QR-Code – " + titleText,
+            UnicodeSymbols.INFO + " ESC zum Schließen",
+            preview::dispose
+        ), BorderLayout.CENTER);
         preview.add(headerWrap, BorderLayout.NORTH);
 
         // Content card with the QR image (scaled to fit, but can scroll if needed)
-        JFrameUtils.RoundedPanel contentCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        JFrameUtils.RoundedPanel contentCard = buildCard(18, 18, 18, 18, 18);
         contentCard.setLayout(new BorderLayout());
-        contentCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(18, 18, 18, 18)
-        ));
 
         // Scale the image to a comfortable size based on screen
         Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
@@ -634,7 +679,7 @@ public final class ArticleQrPreviewDialog {
         // ESC closes
         preview.getRootPane().registerKeyboardAction(
                 e -> preview.dispose(),
-                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_IN_FOCUSED_WINDOW
         );
 

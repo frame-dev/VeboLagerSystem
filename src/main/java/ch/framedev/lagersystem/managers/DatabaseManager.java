@@ -1,13 +1,25 @@
 package ch.framedev.lagersystem.managers;
 
-import ch.framedev.lagersystem.main.Main;
+import java.io.File;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.function.Consumer;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
-import java.sql.*;
-import java.util.*;
-import java.util.function.Consumer;
+import ch.framedev.lagersystem.main.Main;
 
 /**
  * Simple DatabaseManager for SQLite.
@@ -19,7 +31,7 @@ import java.util.function.Consumer;
  * - clearDatabase() uses a transaction and a single Statement for speed
  * - clearTable() uses a strict whitelist (safe + fast)
  */
-@SuppressWarnings({"UnusedReturnValue", "unused", "DeprecatedIsStillUsed", "SqlWithoutWhere"})
+@SuppressWarnings({"UnusedReturnValue", "DeprecatedIsStillUsed", "SqlWithoutWhere"})
 public class DatabaseManager {
 
     private static final Logger logger = LogManager.getLogger(DatabaseManager.class);
@@ -699,7 +711,7 @@ public class DatabaseManager {
             work.accept(connection);
             connection.commit();
             return true;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             logger.error("Transaction failed", e);
             try {
                 connection.rollback();

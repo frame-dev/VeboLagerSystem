@@ -1,17 +1,17 @@
 package ch.framedev.lagersystem.managers;
 
-import ch.framedev.lagersystem.classes.Vendor;
-import ch.framedev.lagersystem.main.Main;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import ch.framedev.lagersystem.classes.Vendor;
+import ch.framedev.lagersystem.main.Main;
 
 @SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
 public class VendorManager {
@@ -39,6 +39,7 @@ public class VendorManager {
         createTable();
     }
 
+    @SuppressWarnings("DoubleCheckedLocking")
     public static VendorManager getInstance() {
         if (instance == null) {
             synchronized (LOCK) {

@@ -1,27 +1,48 @@
 package ch.framedev.lagersystem.main;
 
-import ch.framedev.lagersystem.classes.Article;
-import ch.framedev.lagersystem.classes.User;
-import ch.framedev.lagersystem.guis.ArticleListGUI;
-import ch.framedev.lagersystem.guis.MainGUI;
-import ch.framedev.lagersystem.guis.SplashscreenGUI;
-import ch.framedev.lagersystem.guis.SettingsGUI;
-import ch.framedev.lagersystem.managers.*;
-import ch.framedev.lagersystem.utils.*;
-import ch.framedev.simplejavautils.Settings;
-import ch.framedev.simplejavautils.SimpleJavaUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Desktop;
+import java.awt.HeadlessException;
+import java.awt.Image;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.classes.User;
+import ch.framedev.lagersystem.guis.ArticleListGUI;
+import ch.framedev.lagersystem.guis.MainGUI;
+import ch.framedev.lagersystem.guis.SettingsGUI;
+import ch.framedev.lagersystem.guis.SplashscreenGUI;
+import ch.framedev.lagersystem.managers.ArticleManager;
+import ch.framedev.lagersystem.managers.ClientManager;
+import ch.framedev.lagersystem.managers.DatabaseManager;
+import ch.framedev.lagersystem.managers.DepartmentManager;
+import ch.framedev.lagersystem.managers.SchedulerManager;
+import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.managers.UpdateManager;
+import ch.framedev.lagersystem.managers.UserManager;
+import ch.framedev.lagersystem.managers.VendorManager;
+import ch.framedev.lagersystem.utils.ImportUtils;
+import ch.framedev.lagersystem.utils.LogUtils;
+import ch.framedev.lagersystem.utils.QRCodeUtils;
+import ch.framedev.lagersystem.utils.UserDataDir;
+import ch.framedev.simplejavautils.Settings;
+import ch.framedev.simplejavautils.SimpleJavaUtils;
 
 /**
  * Main entry point for VEBO Lagersystem application.
@@ -242,7 +263,7 @@ public class Main {
             ImageIcon originalIcon = new ImageIcon(utils.getFromResourceFile(resourceName).toURI().toURL());
             Image scaledImage = originalIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
             return new ImageIcon(scaledImage);
-        } catch (Exception e) {
+        } catch (MalformedURLException e) {
             logger.error("Fehler beim Laden des Icons: {}", e.getMessage(), e);
             logUtils.addLog("Fehler beim Laden des Icons: " + e.getMessage());
             throw new MalformedURLException("Failed to load resource: " + resourceName);
@@ -657,7 +678,7 @@ public class Main {
             File resolved = UserDataDir.getAppPath("VeboLagerSystem").toFile();
             appDataDirCache = resolved;
             return resolved;
-        } catch (Exception e) {
+        } catch (FileNotFoundException e) {
             logger.error("Could not get VeboLagerSystem directory.", e);
             logUtils.addLog("Fehler beim Ermitteln des App-Datenverzeichnisses: " + e.getMessage());
             File fallback = new File(".");
@@ -719,7 +740,7 @@ public class Main {
                 logger.info("Settings file created: {}", settingsFile.getAbsolutePath());
                 logUtils.addLog("Einstellungsdatei erstellt: " + settingsFile.getAbsolutePath());
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             logger.error("Fehler beim Erstellen der Einstellungsdatei: {}", e.getMessage(), e);
             logUtils.addLog("Fehler beim Erstellen der Einstellungsdatei: " + e.getMessage());
         }
@@ -922,7 +943,7 @@ public class Main {
                 );
                 logger.warn("Browser not supported, showed URL in dialog instead");
             }
-        } catch (Exception e) {
+        } catch (HeadlessException | IOException e) {
             logger.error("Failed to open browser: {}", e.getMessage(), e);
             JOptionPane.showMessageDialog(
                     null,
@@ -1007,7 +1028,7 @@ public class Main {
                 splashRef[0].display();
             });
             return splashRef[0];
-        } catch (Exception e) {
+        } catch (InterruptedException | InvocationTargetException e) {
             throw new RuntimeException("Konnte Splashscreen nicht starten", e);
         }
     }
@@ -1084,7 +1105,7 @@ public class Main {
                     JOptionPane.INFORMATION_MESSAGE,
                     icon
             ));
-        } catch (Exception e) {
+        } catch (InterruptedException | InvocationTargetException e) {
             throw new RuntimeException("Dialog konnte nicht angezeigt werden", e);
         }
         return result[0];

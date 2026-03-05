@@ -34,7 +34,7 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
  * ArticleGUI with category support for better organization.
  * Categories are loaded from categories.json and mapped to articles based on article number ranges.
  */
-@SuppressWarnings({"ALL", "unused"})
+@SuppressWarnings({"ALL"})
 public class ArticleGUI extends JFrame {
 
     public final JTable articleTable;
@@ -56,6 +56,7 @@ public class ArticleGUI extends JFrame {
     /**
      * Initializes the ArticleGUI, sets up the layout, loads categories and articles, and configures interactions.
      */
+    @SuppressWarnings("unchecked")
     public ArticleGUI() {
         ThemeManager.getInstance().registerWindow(this);
 

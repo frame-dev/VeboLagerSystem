@@ -379,12 +379,12 @@ public class MainGUI extends JFrame {
         String tabClipboard = UnicodeSymbols.safeSymbol(UnicodeSymbols.CLIPBOARD, "CLIP", tabFont);
         String tabPeople = UnicodeSymbols.safeSymbol(UnicodeSymbols.PEOPLE, "USERS", tabFont);
         // Add extra spacing for bigger, more prominent tabs
-        tabbedPane.addTab("<html>     " + tabPackage + "  Artikel     </html>", null, articleWrapper, "Artikelverwaltung");
-        tabbedPane.addTab("<html>     " + tabTruck + "  Lieferanten     </html>", null, vendorWrapper, "Lieferantenverwaltung");
-        tabbedPane.addTab("<html>     " + tabClipboard + "  Bestellungen     </html>", null, orderWrapper, "Bestellungsverwaltung");
-        tabbedPane.addTab("<html>     " + tabPeople + "  Kunden     </html>", null, clientWrapper, "Kundenverwaltung");
-        tabbedPane.addTab("<html>     " + tabTruck + tabPackage + "  Lieferantenbestellungen     </html>", null, supplierOrderWrapper, "Lieferantenbestellungen verwalten");
-        tabbedPane.addTab("<html>     " + tabClipboard + " Protokolle     </html>", null, logsWrapper, "Systemprotokolle anzeigen");
+        tabbedPane.addTab("<html>   " + tabPackage + "  Artikel   </html>", null, articleWrapper, "Artikelverwaltung");
+        tabbedPane.addTab("<html>   " + tabTruck + "  Lieferanten   </html>", null, vendorWrapper, "Lieferantenverwaltung");
+        tabbedPane.addTab("<html>   " + tabClipboard + "  Bestellungen   </html>", null, orderWrapper, "Bestellungsverwaltung");
+        tabbedPane.addTab("<html>   " + tabPeople + "  Kunden   </html>", null, clientWrapper, "Kundenverwaltung");
+        tabbedPane.addTab("<html>   " + tabTruck + tabPackage + "  Lieferantenbestellungen   </html>", null, supplierOrderWrapper, "Lieferantenbestellungen verwalten");
+        tabbedPane.addTab("<html>   " + tabClipboard + " Protokolle   </html>", null, logsWrapper, "Systemprotokolle anzeigen");
     }
 
     /**

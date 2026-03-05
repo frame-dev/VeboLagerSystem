@@ -1,15 +1,5 @@
 package ch.framedev.lagersystem.managers;
 
-import ch.framedev.lagersystem.classes.Article;
-import ch.framedev.lagersystem.classes.Warning;
-import ch.framedev.lagersystem.guis.MainGUI;
-import ch.framedev.lagersystem.main.Main;
-import ch.framedev.lagersystem.utils.ImportUtils;
-import ch.framedev.lagersystem.utils.QRCodeUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import javax.swing.SwingUtilities;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -18,7 +8,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import javax.swing.SwingUtilities;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.classes.Warning;
 import static ch.framedev.lagersystem.dialogs.DisplayWarningDialog.displayWarning;
+import ch.framedev.lagersystem.guis.MainGUI;
+import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.ImportUtils;
+import ch.framedev.lagersystem.utils.QRCodeUtils;
 
 /**
  * Manages scheduled background tasks (stock checks, warning display, and optional QR-code auto import).
@@ -93,14 +94,17 @@ public class SchedulerManager {
      * @return scheduler manager instance
      */
     public static SchedulerManager getInstance() {
-        if (instance == null) {
+        SchedulerManager local = SchedulerManager.instance;
+        if (local == null) {
             synchronized (lock) {
-                if (instance == null) {
-                    instance = new SchedulerManager();
+                local = SchedulerManager.instance;
+                if (local == null) {
+                    local = new SchedulerManager();
+                    SchedulerManager.instance = local;
                 }
             }
         }
-        return instance;
+        return local;
     }
 
     /**

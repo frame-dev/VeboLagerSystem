@@ -6,412 +6,475 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Hilfe - Scanner System</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
+
+        :root {
+            --bg-top: #eef4ff;
+            --bg-bottom: #dde8ff;
+            --ink: #142033;
+            --muted: #5a6b86;
+            --surface: rgba(255, 255, 255, 0.88);
+            --surface-strong: #ffffff;
+            --border: rgba(20, 32, 51, 0.14);
+            --shadow-soft: 0 12px 34px rgba(16, 36, 92, 0.10);
+            --shadow-hover: 0 20px 46px rgba(16, 36, 92, 0.18);
+            --brand: #2b63f6;
+            --brand-dark: #214cc7;
+            --warn-bg: #fff7e9;
+            --warn-border: #b37217;
+            --tip-bg: #edf3ff;
+            --tip-border: #3c73ff;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-top: #070e20;
+                --bg-bottom: #040917;
+                --ink: #e8eeff;
+                --muted: #9fb1d6;
+                --surface: rgba(16, 24, 43, 0.88);
+                --surface-strong: #121b33;
+                --border: rgba(149, 174, 226, 0.2);
+                --shadow-soft: 0 12px 34px rgba(1, 8, 28, 0.45);
+                --shadow-hover: 0 20px 46px rgba(1, 8, 28, 0.58);
+                --brand: #6b95ff;
+                --brand-dark: #9eb9ff;
+                --warn-bg: #372913;
+                --warn-border: #d39a4a;
+                --tip-bg: #162a57;
+                --tip-border: #7ea2ff;
+            }
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        body,
+        button,
+        input {
+            font-family: "Sora", "Avenir Next", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
-            position: relative;
-            overflow-x: hidden;
+            font-family: "Trebuchet MS", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(950px 460px at 5% -10%, rgba(43, 99, 246, 0.18), transparent 60%),
+                radial-gradient(760px 420px at 100% 0%, rgba(72, 168, 255, 0.2), transparent 55%),
+                linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+            padding: 14px;
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background:
+                    radial-gradient(950px 460px at 5% -10%, rgba(103, 139, 255, 0.22), transparent 60%),
+                    radial-gradient(760px 420px at 100% 0%, rgba(34, 77, 153, 0.28), transparent 55%),
+                    linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+            }
+        }
+
+        .page {
+            max-width: 980px;
+            margin: 0 auto;
+            display: grid;
+            gap: 10px;
+            animation: fadeIn 250ms ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-start;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.76));
+            box-shadow: var(--shadow-soft);
+            padding: 14px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .header {
+                background: linear-gradient(145deg, rgba(18, 27, 49, 0.95), rgba(12, 19, 38, 0.92));
+            }
+        }
+
+        .vebo-logo {
+            width: min(100%, 240px);
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: clamp(1.3rem, 4.7vw, 2.2rem);
+            line-height: 1.1;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            line-height: 1.45;
+            max-width: 60ch;
+            font-size: 0.9rem;
+        }
+
+        .help-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-soft);
+            padding: 14px;
+            transition: transform 160ms ease, box-shadow 160ms ease;
+        }
+
+        .help-card:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .help-title {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            color: var(--brand-dark);
+            margin-bottom: 8px;
+        }
+
+        .help-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--brand), #3c73ff);
+            flex-shrink: 0;
+        }
+
+        .help-title h2 {
+            font-size: 1rem;
+            line-height: 1.3;
+        }
+
+        .help-content {
+            color: var(--ink);
+            line-height: 1.55;
+            font-size: 0.92rem;
+        }
+
+        .help-content p + p {
+            margin-top: 10px;
+        }
+
+        .help-content ul {
+            margin: 8px 0 0 18px;
+        }
+
+        .help-content li + li {
+            margin-top: 5px;
+        }
+
+        .code-example {
+            margin-top: 10px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(241, 246, 255, 0.92);
+            padding: 10px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.8rem;
+            overflow-wrap: anywhere;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .code-example {
+                background: rgba(23, 33, 62, 0.9);
+            }
+        }
+
+        .tip-box,
+        .warning-box {
+            margin-top: 10px;
+            border-radius: 10px;
+            padding: 10px;
+            border: 1px solid transparent;
+        }
+
+        .tip-box {
+            background: var(--tip-bg);
+            border-color: var(--tip-border);
+        }
+
+        .warning-box {
+            background: var(--warn-bg);
+            border-color: var(--warn-border);
+        }
+
+        .links {
+            display: flex;
+            justify-content: center;
+        }
+
+        .back-link {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            min-height: 46px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--brand-dark);
+            background: rgba(255, 255, 255, 0.86);
+            box-shadow: var(--shadow-soft);
+            transition: transform 160ms ease, box-shadow 160ms ease;
+            width: 100%;
+            text-align: center;
+            touch-action: manipulation;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .back-link {
+                background: rgba(21, 30, 24, 0.92);
+            }
+        }
+
+        .back-link:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        @media (min-width: 760px) {
+            body {
+                padding: 20px;
+                padding-bottom: calc(24px + env(safe-area-inset-bottom));
+            }
+
+            .page {
+                gap: 14px;
+            }
+
+            .header {
+                flex-direction: row;
+                align-items: center;
+                padding: 18px;
+                gap: 14px;
+            }
+
+            .vebo-logo {
+                width: min(320px, 100%);
+            }
+
+            .help-card {
+                padding: 18px;
+            }
+
+            .help-title h2 {
+                font-size: 1.2rem;
+            }
+
+            .help-content {
+                font-size: 0.95rem;
+            }
+
+            .code-example {
+                font-size: 0.86rem;
+            }
+
+            .back-link {
+                width: auto;
+            }
+        }
+
+        /* Visual polish layer */
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.45;
+            filter: blur(12px);
         }
 
         body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-            pointer-events: none;
+            width: 300px;
+            height: 300px;
+            top: -80px;
+            right: -90px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(74, 129, 255, 0.34), transparent 65%);
         }
 
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
+        body::after {
+            width: 320px;
+            height: 320px;
+            bottom: -120px;
+            left: -120px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(47, 122, 255, 0.28), transparent 68%);
+        }
+
+        .page {
             position: relative;
             z-index: 1;
         }
 
-        .vebo-logo {
-            max-width: 400px;
-            height: auto;
-            margin: auto;
-            display: block;
-            animation: fadeInDown 0.6s ease-out;
-            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
-        }
-
-        h1 {
-            color: white;
-            margin-bottom: 30px;
-            font-size: 32px;
-            text-align: center;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            animation: slideDown 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        .header,
+        .help-card,
+        .back-link,
+        .tip-box,
+        .warning-box {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
 
         .help-card {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-            margin-bottom: 25px;
-            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) backwards;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .help-card:nth-child(2) { animation-delay: 0.1s; }
-        .help-card:nth-child(3) { animation-delay: 0.2s; }
-        .help-card:nth-child(4) { animation-delay: 0.3s; }
-        .help-card:nth-child(5) { animation-delay: 0.4s; }
-        .help-card:nth-child(6) { animation-delay: 0.5s; }
-
-        .help-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
-        }
-
-        .help-title {
-            font-size: 24px;
-            font-weight: 600;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .help-icon {
-            font-size: 28px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .help-content {
-            color: #333;
-            line-height: 1.8;
-            font-size: 15px;
-        }
-
-        .help-content p {
-            margin-bottom: 12px;
-        }
-
-        .help-content ul {
-            margin-left: 20px;
-            margin-bottom: 12px;
-        }
-
-        .help-content li {
-            margin-bottom: 8px;
-            color: #555;
-        }
-
-        .help-content strong {
-            color: #667eea;
-            font-weight: 600;
-        }
-
-        .code-example {
-            background: #f5f7ff;
-            border-left: 4px solid #667eea;
-            padding: 12px 15px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            color: #333;
-            margin: 12px 0;
-        }
-
-        .tip-box {
-            background: #e8f5e9;
-            border-left: 4px solid #4caf50;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-        }
-
-        .tip-box strong {
-            color: #4caf50;
-        }
-
-        .warning-box {
-            background: #fff3e0;
-            border-left: 4px solid #ff9800;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-        }
-
-        .warning-box strong {
-            color: #ff9800;
-        }
-
-        .back-link {
-            display: inline-block;
-            margin: 20px auto;
-            padding: 14px 35px;
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            color: #667eea;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 600;
-            text-align: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             position: relative;
             overflow: hidden;
         }
 
-        .back-link::before {
-            content: '';
+        .help-card::after {
+            content: "";
             position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.2), transparent);
-            transition: left 0.5s;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(130deg, rgba(255, 255, 255, 0.12), transparent 40%, transparent 75%, rgba(43, 99, 246, 0.06));
         }
 
-        .back-link:hover::before {
-            left: 100%;
+        .help-title h2 {
+            letter-spacing: -0.01em;
         }
 
-        .back-link:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-            background: rgba(255, 255, 255, 1);
-        }
-
-        .links {
-            text-align: center;
-            margin-bottom: 30px;
-            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.6s backwards;
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 28px;
+        @media (prefers-color-scheme: dark) {
+            body::before {
+                background: radial-gradient(circle, rgba(117, 167, 255, 0.3), transparent 65%);
             }
 
-            .help-card {
-                padding: 20px;
+            body::after {
+                background: radial-gradient(circle, rgba(90, 140, 255, 0.24), transparent 68%);
             }
 
-            .help-title {
-                font-size: 20px;
+            .help-card::after {
+                background: linear-gradient(130deg, rgba(255, 255, 255, 0.05), transparent 40%, transparent 75%, rgba(124, 150, 255, 0.1));
             }
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <img src="logo.png" alt="VEBO Logo" class="vebo-logo">
-        
-        <h1>📚 Hilfe & Anleitung</h1>
+    <main class="page">
+        <section class="header">
+            <img src="logo.png" alt="VEBO Logo" class="vebo-logo">
+            <div>
+                <h1>Hilfe und Anleitung</h1>
+                <p class="subtitle">Kurzanleitung fuer Scan, Datenerfassung, Suche, Export und Verwaltung.</p>
+            </div>
+        </section>
 
-        <div class="help-card">
+        <section class="help-card">
             <div class="help-title">
-                <div class="help-icon">📷</div>
-                <span>QR-Code & Barcode scannen</span>
+                <span class="help-icon">1</span>
+                <h2>QR-Code und Barcode scannen</h2>
             </div>
             <div class="help-content">
-                <p>Das System unterstützt das Scannen von QR-Codes und Barcodes über die Kamera Ihres Geräts.</p>
-                
-                <p><strong>So scannen Sie einen Code:</strong></p>
+                <p>Das System unterstuetzt das Scannen ueber die Kamera Ihres Geraets.</p>
                 <ul>
-                    <li>Klicken Sie auf "Neuer Scan" auf der Startseite</li>
-                    <li>Drücken Sie den Button "Kamera starten"</li>
-                    <li>Halten Sie den QR-Code oder Barcode vor die Kamera</li>
-                    <li>Das System erkennt automatisch den Code und extrahiert die Daten</li>
+                    <li>Auf der Startseite <strong>Neuer Scan</strong> oeffnen.</li>
+                    <li>Auf <strong>Kamera starten</strong> klicken.</li>
+                    <li>Code in die Kamera halten und kurz ruhig bleiben.</li>
+                    <li>Der erkannte Wert wird automatisch uebernommen.</li>
                 </ul>
-
-                <div class="tip-box">
-                    <strong>💡 Tipp:</strong> Für beste Ergebnisse halten Sie den Code ruhig und achten Sie auf gute Beleuchtung.
-                </div>
+                <div class="tip-box"><strong>Tipp:</strong> Gute Beleuchtung verbessert die Erkennungsrate deutlich.</div>
             </div>
-        </div>
+        </section>
 
-        <div class="help-card">
+        <section class="help-card">
             <div class="help-title">
-                <div class="help-icon">📝</div>
-                <span>Datenformat verstehen</span>
+                <span class="help-icon">2</span>
+                <h2>Datenformat und Felder</h2>
             </div>
             <div class="help-content">
-                <p>Das System kann strukturierte Daten aus QR-Codes automatisch parsen und anzeigen.</p>
-                
-                <p><strong>Unterstütztes Format:</strong></p>
-                <div class="code-example">
-                    artikelNr:001,name:Produktname,buyPrice:25.50;sellPrice:28.80;vendor:Lieferant
-                </div>
+                <p>Strukturierte Daten werden automatisch geparst.</p>
+                <div class="code-example">artikelNr:001,name:Produkt,buyPrice:25.50;sellPrice:28.80;vendor:Lieferant</div>
+                <p>Erkannte Schluessel sind z. B. <strong>artikelNr</strong>, <strong>name</strong>, <strong>buyPrice</strong>, <strong>sellPrice</strong> und <strong>vendor</strong>.</p>
+            </div>
+        </section>
 
-                <p><strong>Erkannte Felder:</strong></p>
+        <section class="help-card">
+            <div class="help-title">
+                <span class="help-icon">3</span>
+                <h2>Scan-Typen</h2>
+            </div>
+            <div class="help-content">
                 <ul>
-                    <li><strong>artikelNr:</strong> Artikel-Nummer</li>
-                    <li><strong>name:</strong> Produktname</li>
-                    <li><strong>buyPrice:</strong> Einkaufspreis (in CHF)</li>
-                    <li><strong>sellPrice:</strong> Verkaufspreis (in CHF)</li>
-                    <li><strong>vendor:</strong> Lieferant/Hersteller</li>
-                </ul>
-
-                <p>Felder können durch Komma (,) oder Semikolon (;) getrennt werden.</p>
-            </div>
-        </div>
-
-        <div class="help-card">
-            <div class="help-title">
-                <div class="help-icon">📊</div>
-                <span>Scan-Typen</span>
-            </div>
-            <div class="help-content">
-                <p>Bei jedem Scan können Sie zwischen zwei Typen wählen:</p>
-                
-                <p><strong>📤 Verkauf:</strong></p>
-                <p>Verwenden Sie diesen Typ, wenn Ware verkauft oder ausgegeben wird. Diese Scans werden grün markiert.</p>
-
-                <p><strong>📥 Lagern (Einkauf):</strong></p>
-                <p>Verwenden Sie diesen Typ, wenn Ware eingekauft oder ins Lager aufgenommen wird. Diese Scans werden blau markiert.</p>
-
-                <div class="tip-box">
-                    <strong>💡 Tipp:</strong> Die Statistiken auf der Startseite zeigen Ihnen die Gesamtanzahl von Verkaufs- und Lager-Scans.
-                </div>
-            </div>
-        </div>
-
-        <div class="help-card">
-            <div class="help-title">
-                <div class="help-icon">✓</div>
-                <span>Eigenbedarf markieren</span>
-            </div>
-            <div class="help-content">
-                <p>Beim Erfassen eines Scans können Sie die Option "Eigenbedarf" aktivieren.</p>
-                
-                <p><strong>Wann verwenden:</strong></p>
-                <ul>
-                    <li>Wenn Ware für den internen Gebrauch entnommen wird</li>
-                    <li>Für Musterstücke oder Testprodukte</li>
-                    <li>Bei Entnahme für Firmenzwecke</li>
-                </ul>
-
-                <p>Eigenbedarfs-Scans werden in der Liste speziell gekennzeichnet.</p>
-            </div>
-        </div>
-
-        <div class="help-card">
-            <div class="help-title">
-                <div class="help-icon">🔍</div>
-                <span>Suchen & Filtern</span>
-            </div>
-            <div class="help-content">
-                <p>In der Scan-Liste können Sie Ihre Daten durchsuchen und filtern:</p>
-                
-                <p><strong>Suchfunktion:</strong></p>
-                <p>Geben Sie einen Suchbegriff ein, um nach Artikelnummer, Name, Preis oder anderen Feldern zu suchen. Die Liste wird automatisch gefiltert.</p>
-
-                <p><strong>Filter-Buttons:</strong></p>
-                <ul>
-                    <li><strong>Alle:</strong> Zeigt alle Scans an</li>
-                    <li><strong>Verkauf:</strong> Zeigt nur Verkaufs-Scans</li>
-                    <li><strong>Lagern:</strong> Zeigt nur Lager-Scans</li>
-                </ul>
-
-                <p><strong>CSV-Export:</strong></p>
-                <p>Klicken Sie auf "Export CSV", um die aktuell sichtbaren Daten als CSV-Datei herunterzuladen. Diese kann in Excel oder anderen Programmen geöffnet werden.</p>
-            </div>
-        </div>
-
-        <div class="help-card">
-            <div class="help-title">
-                <div class="help-icon">⚠️</div>
-                <span>Daten löschen</span>
-            </div>
-            <div class="help-content">
-                <p>Sie können alle gespeicherten Scan-Daten auf einmal löschen.</p>
-                
-                <div class="warning-box">
-                    <strong>⚠️ Achtung:</strong> Das Löschen der Daten kann nicht rückgängig gemacht werden! Erstellen Sie bei Bedarf vorher einen CSV-Export als Backup.
-                </div>
-
-                <p><strong>So löschen Sie Daten:</strong></p>
-                <ul>
-                    <li>Klicken Sie auf "Daten löschen" im Menü</li>
-                    <li>Bestätigen Sie die Sicherheitsabfrage</li>
-                    <li>Alle Daten werden permanent entfernt</li>
+                    <li><strong>Verkauf:</strong> Ausgabe oder Verkauf von Ware.</li>
+                    <li><strong>Lagern:</strong> Einlagerung oder Einkauf.</li>
+                    <li><strong>Bestellen:</strong> Bedarf fuer Nachbestellung erfassen.</li>
                 </ul>
             </div>
-        </div>
+        </section>
 
-        <div class="help-card">
+        <section class="help-card">
             <div class="help-title">
-                <div class="help-icon">💾</div>
-                <span>Datenspeicherung</span>
+                <span class="help-icon">4</span>
+                <h2>Eigenbedarf</h2>
             </div>
             <div class="help-content">
-                <p>Alle Scan-Daten werden lokal auf dem Server in einer JSON-Datei gespeichert.</p>
-                
-                <p><strong>Gespeicherte Informationen:</strong></p>
-                <ul>
-                    <li>Zeitstempel (Datum und Uhrzeit des Scans)</li>
-                    <li>Gescannte Daten (vollständiger Inhalt)</li>
-                    <li>Menge</li>
-                    <li>Typ (Verkauf oder Lagern)</li>
-                    <li>Eigenbedarf (Ja/Nein)</li>
-                </ul>
-
-                <div class="tip-box">
-                    <strong>💡 Tipp:</strong> Exportieren Sie regelmäßig Ihre Daten als CSV, um eine Sicherheitskopie zu haben.
-                </div>
+                <p>Aktivieren Sie <strong>Eigenbedarf</strong>, wenn Ware fuer interne Zwecke verwendet wird.</p>
+                <p>In der Liste bleibt diese Information beim jeweiligen Eintrag sichtbar.</p>
             </div>
-        </div>
+        </section>
+
+        <section class="help-card">
+            <div class="help-title">
+                <span class="help-icon">5</span>
+                <h2>Suchen, filtern und exportieren</h2>
+            </div>
+            <div class="help-content">
+                <p>In der Scan-Liste koennen Sie per Suchfeld filtern und mit Typ-Buttons eingrenzen.</p>
+                <p>Mit <strong>Export CSV</strong> werden die aktuell sichtbaren Eintraege als Datei gespeichert.</p>
+            </div>
+        </section>
+
+        <section class="help-card">
+            <div class="help-title">
+                <span class="help-icon">6</span>
+                <h2>Daten loeschen</h2>
+            </div>
+            <div class="help-content">
+                <p>Der Menuepunkt <strong>Daten loeschen</strong> leert alle gespeicherten Scans.</p>
+                <div class="warning-box"><strong>Achtung:</strong> Dieser Schritt ist dauerhaft. Erstellen Sie vorher bei Bedarf einen CSV-Export.</div>
+            </div>
+        </section>
 
         <div class="links">
-            <a href="start.php" class="back-link">🏠 Zurück zum Start</a>
+            <a href="start.php" class="back-link">Zurueck zum Start</a>
         </div>
-    </div>
+    </main>
 </body>
 
 </html>

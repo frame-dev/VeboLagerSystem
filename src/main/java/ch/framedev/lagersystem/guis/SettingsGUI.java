@@ -5,7 +5,6 @@ import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.*;
-import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.SettingsUtils;
@@ -32,7 +31,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.List;
-
 import static ch.framedev.lagersystem.main.Main.databaseManager;
 import static ch.framedev.lagersystem.main.Main.settings;
 import static ch.framedev.lagersystem.utils.ArticleUtils.categories;
@@ -41,14 +39,19 @@ import static ch.framedev.lagersystem.utils.ArticleUtils.loadCategories;
 /**
  * Moderne Einstellungen-GUI für das VEBO Lagersystem.
  *
- * <p>Diese Ansicht kapselt:
+ * <p>
+ * Diese Ansicht kapselt:
  * <ul>
- *   <li>System-/Automatisierungs-Einstellungen (z.B. Lagerbestandsprüfung, Warnungen, QR-Import)</li>
- *   <li>Darstellungs-Einstellungen (Theme, Farben, Schriftart, Schriftgrößen)</li>
- *   <li>Such-/Filter-Funktion über Einstellungsbereiche</li>
+ * <li>System-/Automatisierungs-Einstellungen (z.B. Lagerbestandsprüfung,
+ * Warnungen, QR-Import)</li>
+ * <li>Darstellungs-Einstellungen (Theme, Farben, Schriftart,
+ * Schriftgrößen)</li>
+ * <li>Such-/Filter-Funktion über Einstellungsbereiche</li>
  * </ul>
  *
- * <p>Änderungen werden typischerweise über {@code saveSettings()} persistiert und nach dem Speichern
+ * <p>
+ * Änderungen werden typischerweise über {@code saveSettings()} persistiert und
+ * nach dem Speichern
  * in der Anwendung angewendet.
  */
 @SuppressWarnings("deprecation")
@@ -75,7 +78,8 @@ public class SettingsGUI extends JFrame {
      */
     private final JTextField settingsSearchField = new JTextField(24);
     /**
-     * Platzhaltertext für {@link #settingsSearchField}, solange kein echter Suchtext eingegeben wurde.
+     * Platzhaltertext für {@link #settingsSearchField}, solange kein echter
+     * Suchtext eingegeben wurde.
      */
     private static final String SEARCH_PLACEHOLDER = "Suche nach Einstellungen…";
     /**
@@ -84,18 +88,18 @@ public class SettingsGUI extends JFrame {
      */
     private boolean searchPlaceholderActive = false;
     /**
-     * Sammlung von UI-Sektionen, die über die Suche gefiltert/gehervorgehoben werden können.
+     * Sammlung von UI-Sektionen, die über die Suche gefiltert/gehervorgehoben
+     * werden können.
      */
     private final List<JComponent> searchableSections = new ArrayList<>();
     private final JLabel previewTitleLabel = new JLabel("Vorschau");
     private final JLabel previewBodyLabel = new JLabel("Schrift und Farben werden hier angezeigt.");
     private final JTable previewTable = new JTable(
-            new Object[][]{
-                    {"A-100", "Beispielartikel", 12, 5},
-                    {"B-200", "Musterteil", 4, 2}
+            new Object[][] {
+                    { "A-100", "Beispielartikel", 12, 5 },
+                    { "B-200", "Musterteil", 4, 2 }
             },
-            new Object[]{"Artikel", "Name", "Lager", "Min"}
-    );
+            new Object[] { "Artikel", "Name", "Lager", "Min" });
     private final JButton previewButton = new JButton("Beispiel Button");
     private JPanel previewCardPanel;
     private JPanel previewTextPanel;
@@ -131,70 +135,146 @@ public class SettingsGUI extends JFrame {
     private static final String DEFAULT_SERVER_URL = "https://framedev.ch/vebo";
 
     /**
-     * Aktuell verwendete Tabellenschriftgröße (px). Wird u.a. für Vorschau und Tabellen-UI genutzt.
+     * Aktuell verwendete Tabellenschriftgröße (px). Wird u.a. für Vorschau und
+     * Tabellen-UI genutzt.
      */
     public static int TABLE_FONT_SIZE = 16;
 
     /**
      * Schlüssel/Mapping der unterstützten Einstellungsvariablen.
      *
-     * <p>Jeder Enum-Wert enthält den Property-Key, der in der Settings-Property-Datei verwendet wird.
+     * <p>
+     * Jeder Enum-Wert enthält den Property-Key, der in der Settings-Property-Datei
+     * verwendet wird.
      */
     public enum Variable {
         /**
-         * Intervall (in Minuten), in dem die Anwendung den Lagerbestand überprüft und Warnungen erstellt, wenn Artikel unter dem Mindestbestand liegen. Beeinflusst, wie häufig die Anwendung den Lagerbestand überprüft und automatisch Warnungen für Artikel erstellt, die unter dem definierten Mindestbestand liegen. Standard ist 30 Minuten, was eine gute Balance zwischen Aktualität und Systemressourcen bietet. Benutzer können hier ein kürzeres Intervall angeben, um schneller auf Lagerbestandsänderungen zu reagieren, oder ein längeres Intervall, um Ressourcen zu schonen.
+         * Intervall (in Minuten), in dem die Anwendung den Lagerbestand überprüft und
+         * Warnungen erstellt, wenn Artikel unter dem Mindestbestand liegen.
+         * Beeinflusst, wie häufig die Anwendung den Lagerbestand überprüft und
+         * automatisch Warnungen für Artikel erstellt, die unter dem definierten
+         * Mindestbestand liegen. Standard ist 30 Minuten, was eine gute Balance
+         * zwischen Aktualität und Systemressourcen bietet. Benutzer können hier ein
+         * kürzeres Intervall angeben, um schneller auf Lagerbestandsänderungen zu
+         * reagieren, oder ein längeres Intervall, um Ressourcen zu schonen.
          */
         STOCK_CHECK_INTERVAL(settings.getProperty("stock_check_interval")),
         /**
-         * Ob die automatische Anzeige von ungelesenen Warnungen aktiviert ist. Beeinflusst, ob die Anwendung regelmäßig auf ungelesene Warnungen prüft und diese automatisch anzeigt. Standard ist {@code true}. Wenn aktiviert, prüft die Anwendung alle Stunde (gemäß {@link #WARNING_DISPLAY_INTERVAL}) auf ungelesene Warnungen und zeigt diese prominent an, um sicherzustellen, dass Benutzer wichtige Informationen nicht verpassen. Benutzer können hier entscheiden, ob sie diese proaktive Benachrichtigungsfunktion nutzen möchten oder lieber manuell nach Warnungen suchen wollen.
+         * Ob die automatische Anzeige von ungelesenen Warnungen aktiviert ist.
+         * Beeinflusst, ob die Anwendung regelmäßig auf ungelesene Warnungen prüft und
+         * diese automatisch anzeigt. Standard ist {@code true}. Wenn aktiviert, prüft
+         * die Anwendung alle Stunde (gemäß {@link #WARNING_DISPLAY_INTERVAL}) auf
+         * ungelesene Warnungen und zeigt diese prominent an, um sicherzustellen, dass
+         * Benutzer wichtige Informationen nicht verpassen. Benutzer können hier
+         * entscheiden, ob sie diese proaktive Benachrichtigungsfunktion nutzen möchten
+         * oder lieber manuell nach Warnungen suchen wollen.
          */
         ENABLE_WARNING_INTERVAL(settings.getProperty("enable_houtly_warnings")),
         /**
-         * Intervall (in Stunden), in dem die Anwendung auf ungelesene Warnungen prüft und diese automatisch anzeigt. Beeinflusst, wie häufig die Anwendung nach ungelesenen Warnungen sucht und diese prominent anzeigt. Standard ist 1 Stunde, was eine gute Balance zwischen Aktualität und Systemressourcen bietet. Benutzer können hier ein kürzeres Intervall angeben, um schneller auf neue Warnungen zu reagieren, oder ein längeres Intervall, um Ressourcen zu schonen.
+         * Intervall (in Stunden), in dem die Anwendung auf ungelesene Warnungen prüft
+         * und diese automatisch anzeigt. Beeinflusst, wie häufig die Anwendung nach
+         * ungelesenen Warnungen sucht und diese prominent anzeigt. Standard ist 1
+         * Stunde, was eine gute Balance zwischen Aktualität und Systemressourcen
+         * bietet. Benutzer können hier ein kürzeres Intervall angeben, um schneller auf
+         * neue Warnungen zu reagieren, oder ein längeres Intervall, um Ressourcen zu
+         * schonen.
          */
         WARNING_DISPLAY_INTERVAL(settings.getProperty("warning_display_interval")),
         /**
-         * Ob die automatische Lagerbestandsprüfung aktiviert ist. Beeinflusst, ob die Anwendung regelmäßig den Lagerbestand überprüft und Warnungen erstellt, wenn Artikel unter dem Mindestbestand liegen. Standard ist {@code true}. Wenn aktiviert, prüft die Anwendung alle 30 Minuten (gemäß {@link #STOCK_CHECK_INTERVAL}) den Lagerbestand und erstellt automatisch Warnungen für Artikel, die unter dem definierten Mindestbestand liegen. Benutzer können hier entscheiden, ob sie diese proaktive Überprüfungsfunktion nutzen möchten oder lieber manuell den Lagerbestand überwachen wollen.
+         * Ob die automatische Lagerbestandsprüfung aktiviert ist. Beeinflusst, ob die
+         * Anwendung regelmäßig den Lagerbestand überprüft und Warnungen erstellt, wenn
+         * Artikel unter dem Mindestbestand liegen. Standard ist {@code true}. Wenn
+         * aktiviert, prüft die Anwendung alle 30 Minuten (gemäß
+         * {@link #STOCK_CHECK_INTERVAL}) den Lagerbestand und erstellt automatisch
+         * Warnungen für Artikel, die unter dem definierten Mindestbestand liegen.
+         * Benutzer können hier entscheiden, ob sie diese proaktive Überprüfungsfunktion
+         * nutzen möchten oder lieber manuell den Lagerbestand überwachen wollen.
          */
         ENABLE_AUTO_STOCK_CHECK(settings.getProperty("enable_auto_stock_check")),
         /**
-         * Die URL, von der die Anwendung Warnungsdaten (z.B. Lagerwarnungen) abruft. Beeinflusst, wo die Anwendung nach Warnungsinformationen sucht. Standard ist "<a href="https://framedev.ch/vebo/scans.json">...</a>", was auf eine Beispiel-URL verweist. Benutzer können hier eine benutzerdefinierte URL angeben, z.B. die Adresse eines eigenen Servers oder einer API, von der die Anwendung Warnungsdaten abrufen soll. Es ist wichtig, dass die angegebene URL korrekt formatiert ist und auf eine gültige Ressource zeigt, damit die Anwendung Warnungsinformationen erfolgreich abrufen kann.
+         * Die URL, von der die Anwendung Warnungsdaten (z.B. Lagerwarnungen) abruft.
+         * Beeinflusst, wo die Anwendung nach Warnungsinformationen sucht. Standard ist
+         * "<a href="https://framedev.ch/vebo/scans.json">...</a>", was auf eine
+         * Beispiel-URL verweist. Benutzer können hier eine benutzerdefinierte URL
+         * angeben, z.B. die Adresse eines eigenen Servers oder einer API, von der die
+         * Anwendung Warnungsdaten abrufen soll. Es ist wichtig, dass die angegebene URL
+         * korrekt formatiert ist und auf eine gültige Ressource zeigt, damit die
+         * Anwendung Warnungsinformationen erfolgreich abrufen kann.
          */
         SERVER_URL(settings.getProperty("server_url")),
         /**
-         * Ob die automatische Anzeige von ungelesenen Warnungen aktiviert ist. Beeinflusst, ob die Anwendung automatisch eine Warnungs-Karte anzeigt, wenn ungelesene Warnungen vorhanden sind. Standard ist {@code true}. Wenn aktiviert, prüft die Anwendung regelmäßig (gemäß {@link #WARNING_DISPLAY_INTERVAL}) auf ungelesene Warnungen und zeigt diese prominent an, um sicherzustellen, dass Benutzer wichtige Informationen nicht verpassen. Benutzer können hier entscheiden, ob sie diese proaktive Benachrichtigungsfunktion nutzen möchten oder lieber manuell nach Warnungen suchen.
+         * Ob die automatische Anzeige von ungelesenen Warnungen aktiviert ist.
+         * Beeinflusst, ob die Anwendung automatisch eine Warnungs-Karte anzeigt, wenn
+         * ungelesene Warnungen vorhanden sind. Standard ist {@code true}. Wenn
+         * aktiviert, prüft die Anwendung regelmäßig (gemäß
+         * {@link #WARNING_DISPLAY_INTERVAL}) auf ungelesene Warnungen und zeigt diese
+         * prominent an, um sicherzustellen, dass Benutzer wichtige Informationen nicht
+         * verpassen. Benutzer können hier entscheiden, ob sie diese proaktive
+         * Benachrichtigungsfunktion nutzen möchten oder lieber manuell nach Warnungen
+         * suchen.
          */
         ENABLE_AUTOMATIC_IMPORT_QRCODE(settings.getProperty("enable_automatic_import_qrcode")),
         /**
-         * Intervall (in Minuten) für den automatischen Import von QR-Code Scans. Beeinflusst, wie häufig die Anwendung nach neuen QR-Code Scans sucht und diese importiert. Standard ist 10 Minuten, was eine gute Balance zwischen Aktualität und Systemressourcen bietet. Benutzer können hier ein kürzeres Intervall angeben, um schneller auf neue Scans zu reagieren, oder ein längeres Intervall, um Ressourcen zu schonen.
+         * Intervall (in Minuten) für den automatischen Import von QR-Code Scans.
+         * Beeinflusst, wie häufig die Anwendung nach neuen QR-Code Scans sucht und
+         * diese importiert. Standard ist 10 Minuten, was eine gute Balance zwischen
+         * Aktualität und Systemressourcen bietet. Benutzer können hier ein kürzeres
+         * Intervall angeben, um schneller auf neue Scans zu reagieren, oder ein
+         * längeres Intervall, um Ressourcen zu schonen.
          */
         QRCODE_IMPORT_INTERVAL(settings.getProperty("qrcode_import_interval")),
         /**
-         * Ob der Dunkelmodus aktiviert ist. Beeinflusst die Farbpalette der gesamten Anwendung. Standard ist {@code false} (Hellmodus). Wenn aktiviert, verwendet die Anwendung dunkle Hintergründe und helle Schriftfarben, um die Augen zu schonen und die Lesbarkeit in dunklen Umgebungen zu verbessern. Benutzer können hier zwischen Dunkel- und Hellmodus wechseln, je nach ihren Präferenzen und Umgebungslichtbedingungen.
+         * Ob der Dunkelmodus aktiviert ist. Beeinflusst die Farbpalette der gesamten
+         * Anwendung. Standard ist {@code false} (Hellmodus). Wenn aktiviert, verwendet
+         * die Anwendung dunkle Hintergründe und helle Schriftfarben, um die Augen zu
+         * schonen und die Lesbarkeit in dunklen Umgebungen zu verbessern. Benutzer
+         * können hier zwischen Dunkel- und Hellmodus wechseln, je nach ihren
+         * Präferenzen und Umgebungslichtbedingungen.
          */
         DARK_MODE(settings.getProperty("dark_mode")),
         /**
-         * Die Schriftgröße, die in Tabellen (z.B. Artikelkarte, Warnungskarte) verwendet wird. Beeinflusst die Lesbarkeit der Tabellen und die Gesamtästhetik der Anwendung. Standard ist 16px, was eine gute Balance zwischen Lesbarkeit und Platzbedarf bietet. Benutzer können hier eine größere oder kleinere Schriftgröße angeben, je nach ihren Präferenzen und Bildschirmauflösung.
+         * Die Schriftgröße, die in Tabellen (z.B. Artikelkarte, Warnungskarte)
+         * verwendet wird. Beeinflusst die Lesbarkeit der Tabellen und die
+         * Gesamtästhetik der Anwendung. Standard ist 16px, was eine gute Balance
+         * zwischen Lesbarkeit und Platzbedarf bietet. Benutzer können hier eine größere
+         * oder kleinere Schriftgröße angeben, je nach ihren Präferenzen und
+         * Bildschirmauflösung.
          */
         TABLE_FONT_SIZE(settings.getProperty("table_font_size")),
         /**
-         * Die Schriftgröße, die in Tab-Labels (z.B. im Hauptbereich) verwendet wird. Beeinflusst die Lesbarkeit der Tabs und die Gesamtästhetik der Anwendung. Standard ist 15px, was eine gute Balance zwischen Lesbarkeit und Platzbedarf bietet. Benutzer können hier eine größere oder kleinere Schriftgröße angeben, je nach ihren Präferenzen und Bildschirmauflösung.
+         * Die Schriftgröße, die in Tab-Labels (z.B. im Hauptbereich) verwendet wird.
+         * Beeinflusst die Lesbarkeit der Tabs und die Gesamtästhetik der Anwendung.
+         * Standard ist 15px, was eine gute Balance zwischen Lesbarkeit und Platzbedarf
+         * bietet. Benutzer können hier eine größere oder kleinere Schriftgröße angeben,
+         * je nach ihren Präferenzen und Bildschirmauflösung.
          */
         TABLE_FONT_SIZE_TAB(settings.getProperty("table_font_size_tab")),
         /**
-         * Die Schriftart, die in der gesamten Anwendung verwendet wird (z.B. für Labels, Buttons, Tabellen). Standard ist "Dialog", was eine plattformunabhängige Schriftfamilie ist, die auf den meisten Systemen verfügbar ist. Benutzer können hier eine andere Schriftart angeben, z.B. "Arial", "Verdana" oder "Times New Roman". Die Anwendung sollte versuchen, die angegebene Schriftart zu laden und verwenden, und falls diese nicht verfügbar ist, auf die Standardschriftart zurückfallen.
+         * Die Schriftart, die in der gesamten Anwendung verwendet wird (z.B. für
+         * Labels, Buttons, Tabellen). Standard ist "Dialog", was eine
+         * plattformunabhängige Schriftfamilie ist, die auf den meisten Systemen
+         * verfügbar ist. Benutzer können hier eine andere Schriftart angeben, z.B.
+         * "Arial", "Verdana" oder "Times New Roman". Die Anwendung sollte versuchen,
+         * die angegebene Schriftart zu laden und verwenden, und falls diese nicht
+         * verfügbar ist, auf die Standardschriftart zurückfallen.
          */
         FONT_STYLE(settings.getProperty("font_style")),
         /**
-         * Die Akzentfarbe der Anwendung, z.B. für Links, Icons und Hervorhebungen. Wird in der gesamten Anwendung verwendet, z.B. für Link-Farben, Icons in Buttons und Hervorhebungen in Karten-UI.
+         * Die Akzentfarbe der Anwendung, z.B. für Links, Icons und Hervorhebungen. Wird
+         * in der gesamten Anwendung verwendet, z.B. für Link-Farben, Icons in Buttons
+         * und Hervorhebungen in Karten-UI.
          */
         THEME_ACCENT_COLOR(settings.getProperty("theme_accent_color")),
         /**
-         * Die Farbe des Headers in der Einstellungen-GUI. Wird auch in anderen Bereichen der Anwendung verwendet, z.B. für die Header-Farbe in den Karten-UI (Artikelkarte, Warnungskarte, etc.).
+         * Die Farbe des Headers in der Einstellungen-GUI. Wird auch in anderen
+         * Bereichen der Anwendung verwendet, z.B. für die Header-Farbe in den Karten-UI
+         * (Artikelkarte, Warnungskarte, etc.).
          */
         THEME_HEADER_COLOR(settings.getProperty("theme_header_color")),
         /**
-         * Die Farbe von Buttons (z.B. Speichern, Abbrechen) in der Einstellungen-GUI. Wird auch in anderen Bereichen der Anwendung verwendet, z.B. für die "Hinzufügen"-Buttons in der Artikelverwaltung.
+         * Die Farbe von Buttons (z.B. Speichern, Abbrechen) in der Einstellungen-GUI.
+         * Wird auch in anderen Bereichen der Anwendung verwendet, z.B. für die
+         * "Hinzufügen"-Buttons in der Artikelverwaltung.
          */
         THEME_BUTTON_COLOR(settings.getProperty("theme_button_color"));
 
@@ -222,7 +302,9 @@ public class SettingsGUI extends JFrame {
     /**
      * Erstellt und initialisiert die Einstellungen-GUI.
      *
-     * <p>Initialisiert das Frame, baut die UI (Header, Tabs, Bottom-Bar), registriert Shortcuts/
+     * <p>
+     * Initialisiert das Frame, baut die UI (Header, Tabs, Bottom-Bar), registriert
+     * Shortcuts/
      * Listener und lädt anschließend die aktuellen Settings.
      */
     public SettingsGUI() {
@@ -269,8 +351,7 @@ public class SettingsGUI extends JFrame {
         headerCard.setLayout(new BorderLayout());
         headerCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(14, 18, 14, 18)
-        ));
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)));
         headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel titleLabel = new JLabel(UnicodeSymbols.BETTER_GEAR + " Einstellungen");
@@ -314,8 +395,7 @@ public class SettingsGUI extends JFrame {
         contentCard.setOpaque(false);
         contentCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12)
-        ));
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
 
         // Tabs (TOP placement) + Search bar below the tab strip (visual hierarchy)
         JTabbedPane tabbedPane = createTabbedPane();
@@ -333,7 +413,8 @@ public class SettingsGUI extends JFrame {
 
         contentCard.add(tabsAndSearch, BorderLayout.NORTH);
 
-        // The tabbed pane itself contains the scrollable content; we only need to ensure it expands.
+        // The tabbed pane itself contains the scrollable content; we only need to
+        // ensure it expands.
         // Wrap it so it takes all remaining space and stays aligned.
         JPanel tabFill = new JPanel(new BorderLayout());
         tabFill.setOpaque(false);
@@ -375,8 +456,7 @@ public class SettingsGUI extends JFrame {
                 }
                 settingsSearchField.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(ThemeManager.getPrimaryColor(), 2, true),
-                        BorderFactory.createEmptyBorder(7, 9, 7, 9)
-                ));
+                        BorderFactory.createEmptyBorder(7, 9, 7, 9)));
             }
 
             @Override
@@ -390,8 +470,7 @@ public class SettingsGUI extends JFrame {
                 }
                 settingsSearchField.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                        BorderFactory.createEmptyBorder(8, 10, 8, 10)
-                ));
+                        BorderFactory.createEmptyBorder(8, 10, 8, 10)));
             }
         });
 
@@ -426,8 +505,7 @@ public class SettingsGUI extends JFrame {
         searchFieldWrapper.setBackground(ThemeManager.getInputBackgroundColor());
         searchFieldWrapper.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(0, 0, 0, 0)
-        ));
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)));
         searchFieldWrapper.add(settingsSearchField, BorderLayout.CENTER);
         searchFieldWrapper.add(clearSearchButton, BorderLayout.EAST);
 
@@ -457,7 +535,8 @@ public class SettingsGUI extends JFrame {
         buttonPanel.setBackground(ThemeManager.getCardBackgroundColor());
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
-        JButton resetAllButton = createStyledButton(UnicodeSymbols.REFRESH + " Alles zurücksetzen", new Color(231, 76, 60));
+        JButton resetAllButton = createStyledButton(UnicodeSymbols.REFRESH + " Alles zurücksetzen",
+                new Color(231, 76, 60));
         resetAllButton.addActionListener(e -> resetAllDefaults());
 
         JButton cancelButton = createStyledButton(UnicodeSymbols.CLOSE + " Abbrechen", new Color(155, 89, 182));
@@ -477,7 +556,8 @@ public class SettingsGUI extends JFrame {
         InputMap im = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         ActionMap am = getRootPane().getActionMap();
 
-        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()), "focusSearch");
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()),
+                "focusSearch");
         am.put("focusSearch", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -521,7 +601,8 @@ public class SettingsGUI extends JFrame {
     }
 
     private void buildTabs(JTabbedPane tabbedPane) {
-        if(tabbedPane == null) return;
+        if (tabbedPane == null)
+            return;
         buildSystemAutomaticTab(tabbedPane);
         buildDesignTab(tabbedPane);
         buildConnectionTab(tabbedPane);
@@ -564,7 +645,8 @@ public class SettingsGUI extends JFrame {
         enableWarningDisplayCheckbox.setSelected(true);
 
         warningDisplayIntervalSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 24, 1));
-        JPanel warningIntervalPanel = createLabeledSpinnerPanel("Anzeigeintervall:", warningDisplayIntervalSpinner, "Stunde(n)", 6);
+        JPanel warningIntervalPanel = createLabeledSpinnerPanel("Anzeigeintervall:", warningDisplayIntervalSpinner,
+                "Stunde(n)", 6);
 
         JLabel warningInfoLabel = getWarningInfoLabel();
 
@@ -593,36 +675,40 @@ public class SettingsGUI extends JFrame {
         qrCodeOptionsPanel.add(Box.createVerticalStrut(15));
 
         qrCodeImportIntervalSpinner = new JSpinner(new SpinnerNumberModel(10, 1, 60, 5));
-        JPanel qrIntervalPanel = createLabeledSpinnerPanel("Import-Intervall:", qrCodeImportIntervalSpinner, "Minuten", 6);
+        JPanel qrIntervalPanel = createLabeledSpinnerPanel("Import-Intervall:", qrCodeImportIntervalSpinner, "Minuten",
+                6);
 
         qrCodeOptionsPanel.add(qrIntervalPanel);
 
         systemPanel.add(qrCodeOptionsPanel);
         systemPanel.add(Box.createVerticalStrut(25));
 
-        JPanel categoryPanel = createSectionPanel(UnicodeSymbols.FOLDER + " Kategorien", "Einstellungen zu verschiedenen Kategorien");
+        JList<String> categoryList = new JList<>();
+        JPanel categoryPanel = createSectionPanel(UnicodeSymbols.FOLDER + " Kategorien",
+            "Einstellungen zu verschiedenen Kategorien");
+        // Ensure left alignment for the whole section
+        categoryPanel.setLayout(new BoxLayout(categoryPanel, BoxLayout.Y_AXIS));
+        categoryPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel categoryInfoLabel = createInfoLabel(
-                "Hier können Sie Kategorien hinzufügen oder die Datei direkt bearbeiten. " +
-                        "Optional können Sie einen Nummernbereich (Von/Bis) angeben."
-        );
+            "Hier können Sie Kategorien hinzufügen oder die Datei direkt bearbeiten. " +
+                "Optional können Sie einen Nummernbereich (Von/Bis) angeben.");
+        categoryInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Top actions row
-        JPanel categoryActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JPanel categoryActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         categoryActions.setOpaque(false);
         categoryActions.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JButton categorySettingsFileButton = createStyledButton(
                 UnicodeSymbols.FOLDER + " Kategorien-Datei öffnen",
-                new Color(52, 152, 219)
-        );
+                new Color(52, 152, 219));
         categorySettingsFileButton.setToolTipText("Öffnet categories.json im Standard-Editor");
         categorySettingsFileButton.addActionListener(e -> openCategorySettingsFile());
 
         JButton reloadCategoriesButton = createStyledButton(
                 UnicodeSymbols.REFRESH + " Kategorien neu laden",
-                new Color(155, 89, 182)
-        );
+                new Color(155, 89, 182));
         reloadCategoriesButton.setToolTipText("Lädt categories.json neu ein (ohne Neustart)");
         reloadCategoriesButton.addActionListener(e -> {
             loadCategories();
@@ -647,8 +733,7 @@ public class SettingsGUI extends JFrame {
         categoryPanel.add(catSep);
         categoryPanel.add(Box.createVerticalStrut(14));
 
-        // ---- Add Category Form (improved layout) ---------------------------------
-
+        // ---- Add Category Form (improved layout, left-aligned) ----
         JLabel categoryFormTitle = new JLabel("Neue Kategorie hinzufügen");
         categoryFormTitle.setFont(getFontByName(Font.BOLD, 14));
         categoryFormTitle.setForeground(ThemeManager.getTextPrimaryColor());
@@ -656,9 +741,9 @@ public class SettingsGUI extends JFrame {
 
         JLabel categoryFormHint = new JLabel(
                 "<html><div style='padding-top:2px;'>" +
-                        "<span style='font-size:11px;'>Tipp: Drücken Sie Enter im Namen-Feld, um hinzuzufügen. Z.b von 1000 bis 1999</span>" +
-                        "</div></html>"
-        );
+                        "<span style='font-size:11px;'>Tipp: Drücken Sie Enter im Namen-Feld, um hinzuzufügen. Z.b von 1000 bis 1999</span>"
+                        +
+                        "</div></html>");
         categoryFormHint.setFont(getFontByName(Font.PLAIN, 12));
         categoryFormHint.setForeground(ThemeManager.getTextSecondaryColor());
         categoryFormHint.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -686,8 +771,7 @@ public class SettingsGUI extends JFrame {
         fromRange.setCaretColor(ThemeManager.getTextPrimaryColor());
         fromRange.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
 
         JFormattedTextField toRange = new JFormattedTextField(intFormatter);
         toRange.setColumns(6);
@@ -698,13 +782,11 @@ public class SettingsGUI extends JFrame {
         toRange.setCaretColor(ThemeManager.getTextPrimaryColor());
         toRange.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
 
         JButton addCategoryButton = createStyledButton(
                 UnicodeSymbols.PLUS + " Hinzufügen",
-                new Color(46, 204, 113)
-        );
+                new Color(46, 204, 113));
         addCategoryButton.setToolTipText("Fügt die Kategorie hinzu");
         addCategoryButton.setEnabled(false);
 
@@ -728,8 +810,10 @@ public class SettingsGUI extends JFrame {
                 try {
                     int f = fromTxt.isEmpty() ? Integer.MIN_VALUE : Integer.parseInt(fromTxt);
                     int t = toTxt.isEmpty() ? Integer.MAX_VALUE : Integer.parseInt(toTxt);
-                    if (f > t) throw new NumberFormatException();
+                    if (f > t)
+                        throw new NumberFormatException();
                     addNewCategory(newCategory, f, t);
+                    loadCategoriesIntoList(categoryList);
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(this,
                             "Ungültiger Bereich (Von/Bis). Bitte ganze Zahlen eingeben und Von ≤ Bis.",
@@ -795,79 +879,90 @@ public class SettingsGUI extends JFrame {
             }
         });
 
-        // Layout panel
-        JPanel addCategoryPanel = new JPanel(new GridBagLayout());
+        // Layout panel (left-aligned)
+        JPanel addCategoryPanel = new JPanel();
+        addCategoryPanel.setLayout(new BoxLayout(addCategoryPanel, BoxLayout.X_AXIS));
         addCategoryPanel.setOpaque(false);
         addCategoryPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(0, 0, 8, 12);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weighty = 0;
-
-        // Row 0: Title + hint (full width)
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 4;
-        gbc.weightx = 1.0;
-        gbc.insets = new Insets(0, 0, 4, 0);
-        addCategoryPanel.add(categoryFormTitle, gbc);
-
-        gbc.gridy = 1;
-        gbc.insets = new Insets(0, 0, 12, 0);
-        addCategoryPanel.add(categoryFormHint, gbc);
-
-        // Row 2: Labels
-        gbc.gridwidth = 1;
-        gbc.gridy = 2;
-        gbc.insets = new Insets(0, 0, 6, 12);
-
+        JPanel addCategoryLabels = new JPanel();
+        addCategoryLabels.setLayout(new BoxLayout(addCategoryLabels, BoxLayout.Y_AXIS));
+        addCategoryLabels.setOpaque(false);
+        addCategoryLabels.setAlignmentY(Component.TOP_ALIGNMENT);
+        addCategoryLabels.setMaximumSize(new Dimension(140, Integer.MAX_VALUE));
         JLabel categoryNameLabel = new JLabel("Kategoriename");
         categoryNameLabel.setFont(getFontByName(Font.BOLD, 13));
         categoryNameLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
         JLabel fromLabel = new JLabel("Von");
         fromLabel.setFont(getFontByName(Font.PLAIN, 11));
         fromLabel.setForeground(ThemeManager.getTextSecondaryColor());
-
         JLabel toLabel = new JLabel("Bis");
         toLabel.setFont(getFontByName(Font.PLAIN, 11));
         toLabel.setForeground(ThemeManager.getTextSecondaryColor());
+        addCategoryLabels.add(categoryNameLabel);
+        addCategoryLabels.add(Box.createVerticalStrut(8));
+        addCategoryLabels.add(fromLabel);
+        addCategoryLabels.add(Box.createVerticalStrut(8));
+        addCategoryLabels.add(toLabel);
 
-        gbc.gridx = 0;
-        gbc.weightx = 1.0;
-        addCategoryPanel.add(categoryNameLabel, gbc);
+        JPanel addCategoryFields = new JPanel();
+        addCategoryFields.setLayout(new BoxLayout(addCategoryFields, BoxLayout.Y_AXIS));
+        addCategoryFields.setOpaque(false);
+        addCategoryFields.setAlignmentY(Component.TOP_ALIGNMENT);
+        addCategoryFields.setMaximumSize(new Dimension(220, Integer.MAX_VALUE));
+        addCategoryFields.add(categoryNameField);
+        addCategoryFields.add(Box.createVerticalStrut(8));
+        addCategoryFields.add(fromRange);
+        addCategoryFields.add(Box.createVerticalStrut(8));
+        addCategoryFields.add(toRange);
 
-        gbc.gridx = 1;
-        gbc.weightx = 0.0;
-        addCategoryPanel.add(fromLabel, gbc);
-
-        gbc.gridx = 2;
-        addCategoryPanel.add(toLabel, gbc);
-
-        // Row 3: Fields + button
-        gbc.gridy = 3;
-        gbc.insets = new Insets(0, 0, 0, 12);
-
-        gbc.gridx = 0;
-        gbc.weightx = 1.0;
-        addCategoryPanel.add(categoryNameField, gbc);
-
-        gbc.gridx = 1;
-        gbc.weightx = 0.0;
-        fromRange.setPreferredSize(new Dimension(120, 36));
-        addCategoryPanel.add(fromRange, gbc);
-
-        gbc.gridx = 2;
-        toRange.setPreferredSize(new Dimension(120, 36));
-        addCategoryPanel.add(toRange, gbc);
-
-        gbc.gridx = 3;
-        gbc.insets = new Insets(0, 0, 0, 0);
+        JPanel addCategoryButtonPanel = new JPanel();
+        addCategoryButtonPanel.setLayout(new BoxLayout(addCategoryButtonPanel, BoxLayout.Y_AXIS));
+        addCategoryButtonPanel.setOpaque(false);
+        addCategoryButtonPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        addCategoryButtonPanel.setMaximumSize(new Dimension(180, Integer.MAX_VALUE));
         addCategoryButton.setPreferredSize(new Dimension(160, 36));
-        addCategoryPanel.add(addCategoryButton, gbc);
+        addCategoryButtonPanel.add(addCategoryButton);
 
-        categoryPanel.add(addCategoryPanel);
+        JPanel addCategoryFormPanel = new JPanel();
+        addCategoryFormPanel.setLayout(new BoxLayout(addCategoryFormPanel, BoxLayout.X_AXIS));
+        addCategoryFormPanel.setOpaque(false);
+        addCategoryFormPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addCategoryFormPanel.add(addCategoryLabels);
+        addCategoryFormPanel.add(Box.createHorizontalStrut(12));
+        addCategoryFormPanel.add(addCategoryFields);
+        addCategoryFormPanel.add(Box.createHorizontalStrut(12));
+        addCategoryFormPanel.add(addCategoryButtonPanel);
+
+        JPanel addCategoryOuterPanel = new JPanel();
+        addCategoryOuterPanel.setLayout(new BoxLayout(addCategoryOuterPanel, BoxLayout.Y_AXIS));
+        addCategoryOuterPanel.setOpaque(false);
+        addCategoryOuterPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addCategoryOuterPanel.add(categoryFormTitle);
+        addCategoryOuterPanel.add(Box.createVerticalStrut(4));
+        addCategoryOuterPanel.add(categoryFormHint);
+        addCategoryOuterPanel.add(Box.createVerticalStrut(10));
+        addCategoryOuterPanel.add(addCategoryFormPanel);
+
+        categoryPanel.add(addCategoryOuterPanel);
+        categoryPanel.add(Box.createVerticalStrut(18));
+        
+        JLabel categoryListLabel = new JLabel("Aktuelle Kategorien");
+        categoryListLabel.setFont(getFontByName(Font.BOLD, 17));
+        categoryListLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        categoryListLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        categoryPanel.add(categoryListLabel);
+        categoryPanel.add(Box.createVerticalStrut(10));
+        categoryList.setFont(getFontByName(Font.PLAIN, 13));
+        categoryList.setBackground(ThemeManager.getInputBackgroundColor());
+        categoryList.setForeground(ThemeManager.getTextPrimaryColor());
+        categoryList.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+            BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+        categoryList.setAlignmentX(Component.LEFT_ALIGNMENT);
+        loadCategoriesIntoList(categoryList);
+        categoryPanel.add(categoryList);
+        categoryPanel.add(Box.createVerticalStrut(14));
 
         // finally add to system panel
         systemPanel.add(categoryPanel);
@@ -875,42 +970,64 @@ public class SettingsGUI extends JFrame {
         systemPanel.add(Box.createVerticalStrut(25));
         JPanel otherSection = createSectionPanel("Sonstiges", "Allgemeine Einstellungen");
         otherSection.add(Box.createVerticalStrut(18));
-        JLabel openSettingsLabel = createInfoLabel("Öffnet den Ordner, in dem die Einstellungsdateien gespeichert sind.");
+        JLabel openSettingsLabel = createInfoLabel(
+                "Öffnet den Ordner, in dem die Einstellungsdateien gespeichert sind.");
         otherSection.add(openSettingsLabel);
         otherSection.add(Box.createVerticalStrut(10));
-        JButton openSettingsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Einstellungen-Ordner öffnen", new Color(52, 152, 219));
+        JButton openSettingsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Einstellungen-Ordner öffnen",
+                new Color(52, 152, 219));
         openSettingsFolderButton.addActionListener(e -> openSettingsFolder());
         otherSection.add(openSettingsFolderButton);
         JLabel logsLabel = createInfoLabel("Öffnet den Ordner, in dem die Anwendungsprotokolle gespeichert sind.");
         otherSection.add(Box.createVerticalStrut(15));
         otherSection.add(logsLabel);
         otherSection.add(Box.createVerticalStrut(10));
-        JButton openLogsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Protokolle-Ordner öffnen", new Color(52, 152, 219));
+        JButton openLogsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Protokolle-Ordner öffnen",
+                new Color(52, 152, 219));
         openLogsFolderButton.addActionListener(e -> openLogsFolder());
         otherSection.add(openLogsFolderButton);
         otherSection.add(Box.createVerticalStrut(15));
-        JLabel logsDelete = createInfoLabel("Löscht alle Anwendungsprotokolle aus dem Protokolle-Ordner. So wie in der Datenbank.");
+        JLabel logsDelete = createInfoLabel(
+                "Löscht alle Anwendungsprotokolle aus dem Protokolle-Ordner. So wie in der Datenbank.");
         otherSection.add(Box.createVerticalStrut(15));
         otherSection.add(logsDelete);
-        JButton deleteLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alle Protokolle löschen", new Color(220, 53, 69));
+        JButton deleteLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alle Protokolle löschen",
+                new Color(220, 53, 69));
         deleteLogsButton.addActionListener(e -> deleteAllLogs());
         otherSection.add(Box.createVerticalStrut(10));
         otherSection.add(deleteLogsButton);
         otherSection.add(Box.createVerticalStrut(15));
-        JLabel logsDeleteTime = createInfoLabel("Löscht alle Anwendungsprotokolle, die älter als 30 Tage sind, aus dem Protokolle-Ordner. So wie in der Datenbank.");
+        JLabel logsDeleteTime = createInfoLabel(
+                "Löscht alle Anwendungsprotokolle, die älter als 30 Tage sind, aus dem Protokolle-Ordner. So wie in der Datenbank.");
         otherSection.add(Box.createVerticalStrut(15));
         otherSection.add(logsDeleteTime);
         JCheckBox deleteOldLogsCheckBox = new JCheckBox("Alte Protokolle (älter als 30 Tage) löschen");
         styleCheckbox(deleteOldLogsCheckBox);
         otherSection.add(Box.createVerticalStrut(10));
         otherSection.add(deleteOldLogsCheckBox);
-        JButton deleteOldLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alte Protokolle löschen", new Color(220, 53, 69));
+        JButton deleteOldLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alte Protokolle löschen",
+                new Color(220, 53, 69));
         deleteOldLogsButton.addActionListener(e -> deleteOldLogs());
         otherSection.add(Box.createVerticalStrut(10));
         otherSection.add(deleteOldLogsButton);
         systemPanel.add(otherSection);
         // Add system panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.WRENCH + " System", systemScroll);
+    }
+
+    private void loadCategoriesIntoList(JList<String> categoryList) {
+        categoryList.setListData(new String[0]);
+        List<String> categories = new ArrayList<>();
+        ArticleUtils.categories.forEach((key, value) -> {
+            String range = "";
+            if (value.rangeStart != Integer.MIN_VALUE || value.rangeEnd != Integer.MAX_VALUE) {
+                String fromStr = value.rangeStart == Integer.MIN_VALUE ? "" : String.valueOf(value.rangeStart);
+                String toStr = value.rangeEnd == Integer.MAX_VALUE ? "" : String.valueOf(value.rangeEnd);
+                range = " (" + fromStr + " - " + toStr + ")";
+            }
+            categories.add(key + range);
+        });
+        categoryList.setListData(categories.toArray(new String[0]));
     }
 
     private void buildDesignTab(JTabbedPane tabbedPane) {
@@ -921,8 +1038,7 @@ public class SettingsGUI extends JFrame {
         JLabel appearanceIntro = new JLabel(
                 "<html><div style='padding:2px 0;'><b>Darstellung</b><br/>" +
                         "<span style='font-size:11px;'>Änderungen werden nach dem Speichern übernommen. " +
-                        "Die Vorschau aktualisiert sich automatisch.</span></div></html>"
-        );
+                        "Die Vorschau aktualisiert sich automatisch.</span></div></html>");
         appearanceIntro.setFont(getFontByName(Font.PLAIN, 12));
         appearanceIntro.setForeground(ThemeManager.getTextSecondaryColor());
         appearanceIntro.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -935,8 +1051,7 @@ public class SettingsGUI extends JFrame {
         fontSettingsPanel.add(Box.createVerticalStrut(12));
         JLabel fontInfoLabel = new JLabel(
                 "<html><div><span style='font-size: 11px;'>" +
-                        "Wählen Sie eine Schriftart. Die Vorschau unten zeigt das Ergebnis.</span></div></html>"
-        );
+                        "Wählen Sie eine Schriftart. Die Vorschau unten zeigt das Ergebnis.</span></div></html>");
         fontInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
         fontInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         fontInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -988,7 +1103,7 @@ public class SettingsGUI extends JFrame {
         themeSection.add(Box.createVerticalStrut(16));
         themeSection.add(darkModeCheckbox);
         themeSection.add(Box.createVerticalStrut(12));
-        String[] themes = {"Light", "Dark"};
+        String[] themes = { "Light", "Dark" };
         themeComboBox = new JComboBox<>(themes);
         styleComboBox(themeComboBox);
         themeComboBox.setSelectedItem(ThemeManager.isDarkMode() ? "Dark" : "Light");
@@ -1058,8 +1173,7 @@ public class SettingsGUI extends JFrame {
                 "URL des QR-Code Scan-Servers");
         addSectionResetButton(serverSection, this::resetServerDefaults);
         JLabel serverHint = createInfoLabel(
-                "Tipp: Nutzen Sie https (wenn möglich). Mit den Aktionen können Sie die URL testen oder kopieren."
-        );
+                "Tipp: Nutzen Sie https (wenn möglich). Mit den Aktionen können Sie die URL testen oder kopieren.");
         serverHint.setAlignmentX(Component.LEFT_ALIGNMENT);
         // Actions row
         JPanel serverActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
@@ -1200,7 +1314,8 @@ public class SettingsGUI extends JFrame {
         databaseButtonPanel.setOpaque(false);
         databaseButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         databaseButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-        JButton clearDatabaseButton = createStyledButton(UnicodeSymbols.TRASH + " Datenbank Bereinigen", new Color(220, 53, 69));
+        JButton clearDatabaseButton = createStyledButton(UnicodeSymbols.TRASH + " Datenbank Bereinigen",
+                new Color(220, 53, 69));
         clearDatabaseButton.addActionListener(e -> clearDatabase());
         databaseButtonPanel.add(clearDatabaseButton);
         databaseSection.add(Box.createVerticalStrut(18));
@@ -1216,7 +1331,8 @@ public class SettingsGUI extends JFrame {
         JPanel tableSelectionPanel = createLabeledComboBoxPanel("Tabelle auswählen:", tableComboBox);
         databaseSection.add(Box.createVerticalStrut(15));
         databaseSection.add(tableSelectionPanel);
-        JButton deleteSelectedTableButton = createStyledButton(UnicodeSymbols.TRASH + " Ausgewählte Tabelle Löschen", new Color(230, 126, 34));
+        JButton deleteSelectedTableButton = createStyledButton(UnicodeSymbols.TRASH + " Ausgewählte Tabelle Löschen",
+                new Color(230, 126, 34));
         deleteSelectedTableButton.addActionListener(e -> {
             String selectedTable = (String) tableComboBox.getSelectedItem();
             if (selectedTable == null || selectedTable.trim().isEmpty()) {
@@ -1268,7 +1384,8 @@ public class SettingsGUI extends JFrame {
         // === CATEGORY 4: Import & Export ===
         JPanel importExportPanel = createCategoryPanel();
         JScrollPane importExportScroll = createScrollablePanel(importExportPanel);
-        JPanel importExportSection = createSectionPanel(UnicodeSymbols.ARROW_UP + UnicodeSymbols.ARROW_DOWN + "️ Import & Export",
+        JPanel importExportSection = createSectionPanel(
+                UnicodeSymbols.ARROW_UP + UnicodeSymbols.ARROW_DOWN + "️ Import & Export",
                 "Datenimport und -export Funktionen");
         importExportSection.add(Box.createVerticalStrut(15));
         importExportSection.add(createStyledLabel("Import:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
@@ -1277,7 +1394,8 @@ public class SettingsGUI extends JFrame {
                 "Importieren Sie Artikel, Lieferanten oder andere Daten aus CSV-Dateien.<br/>" +
                 "Stellen Sie sicher, dass die CSV-Dateien das richtige Format haben.</div></html>"));
         importExportSection.add(Box.createVerticalStrut(10));
-        JButton importButton = createStyledButton(UnicodeSymbols.ARROW_UP + " Datenbank Importieren", new Color(39, 174, 96));
+        JButton importButton = createStyledButton(UnicodeSymbols.ARROW_UP + " Datenbank Importieren",
+                new Color(39, 174, 96));
         importButton.addActionListener(e -> importFromCsv());
         importExportSection.add(importButton);
         importExportSection.add(Box.createVerticalStrut(20));
@@ -1287,7 +1405,8 @@ public class SettingsGUI extends JFrame {
         importExportSection.add(createInfoLabel("<html><div style='width:650px;'>" +
                 "Exportieren Sie Ihre Datenbankinhalte in CSV-Dateien zur Sicherung oder Weiterverarbeitung.</div></html>"));
         importExportSection.add(Box.createVerticalStrut(10));
-        JButton exportButton = createStyledButton(UnicodeSymbols.ARROW_DOWN + " Datenbank Exportieren", new Color(52, 152, 219));
+        JButton exportButton = createStyledButton(UnicodeSymbols.ARROW_DOWN + " Datenbank Exportieren",
+                new Color(52, 152, 219));
         exportButton.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(this,
                     "<html><b>Datenbank nach CSV exportieren?</b><br/><br/>" +
@@ -1328,9 +1447,11 @@ public class SettingsGUI extends JFrame {
         JPanel settingsProfileSection = createSectionPanel(UnicodeSymbols.FLOPPY + " Einstellungen Profil",
                 "Importieren oder exportieren Sie Ihre Einstellungen als Profil-Datei");
         settingsProfileSection.add(Box.createVerticalStrut(15));
-        JButton exportSettingsButton = createStyledButton(UnicodeSymbols.DOWNLOAD + " Einstellungen exportieren", new Color(52, 152, 219));
+        JButton exportSettingsButton = createStyledButton(UnicodeSymbols.DOWNLOAD + " Einstellungen exportieren",
+                new Color(52, 152, 219));
         exportSettingsButton.addActionListener(e -> exportSettingsProfile());
-        JButton importSettingsButton = createStyledButton(UnicodeSymbols.UPLOAD + " Einstellungen importieren", new Color(39, 174, 96));
+        JButton importSettingsButton = createStyledButton(UnicodeSymbols.UPLOAD + " Einstellungen importieren",
+                new Color(39, 174, 96));
         importSettingsButton.addActionListener(e -> importSettingsProfile());
         settingsProfileSection.add(exportSettingsButton);
         settingsProfileSection.add(Box.createVerticalStrut(10));
@@ -1402,8 +1523,7 @@ public class SettingsGUI extends JFrame {
                 "VEBO Lagersystem ist eine moderne Lagerverwaltungssoftware für die effiziente " +
                         "Verwaltung von Artikeln, Bestellungen, Lieferanten und Kunden. Die Anwendung " +
                         "bietet umfangreiche Funktionen für die Bestandsverwaltung, automatische Warnungen " +
-                        "bei niedrigem Lagerbestand und QR-Code-basierte Artikelerfassung."
-        );
+                        "bei niedrigem Lagerbestand und QR-Code-basierte Artikelerfassung.");
         descriptionArea.setWrapStyleWord(true);
         descriptionArea.setLineWrap(true);
         descriptionArea.setEditable(false);
@@ -1412,8 +1532,7 @@ public class SettingsGUI extends JFrame {
         descriptionArea.setBackground(ThemeManager.getInputBackgroundColor());
         descriptionArea.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
         descriptionArea.setRows(4);
         descriptionPanel.add(descTitle, BorderLayout.NORTH);
         descriptionPanel.add(descriptionArea, BorderLayout.CENTER);
@@ -1425,11 +1544,13 @@ public class SettingsGUI extends JFrame {
         developerPanel.setOpaque(false);
         developerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         developerPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-        developerPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " Entwickler:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+        developerPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " Entwickler:", 14, Font.BOLD,
+                ThemeManager.getTextPrimaryColor()));
         developerPanel.add(Box.createVerticalStrut(8));
         developerPanel.add(createStyledLabel("Darryl Huber", 13, Font.PLAIN, ThemeManager.getTextPrimaryColor()));
         developerPanel.add(Box.createVerticalStrut(5));
-        developerPanel.add(createStyledLabel("Organisation: VEBO Oensingen", 13, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
+        developerPanel.add(createStyledLabel("Organisation: VEBO Oensingen", 13, Font.PLAIN,
+                ThemeManager.getTextSecondaryColor()));
         aboutSection.add(Box.createVerticalStrut(15));
         aboutSection.add(developerPanel);
         // System Info
@@ -1438,13 +1559,18 @@ public class SettingsGUI extends JFrame {
         systemInfoPanel.setOpaque(false);
         systemInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         systemInfoPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-        systemInfoPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " System-Information:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+        systemInfoPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " System-Information:", 14, Font.BOLD,
+                ThemeManager.getTextPrimaryColor()));
         systemInfoPanel.add(Box.createVerticalStrut(8));
-        systemInfoPanel.add(createStyledLabel("Java Version: " + System.getProperty("java.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
+        systemInfoPanel.add(createStyledLabel("Java Version: " + System.getProperty("java.version"), 12, Font.PLAIN,
+                ThemeManager.getTextSecondaryColor()));
         systemInfoPanel.add(Box.createVerticalStrut(5));
-        systemInfoPanel.add(createStyledLabel("Betriebssystem: " + System.getProperty("os.name") + " " + System.getProperty("os.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
+        systemInfoPanel.add(createStyledLabel(
+                "Betriebssystem: " + System.getProperty("os.name") + " " + System.getProperty("os.version"), 12,
+                Font.PLAIN, ThemeManager.getTextSecondaryColor()));
         systemInfoPanel.add(Box.createVerticalStrut(5));
-        systemInfoPanel.add(createStyledLabel("Datenverzeichnis: " + Main.getAppDataDir().getAbsolutePath(), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
+        systemInfoPanel.add(createStyledLabel("Datenverzeichnis: " + Main.getAppDataDir().getAbsolutePath(), 12,
+                Font.PLAIN, ThemeManager.getTextSecondaryColor()));
         aboutSection.add(Box.createVerticalStrut(15));
         aboutSection.add(systemInfoPanel);
         // Update Manager Section
@@ -1453,7 +1579,8 @@ public class SettingsGUI extends JFrame {
         updatePanel.setOpaque(false);
         updatePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         updatePanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-        updatePanel.add(createStyledLabel(UnicodeSymbols.DOWNLOAD + " Update-Verwaltung:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
+        updatePanel.add(createStyledLabel(UnicodeSymbols.DOWNLOAD + " Update-Verwaltung:", 14, Font.BOLD,
+                ThemeManager.getTextPrimaryColor()));
         updatePanel.add(Box.createVerticalStrut(12));
         // Create update button rows with better layout
         JPanel updateRow1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
@@ -1489,9 +1616,11 @@ public class SettingsGUI extends JFrame {
         updatePanel.add(updateRow2);
         updatePanel.add(Box.createVerticalStrut(12));
         // Add info text about version
-        JLabel versionInfoLabel = new JLabel("<html><div style='padding: 8px; background: " + toHexColor(ThemeManager.getInputBackgroundColor()) + "; border-radius: 6px;'>" +
+        JLabel versionInfoLabel = new JLabel("<html><div style='padding: 8px; background: "
+                + toHexColor(ThemeManager.getInputBackgroundColor()) + "; border-radius: 6px;'>" +
                 "<b>Aktuelle Version:</b> " + Main.VERSION + "<br/>" +
-                "<span style='font-size: 11px; color: #666;'>Kanal: " + UpdateManager.detectChannel(Main.VERSION) + "</span>" +
+                "<span style='font-size: 11px; color: #666;'>Kanal: " + UpdateManager.detectChannel(Main.VERSION)
+                + "</span>" +
                 "</div></html>");
         versionInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
         versionInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -1505,11 +1634,13 @@ public class SettingsGUI extends JFrame {
         copyrightPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         copyrightPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
-                BorderFactory.createEmptyBorder(15, 0, 0, 0)
-        ));
-        copyrightPanel.add(createStyledLabel("© 2026 VEBO Oensingen. Alle Rechte vorbehalten.", 11, Font.PLAIN, ThemeManager.getTextSecondaryColor()));
+                BorderFactory.createEmptyBorder(15, 0, 0, 0)));
+        copyrightPanel.add(createStyledLabel("© 2026 VEBO Oensingen. Alle Rechte vorbehalten.", 11, Font.PLAIN,
+                ThemeManager.getTextSecondaryColor()));
         copyrightPanel.add(Box.createVerticalStrut(5));
-        JLabel licenseLabel = createStyledLabel("Diese Software wird bereitgestellt \"wie sie ist\", ohne jegliche Garantie.", 11, Font.ITALIC, ThemeManager.getTextSecondaryColor());
+        JLabel licenseLabel = createStyledLabel(
+                "Diese Software wird bereitgestellt \"wie sie ist\", ohne jegliche Garantie.", 11, Font.ITALIC,
+                ThemeManager.getTextSecondaryColor());
         copyrightPanel.add(licenseLabel);
         aboutSection.add(Box.createVerticalStrut(20));
         aboutSection.add(copyrightPanel);
@@ -1520,15 +1651,15 @@ public class SettingsGUI extends JFrame {
     }
 
     private void styleInputField(JTextField field) {
-        if(field == null) return;
+        if (field == null)
+            return;
         field.setFont(getFontByName(Font.PLAIN, 13));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
         field.setCaretColor(ThemeManager.getTextPrimaryColor());
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
     }
 
     private void addNewCategory(String newCategory, int from, int to) {
@@ -1578,7 +1709,8 @@ public class SettingsGUI extends JFrame {
     }
 
     private void deleteOldLogs() {
-        ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager.getInstance();
+        ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager
+                .getInstance();
         int deletedCount = logManager.deleteOldLogs(30);
         File logsFolder = new File(Main.getAppDataDir(), "logs");
         int fileDeletedCount = 0;
@@ -1589,7 +1721,8 @@ public class SettingsGUI extends JFrame {
                 for (File logFile : logFiles) {
                     if (logFile.isFile()) {
                         BasicFileAttributes attrs = Files.readAttributes(logFile.toPath(), BasicFileAttributes.class);
-                        LocalDateTime fileTime = LocalDateTime.ofInstant(attrs.creationTime().toInstant(), ZoneId.systemDefault());
+                        LocalDateTime fileTime = LocalDateTime.ofInstant(attrs.creationTime().toInstant(),
+                                ZoneId.systemDefault());
                         if (fileTime.isBefore(cutoffDate)) {
                             Files.delete(logFile.toPath());
                             fileDeletedCount++;
@@ -1598,11 +1731,16 @@ public class SettingsGUI extends JFrame {
                 }
             }
             JOptionPane.showMessageDialog(this,
-                    String.format("Es wurden %d Protokolle aus der Datenbank und %d Protokolldateien gelöscht, die älter als 30 Tage sind.", deletedCount, fileDeletedCount),
+                    String.format(
+                            "Es wurden %d Protokolle aus der Datenbank und %d Protokolldateien gelöscht, die älter als 30 Tage sind.",
+                            deletedCount, fileDeletedCount),
                     "Alte Protokolle gelöscht",
                     JOptionPane.INFORMATION_MESSAGE);
-            logger.info("Es wurden {} Protokolle aus der Datenbank und {} Protokolldateien gelöscht, die älter als 30 Tage sind.", deletedCount, fileDeletedCount);
-            Main.logUtils.addLog("Es wurden " + deletedCount + " Protokolle aus der Datenbank und " + fileDeletedCount + " Protokolldateien gelöscht, die älter als 30 Tage sind.");
+            logger.info(
+                    "Es wurden {} Protokolle aus der Datenbank und {} Protokolldateien gelöscht, die älter als 30 Tage sind.",
+                    deletedCount, fileDeletedCount);
+            Main.logUtils.addLog("Es wurden " + deletedCount + " Protokolle aus der Datenbank und " + fileDeletedCount
+                    + " Protokolldateien gelöscht, die älter als 30 Tage sind.");
         } catch (IOException ex) {
             logger.error("Fehler beim Löschen alter Protokolle: {}", ex.getMessage());
             JOptionPane.showMessageDialog(this,
@@ -1646,7 +1784,8 @@ public class SettingsGUI extends JFrame {
                     "Protokolle gelöscht",
                     JOptionPane.INFORMATION_MESSAGE);
         }
-        ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager.getInstance();
+        ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager
+                .getInstance();
         if (logManager.clearAllLogs()) {
             logger.info("Alle Protokolle wurden erfolgreich aus der Datenbank gelöscht.");
             Main.logUtils.addLog("Alle Protokolle wurden erfolgreich aus der Datenbank gelöscht.");
@@ -1689,7 +1828,8 @@ public class SettingsGUI extends JFrame {
      * Creates a scrollable panel wrapper with optimized settings
      */
     private JScrollPane createScrollablePanel(JPanel panel) {
-        if(panel == null) throw new NullPointerException("Panel cannot be null");
+        if (panel == null)
+            throw new NullPointerException("Panel cannot be null");
         JScrollPane scrollPane = new JScrollPane(panel);
         scrollPane.setBorder(null);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
@@ -1698,7 +1838,6 @@ public class SettingsGUI extends JFrame {
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
         scrollPane.getViewport().setBackground(ThemeManager.getBackgroundColor());
-
 
         return scrollPane;
     }
@@ -1725,7 +1864,8 @@ public class SettingsGUI extends JFrame {
 
     private static JLabel getWarningInfoLabel() {
         JLabel warningInfoLabel = new JLabel("<html><div style='padding: 8px 0;'>" +
-                "<i>Warnungen werden automatisch in diesem Intervall angezeigt, wenn neue ungelesene Warnungen vorhanden sind.</i>" +
+                "<i>Warnungen werden automatisch in diesem Intervall angezeigt, wenn neue ungelesene Warnungen vorhanden sind.</i>"
+                +
                 "</div></html>");
         warningInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
         warningInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
@@ -1737,12 +1877,14 @@ public class SettingsGUI extends JFrame {
      * Creates a modern styled section panel with card-like appearance
      */
     private JPanel createSectionPanel(String title, String description) {
-        if(title == null || description == null) throw new NullPointerException("Title and description cannot be null");
+        if (title == null || description == null)
+            throw new NullPointerException("Title and description cannot be null");
         return SettingsUtils.createSectionPanel(title, description, searchableSections);
     }
 
     private void addSectionResetButton(JPanel section, Runnable action) {
-        if(section == null || action == null) throw new NullPointerException("Section and action cannot be null");
+        if (section == null || action == null)
+            throw new NullPointerException("Section and action cannot be null");
         Object actions = section.getClientProperty("headerActions");
         if (actions instanceof JPanel panel) {
             JButton resetButton = createHeaderActionButton();
@@ -1752,7 +1894,8 @@ public class SettingsGUI extends JFrame {
     }
 
     private JPanel createColorRow(String labelText, String key) {
-        if(labelText == null || key == null) throw new NullPointerException("Label text and key cannot be null");
+        if (labelText == null || key == null)
+            throw new NullPointerException("Label text and key cannot be null");
         JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         row.setOpaque(false);
 
@@ -1801,8 +1944,7 @@ public class SettingsGUI extends JFrame {
         button.setPreferredSize(new Dimension(36, 22));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(2, 2, 2, 2)
-        ));
+                BorderFactory.createEmptyBorder(2, 2, 2, 2)));
         button.setFocusPainted(false);
         button.setContentAreaFilled(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -1810,7 +1952,8 @@ public class SettingsGUI extends JFrame {
     }
 
     private Color getSelectedColorForKey(String key) {
-        if(key == null) throw new NullPointerException("Key cannot be null");
+        if (key == null)
+            throw new NullPointerException("Key cannot be null");
         return switch (key) {
             case "theme_accent_color" -> selectedAccentColor;
             case "theme_header_color" -> selectedHeaderColor;
@@ -1820,7 +1963,8 @@ public class SettingsGUI extends JFrame {
     }
 
     private void setSelectedColorForKey(String key, Color color) {
-        if(key == null) throw new NullPointerException("Key cannot be null");
+        if (key == null)
+            throw new NullPointerException("Key cannot be null");
         switch (key) {
             case "theme_accent_color" -> selectedAccentColor = color;
             case "theme_header_color" -> selectedHeaderColor = color;
@@ -1855,20 +1999,19 @@ public class SettingsGUI extends JFrame {
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)
-        ));
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return button;
     }
 
     private JPanel createPreviewPanel() {
-        SettingsUtils.RoundedPanel previewCard = new SettingsUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
+        SettingsUtils.RoundedPanel previewCard = new SettingsUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(),
+                12);
         previewCardPanel = previewCard;
         previewCard.setLayout(new BorderLayout(12, 12));
         previewCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12)
-        ));
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
 
         JPanel textPanel = new JPanel();
         previewTextPanel = textPanel;
@@ -1904,9 +2047,11 @@ public class SettingsGUI extends JFrame {
         Color text = darkMode ? ThemeManager.Dark.TEXT_PRIMARY : ThemeManager.Light.TEXT_PRIMARY;
         Color secondary = darkMode ? ThemeManager.Dark.TEXT_SECONDARY : ThemeManager.Light.TEXT_SECONDARY;
         Color border = darkMode ? ThemeManager.Dark.BORDER : ThemeManager.Light.BORDER;
-        Color header = selectedHeaderColor != null ? selectedHeaderColor : (darkMode ? ThemeManager.Dark.HEADER_BG : ThemeManager.Light.HEADER_BG);
+        Color header = selectedHeaderColor != null ? selectedHeaderColor
+                : (darkMode ? ThemeManager.Dark.HEADER_BG : ThemeManager.Light.HEADER_BG);
         Color accent = selectedAccentColor != null ? selectedAccentColor : ThemeManager.getAccentColor();
-        Color button = selectedButtonColor != null ? selectedButtonColor : (darkMode ? ThemeManager.Dark.BUTTON_BG : ThemeManager.Light.BUTTON_BG);
+        Color button = selectedButtonColor != null ? selectedButtonColor
+                : (darkMode ? ThemeManager.Dark.BUTTON_BG : ThemeManager.Light.BUTTON_BG);
 
         String fontName = fontComboBox == null ? DEFAULT_FONT_STYLE : (String) fontComboBox.getSelectedItem();
         int tableSize = fontSizeTableSpinner == null ? 16 : (Integer) fontSizeTableSpinner.getValue();
@@ -1928,8 +2073,10 @@ public class SettingsGUI extends JFrame {
         previewTable.setBackground(card);
         previewTable.setSelectionBackground(new Color(accent.getRed(), accent.getGreen(), accent.getBlue(), 80));
         previewTable.getTableHeader().setFont(new Font(fontName, Font.BOLD, Math.max(10, tableSize - 3)));
-        previewTable.getTableHeader().setBackground(darkMode ? ThemeManager.Dark.TABLE_HEADER_BG : ThemeManager.Light.TABLE_HEADER_BG);
-        previewTable.getTableHeader().setForeground(darkMode ? ThemeManager.Dark.TABLE_HEADER_FG : ThemeManager.Light.TABLE_HEADER_FG);
+        previewTable.getTableHeader()
+                .setBackground(darkMode ? ThemeManager.Dark.TABLE_HEADER_BG : ThemeManager.Light.TABLE_HEADER_BG);
+        previewTable.getTableHeader()
+                .setForeground(darkMode ? ThemeManager.Dark.TABLE_HEADER_FG : ThemeManager.Light.TABLE_HEADER_FG);
 
         tableFontSample.setFont(new Font(fontName, Font.PLAIN, tableSize));
         tabFontSample.setFont(new Font(fontName, Font.PLAIN, tabSize));
@@ -1953,7 +2100,8 @@ public class SettingsGUI extends JFrame {
     }
 
     private void configureSlider(JSlider slider, JSpinner spinner, JLabel sampleLabel) {
-        if(slider == null || spinner == null || sampleLabel == null) throw new IllegalArgumentException("slider, spinner and sampleLabel must not be null");
+        if (slider == null || spinner == null || sampleLabel == null)
+            throw new IllegalArgumentException("slider, spinner and sampleLabel must not be null");
         final String baseText = sampleLabel.getText().replaceAll("\\s*\\(\\d+px\\)\\s*$", "");
 
         slider.setPaintTicks(true);
@@ -1986,7 +2134,8 @@ public class SettingsGUI extends JFrame {
     }
 
     private boolean valueEqualsSpinner(int value, JSpinner spinner) {
-        if(spinner == null) throw new IllegalArgumentException("spinner must not be null");
+        if (spinner == null)
+            throw new IllegalArgumentException("spinner must not be null");
         Object spinnerValue = spinner.getValue();
         return spinnerValue instanceof Integer && (Integer) spinnerValue == value;
     }
@@ -2011,7 +2160,8 @@ public class SettingsGUI extends JFrame {
      * Styles a checkbox with a modern appearance and enhanced click area
      */
     private void styleCheckbox(JCheckBox checkbox) {
-        if(checkbox == null) throw new IllegalArgumentException("checkbox must not be null");
+        if (checkbox == null)
+            throw new IllegalArgumentException("checkbox must not be null");
         checkbox.setFont(getFontByName(Font.PLAIN, 14));
         checkbox.setForeground(ThemeManager.getTextPrimaryColor());
         checkbox.setOpaque(false);
@@ -2044,7 +2194,8 @@ public class SettingsGUI extends JFrame {
      * Styles a spinner with modern, rounded appearance and focus effects
      */
     private void styleSpinner(JSpinner spinner) {
-        if(spinner == null) throw new IllegalArgumentException("spinner must not be null");
+        if (spinner == null)
+            throw new IllegalArgumentException("spinner must not be null");
         JComponent editor = spinner.getEditor();
         if (editor instanceof JSpinner.DefaultEditor) {
             JTextField textField = ((JSpinner.DefaultEditor) editor).getTextField();
@@ -2054,8 +2205,7 @@ public class SettingsGUI extends JFrame {
             textField.setCaretColor(ThemeManager.getTextPrimaryColor());
             textField.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                    BorderFactory.createEmptyBorder(10, 14, 10, 14)
-            ));
+                    BorderFactory.createEmptyBorder(10, 14, 10, 14)));
 
             // Add focus listener for better UX
             textField.addFocusListener(new FocusAdapter() {
@@ -2063,16 +2213,14 @@ public class SettingsGUI extends JFrame {
                 public void focusGained(FocusEvent e) {
                     textField.setBorder(BorderFactory.createCompoundBorder(
                             BorderFactory.createLineBorder(ThemeManager.getPrimaryColor(), 2, true),
-                            BorderFactory.createEmptyBorder(9, 13, 9, 13)
-                    ));
+                            BorderFactory.createEmptyBorder(9, 13, 9, 13)));
                 }
 
                 @Override
                 public void focusLost(FocusEvent e) {
                     textField.setBorder(BorderFactory.createCompoundBorder(
                             BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                            BorderFactory.createEmptyBorder(10, 14, 10, 14)
-                    ));
+                            BorderFactory.createEmptyBorder(10, 14, 10, 14)));
                 }
             });
         }
@@ -2082,18 +2230,19 @@ public class SettingsGUI extends JFrame {
     }
 
     /**
-     * Creates a modern styled button with smooth hover effects and professional appearance
+     * Creates a modern styled button with smooth hover effects and professional
+     * appearance
      */
     private JButton createStyledButton(String text, Color originalBg) {
-        if(text == null) throw new IllegalArgumentException("text must not be null");
+        if (text == null)
+            throw new IllegalArgumentException("text must not be null");
         JButton button = new JButton(text);
         button.setFont(getFontByName(Font.BOLD, 14));
         button.setForeground(Color.WHITE);
         button.setBackground(originalBg);
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(originalBg.darker(), 1, true),
-                BorderFactory.createEmptyBorder(14, 28, 14, 28)
-        ));
+                BorderFactory.createEmptyBorder(14, 28, 14, 28)));
         button.setFocusPainted(false);
         button.setOpaque(true);
         button.setBorderPainted(true);
@@ -2103,20 +2252,17 @@ public class SettingsGUI extends JFrame {
         // Set consistent height
         button.setPreferredSize(new Dimension(
                 button.getPreferredSize().width,
-                48
-        ));
+                48));
 
         // Enhanced hover effect with smooth color transitions
         Color hoverBg = new Color(
                 Math.max(0, originalBg.getRed() - 25),
                 Math.max(0, originalBg.getGreen() - 25),
-                Math.max(0, originalBg.getBlue() - 25)
-        );
+                Math.max(0, originalBg.getBlue() - 25));
         Color pressedBg = new Color(
                 Math.max(0, originalBg.getRed() - 50),
                 Math.max(0, originalBg.getGreen() - 50),
-                Math.max(0, originalBg.getBlue() - 50)
-        );
+                Math.max(0, originalBg.getBlue() - 50));
 
         button.addMouseListener(new MouseAdapter() {
             @Override
@@ -2124,8 +2270,7 @@ public class SettingsGUI extends JFrame {
                 button.setBackground(hoverBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(hoverBg.darker(), 2, true),
-                        BorderFactory.createEmptyBorder(13, 27, 13, 27)
-                ));
+                        BorderFactory.createEmptyBorder(13, 27, 13, 27)));
             }
 
             @Override
@@ -2133,8 +2278,7 @@ public class SettingsGUI extends JFrame {
                 button.setBackground(originalBg);
                 button.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(originalBg.darker(), 1, true),
-                        BorderFactory.createEmptyBorder(14, 28, 14, 28)
-                ));
+                        BorderFactory.createEmptyBorder(14, 28, 14, 28)));
             }
 
             @Override
@@ -2189,11 +2333,13 @@ public class SettingsGUI extends JFrame {
                 serverUrlField.setText(serverUrl);
 
                 String enableAutomaticImportStr = Main.settings.getProperty("enable_automatic_import_qrcode");
-                boolean enableAutomaticImport = enableAutomaticImportStr == null || Boolean.parseBoolean(enableAutomaticImportStr);
+                boolean enableAutomaticImport = enableAutomaticImportStr == null
+                        || Boolean.parseBoolean(enableAutomaticImportStr);
                 automaticImportCheckBox.setSelected(enableAutomaticImport);
 
                 String qrCodeImportIntervalStr = Main.settings.getProperty("qrcode_import_interval");
-                int qrCodeImportInterval = (qrCodeImportIntervalStr != null) ? Integer.parseInt(qrCodeImportIntervalStr) : 10;
+                int qrCodeImportInterval = (qrCodeImportIntervalStr != null) ? Integer.parseInt(qrCodeImportIntervalStr)
+                        : 10;
                 qrCodeImportIntervalSpinner.setValue(qrCodeImportInterval);
 
                 // Load dark mode setting (default false)
@@ -2441,14 +2587,21 @@ public class SettingsGUI extends JFrame {
     }
 
     private void applySettingsProperties(Properties props) {
-        if(props == null) throw new IllegalArgumentException("props must not be null");
-        stockCheckIntervalSpinner.setValue(parseIntProperty(props, "stock_check_interval", DEFAULT_STOCK_CHECK_INTERVAL));
-        enableWarningDisplayCheckbox.setSelected(Boolean.parseBoolean(props.getProperty("enable_hourly_warnings", String.valueOf(DEFAULT_ENABLE_WARNINGS))));
-        warningDisplayIntervalSpinner.setValue(parseIntProperty(props, "warning_display_interval", DEFAULT_WARNING_INTERVAL));
-        enableAutoStockCheckCheckbox.setSelected(Boolean.parseBoolean(props.getProperty("enable_auto_stock_check", String.valueOf(DEFAULT_ENABLE_AUTO_STOCK_CHECK))));
+        if (props == null)
+            throw new IllegalArgumentException("props must not be null");
+        stockCheckIntervalSpinner
+                .setValue(parseIntProperty(props, "stock_check_interval", DEFAULT_STOCK_CHECK_INTERVAL));
+        enableWarningDisplayCheckbox.setSelected(Boolean
+                .parseBoolean(props.getProperty("enable_hourly_warnings", String.valueOf(DEFAULT_ENABLE_WARNINGS))));
+        warningDisplayIntervalSpinner
+                .setValue(parseIntProperty(props, "warning_display_interval", DEFAULT_WARNING_INTERVAL));
+        enableAutoStockCheckCheckbox.setSelected(Boolean.parseBoolean(
+                props.getProperty("enable_auto_stock_check", String.valueOf(DEFAULT_ENABLE_AUTO_STOCK_CHECK))));
         serverUrlField.setText(props.getProperty("server_url", DEFAULT_SERVER_URL));
-        automaticImportCheckBox.setSelected(Boolean.parseBoolean(props.getProperty("enable_automatic_import_qrcode", String.valueOf(DEFAULT_ENABLE_QR_IMPORT))));
-        qrCodeImportIntervalSpinner.setValue(parseIntProperty(props, "qrcode_import_interval", DEFAULT_QR_IMPORT_INTERVAL));
+        automaticImportCheckBox.setSelected(Boolean.parseBoolean(
+                props.getProperty("enable_automatic_import_qrcode", String.valueOf(DEFAULT_ENABLE_QR_IMPORT))));
+        qrCodeImportIntervalSpinner
+                .setValue(parseIntProperty(props, "qrcode_import_interval", DEFAULT_QR_IMPORT_INTERVAL));
         boolean darkMode = Boolean.parseBoolean(props.getProperty("dark_mode", String.valueOf(DEFAULT_DARK_MODE)));
         darkModeCheckbox.setSelected(darkMode);
         themeComboBox.setSelectedItem(darkMode ? "Dark" : "Light");
@@ -2464,8 +2617,10 @@ public class SettingsGUI extends JFrame {
     }
 
     private int parseIntProperty(Properties props, String key, int fallback) {
-        if(props == null) throw new IllegalArgumentException("props must not be null");
-        if(key == null) throw new IllegalArgumentException("key must not be null");
+        if (props == null)
+            throw new IllegalArgumentException("props must not be null");
+        if (key == null)
+            throw new IllegalArgumentException("key must not be null");
         try {
             return Integer.parseInt(props.getProperty(key, String.valueOf(fallback)));
         } catch (NumberFormatException ex) {
@@ -2506,7 +2661,8 @@ public class SettingsGUI extends JFrame {
         if (fontName == null || fontName.trim().isEmpty()) {
             Font uiFont = UIManager.getFont("Label.font");
             fontName = uiFont == null ? DEFAULT_FONT_STYLE : uiFont.getFamily();
-        } else if (isWindows() && ("Arial".equalsIgnoreCase(fontName) || "Arial Unicode MS".equalsIgnoreCase(fontName))) {
+        } else if (isWindows()
+                && ("Arial".equalsIgnoreCase(fontName) || "Arial Unicode MS".equalsIgnoreCase(fontName))) {
             Font uiFont = UIManager.getFont("Label.font");
             fontName = uiFont == null ? DEFAULT_FONT_STYLE : uiFont.getFamily();
         }
@@ -2530,7 +2686,8 @@ public class SettingsGUI extends JFrame {
     /**
      * Applies settings to the running system
      */
-    private void applySettings(int interval, boolean enableWarnings, int warningInterval, boolean enableAutoCheck, boolean darkMode) {
+    private void applySettings(int interval, boolean enableWarnings, int warningInterval, boolean enableAutoCheck,
+            boolean darkMode) {
         try {
             // Apply theme changes
             boolean currentDarkMode = ThemeManager.isDarkMode();
@@ -2570,14 +2727,16 @@ public class SettingsGUI extends JFrame {
             // Restart scheduler with new settings
             if (enableAutoCheck) {
                 scheduler.startScheduledStockCheck(interval, java.util.concurrent.TimeUnit.MINUTES);
-                System.out.println("[SettingsGUI] Automatische Lagerbestandsprüfung neu gestartet (Intervall: " + interval + " Min.)");
+                System.out.println("[SettingsGUI] Automatische Lagerbestandsprüfung neu gestartet (Intervall: "
+                        + interval + " Min.)");
             } else {
                 System.out.println("[SettingsGUI] Automatische Lagerbestandsprüfung deaktiviert");
             }
 
             if (enableWarnings) {
                 scheduler.startWarningDisplay(warningInterval, java.util.concurrent.TimeUnit.HOURS);
-                System.out.println("[SettingsGUI] Automatische Warnanzeige aktiviert (Intervall: " + warningInterval + " Stunde(n))");
+                System.out.println("[SettingsGUI] Automatische Warnanzeige aktiviert (Intervall: " + warningInterval
+                        + " Stunde(n))");
             } else {
                 System.out.println("[SettingsGUI] Automatische Warnanzeige deaktiviert");
             }
@@ -2585,9 +2744,9 @@ public class SettingsGUI extends JFrame {
             if (automaticImportCheckBox.isSelected()) {
                 scheduler.startAutoImportQrCodes(
                         (Integer) qrCodeImportIntervalSpinner.getValue(),
-                        java.util.concurrent.TimeUnit.MINUTES
-                );
-                System.out.println("[SettingsGUI] Automatischer QR-Code Import aktiviert (Intervall: " + qrCodeImportIntervalSpinner.getValue() + " Min.)");
+                        java.util.concurrent.TimeUnit.MINUTES);
+                System.out.println("[SettingsGUI] Automatischer QR-Code Import aktiviert (Intervall: "
+                        + qrCodeImportIntervalSpinner.getValue() + " Min.)");
             } else {
                 System.out.println("[SettingsGUI] Automatischer QR-Code Import deaktiviert");
             }
@@ -2600,7 +2759,8 @@ public class SettingsGUI extends JFrame {
     }
 
     /**
-     * Checks for updates based on the selected release channel (stable, beta, alpha, testing)
+     * Checks for updates based on the selected release channel (stable, beta,
+     * alpha, testing)
      * Shows a dialog with update information and download link if available
      */
     private void checkForUpdates(String channel) {
@@ -2635,10 +2795,10 @@ public class SettingsGUI extends JFrame {
             progressPanel.setBackground(ThemeManager.getCardBackgroundColor());
             progressPanel.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 2),
-                    BorderFactory.createEmptyBorder(20, 20, 20, 20)
-            ));
+                    BorderFactory.createEmptyBorder(20, 20, 20, 20)));
 
-            JLabel progressLabel = new JLabel("<html><center>Prüfe auf " + channelDisplay + "-Updates...<br/>Bitte warten...</center></html>");
+            JLabel progressLabel = new JLabel(
+                    "<html><center>Prüfe auf " + channelDisplay + "-Updates...<br/>Bitte warten...</center></html>");
             progressLabel.setFont(getFontByName(Font.PLAIN, 14));
             progressLabel.setForeground(ThemeManager.getTextPrimaryColor());
             progressLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -2719,7 +2879,7 @@ public class SettingsGUI extends JFrame {
 
         String downloadUrl = getDownloadUrl(channel);
 
-        Object[] options = {"Download-Seite öffnen", "Später"};
+        Object[] options = { "Download-Seite öffnen", "Später" };
         int result = JOptionPane.showOptionDialog(this,
                 "<html><b>" + UnicodeSymbols.DOWNLOAD + " Update verfügbar!</b><br/><br/>" +
                         "Eine neue Version ist verfügbar:<br/><br/>" +
@@ -2762,7 +2922,8 @@ public class SettingsGUI extends JFrame {
      * Shows error dialog when update check fails
      */
     private void showUpdateError(String errorMessage) {
-        if(errorMessage == null) throw new IllegalArgumentException("errorMessage must not be null");
+        if (errorMessage == null)
+            throw new IllegalArgumentException("errorMessage must not be null");
         JOptionPane.showMessageDialog(this,
                 "<html><b>" + UnicodeSymbols.WARNING + " Fehler bei Update-Prüfung</b><br/><br/>" +
                         "Die Update-Prüfung ist fehlgeschlagen:<br/>" +
@@ -2777,7 +2938,8 @@ public class SettingsGUI extends JFrame {
      * Gets the download URL based on the release channel
      */
     private String getDownloadUrl(String channel) {
-        if(channel == null) throw new IllegalArgumentException("channel must not be null");
+        if (channel == null)
+            throw new IllegalArgumentException("channel must not be null");
         return switch (channel.toLowerCase()) {
             case "beta" -> "https://github.com/frame-dev/VeboLagerSystem/releases?q=beta";
             case "alpha" -> "https://github.com/frame-dev/VeboLagerSystem/releases?q=alpha";
@@ -2790,7 +2952,8 @@ public class SettingsGUI extends JFrame {
      * Opens the download page in the default browser
      */
     private void openDownloadPage(String url) {
-        if(url == null) throw new IllegalArgumentException("url must not be null");
+        if (url == null)
+            throw new IllegalArgumentException("url must not be null");
         try {
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                 Desktop.getDesktop().browse(new java.net.URI(url));
@@ -2840,8 +3003,8 @@ public class SettingsGUI extends JFrame {
                 if (success) {
                     JOptionPane.showMessageDialog(this,
                             String.format("<html><b>OK Tabelle erfolgreich gelöscht</b><br/><br/>" +
-                                            "Die Tabelle '<b>%s</b>' wurde aus der Datenbank entfernt.<br/><br/>" +
-                                            "<i>Hinweis: Die zugehörigen Daten sind permanent gelöscht.</i></html>",
+                                    "Die Tabelle '<b>%s</b>' wurde aus der Datenbank entfernt.<br/><br/>" +
+                                    "<i>Hinweis: Die zugehörigen Daten sind permanent gelöscht.</i></html>",
                                     tableName),
                             "Erfolgreich",
                             JOptionPane.INFORMATION_MESSAGE,
@@ -2865,13 +3028,15 @@ public class SettingsGUI extends JFrame {
                 } else {
                     JOptionPane.showMessageDialog(this,
                             String.format("<html><b>Fehler beim Löschen der Tabelle</b><br/><br/>" +
-                                            "Die Tabelle '<b>%s</b>' konnte nicht gelöscht werden.<br/>" +
-                                            "Bitte überprüfen Sie die Logs für weitere Details.</html>",
+                                    "Die Tabelle '<b>%s</b>' konnte nicht gelöscht werden.<br/>" +
+                                    "Bitte überprüfen Sie die Logs für weitere Details.</html>",
                                     tableName),
                             "Fehler",
                             JOptionPane.ERROR_MESSAGE,
                             Main.iconSmall);
-                    Main.logUtils.addLog(String.format("Fehler beim Löschen der Tabelle. Die Tabelle '%s' konnte nicht gelöscht werden.", tableName));
+                    Main.logUtils.addLog(String.format(
+                            "Fehler beim Löschen der Tabelle. Die Tabelle '%s' konnte nicht gelöscht werden.",
+                            tableName));
                 }
             } else {
                 JOptionPane.showMessageDialog(this,
@@ -2887,8 +3052,8 @@ public class SettingsGUI extends JFrame {
             logger.error("Fehler beim Löschen der Tabelle '{}'", tableName, e);
             JOptionPane.showMessageDialog(this,
                     String.format("<html><b>Fehler beim Löschen der Tabelle</b><br/><br/>" +
-                                    "Tabelle: %s<br/>" +
-                                    "Fehler: %s</html>",
+                            "Tabelle: %s<br/>" +
+                            "Fehler: %s</html>",
                             tableName, e.getMessage()),
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE,
@@ -2943,20 +3108,22 @@ public class SettingsGUI extends JFrame {
 
         // Perform database clearing
         try {
-            DatabaseManager dbManager =
-                    databaseManager;
+            DatabaseManager dbManager = databaseManager;
 
             if (dbManager != null) {
                 dbManager.clearDatabase();
                 File file = new File(Main.getAppDataDir(), "own_use_list.txt");
                 if (!file.delete())
-                    System.out.println("[SettingsGUI] own_use_list.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
+                    System.out.println(
+                            "[SettingsGUI] own_use_list.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
                 File importQrcodesFile = new File(Main.getAppDataDir(), "imported_qrcodes.txt");
                 if (!importQrcodesFile.delete())
-                    System.out.println("[SettingsGUI] imported_qrcodes.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
+                    System.out.println(
+                            "[SettingsGUI] imported_qrcodes.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
                 File importedItemsFile = new File(Main.getAppDataDir(), "imported_items.txt");
                 if (!importedItemsFile.delete())
-                    System.out.println("[SettingsGUI] imported_items.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
+                    System.out.println(
+                            "[SettingsGUI] imported_items.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
 
                 JOptionPane.showMessageDialog(this,
                         "<html><b>OK Datenbank erfolgreich gelöscht</b><br/><br/>" +
@@ -3004,9 +3171,12 @@ public class SettingsGUI extends JFrame {
      * Creates a panel with a label, spinner, and unit label
      */
     private JPanel createLabeledSpinnerPanel(String labelText, JSpinner spinner, String unitText, int columns) {
-        if(labelText == null) throw new IllegalArgumentException("labelText must not be null");
-        if(spinner == null) throw new IllegalArgumentException("spinner must not be null");
-        if(unitText == null) throw new IllegalArgumentException("unitText must not be null");
+        if (labelText == null)
+            throw new IllegalArgumentException("labelText must not be null");
+        if (spinner == null)
+            throw new IllegalArgumentException("spinner must not be null");
+        if (unitText == null)
+            throw new IllegalArgumentException("unitText must not be null");
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         panel.setOpaque(false);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -3037,8 +3207,10 @@ public class SettingsGUI extends JFrame {
      * Creates a panel with a label and combo box
      */
     private JPanel createLabeledComboBoxPanel(String labelText, JComboBox<?> comboBox) {
-        if(labelText == null) throw new IllegalArgumentException("labelText must not be null");
-        if(comboBox == null) throw new IllegalArgumentException("comboBox must not be null");
+        if (labelText == null)
+            throw new IllegalArgumentException("labelText must not be null");
+        if (comboBox == null)
+            throw new IllegalArgumentException("comboBox must not be null");
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         panel.setOpaque(false);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -3112,7 +3284,7 @@ public class SettingsGUI extends JFrame {
             importOrdersFromCsv();
         } else {
             // Ask user what type of data this is
-            String[] options = {"Artikel", "Lieferanten", "Kunden", "Bestellungen", "Abbrechen"};
+            String[] options = { "Artikel", "Lieferanten", "Kunden", "Bestellungen", "Abbrechen" };
             int choice = JOptionPane.showOptionDialog(null,
                     "Welche Art von Daten möchten Sie importieren?",
                     "Datentyp auswählen",
@@ -3248,11 +3420,12 @@ public class SettingsGUI extends JFrame {
                     String address = parts[4];
                     double minOrderValue = Double.parseDouble(parts[5]);
 
-                    Vendor vendor = new Vendor(name, contactPerson, phoneNumber, email, address, new ArrayList<>(), minOrderValue);
+                    Vendor vendor = new Vendor(name, contactPerson, phoneNumber, email, address, new ArrayList<>(),
+                            minOrderValue);
 
                     if (vendorManager.existsVendor(name)) {
-                        String[] columns = {"contactPerson", "phoneNumber", "email", "address"};
-                        Object[] values = {contactPerson, phoneNumber, email, address};
+                        String[] columns = { "contactPerson", "phoneNumber", "email", "address" };
+                        Object[] values = { contactPerson, phoneNumber, email, address };
                         if (vendorManager.updateVendor(name, columns, values)) {
                             imported++;
                         } else {
@@ -3376,7 +3549,8 @@ public class SettingsGUI extends JFrame {
                 "Nicht verfügbar",
                 JOptionPane.INFORMATION_MESSAGE,
                 Main.iconSmall);
-        System.out.println("[SettingsGUI] Bestellungs-Import wurde übersprungen (nicht implementiert aus Sicherheitsgründen)");
+        System.out.println(
+                "[SettingsGUI] Bestellungs-Import wurde übersprungen (nicht implementiert aus Sicherheitsgründen)");
     }
 
     /**
@@ -3416,7 +3590,8 @@ public class SettingsGUI extends JFrame {
         List<Article> articles = ArticleManager.getInstance().getAllArticles();
         File csvFile = new File(Main.getAppDataDir(), "articles_export.csv");
         try (PrintWriter writer = new PrintWriter(new FileWriter(csvFile))) {
-            writer.println("Artikelnummer,Name,Details,Lagerbestand,Mindestlagerbestand,Verkaufspreis,Einkaufspreis,Lieferant");
+            writer.println(
+                    "Artikelnummer,Name,Details,Lagerbestand,Mindestlagerbestand,Verkaufspreis,Einkaufspreis,Lieferant");
 
             for (Article article : articles) {
                 writer.format(Locale.ROOT,
@@ -3428,10 +3603,10 @@ public class SettingsGUI extends JFrame {
                         article.getMinStockLevel(),
                         article.getSellPrice(),
                         article.getPurchasePrice(),
-                        escapeCSV(article.getVendorName())
-                );
+                        escapeCSV(article.getVendorName()));
             }
-            System.out.println("[SettingsGUI] Artikel erfolgreich nach " + csvFile.getAbsolutePath() + " exportiert (" + articles.size() + " Einträge)");
+            System.out.println("[SettingsGUI] Artikel erfolgreich nach " + csvFile.getAbsolutePath() + " exportiert ("
+                    + articles.size() + " Einträge)");
             successCount++;
         } catch (Exception e) {
             String errorMsg = "Fehler beim Exportieren der Artikel: " + e.getMessage();
@@ -3454,7 +3629,8 @@ public class SettingsGUI extends JFrame {
                         escapeCSV(vendor.getAddress()),
                         escapeCSV(String.valueOf(vendor.getMinOrderValue())));
             }
-            System.out.println("[SettingsGUI] Lieferanten erfolgreich nach " + vendorCsvFile.getAbsolutePath() + " exportiert (" + vendors.size() + " Einträge)");
+            System.out.println("[SettingsGUI] Lieferanten erfolgreich nach " + vendorCsvFile.getAbsolutePath()
+                    + " exportiert (" + vendors.size() + " Einträge)");
             successCount++;
         } catch (Exception ex) {
             String errorMsg = "Fehler beim Exportieren der Lieferanten: " + ex.getMessage();
@@ -3473,7 +3649,8 @@ public class SettingsGUI extends JFrame {
                 String department = clientMap.getOrDefault("department", "");
                 writer.printf("\"%s\",\"%s\"%n", escapeCSV(name), escapeCSV(department));
             }
-            System.out.println("[SettingsGUI] Kunden erfolgreich nach " + clientCsvFile.getAbsolutePath() + " exportiert (" + clients.size() + " Einträge)");
+            System.out.println("[SettingsGUI] Kunden erfolgreich nach " + clientCsvFile.getAbsolutePath()
+                    + " exportiert (" + clients.size() + " Einträge)");
             successCount++;
         } catch (Exception ex) {
             String errorMsg = "Fehler beim Exportieren der Kunden: " + ex.getMessage();
@@ -3486,7 +3663,8 @@ public class SettingsGUI extends JFrame {
         List<Order> orders = OrderManager.getInstance().getOrders();
         File orderCsvFile = new File(Main.getAppDataDir(), "orders_export.csv");
         try (PrintWriter writer = new PrintWriter(new FileWriter(orderCsvFile))) {
-            writer.println("Bestell-ID,Empfängername,EmpfängerKontoNummer,SenderName,SenderKontoNummer,Artikel,Bestelldatum,Status,Abteilung");
+            writer.println(
+                    "Bestell-ID,Empfängername,EmpfängerKontoNummer,SenderName,SenderKontoNummer,Artikel,Bestelldatum,Status,Abteilung");
             for (Order order : orders) {
                 // Format ordered articles as "ArticleNum1:Qty1;ArticleNum2:Qty2;..."
                 String articlesStr = order.getOrderedArticles().entrySet().stream()
@@ -3504,7 +3682,8 @@ public class SettingsGUI extends JFrame {
                         escapeCSV(order.getStatus()),
                         escapeCSV(order.getDepartment()));
             }
-            System.out.println("[SettingsGUI] Bestellungen erfolgreich nach " + orderCsvFile.getAbsolutePath() + " exportiert (" + orders.size() + " Einträge)");
+            System.out.println("[SettingsGUI] Bestellungen erfolgreich nach " + orderCsvFile.getAbsolutePath()
+                    + " exportiert (" + orders.size() + " Einträge)");
             successCount++;
         } catch (Exception ex) {
             String errorMsg = "Fehler beim Exportieren der Bestellungen: " + ex.getMessage();
@@ -3514,12 +3693,14 @@ public class SettingsGUI extends JFrame {
         }
 
         // Show summary
-        System.out.println("[SettingsGUI] CSV-Export abgeschlossen: " + successCount + "/" + totalTables + " Tabellen erfolgreich exportiert");
+        System.out.println("[SettingsGUI] CSV-Export abgeschlossen: " + successCount + "/" + totalTables
+                + " Tabellen erfolgreich exportiert");
         System.out.println("[SettingsGUI] Dateien gespeichert in: " + Main.getAppDataDir().getAbsolutePath());
     }
 
     /**
-     * Helper method to escape special characters in CSV values (quotes, commas, newlines)
+     * Helper method to escape special characters in CSV values (quotes, commas,
+     * newlines)
      */
     private static String escapeCSV(String value) {
         if (value == null) {
@@ -3530,7 +3711,8 @@ public class SettingsGUI extends JFrame {
     }
 
     private void styleComboBox(JComboBox<String> combo) {
-        if(combo == null) throw new IllegalArgumentException("combo must not be null");
+        if (combo == null)
+            throw new IllegalArgumentException("combo must not be null");
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
         Color border = ThemeManager.getInputBorderColor();
@@ -3543,8 +3725,7 @@ public class SettingsGUI extends JFrame {
         combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         combo.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(border, 1),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
 
         // IMPORTANT: force popup list colors via renderer AND list defaults
         combo.setRenderer(new DefaultListCellRenderer() {

@@ -7,7 +7,6 @@ import java.util.Map;
 /**
  * Represents an order with sender/receiver details and ordered article quantities.
  */
-@SuppressWarnings("unused")
 public class Order {
 
     /**

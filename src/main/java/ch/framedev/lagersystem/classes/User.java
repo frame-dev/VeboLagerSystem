@@ -6,7 +6,6 @@ import java.util.List;
 /**
  * Represents a user with a name and a list of order IDs.
  */
-@SuppressWarnings("unused")
 public class User {
 
     /** User display name. */

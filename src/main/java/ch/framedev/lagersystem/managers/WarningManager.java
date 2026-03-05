@@ -1,17 +1,18 @@
 package ch.framedev.lagersystem.managers;
 
-import ch.framedev.lagersystem.classes.Warning;
-import ch.framedev.lagersystem.main.Main;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.List;
-import java.util.Collections;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.ArrayList;
-import java.util.Objects;
+import ch.framedev.lagersystem.classes.Warning;
+import ch.framedev.lagersystem.main.Main;
 
-@SuppressWarnings({"unused", "deprecation"})
+@SuppressWarnings({"deprecation"})
 public class WarningManager {
 
     private final Logger LOGGER = LogManager.getLogger(WarningManager.class);

@@ -20,10 +20,61 @@ import java.util.Set;
 /**
  * Renders the article statistics dialog based on the current table model.
  */
-@SuppressWarnings("DuplicatedCode")
 public final class ArticleStatsDialog {
 
     private ArticleStatsDialog() {
+    }
+
+    // Table column indices
+    private static final int COL_CATEGORY = 2;
+    private static final int COL_STOCK = 4;
+    private static final int COL_MIN_STOCK = 5;
+    private static final int COL_SELL_PRICE = 6;
+    private static final int COL_BUY_PRICE = 7;
+    private static final int COL_VENDOR = 8;
+    private static final int COL_NAME = 1;
+
+    // Dialog dimensions
+    private static final int DIALOG_WIDTH = 900;
+    private static final int DIALOG_HEIGHT = 750;
+    private static final int DIALOG_MIN_WIDTH = 760;
+    private static final int DIALOG_MIN_HEIGHT = 560;
+
+    // Color scheme
+    private static final Color COLOR_PRIMARY = new Color(52, 152, 219);
+    private static final Color COLOR_SECONDARY = new Color(155, 89, 182);
+    private static final Color COLOR_SUCCESS = new Color(46, 204, 113);
+    private static final Color COLOR_WARNING = new Color(241, 196, 15);
+    private static final Color COLOR_ERROR = new Color(231, 76, 60);
+    private static final Color COLOR_DANGER = new Color(192, 57, 43);
+    private static final Color GRADIENT_DARK_START = new Color(30, 58, 95);
+    private static final Color GRADIENT_DARK_END = new Color(44, 62, 80);
+    private static final Color GRADIENT_LIGHT_START = new Color(41, 128, 185);
+    private static final Color GRADIENT_LIGHT_END = new Color(52, 152, 219);
+
+    // Layout constants
+    private static final int BORDER_RADIUS = 12;
+    private static final int STAT_CARD_RADIUS = 14;
+    private static final int HEADER_PADDING = 24;
+    private static final int CONTENT_PADDING = 18;
+
+    /**
+     * Holds all calculated statistics for display.
+     */
+    private record Statistics(
+            int totalArticles,
+            int totalQuantity,
+            double stockValue,
+            double potentialRevenue,
+            double profitMargin,
+            int lowStockCount,
+            int outOfStockCount,
+            int categoriesCount,
+            int vendorsCount,
+            double avgArticleValue,
+            String mostValuable,
+            double stockHealth
+    ) {
     }
 
     /**
@@ -41,32 +92,50 @@ public final class ArticleStatsDialog {
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent),
                 UnicodeSymbols.PACKAGE + " Lager Details & Statistiken", Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setUndecorated(true);
-        dialog.setSize(900, 750);
-        dialog.setMinimumSize(new Dimension(760, 560));
+        dialog.setSize(DIALOG_WIDTH, DIALOG_HEIGHT);
+        dialog.setMinimumSize(new Dimension(DIALOG_MIN_WIDTH, DIALOG_MIN_HEIGHT));
         dialog.setLocationRelativeTo(parent);
 
         JPanel mainContainer = new JPanel(new BorderLayout());
         mainContainer.setBackground(ThemeManager.getBackgroundColor());
-        // Subtle dialog shadow / outline
-        Color shadow = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 90 : 45);
-        mainContainer.setBorder(BorderFactory.createCompoundBorder(
-                new LineBorder(shadow, 1, true),
-                new EmptyBorder(0, 0, 0, 0)
-        ));
+        mainContainer.setBorder(createDarkOutlineBorder());
 
-        JPanel headerPanel = getStatsHeaderPanel(dialog);
-        mainContainer.add(headerPanel, BorderLayout.NORTH);
+        mainContainer.add(getStatsHeaderPanel(dialog), BorderLayout.NORTH);
 
-        ArticleGUI.RoundedPanel contentCard = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
-        contentCard.setBorder(BorderFactory.createEmptyBorder(18, 22, 22, 22));
+        ArticleGUI.RoundedPanel contentCard = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), BORDER_RADIUS);
+        contentCard.setBorder(BorderFactory.createEmptyBorder(CONTENT_PADDING, 22, 22, 22));
         contentCard.setLayout(new GridBagLayout());
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.anchor = GridBagConstraints.CENTER;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
+        Statistics stats = calculateAllStatistics(table);
 
+        fillContentCard(contentCard, stats);
+
+        JScrollPane scrollPane = new JScrollPane(contentCard);
+        scrollPane.setBorder(null);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        mainContainer.add(scrollPane, BorderLayout.CENTER);
+
+        mainContainer.add(createBottomButtonPanel(dialog), BorderLayout.SOUTH);
+
+        dialog.getContentPane().add(mainContainer);
+        dialog.getRootPane().setDefaultButton(createCloseButton(dialog));
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+        dialog.setVisible(true);
+    }
+
+    private static Border createDarkOutlineBorder() {
+        Color shadow = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 90 : 45);
+        return BorderFactory.createCompoundBorder(
+                new LineBorder(shadow, 1, true),
+                new EmptyBorder(0, 0, 0, 0)
+        );
+    }
+
+    private static Statistics calculateAllStatistics(JTable table) {
         int totalArticles = table.getRowCount();
         int totalQuantity = calculateTotalQuantity(table);
         double stockValue = calculateValueInStock(table);
@@ -80,206 +149,115 @@ public final class ArticleStatsDialog {
         String mostValuable = getMostValuableArticle(table);
         double stockHealth = calculateStockHealthPercentage(table);
 
-        int row = 0;
+        return new Statistics(totalArticles, totalQuantity, stockValue, potentialRevenue, profitMargin,
+                lowStockCount, outOfStockCount, categoriesCount, vendorsCount, avgArticleValue, mostValuable, stockHealth);
+    }
 
-        gbc.gridx = 0;
-        gbc.gridy = row++;
-        gbc.gridwidth = 2;
-        JLabel overviewLabel = new JLabel(UnicodeSymbols.CLIPBOARD + " Bestandsübersicht");
-        overviewLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
-        overviewLabel.setForeground(ThemeManager.getTextPrimaryColor());
-        overviewLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
-        contentCard.add(overviewLabel, gbc);
+    private static void fillContentCard(ArticleGUI.RoundedPanel contentCard, Statistics stats) {
+        GridBagConstraints gbc = createDefaultGBC();
+
+        addSectionHeader(contentCard, gbc, UnicodeSymbols.CLIPBOARD + " Bestandsübersicht", 0);
 
         gbc.gridwidth = 1;
+        addStatRow(contentCard, gbc, 1,
+                UnicodeSymbols.PACKAGE + " Gesamtanzahl Artikel", String.valueOf(stats.totalArticles()), COLOR_PRIMARY,
+                UnicodeSymbols.CHART + " Gesamtmenge (Stück)", String.format("%,d", stats.totalQuantity()), COLOR_PRIMARY
+        );
+
+        addStatRow(contentCard, gbc, 2,
+                UnicodeSymbols.FOLDER + " Kategorien", String.valueOf(stats.categoriesCount()), COLOR_SECONDARY,
+                UnicodeSymbols.TRUCK + " Lieferanten", String.valueOf(stats.vendorsCount()), COLOR_SECONDARY
+        );
+
+        addSectionHeader(contentCard, gbc, UnicodeSymbols.MONEY + " Finanzübersicht", 3);
+
+        addStatRow(contentCard, gbc, 4,
+                UnicodeSymbols.MONEY + " Lagerwert (Einkauf)", String.format("%.2f CHF", stats.stockValue()), COLOR_SUCCESS,
+                UnicodeSymbols.MIN_STOCK + " Potenzielle Einnahmen", String.format("%.2f CHF", stats.potentialRevenue()), COLOR_PRIMARY
+        );
 
         gbc.gridx = 0;
-        gbc.gridy = row;
-        contentCard.add(createStatPanel(
-                UnicodeSymbols.PACKAGE + " Gesamtanzahl Artikel",
-                String.valueOf(totalArticles),
-                new Color(52, 152, 219)
-        ), gbc);
-
-        gbc.gridx = 1;
-        contentCard.add(createStatPanel(
-                UnicodeSymbols.CHART + " Gesamtmenge (Stück)",
-                String.format("%,d", totalQuantity),
-                new Color(52, 152, 219)
-        ), gbc);
-
-        row++;
-
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        contentCard.add(createStatPanel(
-                UnicodeSymbols.FOLDER + " Kategorien",
-                String.valueOf(categoriesCount),
-                new Color(155, 89, 182)
-        ), gbc);
-
-        gbc.gridx = 1;
-        contentCard.add(createStatPanel(
-                UnicodeSymbols.TRUCK + " Lieferanten",
-                String.valueOf(vendorsCount),
-                new Color(155, 89, 182)
-        ), gbc);
-
-        row++;
-
-        gbc.gridx = 0;
-        gbc.gridy = row++;
-        gbc.gridwidth = 2;
-        gbc.insets = new Insets(20, 8, 10, 8);
-        JLabel financialLabel = new JLabel(UnicodeSymbols.MONEY + " Finanzübersicht");
-        financialLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
-        financialLabel.setForeground(ThemeManager.getTextPrimaryColor());
-        financialLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
-        contentCard.add(financialLabel, gbc);
-
-        gbc.gridwidth = 1;
-        gbc.insets = new Insets(8, 8, 8, 8);
-
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        contentCard.add(createStatPanel(
-                UnicodeSymbols.MONEY + " Lagerwert (Einkauf)",
-                String.format("%.2f CHF", stockValue),
-                new Color(46, 204, 113)
-        ), gbc);
-
-        gbc.gridx = 1;
-        contentCard.add(createStatPanel(
-                UnicodeSymbols.MIN_STOCK + " Potenzielle Einnahmen",
-                String.format("%.2f CHF", potentialRevenue),
-                new Color(52, 152, 219)
-        ), gbc);
-
-        row++;
-
-        gbc.gridx = 0;
-        gbc.gridy = row++;
+        gbc.gridy = 5;
         gbc.gridwidth = 2;
         contentCard.add(createStatPanel(
                 UnicodeSymbols.CHEVRON_UP + " Gewinnspanne",
-                String.format("%.2f CHF", profitMargin),
-                new Color(241, 196, 15)
+                String.format("%.2f CHF", stats.profitMargin()),
+                COLOR_WARNING
         ), gbc);
 
         gbc.gridwidth = 1;
-
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        contentCard.add(createStatPanel(
-                UnicodeSymbols.BULLET + " Ø Wert pro Artikel",
-                String.format("%.2f CHF", avgArticleValue),
-                new Color(155, 89, 182)
-        ), gbc);
-
-        gbc.gridx = 1;
-        String displayValue = mostValuable.length() > 20 ? mostValuable.substring(0, 17) + "..." : mostValuable;
-        contentCard.add(createStatPanel(
+        addStatRow(contentCard, gbc, 6,
+                UnicodeSymbols.BULLET + " Ø Wert pro Artikel", String.format("%.2f CHF", stats.avgArticleValue()), COLOR_SECONDARY,
                 UnicodeSymbols.STAR_FILLED + " Wertvollster Artikel",
-                displayValue,
-                new Color(241, 196, 15)
-        ), gbc);
+                truncateString(stats.mostValuable(), 20),
+                COLOR_WARNING
+        );
 
-        row++;
+        addSectionHeader(contentCard, gbc, UnicodeSymbols.HEALTH + " Lagerstatus", 7);
 
+        Color lowStockColor = stats.lowStockCount() > 0 ? COLOR_ERROR : COLOR_SUCCESS;
+        Color outOfStockColor = stats.outOfStockCount() > 0 ? COLOR_DANGER : COLOR_SUCCESS;
+
+        addStatRow(contentCard, gbc, 8,
+                UnicodeSymbols.WARNING + " Niedriger Bestand", String.valueOf(stats.lowStockCount()), lowStockColor,
+                UnicodeSymbols.WARNING + " Nicht vorrätig", String.valueOf(stats.outOfStockCount()), outOfStockColor
+        );
+
+        Color healthColor = getHealthColor(stats.stockHealth());
         gbc.gridx = 0;
-        gbc.gridy = row++;
+        gbc.gridy = 9;
         gbc.gridwidth = 2;
-        gbc.insets = new Insets(20, 8, 10, 8);
-        JLabel healthLabel = new JLabel(UnicodeSymbols.HEALTH + " Lagerstatus");
-        healthLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
-        healthLabel.setForeground(ThemeManager.getTextPrimaryColor());
-        healthLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
-        contentCard.add(healthLabel, gbc);
-
-        gbc.gridwidth = 1;
         gbc.insets = new Insets(8, 8, 8, 8);
-
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        Color lowStockColor = lowStockCount > 0 ? new Color(231, 76, 60) : new Color(46, 204, 113);
-        contentCard.add(createStatPanel(
-                UnicodeSymbols.WARNING + " Niedriger Bestand",
-                String.valueOf(lowStockCount),
-                lowStockColor
-        ), gbc);
-
-        gbc.gridx = 1;
-        Color outOfStockColor = outOfStockCount > 0 ? new Color(192, 57, 43) : new Color(46, 204, 113);
-        contentCard.add(createStatPanel(
-                UnicodeSymbols.WARNING + " Nicht vorrätig",
-                String.valueOf(outOfStockCount),
-                outOfStockColor
-        ), gbc);
-
-        row++;
-
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.gridwidth = 2;
-        Color healthColor = stockHealth >= 80 ? new Color(46, 204, 113)
-                : stockHealth >= 50 ? new Color(241, 196, 15)
-                : new Color(231, 76, 60);
         contentCard.add(createStatPanel(
                 UnicodeSymbols.HEALTH + " Lagergesundheit",
-                String.format("%.1f%%", stockHealth),
+                String.format("%.1f%%", stats.stockHealth()),
                 healthColor
         ), gbc);
+    }
 
-        JScrollPane scrollPane = new JScrollPane(contentCard);
-        scrollPane.setBorder(null);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        mainContainer.add(scrollPane, BorderLayout.CENTER);
+    private static void addSectionHeader(ArticleGUI.RoundedPanel contentCard, GridBagConstraints gbc, String text, int row) {
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.gridwidth = 2;
+        gbc.insets = new Insets(20, 8, 10, 8);
+        JLabel label = new JLabel(text);
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        label.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        contentCard.add(label, gbc);
+    }
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 14));
-        buttonPanel.setBackground(ThemeManager.getBackgroundColor());
-        buttonPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
-                BorderFactory.createEmptyBorder(8, 16, 8, 16)
-        ));
+    private static void addStatRow(ArticleGUI.RoundedPanel contentCard, GridBagConstraints gbc, int row,
+                                    String label1, String value1, Color color1,
+                                    String label2, String value2, Color color2) {
+        gbc.gridwidth = 1;
+        gbc.insets = new Insets(8, 8, 8, 8);
+        
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        contentCard.add(createStatPanel(label1, value1, color1), gbc);
 
-        Color okBtnColor = ThemeManager.getAccentColor();
-        JButton okBtn = new JButton(UnicodeSymbols.CHECK + " Schließen");
-        okBtn.setToolTipText("Schliesst dieses Fenster");
-        okBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        okBtn.setForeground(Color.WHITE);
-        okBtn.setBackground(okBtnColor);
-        okBtn.setOpaque(true);
-        okBtn.setContentAreaFilled(true);
-        okBtn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 120 : 60), 1, true),
-                BorderFactory.createEmptyBorder(12, 26, 12, 26)
-        ));
-        okBtn.setFocusPainted(false);
-        okBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        okBtn.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
-                okBtn.setBackground(ThemeManager.getButtonHoverColor(okBtnColor));
-            }
+        gbc.gridx = 1;
+        contentCard.add(createStatPanel(label2, value2, color2), gbc);
+    }
 
-            @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
-                okBtn.setBackground(okBtnColor);
-            }
-        });
-        okBtn.addActionListener(e -> dialog.dispose());
+    private static GridBagConstraints createDefaultGBC() {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        return gbc;
+    }
 
-        buttonPanel.add(okBtn);
-        mainContainer.add(buttonPanel, BorderLayout.SOUTH);
+    private static Color getHealthColor(double stockHealth) {
+        if (stockHealth >= 80) return COLOR_SUCCESS;
+        if (stockHealth >= 50) return COLOR_WARNING;
+        return COLOR_ERROR;
+    }
 
-        dialog.getContentPane().add(mainContainer);
-        dialog.getRootPane().setDefaultButton(okBtn);
-        dialog.getRootPane().registerKeyboardAction(
-                e -> dialog.dispose(),
-                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
-                JComponent.WHEN_IN_FOCUSED_WINDOW
-        );
-        dialog.setVisible(true);
+    private static String truncateString(String str, int maxLength) {
+        return str.length() > maxLength ? str.substring(0, maxLength - 3) + "..." : str;
     }
 
     private static JPanel getStatsHeaderPanel(JDialog dialog) {
@@ -300,6 +278,11 @@ public final class ArticleStatsDialog {
         titlePanel.add(titleLabel);
         headerPanel.add(titlePanel, BorderLayout.WEST);
 
+        headerPanel.add(createHeaderCloseButton(dialog), BorderLayout.EAST);
+        return headerPanel;
+    }
+
+    private static JButton createHeaderCloseButton(JDialog dialog) {
         JButton closeBtn = new JButton(UnicodeSymbols.CLOSE);
         closeBtn.setToolTipText("Schliesst dieses Fenster");
         closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
@@ -310,9 +293,10 @@ public final class ArticleStatsDialog {
         closeBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         closeBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         closeBtn.setPreferredSize(new Dimension(40, 40));
-        closeBtn.addMouseListener(new java.awt.event.MouseAdapter() {
+        
+        closeBtn.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseEntered(java.awt.event.MouseEvent e) {
+            public void mouseEntered(MouseEvent e) {
                 closeBtn.setForeground(Color.WHITE);
                 closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getErrorColor(), 100));
                 closeBtn.setContentAreaFilled(true);
@@ -320,7 +304,7 @@ public final class ArticleStatsDialog {
             }
 
             @Override
-            public void mouseExited(java.awt.event.MouseEvent e) {
+            public void mouseExited(MouseEvent e) {
                 closeBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
                 closeBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
                 closeBtn.setContentAreaFilled(false);
@@ -328,8 +312,49 @@ public final class ArticleStatsDialog {
             }
         });
         closeBtn.addActionListener(e -> dialog.dispose());
-        headerPanel.add(closeBtn, BorderLayout.EAST);
-        return headerPanel;
+        return closeBtn;
+    }
+
+    private static JButton createCloseButton(JDialog dialog) {
+        Color btnColor = ThemeManager.getAccentColor();
+        JButton btn = new JButton(UnicodeSymbols.CHECK + " Schließen");
+        btn.setToolTipText("Schliesst dieses Fenster");
+        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        btn.setForeground(Color.WHITE);
+        btn.setBackground(btnColor);
+        btn.setOpaque(true);
+        btn.setContentAreaFilled(true);
+        btn.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 120 : 60), 1, true),
+                BorderFactory.createEmptyBorder(12, 26, 12, 26)
+        ));
+        btn.setFocusPainted(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        btn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                btn.setBackground(ThemeManager.getButtonHoverColor(btnColor));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btn.setBackground(btnColor);
+            }
+        });
+        btn.addActionListener(e -> dialog.dispose());
+        return btn;
+    }
+
+    private static JPanel createBottomButtonPanel(JDialog dialog) {
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 14));
+        buttonPanel.setBackground(ThemeManager.getBackgroundColor());
+        buttonPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
+                BorderFactory.createEmptyBorder(8, 16, 8, 16)
+        ));
+        buttonPanel.add(createCloseButton(dialog));
+        return buttonPanel;
     }
 
     private static JPanel getPanel() {
@@ -340,29 +365,21 @@ public final class ArticleStatsDialog {
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 
-                Color color1 = ThemeManager.isDarkMode()
-                        ? new Color(30, 58, 95)
-                        : new Color(41, 128, 185);
-                Color color2 = ThemeManager.isDarkMode()
-                        ? new Color(44, 62, 80)
-                        : new Color(52, 152, 219);
+                Color color1 = ThemeManager.isDarkMode() ? GRADIENT_DARK_START : GRADIENT_LIGHT_START;
+                Color color2 = ThemeManager.isDarkMode() ? GRADIENT_DARK_END : GRADIENT_LIGHT_END;
 
-                GradientPaint gradient = new GradientPaint(
-                        0, 0, color1,
-                        getWidth(), 0, color2
-                );
+                GradientPaint gradient = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
                 g2d.setPaint(gradient);
                 g2d.fillRect(0, 0, getWidth(), getHeight());
                 g2d.dispose();
             }
         };
         headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(HEADER_PADDING, 28, HEADER_PADDING, 28));
         return headerPanel;
     }
 
     private static JPanel createStatPanel(String label, String value, Color accentColor) {
-        // Base + hover borders (subtle shadow via alpha outline)
         Color outline = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 70 : 35);
         Color outlineHover = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 120 : 65);
 
@@ -372,11 +389,10 @@ public final class ArticleStatsDialog {
         );
         Border hoverBorder = new CompoundBorder(
                 new LineBorder(outlineHover, 1, true),
-                // Top a touch smaller + bottom a touch larger -> optical "lift"
                 new EmptyBorder(12, 14, 16, 16)
         );
 
-        ArticleGUI.RoundedPanel tile = new ArticleGUI.RoundedPanel(ThemeManager.getSurfaceColor(), 14);
+        ArticleGUI.RoundedPanel tile = new ArticleGUI.RoundedPanel(ThemeManager.getSurfaceColor(), STAT_CARD_RADIUS);
         tile.setLayout(new BorderLayout(12, 0));
         tile.setBorder(baseBorder);
         tile.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -410,26 +426,8 @@ public final class ArticleStatsDialog {
 
         tile.add(text, BorderLayout.CENTER);
 
-        // The hover lift effect must work over children too
-        MouseAdapter hover = new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                tile.setBorder(hoverBorder);
-                tile.repaint();
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                // Avoid flicker when moving between child components inside the tile
-                Point p = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), tile);
-                if (tile.contains(p)) {
-                    return;
-                }
-                tile.setBorder(baseBorder);
-                tile.repaint();
-            }
-        };
-
+        // Hover effect for all child components
+        MouseAdapter hover = createHoverAdapter(tile, baseBorder, hoverBorder);
         tile.addMouseListener(hover);
         stripe.addMouseListener(hover);
         labelComp.addMouseListener(hover);
@@ -439,13 +437,32 @@ public final class ArticleStatsDialog {
         return tile;
     }
 
+    private static MouseAdapter createHoverAdapter(ArticleGUI.RoundedPanel tile, Border baseBorder, Border hoverBorder) {
+        return new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                tile.setBorder(hoverBorder);
+                tile.repaint();
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                Point p = SwingUtilities.convertPoint(e.getComponent(), e.getPoint(), tile);
+                if (!tile.contains(p)) {
+                    tile.setBorder(baseBorder);
+                    tile.repaint();
+                }
+            }
+        };
+    }
+
     private static double calculateValueInStock(JTable table) {
         double totalValue = 0.0;
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = readInt(model, i, 4);
-            double einkaufspreis = readDouble(model, i, 7);
-            totalValue += lagerbestand * einkaufspreis;
+            int stock = readInt(model, i, COL_STOCK);
+            double buyPrice = readDouble(model, i, COL_BUY_PRICE);
+            totalValue += stock * buyPrice;
         }
         return totalValue;
     }
@@ -454,9 +471,9 @@ public final class ArticleStatsDialog {
         double totalRevenue = 0.0;
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = readInt(model, i, 4);
-            double verkaufspreis = readDouble(model, i, 6);
-            totalRevenue += lagerbestand * verkaufspreis;
+            int stock = readInt(model, i, COL_STOCK);
+            double sellPrice = readDouble(model, i, COL_SELL_PRICE);
+            totalRevenue += stock * sellPrice;
         }
         return totalRevenue;
     }
@@ -465,9 +482,9 @@ public final class ArticleStatsDialog {
         int count = 0;
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = readInt(model, i, 4);
-            int mindestbestand = readInt(model, i, 5);
-            if (lagerbestand <= mindestbestand && mindestbestand > 0) {
+            int stock = readInt(model, i, COL_STOCK);
+            int minStock = readInt(model, i, COL_MIN_STOCK);
+            if (stock <= minStock && minStock > 0) {
                 count++;
             }
         }
@@ -478,8 +495,8 @@ public final class ArticleStatsDialog {
         int count = 0;
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = readInt(model, i, 4);
-            if (lagerbestand == 0) {
+            int stock = readInt(model, i, COL_STOCK);
+            if (stock == 0) {
                 count++;
             }
         }
@@ -490,8 +507,8 @@ public final class ArticleStatsDialog {
         int total = 0;
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = readInt(model, i, 4);
-            total += lagerbestand;
+            int stock = readInt(model, i, COL_STOCK);
+            total += stock;
         }
         return total;
     }
@@ -500,8 +517,8 @@ public final class ArticleStatsDialog {
         Set<String> categories = new HashSet<>();
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            String category = readString(model, i, 2);
-            if (category != null && !category.trim().isEmpty() && !category.equals("Unbekannt")) {
+            String category = readString(model, i, COL_CATEGORY);
+            if (isValidCategory(category)) {
                 categories.add(category);
             }
         }
@@ -512,8 +529,8 @@ public final class ArticleStatsDialog {
         Set<String> vendors = new HashSet<>();
         DefaultTableModel model = (DefaultTableModel) table.getModel();
         for (int i = 0; i < model.getRowCount(); i++) {
-            String vendor = readString(model, i, 8);
-            if (vendor != null && !vendor.trim().isEmpty()) {
+            String vendor = readString(model, i, COL_VENDOR);
+            if (!vendor.trim().isEmpty()) {
                 vendors.add(vendor);
             }
         }
@@ -526,13 +543,13 @@ public final class ArticleStatsDialog {
         String articleName = "N/A";
 
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = readInt(model, i, 4);
-            double einkaufspreis = readDouble(model, i, 7);
-            double value = lagerbestand * einkaufspreis;
+            int stock = readInt(model, i, COL_STOCK);
+            double buyPrice = readDouble(model, i, COL_BUY_PRICE);
+            double value = stock * buyPrice;
 
             if (value > maxValue) {
                 maxValue = value;
-                articleName = readString(model, i, 1);
+                articleName = readString(model, i, COL_NAME);
             }
         }
 
@@ -545,21 +562,22 @@ public final class ArticleStatsDialog {
         int articlesWithMinSet = 0;
 
         for (int i = 0; i < model.getRowCount(); i++) {
-            int lagerbestand = readInt(model, i, 4);
-            int mindestbestand = readInt(model, i, 5);
+            int stock = readInt(model, i, COL_STOCK);
+            int minStock = readInt(model, i, COL_MIN_STOCK);
 
-            if (mindestbestand > 0) {
+            if (minStock > 0) {
                 articlesWithMinSet++;
-                if (lagerbestand > mindestbestand) {
+                if (stock > minStock) {
                     articlesAboveMin++;
                 }
             }
         }
 
-        if (articlesWithMinSet == 0) {
-            return 100.0;
-        }
-        return (articlesAboveMin * 100.0) / articlesWithMinSet;
+        return articlesWithMinSet == 0 ? 100.0 : (articlesAboveMin * 100.0) / articlesWithMinSet;
+    }
+
+    private static boolean isValidCategory(String category) {
+        return category != null && !category.trim().isEmpty() && !category.equals("Unbekannt");
     }
 
     private static int readInt(DefaultTableModel model, int row, int col) {

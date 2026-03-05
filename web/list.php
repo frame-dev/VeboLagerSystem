@@ -16,15 +16,26 @@ if (file_exists($jsonFile)) {
 $totalScans = count($scans);
 $totalSell = 0;
 $totalBuy = 0;
+$totalOrder = 0;
 $totalQuantity = 0;
 
 foreach ($scans as $scan) {
-    $totalQuantity += (int)$scan['quantity'];
-    if ($scan['type'] === 'sell') {
-        $totalSell += (int)$scan['quantity'];
+    $quantity = (int)($scan['quantity'] ?? 0);
+    $type = $scan['type'] ?? '';
+
+    $totalQuantity += $quantity;
+    if ($type === 'sell') {
+        $totalSell += $quantity;
+    } elseif ($type === 'order') {
+        $totalOrder += $quantity;
     } else {
-        $totalBuy += (int)$scan['quantity'];
+        $totalBuy += $quantity;
     }
+}
+
+function e($value)
+{
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 ?>
 <!doctype html>
@@ -35,536 +46,589 @@ foreach ($scans as $scan) {
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Scan Liste</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
+
+        :root {
+            --bg-top: #eef4ff;
+            --bg-bottom: #dde8ff;
+            --ink: #142033;
+            --muted: #5a6b86;
+            --surface: rgba(255, 255, 255, 0.88);
+            --surface-strong: #ffffff;
+            --border: rgba(20, 32, 51, 0.14);
+            --shadow-soft: 0 12px 34px rgba(16, 36, 92, 0.10);
+            --shadow-hover: 0 20px 46px rgba(16, 36, 92, 0.18);
+            --brand: #2b63f6;
+            --brand-dark: #214cc7;
+            --buy: #1f8bff;
+            --sell: #4c6dff;
+            --order: #6a5cff;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-top: #070e20;
+                --bg-bottom: #040917;
+                --ink: #e8eeff;
+                --muted: #9fb1d6;
+                --surface: rgba(16, 24, 43, 0.88);
+                --surface-strong: #121b33;
+                --border: rgba(149, 174, 226, 0.2);
+                --shadow-soft: 0 12px 34px rgba(1, 8, 28, 0.45);
+                --shadow-hover: 0 20px 46px rgba(1, 8, 28, 0.58);
+                --brand: #6b95ff;
+                --brand-dark: #9eb9ff;
+                --buy: #57b1ff;
+                --sell: #7f93ff;
+                --order: #9b88ff;
+            }
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes countUp {
-            from {
-                opacity: 0;
-                transform: scale(0.5);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        @keyframes slideInLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+        body,
+        button,
+        input {
+            font-family: "Sora", "Avenir Next", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
-            position: relative;
-            overflow-x: hidden;
+            font-family: "Trebuchet MS", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(950px 460px at 5% -10%, rgba(43, 99, 246, 0.18), transparent 60%),
+                radial-gradient(760px 420px at 100% 0%, rgba(72, 168, 255, 0.2), transparent 55%),
+                linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+            padding: 14px;
+            padding-bottom: calc(22px + env(safe-area-inset-bottom));
         }
 
-        body::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-            pointer-events: none;
+        @media (prefers-color-scheme: dark) {
+            body {
+                background:
+                    radial-gradient(950px 460px at 5% -10%, rgba(103, 139, 255, 0.22), transparent 60%),
+                    radial-gradient(760px 420px at 100% 0%, rgba(34, 77, 153, 0.28), transparent 55%),
+                    linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+            }
         }
 
-        .container {
-            max-width: 800px;
+        .page {
+            max-width: 1080px;
             margin: 0 auto;
-            position: relative;
-            z-index: 1;
+            display: grid;
+            gap: 10px;
+            animation: fadeIn 250ms ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-soft);
+            padding: 14px;
+        }
+
+        .header {
+            border-radius: var(--radius-lg);
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.93), rgba(255, 255, 255, 0.76));
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .header {
+                background: linear-gradient(145deg, rgba(18, 27, 49, 0.95), rgba(12, 19, 38, 0.92));
+            }
         }
 
         h1 {
-            color: white;
-            margin-bottom: 30px;
-            font-size: 32px;
-            text-align: center;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            animation: slideDown 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: clamp(1.35rem, 4.7vw, 2.2rem);
+            line-height: 1.15;
+            letter-spacing: -0.01em;
+            margin-bottom: 4px;
         }
 
-        .scan-item {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-            margin-bottom: 20px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+        .subline {
+            color: var(--muted);
+            line-height: 1.4;
+            font-size: 0.9rem;
         }
 
-        .scan-item:nth-child(1) { animation-delay: 0.05s; }
-        .scan-item:nth-child(2) { animation-delay: 0.1s; }
-        .scan-item:nth-child(3) { animation-delay: 0.15s; }
-        .scan-item:nth-child(4) { animation-delay: 0.2s; }
-        .scan-item:nth-child(5) { animation-delay: 0.25s; }
-
-        .scan-item:hover {
-            transform: translateY(-5px) scale(1.01);
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
-        }
-
-        .scan-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .timestamp {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .type-badge {
-            padding: 8px 18px;
-            border-radius: 25px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .scan-item:hover .type-badge {
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
-        }
-
-        .type-sell {
-            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-            color: white;
-        }
-
-        .type-buy {
-            background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-            color: white;
-        }
-
-        .scan-details {
+        .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
+            gap: 10px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
-        .detail-item {
-            display: flex;
-            flex-direction: column;
-            padding: 12px;
-            background: #f8f9ff;
-            border-radius: 10px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .detail-item:hover {
-            background: #eef1ff;
-            transform: translateY(-2px);
-        }
-
-        .detail-label {
-            color: #667eea;
-            font-size: 11px;
-            text-transform: uppercase;
-            margin-bottom: 6px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-
-        .detail-value {
-            color: #333;
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .empty-state {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            padding: 50px 40px;
-            border-radius: 16px;
-            text-align: center;
-            color: #666;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .empty-state h2 {
-            margin-bottom: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .back-link {
-            display: inline-block;
-            margin: 20px auto;
-            padding: 14px 35px;
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            color: #667eea;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 600;
-            text-align: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .back-link::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        .back-link:hover::before {
-            left: 100%;
-        }
-
-        .back-link:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-            background: rgba(255, 255, 255, 1);
-        }
-
-        .links {
-            text-align: center;
-            margin-bottom: 30px;
-            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s backwards;
-        }
-
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.1s backwards;
+        @media (max-width: 420px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
         }
 
         .stat-card {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            padding: 25px 20px;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface-strong);
+            padding: 12px;
             text-align: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transform: scaleX(0);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .stat-card:hover::before {
-            transform: scaleX(1);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
         }
 
         .stat-number {
-            font-size: 42px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 8px;
-            animation: countUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s backwards;
+            color: var(--brand);
+            font-size: 1.65rem;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 4px;
         }
 
         .stat-label {
-            color: #666;
-            font-size: 14px;
+            color: var(--muted);
             text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.72rem;
         }
 
         .search-box {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-            margin-bottom: 30px;
-            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s backwards;
+            display: grid;
+            gap: 10px;
         }
 
-        .search-box input {
+        #searchInput {
             width: 100%;
-            padding: 14px 18px;
-            border: 2px solid #e0e0e0;
+            border: 1px solid rgba(31, 42, 31, 0.2);
             border-radius: 10px;
-            font-size: 16px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: #fafafa;
+            background: #fff;
+            padding: 12px 12px;
+            min-height: 46px;
+            font-size: 0.96rem;
+            color: var(--ink);
         }
 
-        .search-box input:focus {
-            outline: none;
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(102, 126, 234, 0.15);
-            transform: translateY(-2px);
+        #searchInput:focus {
+            outline: 2px solid rgba(43, 99, 246, 0.2);
+            border-color: rgba(43, 99, 246, 0.45);
         }
 
         .filter-buttons {
             display: flex;
-            gap: 12px;
-            margin-top: 18px;
-            flex-wrap: wrap;
+            gap: 8px;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            padding-bottom: 2px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .filter-btn,
+        .btn,
+        .export-btn {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            min-height: 44px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+            touch-action: manipulation;
         }
 
         .filter-btn {
-            padding: 10px 24px;
-            border: 2px solid #667eea;
-            background: white;
-            color: #667eea;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
+            background: rgba(255, 255, 255, 0.8);
+            color: var(--brand-dark);
+            white-space: nowrap;
+            flex: 0 0 auto;
         }
 
-        .filter-btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(102, 126, 234, 0.1);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
+        @media (prefers-color-scheme: dark) {
+            #searchInput {
+                background: #121b16;
+                border-color: rgba(149, 174, 226, 0.24);
+            }
+
+            .filter-btn {
+                background: rgba(21, 30, 24, 0.9);
+            }
         }
 
-        .filter-btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
+        .filter-btn.active,
         .filter-btn:hover {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--brand), #3c73ff);
+            color: #fff;
             border-color: transparent;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 20px rgba(43, 99, 246, 0.25);
+            transform: translateY(-1px);
         }
 
-        .filter-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-color: transparent;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .btn,
+        .export-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--brand-dark);
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: var(--shadow-soft);
+            width: 100%;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .btn,
+            .export-btn {
+                background: rgba(21, 30, 24, 0.9);
+            }
         }
 
         .export-btn {
-            display: inline-block;
-            padding: 14px 35px;
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            color: #667eea;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             border: none;
-            cursor: pointer;
-            margin-left: 10px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            position: relative;
-            overflow: hidden;
+            font-family: inherit;
         }
 
-        .export-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        .export-btn:hover::before {
-            left: 100%;
-        }
-
+        .btn:hover,
         .export-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
-            background: rgba(255, 255, 255, 1);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-hover);
         }
 
-        .scan-number {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 15px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .empty-state {
+            text-align: center;
+            color: var(--muted);
+            padding: 28px 16px;
         }
 
-        .scan-item:hover .scan-number {
-            transform: scale(1.1) rotate(5deg);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        .scan-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .scan-item {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--surface);
+            box-shadow: var(--shadow-soft);
+            padding: 12px;
         }
 
         .scan-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #f0f0f0;
+            gap: 10px;
+            margin-bottom: 10px;
         }
 
         .header-left {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .scan-number {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, var(--brand), #3c73ff);
+            flex-shrink: 0;
+        }
+
+        .timestamp {
+            color: var(--muted);
+            font-size: 0.86rem;
+            overflow-wrap: anywhere;
+        }
+
+        .type-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 90px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .type-sell {
+            background: linear-gradient(135deg, var(--sell), #2e964a);
+        }
+
+        .type-buy {
+            background: linear-gradient(135deg, var(--buy), #2f8ade);
+        }
+
+        .type-order {
+            background: linear-gradient(135deg, var(--order), #b37217);
+        }
+
+        .scan-details {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: 1fr;
+        }
+
+        .detail-item {
+            border: 1px solid rgba(31, 42, 31, 0.08);
+            border-radius: 10px;
+            background: rgba(248, 250, 247, 0.95);
+            padding: 9px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .detail-item {
+                border-color: rgba(149, 174, 226, 0.16);
+                background: rgba(23, 33, 62, 0.9);
+            }
+        }
+
+        .detail-label {
+            color: #6e7d9d;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 3px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .detail-label {
+                color: #9fb0a2;
+            }
+        }
+
+        .detail-value {
+            color: var(--ink);
+            font-size: 0.92rem;
+            font-weight: 600;
+            overflow-wrap: anywhere;
         }
 
         .download-section {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-            margin-top: 30px;
             text-align: center;
-            animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.6s backwards;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        .download-section:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+        .download-title {
+            color: var(--muted);
+            margin-bottom: 10px;
+            font-size: 0.95rem;
         }
 
-        .download-section h1 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-size: 20px;
-            margin-bottom: 15px;
+        @media (min-width: 600px) {
+            .actions {
+                flex-direction: row;
+            }
+
+            .btn,
+            .export-btn {
+                width: auto;
+            }
+
+            .scan-details {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 700px) {
+            .scan-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        @media (min-width: 860px) {
+            body {
+                padding: 20px;
+                padding-bottom: calc(26px + env(safe-area-inset-bottom));
+            }
+
+            .page {
+                gap: 14px;
+            }
+
+            .panel {
+                padding: 18px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+            }
+
+            .scan-header {
+                flex-direction: row;
+                align-items: center;
+            }
+
+            .scan-details {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        /* Visual polish layer */
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.45;
+            filter: blur(12px);
+        }
+
+        body::before {
+            width: 300px;
+            height: 300px;
+            top: -85px;
+            right: -90px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(74, 129, 255, 0.34), transparent 65%);
+        }
+
+        body::after {
+            width: 330px;
+            height: 330px;
+            bottom: -120px;
+            left: -130px;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(47, 122, 255, 0.28), transparent 68%);
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+        }
+
+        .panel,
+        .scan-item,
+        .btn,
+        .export-btn,
+        .filter-btn {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .scan-item {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scan-item::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), transparent 35%, transparent 70%, rgba(43, 99, 246, 0.05));
+            pointer-events: none;
+        }
+
+        .scan-number {
+            box-shadow: 0 8px 16px rgba(39, 72, 166, 0.32);
+        }
+
+        .stat-number {
+            text-shadow: 0 6px 16px rgba(43, 99, 246, 0.2);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body::before {
+                background: radial-gradient(circle, rgba(117, 167, 255, 0.3), transparent 65%);
+            }
+
+            body::after {
+                background: radial-gradient(circle, rgba(90, 140, 255, 0.24), transparent 68%);
+            }
+
+            .scan-item::after {
+                background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), transparent 35%, transparent 70%, rgba(124, 150, 255, 0.1));
+            }
         }
     </style>
     <script>
-        function filterScans(type) {
+        let activeFilter = 'all';
+
+        function setActiveButton(button) {
+            document.querySelectorAll('.filter-btn').forEach((btn) => btn.classList.remove('active'));
+            if (button) {
+                button.classList.add('active');
+            }
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
             const items = document.querySelectorAll('.scan-item');
-            const buttons = document.querySelectorAll('.filter-btn');
-            
-            buttons.forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            items.forEach(item => {
-                if (type === 'all') {
-                    item.style.display = 'block';
-                } else {
-                    const itemType = item.dataset.type;
-                    item.style.display = itemType === type ? 'block' : 'none';
-                }
+
+            items.forEach((item) => {
+                const matchesFilter = activeFilter === 'all' || item.dataset.type === activeFilter;
+                const matchesSearch = item.textContent.toLowerCase().includes(searchTerm);
+                item.style.display = matchesFilter && matchesSearch ? 'block' : 'none';
             });
+        }
+
+        function filterScans(type, button) {
+            activeFilter = type;
+            setActiveButton(button);
+            applyFilters();
         }
 
         function searchScans() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const items = document.querySelectorAll('.scan-item');
-            
-            items.forEach(item => {
-                const text = item.textContent.toLowerCase();
-                item.style.display = text.includes(searchTerm) ? 'block' : 'none';
-            });
+            applyFilters();
+        }
+
+        function csvEscape(value) {
+            const safe = String(value ?? '').replace(/"/g, '""');
+            return `"${safe}"`;
         }
 
         function exportToCSV() {
-            const items = document.querySelectorAll('.scan-item:not([style*="display: none"])');
-            let csv = 'Zeitstempel,Daten,Menge,Typ,Eigenbedarf\n';
-            
-            items.forEach(item => {
-                const timestamp = item.querySelector('.timestamp').textContent;
-                const detailValue = item.querySelectorAll('.detail-value').textContent;
-                const data = detailValue.replace("CHF", "").trim();
-                const details = item.querySelectorAll('.detail-value');
-                const quantity = details[1].textContent;
-                const ownUse = details[2].textContent;
-                const type = item.dataset.type;
-                
-                csv += `"${timestamp}","${data}","${quantity}","${type}","${ownUse}"\n`;
+            const visibleItems = Array.from(document.querySelectorAll('.scan-item')).filter((item) => item.style.display !== 'none');
+            const rows = [
+                ['Zeitstempel', 'Daten', 'Menge', 'Typ', 'Eigenbedarf']
+            ];
+
+            visibleItems.forEach((item) => {
+                rows.push([
+                    item.dataset.timestamp || '',
+                    item.dataset.data || '',
+                    item.dataset.quantity || '',
+                    item.dataset.type || '',
+                    item.dataset.ownuse || ''
+                ]);
             });
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
+
+            const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+            const blob = new Blob([csv], {
+                type: 'text/csv;charset=utf-8;'
+            });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -572,18 +636,25 @@ foreach ($scans as $scan) {
             a.click();
             window.URL.revokeObjectURL(url);
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyFilters();
+        });
     </script>
 </head>
 
 <body>
-    <div class="container">
-        <h1>📊 Scan Liste</h1>
-        
+    <main class="page">
+        <section class="panel header">
+            <h1>Scan Liste</h1>
+            <p class="subline">Durchsuchen, filtern und exportieren Sie Ihre erfassten Scans.</p>
+        </section>
+
         <?php if (!empty($scans)): ?>
-            <div class="stats-container">
+            <section class="panel stats">
                 <div class="stat-card">
                     <div class="stat-number"><?php echo $totalScans; ?></div>
-                    <div class="stat-label">Gesamt Scans</div>
+                    <div class="stat-label">Gesamt</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number"><?php echo $totalSell; ?></div>
@@ -594,125 +665,138 @@ foreach ($scans as $scan) {
                     <div class="stat-label">Lagern</div>
                 </div>
                 <div class="stat-card">
+                    <div class="stat-number"><?php echo $totalOrder; ?></div>
+                    <div class="stat-label">Bestellen</div>
+                </div>
+                <div class="stat-card">
                     <div class="stat-number"><?php echo $totalQuantity; ?></div>
-                    <div class="stat-label">Gesamt Menge</div>
+                    <div class="stat-label">Menge</div>
                 </div>
-            </div>
+            </section>
 
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="🔍 Suche..." oninput="searchScans()">
+            <section class="panel search-box">
+                <input type="text" id="searchInput" placeholder="Suche nach Artikel, Name, Preis oder Datum" oninput="searchScans()">
                 <div class="filter-buttons">
-                    <button class="filter-btn active" onclick="filterScans('all')">Alle</button>
-                    <button class="filter-btn" onclick="filterScans('sell')">Verkauf</button>
-                    <button class="filter-btn" onclick="filterScans('buy')">Lagern</button>
+                    <button class="filter-btn active" onclick="filterScans('all', this)">Alle</button>
+                    <button class="filter-btn" onclick="filterScans('sell', this)">Verkauf</button>
+                    <button class="filter-btn" onclick="filterScans('buy', this)">Lagern</button>
+                    <button class="filter-btn" onclick="filterScans('order', this)">Bestellen</button>
                 </div>
-            </div>
+            </section>
         <?php endif; ?>
-        
-        <div class="links">
-            <a href="start.php" class="back-link">Zurück zum Start</a>
+
+        <section class="actions">
+            <a href="start.php" class="btn">Zurueck zum Start</a>
             <?php if (!empty($scans)): ?>
-                <button onclick="exportToCSV()" class="export-btn">📥 Export CSV</button>
+                <button type="button" onclick="exportToCSV()" class="export-btn">Export CSV</button>
             <?php endif; ?>
-        </div>
+        </section>
 
         <?php if (empty($scans)): ?>
-            <div class="empty-state">
-                <h2>📭 Keine Scans vorhanden</h2>
+            <section class="panel empty-state">
+                <h2>Keine Scans vorhanden</h2>
                 <p>Es wurden noch keine Daten erfasst.</p>
-            </div>
+            </section>
         <?php else: ?>
-            <?php 
-            $counter = $totalScans;
-            foreach (array_reverse($scans) as $scan): 
-            ?>
-                <div class="scan-item" data-type="<?php echo htmlspecialchars($scan['type']); ?>">
-                    <div class="scan-header">
-                        <div class="header-left">
-                            <div class="scan-number"><?php echo $counter--; ?></div>
-                            <span class="timestamp"><?php echo htmlspecialchars($scan['timestamp']); ?></span>
-                        </div>
-                        <span class="type-badge type-<?php echo htmlspecialchars($scan['type']); ?>">
-                            <?php echo $scan['type'] === 'sell' ? '📤 Verkauf' : '📥 Lagern'; ?>
-                        </span>
-                    </div>
-                    <div class="scan-details">
-                        <?php
-                        // Parse structured data
-                        $dataStr = $scan['data'];
-                        $parsedData = [];
-                        
-                        // Split by comma or semicolon
-                        $parts = preg_split('/[,;]/', $dataStr);
-                        foreach ($parts as $part) {
-                            if (strpos($part, ':') !== false) {
-                                list($key, $value) = explode(':', $part, 2);
-                                $parsedData[trim($key)] = trim($value);
-                            }
+            <section class="scan-list">
+                <?php
+                $counter = $totalScans;
+                foreach (array_reverse($scans) as $scan):
+                    $scanType = $scan['type'] ?? 'buy';
+                    $scanData = $scan['data'] ?? '';
+                    $scanQuantity = $scan['quantity'] ?? '';
+                    $scanOwnUse = $scan['ownUse'] ?? 'Nein';
+                    $scanTimestamp = $scan['timestamp'] ?? '';
+
+                    $parsedData = [];
+                    $parts = preg_split('/[,;]/', $scanData);
+                    foreach ($parts as $part) {
+                        if (strpos($part, ':') !== false) {
+                            list($key, $value) = explode(':', $part, 2);
+                            $parsedData[trim($key)] = trim($value);
                         }
-                        
-                        // Display parsed fields or raw data
-                        if (!empty($parsedData)):
-                        ?>
-                            <?php if (isset($parsedData['artikelNr'])): ?>
-                            <div class="detail-item">
-                                <span class="detail-label">Artikel-Nr</span>
-                                <span class="detail-value"><?php echo htmlspecialchars($parsedData['artikelNr']); ?></span>
+                    }
+
+                    $typeLabel = $scanType === 'sell' ? 'Verkauf' : ($scanType === 'buy' ? 'Lagern' : 'Bestellen');
+                ?>
+                    <article
+                        class="scan-item"
+                        data-type="<?php echo e($scanType); ?>"
+                        data-timestamp="<?php echo e($scanTimestamp); ?>"
+                        data-data="<?php echo e($scanData); ?>"
+                        data-quantity="<?php echo e($scanQuantity); ?>"
+                        data-ownuse="<?php echo e($scanOwnUse); ?>"
+                    >
+                        <div class="scan-header">
+                            <div class="header-left">
+                                <div class="scan-number"><?php echo $counter--; ?></div>
+                                <span class="timestamp"><?php echo e($scanTimestamp); ?></span>
                             </div>
-                            <?php endif; ?>
-                            
-                            <?php if (isset($parsedData['name'])): ?>
-                            <div class="detail-item">
-                                <span class="detail-label">Name</span>
-                                <span class="detail-value"><?php echo htmlspecialchars($parsedData['name']); ?></span>
-                            </div>
-                            <?php endif; ?>
-                            
-                            <?php if (isset($parsedData['buyPrice'])): ?>
-                            <div class="detail-item">
-                                <span class="detail-label">Einkaufspreis</span>
-                                <span class="detail-value"><?php echo htmlspecialchars($parsedData['buyPrice']); ?> CHF</span>
-                            </div>
-                            <?php endif; ?>
-                            
-                            <?php if (isset($parsedData['sellPrice'])): ?>
-                            <div class="detail-item">
-                                <span class="detail-label">Verkaufspreis</span>
-                                <span class="detail-value"><?php echo htmlspecialchars($parsedData['sellPrice']); ?> CHF</span>
-                            </div>
-                            <?php endif; ?>
-                            
-                            <?php if (isset($parsedData['vendor'])): ?>
-                            <div class="detail-item">
-                                <span class="detail-label">Lieferant</span>
-                                <span class="detail-value"><?php echo htmlspecialchars($parsedData['vendor']); ?></span>
-                            </div>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <div class="detail-item">
-                                <span class="detail-label">Daten</span>
-                                <span class="detail-value"><?php echo htmlspecialchars($scan['data']); ?></span>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <div class="detail-item">
-                            <span class="detail-label">Menge</span>
-                            <span class="detail-value"><?php echo htmlspecialchars($scan['quantity']); ?></span>
+                            <span class="type-badge type-<?php echo e($scanType); ?>"><?php echo e($typeLabel); ?></span>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">Eigenbedarf</span>
-                            <span class="detail-value"><?php echo $scan['ownUse'] === 'Ja' ? '✓ Ja' : '✗ Nein'; ?></span>
+
+                        <div class="scan-details">
+                            <?php if (!empty($parsedData)): ?>
+                                <?php if (isset($parsedData['artikelNr'])): ?>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Artikel-Nr</div>
+                                        <div class="detail-value"><?php echo e($parsedData['artikelNr']); ?></div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (isset($parsedData['name'])): ?>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Name</div>
+                                        <div class="detail-value"><?php echo e($parsedData['name']); ?></div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (isset($parsedData['buyPrice'])): ?>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Einkaufspreis</div>
+                                        <div class="detail-value"><?php echo e($parsedData['buyPrice']); ?> CHF</div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (isset($parsedData['sellPrice'])): ?>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Verkaufspreis</div>
+                                        <div class="detail-value"><?php echo e($parsedData['sellPrice']); ?> CHF</div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if (isset($parsedData['vendor'])): ?>
+                                    <div class="detail-item">
+                                        <div class="detail-label">Lieferant</div>
+                                        <div class="detail-value"><?php echo e($parsedData['vendor']); ?></div>
+                                    </div>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <div class="detail-item">
+                                    <div class="detail-label">Daten</div>
+                                    <div class="detail-value"><?php echo e($scanData); ?></div>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="detail-item">
+                                <div class="detail-label">Menge</div>
+                                <div class="detail-value"><?php echo e($scanQuantity); ?></div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Eigenbedarf</div>
+                                <div class="detail-value"><?php echo $scanOwnUse === 'Ja' ? 'Ja' : 'Nein'; ?></div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
+                    </article>
+                <?php endforeach; ?>
+            </section>
         <?php endif; ?>
-        
-        <div class="download-section">
-            <h1>Download All Data as (scans.json)</h1>
-            <a href="scans.json" download class="export-btn">📥 Download JSON</a>
-        </div>
-    </div>
+
+        <section class="panel download-section">
+            <p class="download-title">Komplette JSON-Daten herunterladen</p>
+            <a href="scans.json" download class="btn">Download scans.json</a>
+        </section>
+    </main>
 </body>
 
 </html>

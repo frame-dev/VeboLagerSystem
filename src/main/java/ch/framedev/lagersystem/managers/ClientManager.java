@@ -1,14 +1,14 @@
 package ch.framedev.lagersystem.managers;
 
-import ch.framedev.lagersystem.main.Main;
-
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import ch.framedev.lagersystem.main.Main;
 
 /**
  * The ClientManager class is responsible for managing client data in the database. It provides methods to create, read, update, and delete client records, as well as to retrieve client information. The class uses caching to improve performance for frequently accessed data, such as client departments and the list of all clients. It also logs all operations performed on clients for auditing purposes.
@@ -101,7 +101,7 @@ public class ClientManager {
                 departmentCache.put(firstLastName, resultSet.getString("department"));
             }
             return exists;
-        } catch (Exception e) {
+        } catch (SQLException e) {
             return false;
         } finally {
             databaseManager.closeQuery(resultSet);
@@ -179,7 +179,7 @@ public class ClientManager {
                 departmentCache.put(firstLastName, dept);
                 return dept;
             }
-        } catch (Exception ignored) {
+        } catch (SQLException ignored) {
         } finally {
             databaseManager.closeQuery(resultSet);
         }
@@ -213,7 +213,7 @@ public class ClientManager {
             }
             allClientsCache = clients;
             allClientsCacheTime = System.currentTimeMillis();
-        } catch (Exception ignored) {
+        } catch (SQLException ignored) {
         } finally {
             databaseManager.closeQuery(resultSet);
         }
