@@ -47,6 +47,7 @@ public class CompleteOrderGUI extends JFrame {
         setTitle("Bestellung Abschließen");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(850, 650);
+        setMinimumSize(new Dimension(760, 560));
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(0, 0));
 
@@ -67,7 +68,7 @@ public class CompleteOrderGUI extends JFrame {
         headerPanel.setPreferredSize(new Dimension(720, 80));
         headerPanel.setLayout(new GridBagLayout());
 
-        JLabel iconLabel = new JLabel("OK");
+        JLabel iconLabel = new JLabel(UnicodeSymbols.CHECKMARK);
         iconLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 32));
         iconLabel.setForeground(new Color(255, 255, 255, 180));
 

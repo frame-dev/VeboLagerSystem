@@ -64,9 +64,11 @@ public class LogsGUI extends JFrame {
      * Initializes the LogsGUI by setting up the user interface components, including the header, buttons for log categories, filter fields, action buttons, and the main content area for displaying logs. It also attaches listeners for filtering logs based on user input and sets up a timer for auto-refreshing logs if enabled. The constructor loads the initial set of logs for the default category (ORDER) and applies the necessary styles and themes to the components.
      */
     public LogsGUI() {
+        ThemeManager.getInstance().registerWindow(this);
         ThemeManager.applyUIDefaults();
         setTitle(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");
         setSize(900, 650);
+        setMinimumSize(new Dimension(860, 560));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
@@ -266,6 +268,12 @@ public class LogsGUI extends JFrame {
         setCategory(LogCategory.ORDER);
     }
 
+    @Override
+    public void dispose() {
+        ThemeManager.getInstance().unregisterWindow(this);
+        super.dispose();
+    }
+
     private static JPanel getContentPanel() {
         JPanel contentPanel = new JPanel(new BorderLayout()) {
             @Override
@@ -330,31 +338,17 @@ public class LogsGUI extends JFrame {
      */
     private void styleButton(JButton button, Color bgColor, Color fgColor) {
         if(button == null) return;
-        button.setBackground(bgColor);
-        button.setForeground(fgColor);
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setOpaque(true);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(bgColor.darker(), 2),
-                BorderFactory.createEmptyBorder(14, 24, 14, 24)
-        ));
+        button.setForeground(fgColor);
         button.setPreferredSize(new Dimension(260, 46));
+        JFrameUtils.applyButtonPalette(button, bgColor);
     }
 
     // ---- ADDED HELPER METHODS ----
     private void styleTextField(JTextField field) {
         if(field == null) return;
         field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
-        field.setBackground(ThemeManager.getInputBackgroundColor());
-        field.setForeground(ThemeManager.getTextPrimaryColor());
-        field.setCaretColor(ThemeManager.getTextPrimaryColor());
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
+        JFrameUtils.styleTextField(field);
     }
 
     private void styleLabel(JLabel label, int style, Color color) {
@@ -367,18 +361,7 @@ public class LogsGUI extends JFrame {
         if(button == null) return;
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setBackground(bg);
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setOpaque(true);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(bg.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 14, 10, 14)
-        ));
-
-        Color hover = ThemeManager.getButtonHoverColor(bg);
-        button.addChangeListener(e -> button.setBackground(button.getModel().isRollover() ? hover : bg));
+        JFrameUtils.applyButtonPalette(button, bg);
     }
 
     private JPanel createCardWrapper(JComponent inner) {

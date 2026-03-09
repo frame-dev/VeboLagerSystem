@@ -4,6 +4,7 @@ import ch.framedev.lagersystem.managers.LogManager;
 import ch.framedev.lagersystem.managers.NotesManager;
 import ch.framedev.lagersystem.classes.Note;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
@@ -20,6 +21,7 @@ import java.util.List;
  */
 @SuppressWarnings("DuplicatedCode")
 public class NotesGUI extends JFrame {
+    
     /**
      * Creates a reusable form panel for note dialogs (create/update).
      * 
@@ -63,6 +65,8 @@ public class NotesGUI extends JFrame {
     private final JLabel statusLabel = new JLabel();
     private List<String> allTitles = List.of();
     private float fontScaleDelta = 0f;
+    private static final float MIN_FONT_SIZE = 10f;
+    private static final float MAX_FONT_SIZE = 30f;
 
     /**
      * Initializes the NotesGUI window, sets up the layout, components, and event
@@ -73,41 +77,47 @@ public class NotesGUI extends JFrame {
 
         setTitle(UnicodeSymbols.MEMO + " Notizen");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(860, 660);
+        setSize(1060, 860);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(ThemeManager.getBackgroundColor());
-        root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        root.setBorder(BorderFactory.createEmptyBorder(32, 32, 32, 32));
+
+        // Top: header and search bar in a card with shadow and more roundness
+        JPanel topCard = new ShadowRoundedPanel(ThemeManager.getCardBackgroundColor(), 28, 12);
+        topCard.setLayout(new BorderLayout(0, 0));
+        topCard.setBorder(BorderFactory.createEmptyBorder(24, 32, 24, 32));
+
+        JPanel headerPanel = createHeaderPanel();
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel searchBar = createSearchBar();
+        searchBar.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JPanel topPanel = new JPanel();
         topPanel.setOpaque(false);
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
-
-        JPanel headerPanel = createHeaderPanel();
-        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JPanel searchBar = createSearchBar();
-        searchBar.setAlignmentX(Component.LEFT_ALIGNMENT);
-
         topPanel.add(headerPanel);
+        topPanel.add(Box.createVerticalStrut(16));
         topPanel.add(searchBar);
 
-        root.add(topPanel, BorderLayout.NORTH);
+        topCard.add(topPanel, BorderLayout.CENTER);
+        root.add(topCard, BorderLayout.NORTH);
 
-        JPanel contentPanel = createContentPanel();
-        JScrollPane contentScroll = new JScrollPane(contentPanel,
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-                JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        contentScroll.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-        contentScroll.setBackground(ThemeManager.getBackgroundColor());
-        contentScroll.getViewport().setBackground(ThemeManager.getBackgroundColor());
-        contentScroll.getVerticalScrollBar().setUnitIncrement(16);
-        root.add(contentScroll, BorderLayout.CENTER);
+        // Center: content split in a card with shadow and more roundness
+        JPanel contentCard = new ShadowRoundedPanel(ThemeManager.getCardBackgroundColor(), 28, 16);
+        contentCard.setLayout(new BorderLayout());
+        contentCard.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+        contentCard.add(createContentPanel(), BorderLayout.CENTER);
+        root.add(contentCard, BorderLayout.CENTER);
 
-        JPanel bottomPanel = createFooterToolbar();
-        root.add(bottomPanel, BorderLayout.SOUTH);
+        // Bottom: toolbar in a card with shadow and more roundness
+        JPanel bottomCard = new ShadowRoundedPanel(ThemeManager.getCardBackgroundColor(), 28, 10);
+        bottomCard.setLayout(new BorderLayout());
+        bottomCard.setBorder(BorderFactory.createEmptyBorder(16, 24, 16, 24));
+        bottomCard.add(createFooterToolbar(), BorderLayout.CENTER);
+        root.add(bottomCard, BorderLayout.SOUTH);
 
         setContentPane(root);
         setupList();
@@ -141,7 +151,7 @@ public class NotesGUI extends JFrame {
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         titleBox.add(title);
-        titleBox.add(Box.createVerticalStrut(3));
+        titleBox.add(Box.createVerticalStrut(10));
         titleBox.add(subtitle);
 
         header.add(titleBox, BorderLayout.WEST);
@@ -280,28 +290,10 @@ public class NotesGUI extends JFrame {
     }
 
     private void styleToolbarButton(JButton button) {
-        if (button == null)
-            return;
-        Color base = ThemeManager.getAccentColor();
-        Color hover = ThemeManager.getButtonHoverColor(base);
-
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        if (button == null) return;
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setBackground(base);
-        button.setFocusPainted(false);
-        button.setOpaque(true);
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(base.darker(), 1),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        button.addChangeListener(e -> {
-            if (button.getModel().isRollover()) {
-                button.setBackground(hover);
-            } else {
-                button.setBackground(base);
-            }
-        });
+        JFrameUtils.applyButtonPalette(button, ThemeManager.getAccentColor());
     }
 
     /**
@@ -694,16 +686,7 @@ public class NotesGUI extends JFrame {
         JButton button = new JButton(text);
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setBackground(bg);
-        button.setFocusPainted(false);
-        button.setOpaque(true);
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(bg.darker(), 1),
-                BorderFactory.createEmptyBorder(8, 14, 8, 14)));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        Color hover = ThemeManager.getButtonHoverColor(bg);
-        button.addChangeListener(e -> button.setBackground(button.getModel().isRollover() ? hover : bg));
+        JFrameUtils.applyButtonPalette(button, bg);
         return button;
     }
 
@@ -828,6 +811,11 @@ public class NotesGUI extends JFrame {
 
         if (!listModel.isEmpty() && notesList.getSelectedIndex() == -1) {
             notesList.setSelectedIndex(0);
+        } else if (listModel.isEmpty()) {
+            noteContentArea.setText(q.isEmpty()
+                    ? "Keine Notizen vorhanden."
+                    : "Keine Notizen für den aktuellen Filter gefunden.");
+            noteContentArea.setCaretPosition(0);
         }
         updateStatus();
     }
@@ -920,7 +908,8 @@ public class NotesGUI extends JFrame {
             throw new IllegalArgumentException("Component cannot be null");
         Font font = component.getFont();
         if (font != null) {
-            component.setFont(font.deriveFont(font.getSize2D() + delta));
+            float newSize = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, font.getSize2D() + delta));
+            component.setFont(font.deriveFont(newSize));
         }
 
         if (component instanceof Container container) {
@@ -952,31 +941,60 @@ public class NotesGUI extends JFrame {
     private static class RoundedPanel extends JPanel {
         private final Color backgroundColor;
         private final int radius;
-
-        /**
-         * Constructs a RoundedPanel instance with a specified background color and
-         * corner radius.
-         * This panel features rounded corners and supports anti-aliasing for smoother
-         * rendering.
-         * It is non-opaque by default to properly display rounded edges.
-         *
-         * @param bg     the background color of the panel
-         * @param radius the corner radius for the rounded panel
-         */
         RoundedPanel(Color bg, int radius) {
             this.backgroundColor = bg;
             this.radius = radius;
             setOpaque(false);
         }
-
         @Override
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(backgroundColor);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), radius, radius);
+            paintRoundedBackground(g2, backgroundColor, 0, 0, getWidth(), getHeight(), radius);
             g2.dispose();
             super.paintComponent(g);
+        }
+
+        protected static void paintRoundedBackground(Graphics2D g2, Color color,
+                                                     int x, int y, int width, int height, int arc) {
+            if (width <= 0 || height <= 0 || color == null) {
+                return;
+            }
+            g2.setColor(color);
+            g2.fillRoundRect(x, y, width, height, arc, arc);
+        }
+    }
+
+    // Adds a drop shadow to the rounded panel for a modern, elevated look
+    private static class ShadowRoundedPanel extends RoundedPanel {
+        private final int shadowSize;
+        private final int localRadius;
+        private final Color localBackground;
+        ShadowRoundedPanel(Color bg, int radius, int shadowSize) {
+            super(bg, radius + 4); // slightly rounder
+            this.shadowSize = shadowSize;
+            this.localRadius = radius + 4;
+            this.localBackground = bg;
+            setBorder(BorderFactory.createEmptyBorder(0, 0, shadowSize, shadowSize));
+        }
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth();
+            int h = getHeight();
+            int r = localRadius;
+            // Draw soft shadow
+            for (int i = shadowSize; i > 0; i--) {
+                int alpha = (int)(18.0 * i/shadowSize);
+                g2.setColor(new Color(0,0,0,alpha));
+                g2.fillRoundRect(i, i, w-i*2, h-i*2, r, r);
+            }
+            // Draw subtle gradient background
+            GradientPaint gp = new GradientPaint(0, 0, localBackground.brighter(), 0, h, localBackground.darker());
+            g2.setPaint(gp);
+            g2.fillRoundRect(0, 0, w-shadowSize, h-shadowSize, r, r);
+            g2.dispose();
         }
     }
 }

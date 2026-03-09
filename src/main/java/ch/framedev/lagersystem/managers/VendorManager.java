@@ -16,9 +16,9 @@ import ch.framedev.lagersystem.main.Main;
 @SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
 public class VendorManager {
 
-    private final Logger logger = LogManager.getLogger(VendorManager.class);
+    private static final Logger logger = LogManager.getLogger(VendorManager.class);
 
-    private static volatile VendorManager instance;
+    private static volatile VendorManager instance = null;
     private static final Object LOCK = new Object();
     private final DatabaseManager databaseManager;
 
@@ -39,16 +39,17 @@ public class VendorManager {
         createTable();
     }
 
-    @SuppressWarnings("DoubleCheckedLocking")
     public static VendorManager getInstance() {
-        if (instance == null) {
+        VendorManager local = instance;
+        if (local == null) {
             synchronized (LOCK) {
                 if (instance == null) {
                     instance = new VendorManager();
                 }
+                local = instance;
             }
         }
-        return instance;
+        return local;
     }
 
     private void createTable() {
@@ -230,8 +231,8 @@ public class VendorManager {
         }
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_VENDORS + ";";
+        List<Vendor> vendors = new ArrayList<>();
         try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
-            List<Vendor> vendors = new ArrayList<>();
             while (resultSet.next()) {
                 String name = resultSet.getString("name");
                 Vendor v = getVendor(name, resultSet);
@@ -245,7 +246,13 @@ public class VendorManager {
         } catch (Exception e) {
             logger.error("Error while getting vendors", e);
             Main.logUtils.addLog("Error while getting vendors");
-            return new ArrayList<>();
+        }
+        if (allVendorsCache != null) {
+            return allVendorsCache;
+        } else if (!vendors.isEmpty()) {
+            return Collections.unmodifiableList(vendors);
+        } else {
+            return Collections.emptyList();
         }
     }
 

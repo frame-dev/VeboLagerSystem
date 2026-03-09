@@ -19,9 +19,9 @@ import ch.framedev.lagersystem.main.Main;
 @SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
 public class OrderManager {
 
-    private final Logger logger = LogManager.getLogger(OrderManager.class);
+    private static final Logger logger = LogManager.getLogger(OrderManager.class);
 
-    private static volatile OrderManager instance;
+    private static volatile OrderManager instance = null;
     private final DatabaseManager databaseManager;
 
     // ==================== Cache ====================
@@ -38,11 +38,10 @@ public class OrderManager {
         OrderManager local = instance;
         if (local == null) {
             synchronized (OrderManager.class) {
-                local = instance;
-                if (local == null) {
-                    local = new OrderManager();
-                    instance = local;
+                if (instance == null) {
+                    instance = new OrderManager();
                 }
+                local = instance;
             }
         }
         return local;
@@ -263,15 +262,14 @@ public class OrderManager {
 
     public List<Order> getOrders() {
         long now = System.currentTimeMillis();
-        // 5 minutes
         long CACHE_TTL_MILLIS = 5 * 60 * 1000;
         if (allOrdersCache != null && (now - allOrdersCacheTime) < CACHE_TTL_MILLIS) {
             return allOrdersCache;
         }
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + ";";
+        List<Order> orders = new ArrayList<>();
         try (var resultSet = databaseManager.executeQuery(sql)) {
-            List<Order> orders = new ArrayList<>();
             while (resultSet.next()) {
                 String orderedArticlesStr = resultSet.getString("orderedArticles");
                 Map<String, Integer> orderedArticles = parseOrderedArticles(orderedArticlesStr);
@@ -296,7 +294,13 @@ public class OrderManager {
         } catch (Exception e) {
             logger.error("Error while checking if orders in Database", e);
             Main.logUtils.addLog("Error while checking if orders in Database");
-            return new ArrayList<>();
+        }
+        if (allOrdersCache != null) {
+            return allOrdersCache;
+        } else if (!orders.isEmpty()) {
+            return Collections.unmodifiableList(orders);
+        } else {
+            return Collections.emptyList();
         }
     }
 

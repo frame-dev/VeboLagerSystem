@@ -9,9 +9,6 @@ import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
-import javax.swing.plaf.basic.BasicComboBoxUI;
-import javax.swing.plaf.basic.BasicComboPopup;
-import javax.swing.plaf.basic.ComboPopup;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -32,6 +29,7 @@ public class ClientGUI extends JFrame {
     private final JScrollPane tableScrollPane;
     private final int[] baseColumnWidths = new int[]{300, 300};
     private final List<Client> clients = new ArrayList<>();
+    private final JLabel clientCountLabel = new JLabel();
 
     private final JComboBox<String> filterDepartmentCombobox;
 
@@ -46,6 +44,7 @@ public class ClientGUI extends JFrame {
         setTitle("Kunden Verwaltung");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(900, 560);
+        setMinimumSize(new Dimension(860, 520));
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
@@ -129,14 +128,20 @@ public class ClientGUI extends JFrame {
         toolbar.add(deleteClientButton);
         toolbar.add(refreshButton);
 
-        JPanel toolbarWrapper = new JPanel(new BorderLayout());
-        toolbarWrapper.setOpaque(false);
-        toolbarWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-        toolbarWrapper.add(toolbar, BorderLayout.SOUTH);
+        JScrollPane toolbarScrollPane = new JScrollPane(
+            toolbar,
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+            ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
+        );
+        toolbarScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        toolbarScrollPane.setOpaque(false);
+        toolbarScrollPane.getViewport().setOpaque(false);
+        toolbarScrollPane.getHorizontalScrollBar().setUnitIncrement(16);
+        toolbarScrollPane.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         topContainer.add(headerWrapper);
         topContainer.add(Box.createVerticalStrut(10));
-        topContainer.add(toolbarWrapper);
+        topContainer.add(toolbarScrollPane);
 
         add(topContainer, BorderLayout.NORTH);
 
@@ -196,6 +201,10 @@ public class ClientGUI extends JFrame {
         JButton clearBtn = createSecondaryButton(UnicodeSymbols.CLEAR + " Leeren");
         clearBtn.setToolTipText("Suchfeld leeren");
 
+        styleCountBadge(clientCountLabel);
+
+        rightActions.add(clientCountLabel);
+        rightActions.add(Box.createHorizontalStrut(8));
         rightActions.add(searchBtn);
         rightActions.add(clearBtn);
 
@@ -223,6 +232,7 @@ public class ClientGUI extends JFrame {
             } else {
                 sorter.setRowFilter(RowFilter.regexFilter("^" + Pattern.quote(selected) + "$", 1));
             }
+            updateClientCountLabel(sorter);
         });
 
         Runnable doSearch = () -> {
@@ -237,6 +247,7 @@ public class ClientGUI extends JFrame {
                     sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(text), 0, 1));
                 }
             }
+            updateClientCountLabel(sorter);
         };
 
         // Live filter while typing
@@ -262,6 +273,7 @@ public class ClientGUI extends JFrame {
             searchField.setText("");
             filterDepartmentCombobox.setSelectedItem(ALL_DEPARTMENTS_LABEL);
             sorter.setRowFilter(null);
+            updateClientCountLabel(sorter);
         });
         searchField.addActionListener(e -> doSearch.run());
         // ESC clears
@@ -274,10 +286,13 @@ public class ClientGUI extends JFrame {
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_FOCUSED
         );
+                    updateClientCountLabel(sorter);
 
         // ===== Table interactions =====
         setupTableInteractions();
 
+
+        updateClientCountLabel(sorter);
         // ===== Wire actions =====
         addClientButton.addActionListener(e -> {
             Object[] row = showAddClientDialog();
@@ -390,6 +405,25 @@ public class ClientGUI extends JFrame {
             clients.add(new Client(name, dept));
             model.addRow(new Object[]{name, dept});
         }
+
+        updateClientCountLabel((TableRowSorter<?>) clientTable.getRowSorter());
+    }
+
+    private void updateClientCountLabel(TableRowSorter<?> sorter) {
+        int total = clientTable.getModel().getRowCount();
+        int shown = sorter != null ? sorter.getViewRowCount() : total;
+        clientCountLabel.setText("Kunden: " + shown + " / " + total);
+    }
+
+    private void styleCountBadge(JLabel label) {
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        label.setOpaque(true);
+        label.setBackground(ThemeManager.getSurfaceColor());
+        label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
     }
 
     private Object[] showAddClientDialog() {
@@ -541,164 +575,17 @@ public class ClientGUI extends JFrame {
     }
 
     private JButton createRoundedButton(String text) {
-        JButton button = new JButton(text);
-        button.setFocusPainted(false);
-        button.setBorderPainted(true);
-        button.setContentAreaFilled(true);
-        button.setOpaque(true);
-
-        Color defaultBg = ThemeManager.getAccentColor();
-        Color hoverBg = ThemeManager.getButtonHoverColor(defaultBg);
-        Color pressedBg = ThemeManager.getButtonPressedColor(defaultBg);
-
-        button.setBackground(defaultBg);
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(defaultBg.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 20, 10, 20)
-        ));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(hoverBg);
-                button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(hoverBg.darker(), 2),
-                        BorderFactory.createEmptyBorder(9, 19, 9, 19)
-                ));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(defaultBg);
-                button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(defaultBg.darker(), 1),
-                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
-                ));
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                button.setBackground(pressedBg);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                button.setBackground(button.contains(e.getPoint()) ? hoverBg : defaultBg);
-            }
-        });
-
-        return button;
+        return JFrameUtils.createRoundedButton(text);
     }
 
     private void styleTextField(JTextField tf) {
         if(tf == null) return;
-        tf.setBackground(ThemeManager.getInputBackgroundColor());
-        tf.setForeground(ThemeManager.getTextPrimaryColor());
-        tf.setCaretColor(ThemeManager.getTextPrimaryColor());
-        tf.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
+        JFrameUtils.styleTextField(tf);
     }
 
     private void styleComboBox(JComboBox<String> combo) {
         if(combo == null) return;
-        Color bg = ThemeManager.getInputBackgroundColor();
-        Color fg = ThemeManager.getTextPrimaryColor();
-        Color border = ThemeManager.getInputBorderColor();
-        Color selBg = ThemeManager.getSelectionBackgroundColor();
-        Color selFg = ThemeManager.getSelectionForegroundColor();
-        Color surface = ThemeManager.getSurfaceColor();
-
-        combo.setBackground(bg);
-        combo.setForeground(fg);
-        combo.setOpaque(true);
-        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        combo.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(border, 1),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
-
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(
-                    JList<?> list, Object value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-
-                JLabel c = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-
-                // enforce popup list colors
-                list.setBackground(bg);
-                list.setForeground(fg);
-                list.setSelectionBackground(selBg);
-                list.setSelectionForeground(selFg);
-
-                c.setOpaque(true);
-                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-
-                if (isSelected) {
-                    c.setBackground(selBg);
-                    c.setForeground(selFg);
-                } else {
-                    c.setBackground(bg);
-                    c.setForeground(fg);
-                }
-                return c;
-            }
-        });
-
-        // Theme arrow button + popup border (reliable across LAFs)
-        combo.setUI(new BasicComboBoxUI() {
-            @Override
-            protected JButton createArrowButton() {
-                JButton b = new JButton(UnicodeSymbols.ARROW_DOWN);
-                b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
-                b.setFocusPainted(false);
-                b.setContentAreaFilled(true);
-                b.setOpaque(true);
-                b.setBackground(bg);
-                b.setForeground(fg);
-                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                b.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        b.setBackground(surface);
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        b.setBackground(bg);
-                    }
-                });
-                return b;
-            }
-
-            @Override
-            protected ComboPopup createPopup() {
-                ComboPopup popup = super.createPopup();
-                if (popup instanceof BasicComboPopup basic) {
-                    basic.setBorder(BorderFactory.createLineBorder(border, 1));
-                    basic.getList().setBackground(bg);
-                    basic.getList().setForeground(fg);
-                    basic.getList().setSelectionBackground(selBg);
-                    basic.getList().setSelectionForeground(selFg);
-                }
-                return popup;
-            }
-        });
-
-        if (combo.isEditable()) {
-            Component editorComp = combo.getEditor().getEditorComponent();
-            if (editorComp instanceof JTextField tf) {
-                tf.setBackground(bg);
-                tf.setForeground(fg);
-                tf.setCaretColor(fg);
-                tf.setBorder(null);
-            }
-        }
+        JFrameUtils.styleComboBox(combo);
     }
 
     // Simple Client data class

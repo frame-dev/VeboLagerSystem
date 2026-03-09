@@ -45,10 +45,12 @@ public class VendorGUI extends JFrame {
     private final ConcurrentHashMap<String, Vendor> vendorByNameCache = new ConcurrentHashMap<>();
 
     public VendorGUI() {
+        ThemeManager.getInstance().registerWindow(this);
         ThemeManager.applyUIDefaults();
         setTitle("Lieferant Verwaltung");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(900, 560);
+        setMinimumSize(new Dimension(860, 520));
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
@@ -341,13 +343,7 @@ public class VendorGUI extends JFrame {
 
     private void styleTextField(JTextField tf) {
         if(tf == null) throw new IllegalArgumentException("tf must not be null");
-        tf.setBackground(ThemeManager.getInputBackgroundColor());
-        tf.setForeground(ThemeManager.getTextPrimaryColor());
-        tf.setCaretColor(ThemeManager.getTextPrimaryColor());
-        tf.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
+        JFrameUtils.styleTextField(tf);
     }
 
     // -------------------- Data loading --------------------
@@ -466,6 +462,12 @@ public class VendorGUI extends JFrame {
                 }
             }
         });
+    }
+
+    @Override
+    public void dispose() {
+        ThemeManager.getInstance().unregisterWindow(this);
+        super.dispose();
     }
 
     private void deleteSelectedVendor() {

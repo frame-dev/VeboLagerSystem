@@ -41,56 +41,51 @@ import static ch.framedev.lagersystem.utils.ArticleExporter.sanitizeForWinAnsi;
 /**
  * Dialog for previewing QR codes for selected articles and exporting them as a PDF.
  */
-@SuppressWarnings("DuplicatedCode")
 public final class ArticleQrPreviewDialog {
-        // Reusable header panel builder
-        private static JPanel buildHeaderPanel(String title, String subtitle, Runnable onClose) {
-            JFrameUtils.RoundedPanel headerPanel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-            headerPanel.setLayout(new BorderLayout());
-            headerPanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                    BorderFactory.createEmptyBorder(14, 18, 14, 18)
-            ));
-            headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    // Reusable header panel builder
+    private static JPanel buildHeaderPanel(String title, String subtitle, Runnable onClose) {
+        JFrameUtils.RoundedPanel headerPanel = buildCard(20, 14, 18, 14, 18);
+        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-            JLabel titleLabel = new JLabel(title);
-            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-            titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-            JLabel subtitleLabel = new JLabel(subtitle);
-            subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-            subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+        JLabel subtitleLabel = new JLabel(subtitle);
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-            JPanel headerText = new JPanel();
-            headerText.setOpaque(false);
-            headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            headerText.add(titleLabel);
-            headerText.add(Box.createVerticalStrut(4));
-            headerText.add(subtitleLabel);
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerText.add(titleLabel);
+        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(subtitleLabel);
 
-            JButton closeBtn = createHeaderCloseButton(onClose);
+        JButton closeBtn = createHeaderCloseButton(onClose);
 
-            headerPanel.add(headerText, BorderLayout.WEST);
-            headerPanel.add(closeBtn, BorderLayout.EAST);
+        headerPanel.add(headerText, BorderLayout.WEST);
+        headerPanel.add(closeBtn, BorderLayout.EAST);
 
-            JPanel headerWrapper = new JPanel(new BorderLayout());
-            headerWrapper.setOpaque(false);
-            headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-            headerWrapper.add(headerPanel, BorderLayout.CENTER);
-            return headerWrapper;
-        }
+        JPanel headerWrapper = new JPanel(new BorderLayout());
+        headerWrapper.setOpaque(false);
+        headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerWrapper.add(headerPanel, BorderLayout.CENTER);
+        return headerWrapper;
+    }
 
-        // Reusable card builder for QR preview and fullscreen
-        private static JFrameUtils.RoundedPanel buildCard(int radius, int top, int left, int bottom, int right) {
-            JFrameUtils.RoundedPanel card = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), radius);
-            card.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                    BorderFactory.createEmptyBorder(top, left, bottom, right)
-            ));
-            return card;
-        }
+    // Reusable card builder for QR preview and fullscreen
+    private static JFrameUtils.RoundedPanel buildCard(int radius, int top, int left, int bottom, int right) {
+        JFrameUtils.RoundedPanel card = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), radius);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(top, left, bottom, right)
+        ));
+        return card;
+    }
     private static final Dimension PREVIEW_DIALOG_SIZE = new Dimension(980, 640);
     private static final Dimension PREVIEW_DIALOG_MIN_SIZE = new Dimension(820, 520);
     private static final int TILE_SIZE = 170;
@@ -531,6 +526,14 @@ public final class ArticleQrPreviewDialog {
         if (data == null) data = "";
         String encodedData = URLEncoder.encode(data, StandardCharsets.UTF_8);
         String serverUrl = "https://framedev.ch/vebo/scan.php";
+        String serverUrlSettings = Main.settings.getProperty("server_url");
+        if (serverUrlSettings != null && !serverUrlSettings.isBlank()) {
+            if(serverUrl.startsWith("https://framedev.ch/vebo")) {
+                serverUrl = serverUrlSettings + "/scan.php";
+            } else {
+                serverUrl = serverUrlSettings;
+            }
+        }
         return serverUrl + "?data=" + encodedData;
     }
 

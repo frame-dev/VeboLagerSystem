@@ -1075,7 +1075,7 @@ public class NewOrderGUI extends JFrame {
         buttonPanel.setBackground(ThemeManager.getCardBackgroundColor());
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
-        JButton closeButton = createThemeButton(UnicodeSymbols.CHECKMARK + " Schließen", ThemeManager.getPrimaryColor());
+        JButton closeButton = createThemeButton(UnicodeSymbols.CLOSE + " Schließen", ThemeManager.getSecondaryColor());
         closeButton.addActionListener(e -> helpDialog.dispose());
         closeButton.setToolTipText("Schliesst das Fenster");
         buttonPanel.add(closeButton);

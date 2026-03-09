@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import ch.framedev.lagersystem.main.Main;
 
 /**
@@ -15,9 +18,13 @@ import ch.framedev.lagersystem.main.Main;
  * @author framedev
  */
 @SuppressWarnings({"BooleanMethodIsAlwaysInverted", "deprecation"})
-public class ClientManager {
 
-    private static ClientManager instance;
+public class ClientManager {
+    private static final Logger logger = LogManager.getLogger(ClientManager.class);
+
+    private static volatile ClientManager instance;
+
+    // Only keep the volatile instance for thread-safe singleton
     private final DatabaseManager databaseManager;
 
     // Simple caches for fast lookups
@@ -45,9 +52,24 @@ public class ClientManager {
      */
     public static ClientManager getInstance() {
         if (instance == null) {
-            instance = new ClientManager();
+            synchronized (ClientManager.class) {
+                if (instance == null) {
+                    instance = new ClientManager();
+                }
+            }
         }
         return instance;
+    }
+
+    /**
+     * For testing or reinitialization: resets the singleton instance (use with caution).
+     */
+    public static void resetInstance() {
+        synchronized (ClientManager.class) {
+            if (instance != null) {
+                instance = null;
+            }
+        }
     }
 
     private void invalidateCaches(String firstLastName) {
@@ -195,7 +217,7 @@ public class ClientManager {
             return new ArrayList<>(allClientsCache);
         }
 
-        String sql = "SELECT firstLastName, department FROM " + DatabaseManager.TABLE_CLIENTS +";";
+        String sql = "SELECT firstLastName, department FROM " + DatabaseManager.TABLE_CLIENTS + ";";
         List<Map<String, String>> clients = new ArrayList<>();
         ResultSet resultSet = null;
         try {
@@ -211,12 +233,15 @@ public class ClientManager {
                     departmentCache.put(name, dept);
                 }
             }
-            allClientsCache = clients;
+            allClientsCache = clients.isEmpty() ? List.of() : clients;
             allClientsCacheTime = System.currentTimeMillis();
-        } catch (SQLException ignored) {
+        } catch (SQLException e) {
+            logger.error("getAllClients failed", e);
+            Main.logUtils.addLog("Fehler beim Abrufen aller Clients: " + e.getMessage());
+            allClientsCache = List.of();
         } finally {
             databaseManager.closeQuery(resultSet);
         }
-        return clients;
+        return allClientsCache;
     }
 }

@@ -32,9 +32,43 @@ import ch.framedev.lagersystem.main.Main;
  * - clearTable() uses a strict whitelist (safe + fast)
  */
 @SuppressWarnings({"UnusedReturnValue", "DeprecatedIsStillUsed", "SqlWithoutWhere"})
-public class DatabaseManager {
 
+public class DatabaseManager {
     private static final Logger logger = LogManager.getLogger(DatabaseManager.class);
+
+    // Singleton instance
+    private static volatile DatabaseManager instance;
+
+    /**
+     * Get the singleton instance of DatabaseManager.
+     * @param path Directory path (may be null or empty)
+     * @param fileName Database file name
+     * @return DatabaseManager instance
+     */
+    public static DatabaseManager getInstance(String path, String fileName) {
+        if (instance == null) {
+            synchronized (DatabaseManager.class) {
+                if (instance == null) {
+                    instance = new DatabaseManager(path, fileName);
+                }
+            }
+        }
+        return instance;
+    }
+
+    /**
+     * For testing or reinitialization: resets the singleton instance (use with caution).
+     */
+    public static void resetInstance() {
+        synchronized (DatabaseManager.class) {
+            if (instance != null) {
+                instance.close();
+                instance = null;
+            }
+        }
+    }
+
+
 
     /**
      * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
@@ -674,12 +708,12 @@ public class DatabaseManager {
             try (ResultSet rs = ps.executeQuery()) {
                 List<T> out = new ArrayList<>();
                 while (rs.next()) out.add(mapper.map(rs));
-                return out;
+                return out.isEmpty() ? Collections.emptyList() : out;
             }
         } catch (SQLException e) {
             logger.error("queryList failed: {}", sql, e);
             Main.logUtils.addLog("Fehler bei der Abfrage: " + e.getMessage());
-            return List.of();
+            return Collections.emptyList();
         }
     }
 
@@ -694,7 +728,7 @@ public class DatabaseManager {
      */
     public <T> T queryOne(String sql, Object[] params, ResultMapper<T> mapper) {
         List<T> list = queryList(sql, params, mapper);
-        return list.isEmpty() ? null : list.getFirst();
+        return list.isEmpty() ? null : list.get(0);
     }
 
     /**

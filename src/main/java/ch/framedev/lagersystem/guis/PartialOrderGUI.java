@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.JFrameUtils;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -21,9 +22,12 @@ public class PartialOrderGUI extends JFrame {
 
     public PartialOrderGUI(@NotNull Order order) {
         this.order = order;
+        ThemeManager.getInstance().registerWindow(this);
+        ThemeManager.applyUIDefaults();
 
         setTitle("Teilbestellung vervollständigen");
         setSize(520, 480);
+        setMinimumSize(new Dimension(500, 420));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
@@ -39,7 +43,7 @@ public class PartialOrderGUI extends JFrame {
 
         // HEADER
         JLabel title = new JLabel("Teilbestellung vervollständigen");
-        title.setFont(new Font("Dialog", Font.BOLD, 18));
+        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
         title.setForeground(ThemeManager.getTextPrimaryColor());
         root.add(title, BorderLayout.NORTH);
 
@@ -82,7 +86,7 @@ public class PartialOrderGUI extends JFrame {
 
             JTextField field = new JTextField();
             field.setPreferredSize(new Dimension(60,28));
-            field.setBorder(BorderFactory.createLineBorder(border));
+            JFrameUtils.styleTextField(field);
 
             quantityFields.put(article, field);
 
@@ -98,8 +102,8 @@ public class PartialOrderGUI extends JFrame {
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttons.setOpaque(false);
 
-        JButton cancel = new JButton("Abbrechen");
-        JButton finish = new JButton("Bestellung abschließen");
+        JButton cancel = JFrameUtils.createSecondaryButton("Abbrechen");
+        JButton finish = JFrameUtils.createPrimaryButton("Bestellung abschließen");
 
         cancel.addActionListener(e -> dispose());
         finish.addActionListener(e -> applyCompletion());
@@ -108,6 +112,12 @@ public class PartialOrderGUI extends JFrame {
         buttons.add(finish);
 
         root.add(buttons, BorderLayout.SOUTH);
+    }
+
+    @Override
+    public void dispose() {
+        ThemeManager.getInstance().unregisterWindow(this);
+        super.dispose();
     }
 
     private void applyCompletion() {

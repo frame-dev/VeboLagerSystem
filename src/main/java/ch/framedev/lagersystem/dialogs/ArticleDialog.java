@@ -23,7 +23,7 @@ import static ch.framedev.lagersystem.utils.ArticleUtils.getHeaderPanel;
 /**
  * This class provides static methods to display dialogs for adding and updating articles. It includes methods to create and style dialog components such as headers, form fields, buttons, and scroll panes. The dialogs are designed with a modern look using gradients, shadows, and blue accents for required fields. The main methods are showUpdateArticleDialog() for editing existing articles and showAddArticleDialog() for creating new articles. Both methods return the entered data in a structured format or null if the dialog is canceled.
  */
-@SuppressWarnings({"ReassignedVariable", "UnusedAssignment", "ClassEscapesDefinedScope", "DuplicatedCode"})
+@SuppressWarnings({"ReassignedVariable", "UnusedAssignment", "ClassEscapesDefinedScope"})
 public class ArticleDialog {
     private static final Dimension DIALOG_DEFAULT_SIZE = new Dimension(720, 760);
     private static final Dimension DIALOG_MIN_SIZE = new Dimension(680, 620);
@@ -81,48 +81,38 @@ public class ArticleDialog {
         return resultHolder[0];
     }
 
-    private static ArticleGUI.RoundedPanel getButtonPanel() {
-        ArticleGUI.RoundedPanel buttonPanel = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 12);
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 12, 10));
-        buttonPanel.setBorder(BorderFactory.createCompoundBorder(
+    // --- Deduplication helpers ---
+    private static ArticleGUI.RoundedPanel createCardPanel(int radius, int borderPadding) {
+        ArticleGUI.RoundedPanel card = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), radius);
+        card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+                BorderFactory.createEmptyBorder(borderPadding, borderPadding, borderPadding, borderPadding)
         ));
+        return card;
+    }
+
+    private static ArticleGUI.RoundedPanel getButtonPanel() {
+        ArticleGUI.RoundedPanel buttonPanel = createCardPanel(12, 10);
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 12, 10));
         return buttonPanel;
     }
 
-    private static JButton createDialogPrimaryActionButton(String text) {
+    private static JButton createStyledButton(String text, Color bgColor, Color fgColor) {
         JButton btn = new JButton(text);
         btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        btn.setForeground(Color.WHITE);
-
-        Color base = ThemeManager.getButtonBackgroundColor();
-        applyDialogActionButtonPalette(btn, base, ThemeManager.getButtonHoverColor(base), ThemeManager.getButtonPressedColor(base));
-        return btn;
-    }
-
-    private static JButton createDialogDangerActionButton(String text) {
-        JButton btn = new JButton(text);
-        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        btn.setForeground(Color.WHITE);
-
-        Color base = ThemeManager.getErrorColor();
-        applyDialogActionButtonPalette(btn, base, ThemeManager.getButtonHoverColor(base), ThemeManager.getButtonPressedColor(base));
-        return btn;
-    }
-
-    private static void applyDialogActionButtonPalette(JButton btn, Color base, Color hover, Color pressed) {
-        btn.setBackground(base);
+        btn.setForeground(fgColor);
+        Color hover = ThemeManager.getButtonHoverColor(bgColor);
+        Color pressed = ThemeManager.getButtonPressedColor(bgColor);
+        btn.setBackground(bgColor);
         btn.setOpaque(true);
         btn.setContentAreaFilled(true);
         btn.setBorderPainted(true);
         btn.setFocusPainted(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(base.darker(), 1, true),
+                BorderFactory.createLineBorder(bgColor.darker(), 1, true),
                 BorderFactory.createEmptyBorder(12, 24, 12, 24)
         ));
-
         btn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -132,26 +122,32 @@ public class ArticleDialog {
                         BorderFactory.createEmptyBorder(12, 24, 12, 24)
                 ));
             }
-
             @Override
             public void mouseExited(MouseEvent e) {
-                btn.setBackground(base);
+                btn.setBackground(bgColor);
                 btn.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(base.darker(), 1, true),
+                        BorderFactory.createLineBorder(bgColor.darker(), 1, true),
                         BorderFactory.createEmptyBorder(12, 24, 12, 24)
                 ));
             }
-
             @Override
             public void mousePressed(MouseEvent e) {
                 btn.setBackground(pressed);
             }
-
             @Override
             public void mouseReleased(MouseEvent e) {
-                btn.setBackground(btn.contains(e.getPoint()) ? hover : base);
+                btn.setBackground(btn.contains(e.getPoint()) ? hover : bgColor);
             }
         });
+        return btn;
+    }
+
+    private static JButton createDialogPrimaryActionButton(String text) {
+        return createStyledButton(text, ThemeManager.getButtonBackgroundColor(), Color.WHITE);
+    }
+
+    private static JButton createDialogDangerActionButton(String text) {
+        return createStyledButton(text, ThemeManager.getErrorColor(), Color.WHITE);
     }
 
     private static JScrollPane createDialogScrollPane(JComponent content) {

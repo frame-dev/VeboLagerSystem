@@ -18,7 +18,6 @@ import java.util.function.Supplier;
  * The ArticleListGUI class provides a graphical user interface for displaying and managing a list of articles along with their quantities. It allows users to view article details, search/filter the list, edit quantities, remove articles, and clear the entire list. The GUI is designed with a modern look using rounded panels and styled buttons, and it integrates with the ThemeManager for dynamic theming. The class also includes static methods to set and retrieve the articles and their quantities, making it easy to integrate with other parts of the application.
  * @author framedev
  */
-@SuppressWarnings("unused")
 public class ArticleListGUI extends JFrame {
 
     private static Map<Article, Integer> articlesAndQuantity = new HashMap<>();
@@ -467,26 +466,19 @@ public class ArticleListGUI extends JFrame {
     // ---------- Data / filtering ----------
 
     private void filterList() {
-        String q = searchField.getText().trim().toLowerCase(Locale.ROOT);
-
-        if (displayCache.isEmpty() && !articlesAndQuantity.isEmpty()) {
-            refreshArticleList(); // builds cache
-        }
-
-        List<ArticleDisplay> filtered = displayCache.stream()
-                .filter(d -> q.isEmpty() || d.searchableText().contains(q))
-                .toList();
-
-        listModel.clear();
-        for (ArticleDisplay d : filtered) listModel.addElement(d);
-
-        updateCountersAndEmptyState(filtered.size(), q);
+        String rawQuery = getCurrentQuery();
+        applyFilter(rawQuery);
     }
 
     /**
      * Rebuild the display cache and refresh the JList. This should be called whenever the underlying articlesAndQuantity map changes in a way that might affect the display (e.g., article name changes, new article added, etc.). It preserves the current search query and selection state as much as possible.
      */
     public void refreshArticleList() {
+        rebuildDisplayCache();
+        applyFilter(getCurrentQuery());
+    }
+
+    private void rebuildDisplayCache() {
         displayCache.clear();
 
         // Stable, pretty ordering: name -> article number
@@ -498,27 +490,62 @@ public class ArticleListGUI extends JFrame {
         for (Map.Entry<Article, Integer> e : entries) {
             displayCache.add(createDisplay(e.getKey(), e.getValue()));
         }
-
-        listModel.clear();
-        for (ArticleDisplay d : displayCache) listModel.addElement(d);
-
-        updateCountersAndEmptyState(listModel.getSize(), searchField.getText().trim());
     }
 
     private void refreshArticleListPreservingQuery() {
-        // rebuild cache, then apply current query without losing it
+        // Rebuild cache and re-apply current filter without losing selection context.
         refreshArticleList();
-        filterList();
+    }
+
+    private void applyFilter(String rawQuery) {
+        String normalizedQuery = rawQuery.toLowerCase(Locale.ROOT);
+        Article selectedArticle = getSelectedArticle();
+
+        List<ArticleDisplay> filtered = displayCache.stream()
+                .filter(d -> normalizedQuery.isEmpty() || d.searchableText().contains(normalizedQuery))
+                .toList();
+
+        listModel.clear();
+        for (ArticleDisplay d : filtered) {
+            listModel.addElement(d);
+        }
+
+        restoreSelection(selectedArticle);
+        updateCountersAndEmptyState(filtered.size(), rawQuery);
+    }
+
+    private Article getSelectedArticle() {
+        ArticleDisplay selected = articleJList.getSelectedValue();
+        return selected == null ? null : selected.article();
+    }
+
+    private void restoreSelection(Article selectedArticle) {
+        if (selectedArticle == null || listModel.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < listModel.size(); i++) {
+            if (Objects.equals(listModel.get(i).article(), selectedArticle)) {
+                articleJList.setSelectedIndex(i);
+                articleJList.ensureIndexIsVisible(i);
+                return;
+            }
+        }
+    }
+
+    private String getCurrentQuery() {
+        String text = searchField.getText();
+        return text == null ? "" : text.trim();
     }
 
     private void updateCountersAndEmptyState(int shownCount, String query) {
         int total = articlesAndQuantity.size();
+        boolean hasQuery = query != null && !query.isBlank();
 
-        if (query != null && !query.isBlank()) {
-            countLabel.setText(shownCount + " / " + total);
+        if (hasQuery) {
+            countLabel.setText(shownCount + " / " + total + " Artikel");
             subtitleLabel.setText("Gefiltert nach: \"" + query + "\"");
         } else {
-            countLabel.setText(total + " item(s)");
+            countLabel.setText(total + " Artikel");
             subtitleLabel.setText(total == 0 ? "—" : "Tipp: Ctrl+F zum Suchen · Enter Menge ändern · Entf Entfernen");
         }
 
@@ -526,7 +553,7 @@ public class ArticleListGUI extends JFrame {
         emptyStateLabel.setVisible(empty);
 
         if (empty) {
-            if (query != null && !query.isBlank()) {
+            if (hasQuery) {
                 emptyStateLabel.setText("Keine Treffer für \"" + query + "\"");
             } else {
                 emptyStateLabel.setText("Keine Artikel in der Liste");
@@ -690,7 +717,7 @@ public class ArticleListGUI extends JFrame {
             panel.add(info, BorderLayout.CENTER);
 
             // Quantity badge (right)
-            JLabel qty = new JLabel("Qty " + quantity, SwingConstants.CENTER);
+            JLabel qty = new JLabel("Menge: " + quantity, SwingConstants.CENTER);
             qty.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
             qty.setOpaque(true);
 

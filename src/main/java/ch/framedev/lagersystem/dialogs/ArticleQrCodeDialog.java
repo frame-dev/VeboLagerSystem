@@ -2,15 +2,15 @@ package ch.framedev.lagersystem.dialogs;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.guis.ArticleGUI;
-import ch.framedev.lagersystem.guis.ArticleListGUI;
 import ch.framedev.lagersystem.guis.SettingsGUI;
+import ch.framedev.lagersystem.utils.ImportUtils;
+import ch.framedev.lagersystem.utils.UnicodeSymbols;
+import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.guis.ArticleListGUI;
 import ch.framedev.lagersystem.guis.SupplierOrderGUI;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
-import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
-import ch.framedev.lagersystem.utils.UnicodeSymbols;
-import ch.framedev.lagersystem.managers.ThemeManager;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -26,14 +26,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static ch.framedev.lagersystem.utils.ArticleUtils.getHeaderPanel;
 import static ch.framedev.lagersystem.main.Main.articleListGUI;
 import static ch.framedev.lagersystem.main.Main.logUtils;
-import static ch.framedev.lagersystem.utils.ArticleUtils.getHeaderPanel;
 
 /**
  * Dialog for importing QR code scan data from the server.
  */
-@SuppressWarnings("DuplicatedCode")
 public final class ArticleQrCodeDialog {
     private static final int COL_TIMESTAMP = 0;
     private static final int COL_DATA = 1;

@@ -197,7 +197,6 @@ public class Warning {
      *
      * @return QR code data payload
      */
-    @SuppressWarnings("unused")
     public String getQRCodeData() {
         return "title:" + title + ";" +
                 "message:" + message + ";" +

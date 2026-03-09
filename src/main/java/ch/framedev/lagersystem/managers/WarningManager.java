@@ -12,13 +12,13 @@ import org.apache.logging.log4j.Logger;
 import ch.framedev.lagersystem.classes.Warning;
 import ch.framedev.lagersystem.main.Main;
 
-@SuppressWarnings({"deprecation"})
+@SuppressWarnings({ "deprecation" })
 public class WarningManager {
 
-    private final Logger LOGGER = LogManager.getLogger(WarningManager.class);
+    private static final Logger LOGGER = LogManager.getLogger(WarningManager.class);
 
     // Singleton Instance
-    private static volatile WarningManager instance;
+    private static volatile WarningManager instance = null;
     // Database Manager
     private final DatabaseManager databaseManager;
 
@@ -30,6 +30,8 @@ public class WarningManager {
     private volatile long allWarningsCacheTime = 0L;
 
     private static final long ALL_WARNINGS_CACHE_TTL_MILLIS = 5 * 60 * 1000L; // 5 minutes
+    private static final String DB_TRUE = "true";
+    private static final String DB_FALSE = "false";
 
     private void invalidateAllWarningsCache() {
         allWarningsCache = null;
@@ -53,11 +55,10 @@ public class WarningManager {
         WarningManager local = instance;
         if (local == null) {
             synchronized (WarningManager.class) {
-                local = instance;
-                if (local == null) {
-                    local = new WarningManager();
-                    instance = local;
+                if (instance == null) {
+                    instance = new WarningManager();
                 }
+                local = instance;
             }
         }
         return local;
@@ -85,16 +86,18 @@ public class WarningManager {
      * @return true if insertion was successful, false otherwise
      */
     public boolean insertWarning(Warning warning) {
-        if (warning == null) return false;
-        String sql = "INSERT INTO " + DatabaseManager.TABLE_WARNINGS + " (title, message, type, date, isResolved, isDisplayed) " +
+        if (warning == null || warning.getTitle() == null || warning.getTitle().isEmpty())
+            return false;
+        String sql = "INSERT INTO " + DatabaseManager.TABLE_WARNINGS
+                + " (title, message, type, date, isResolved, isDisplayed) " +
                 "VALUES (?, ?, ?, ?, ?, ?);";
-        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[] {
                 warning.getTitle(),
                 warning.getMessage(),
                 warning.getType().name(),
                 warning.getDate(),
-                warning.isResolved() ? "true" : "false",
-                warning.isDisplayed() ? "true" : "false"
+                warning.isResolved() ? DB_TRUE : DB_FALSE,
+                warning.isDisplayed() ? DB_TRUE : DB_FALSE
         });
         if (result) {
             Main.logUtils.addLog("Inserted new warning with title '" + warning.getTitle() + "'");
@@ -110,9 +113,10 @@ public class WarningManager {
     }
 
     public boolean hasNotWarning(String title) {
-        if(title == null) return true;
+        if (title == null)
+            return true;
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
-        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
+        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[] { title })) {
             return !resultSet.next();
         } catch (Exception e) {
             LOGGER.error("Error while checking if warning with title '{}' exists", title, e);
@@ -122,7 +126,8 @@ public class WarningManager {
     }
 
     public boolean isResolved(String title) {
-        if(title == null) return false;
+        if (title == null)
+            return false;
         // Prefer cache if available
         Warning cached = cache.get(title);
         if (cached != null) {
@@ -130,7 +135,7 @@ public class WarningManager {
         }
 
         String sql = "SELECT isResolved FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
-        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
+        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[] { title })) {
             if (resultSet.next()) {
                 return parseDbBoolean(resultSet.getString("isResolved"));
             }
@@ -142,9 +147,10 @@ public class WarningManager {
     }
 
     public boolean resolveWarning(String title) {
-        if(title == null) return false;
+        if (title == null)
+            return false;
         String sql = "UPDATE " + DatabaseManager.TABLE_WARNINGS + " SET isResolved = 'true' WHERE title = ?;";
-        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[] { title });
         if (result) {
             Main.logUtils.addLog("Resolved warning with title '" + title + "'");
             // Update cache if present
@@ -169,15 +175,17 @@ public class WarningManager {
      * @return true if the update was successful, false otherwise
      */
     public boolean updateWarning(Warning warning) {
-        if(warning == null) return false;
-        String sql = "UPDATE " + DatabaseManager.TABLE_WARNINGS + " SET message = ?, type = ?, date = ?, isResolved = ?, isDisplayed = ? " +
+        if (warning == null || warning.getTitle() == null || warning.getTitle().isEmpty())
+            return false;
+        String sql = "UPDATE " + DatabaseManager.TABLE_WARNINGS
+                + " SET message = ?, type = ?, date = ?, isResolved = ?, isDisplayed = ? " +
                 "WHERE title = ?;";
-        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[] {
                 warning.getMessage(),
                 warning.getType().name(),
                 warning.getDate(),
-                warning.isResolved() ? "true" : "false",
-                warning.isDisplayed() ? "true" : "false",
+                warning.isResolved() ? DB_TRUE : DB_FALSE,
+                warning.isDisplayed() ? DB_TRUE : DB_FALSE,
                 warning.getTitle()
         });
         if (result) {
@@ -194,9 +202,10 @@ public class WarningManager {
     }
 
     public boolean deleteWarning(String title) {
-        if(title == null) return false;
+        if (title == null)
+            return false;
         String sql = "DELETE FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
-        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{title});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[] { title });
         if (result) {
             Main.logUtils.addLog("Deleted warning with title '" + title + "'");
             // Remove from cache
@@ -210,14 +219,22 @@ public class WarningManager {
         return result;
     }
 
+    /**
+     * Retrieve a warning by its title
+     * 
+     * @param title The title of the warning
+     * @return The Warning object if found, null otherwise
+     */
     public Warning getWarning(String title) {
-        if (title == null) return null;
+        if (title == null)
+            return null;
         // Try cache first
         Warning cached = cache.get(title);
-        if (cached != null) return cached;
+        if (cached != null)
+            return cached;
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
-        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
+        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[] { title })) {
             if (resultSet.next()) {
                 Warning w = new Warning(
                         resultSet.getString("title"),
@@ -225,8 +242,7 @@ public class WarningManager {
                         Warning.WarningType.valueOf(resultSet.getString("type")),
                         resultSet.getString("date"),
                         parseDbBoolean(resultSet.getString("isResolved")),
-                        parseDbBoolean(resultSet.getString("isDisplayed"))
-                );
+                        parseDbBoolean(resultSet.getString("isDisplayed")));
                 cache.put(title, w);
                 return w;
             }
@@ -237,8 +253,15 @@ public class WarningManager {
         return null;
     }
 
+    /**
+     * Check if a warning with the given title is currently displayed
+     * 
+     * @param title The title of the warning to check
+     * @return true if the warning is displayed, false otherwise
+     */
     public boolean isDisplayed(String title) {
-        if(title == null) return false;
+        if (title == null)
+            return false;
         // Prefer cache if available
         Warning cached = cache.get(title);
         if (cached != null) {
@@ -246,7 +269,7 @@ public class WarningManager {
         }
 
         String sql = "SELECT isDisplayed FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
-        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[]{title})) {
+        try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[] { title })) {
             if (resultSet.next()) {
                 return parseDbBoolean(resultSet.getString("isDisplayed"));
             }
@@ -257,6 +280,12 @@ public class WarningManager {
         return false;
     }
 
+    /**
+     * Retrieve a list of all warnings from the database. This method uses a simple
+     * caching mechanism to improve performance.
+     * 
+     * @return List of all Warning objects
+     */
     public List<Warning> getAllWarnings() {
         // Use cached list when within TTL
         long now = System.currentTimeMillis();
@@ -274,8 +303,7 @@ public class WarningManager {
                         Warning.WarningType.valueOf(resultSet.getString("type")),
                         resultSet.getString("date"),
                         parseDbBoolean(resultSet.getString("isResolved")),
-                        parseDbBoolean(resultSet.getString("isDisplayed"))
-                );
+                        parseDbBoolean(resultSet.getString("isDisplayed")));
                 warnings.add(w);
                 // refresh per-warning cache
                 cache.put(w.getTitle(), w);
@@ -288,7 +316,13 @@ public class WarningManager {
             Main.logUtils.addLog("Fehler beim Laden aller Warnungen");
             LOGGER.error("Error while retrieving all warnings", e);
         }
-        return allWarningsCache != null ? allWarningsCache : Collections.unmodifiableList(warnings);
+        if (allWarningsCache != null) {
+            return allWarningsCache;
+        } else if (!warnings.isEmpty()) {
+            return Collections.unmodifiableList(warnings);
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     /**

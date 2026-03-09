@@ -14,15 +14,16 @@ import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,8 +36,24 @@ import java.util.Locale;
 public final class ArticleExporter {
 
     private static final Logger LOGGER = LogManager.getLogger(ArticleExporter.class);
+    private static final DateTimeFormatter FILE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+    private static final DateTimeFormatter DISPLAY_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+    private static final DateTimeFormatter DISPLAY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final String PDF_EXTENSION = "pdf";
 
     private ArticleExporter() {
+    }
+
+    private static String nowFileTimestamp() {
+        return LocalDateTime.now().format(FILE_TIMESTAMP_FORMATTER);
+    }
+
+    private static String nowDisplayTimestamp() {
+        return LocalDateTime.now().format(DISPLAY_TIMESTAMP_FORMATTER);
+    }
+
+    private static String nowDisplayDate() {
+        return LocalDateTime.now().format(DISPLAY_DATE_FORMATTER);
     }
 
     /**
@@ -59,7 +76,7 @@ public final class ArticleExporter {
         }
 
         File fileToSave = chooseSaveFile(parent,
-                "Artikel_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"
+            "Artikel_Export_" + nowFileTimestamp() + "." + PDF_EXTENSION
         );
         if (fileToSave == null) {
             return;
@@ -123,7 +140,7 @@ public final class ArticleExporter {
                     cs.beginText();
                     cs.setFont(regularFont, 8);
                     cs.newLineAtOffset(pageWidth - margin - 120, yPos - 28);
-                    cs.showText("Export: " + new SimpleDateFormat("dd.MM.yyyy HH:mm").format(new Date()));
+                    cs.showText("Export: " + nowDisplayTimestamp());
                     cs.endText();
 
                     float tableHeaderY = yPos - 55;
@@ -220,9 +237,9 @@ public final class ArticleExporter {
 
                     if (value != null) {
                         if (value instanceof Double) {
-                            text = String.format("%.2f", (Double) value);
+                                text = String.format(Locale.ROOT, "%.2f", (Double) value);
                         } else if (value instanceof Integer) {
-                            text = String.format("%d", (Integer) value);
+                                text = String.format(Locale.ROOT, "%d", (Integer) value);
                         } else {
                             text = value.toString();
                         }
@@ -465,7 +482,7 @@ public final class ArticleExporter {
                 cs.beginText();
                 cs.setFont(regularFont, 11);
                 cs.newLineAtOffset(margin + 100, yPosition);
-                cs.showText(new SimpleDateFormat("dd.MM.yyyy").format(new Date()));
+                cs.showText(nowDisplayDate());
                 cs.endText();
 
                 yPosition -= 18;
@@ -591,9 +608,9 @@ public final class ArticleExporter {
                     cs.newLineAtOffset(200, 0);
                     cs.showText(String.valueOf(qty));
                     cs.newLineAtOffset(60, 0);
-                    cs.showText(String.format("%.2f CHF", unit));
+                    cs.showText(String.format(Locale.ROOT, "%.2f CHF", unit));
                     cs.newLineAtOffset(80, 0);
-                    cs.showText(String.format("%.2f CHF", line));
+                    cs.showText(String.format(Locale.ROOT, "%.2f CHF", line));
                     cs.endText();
 
                     yPosition -= 18;
@@ -621,14 +638,14 @@ public final class ArticleExporter {
                 cs.newLineAtOffset(pageWidth - margin - 140, yPosition - 15);
                 cs.showText("TOTAL:");
                 cs.newLineAtOffset(50, 0);
-                cs.showText(String.format("%.2f CHF", total));
+                cs.showText(String.format(Locale.ROOT, "%.2f CHF", total));
                 cs.endText();
 
                 cs.beginText();
                 cs.setNonStrokingColor(150, 150, 150);
                 cs.setFont(regularFont, 8);
                 cs.newLineAtOffset(margin, 30);
-                cs.showText("VEBO Lagersystem - Generiert am " + new SimpleDateFormat("dd.MM.yyyy HH:mm").format(new Date()));
+                cs.showText("VEBO Lagersystem - Generiert am " + nowDisplayTimestamp());
                 cs.endText();
             }
 
@@ -659,18 +676,10 @@ public final class ArticleExporter {
      * @return A sanitized version of the input text, where characters that cannot be represented in WinAnsi are removed if useWinAnsiFallback is true. If useWinAnsiFallback is false, the original text is returned unchanged.
      */
     private static String sanitizeForWinAnsi(String text, boolean useWinAnsiFallback) {
-        if (!useWinAnsiFallback || text == null || text.isEmpty()) {
-            return text == null ? "" : text;
+        if (text == null || text.isEmpty()) {
+            return "";
         }
-        StringBuilder sb = new StringBuilder(text.length());
-        for (int i = 0; i < text.length(); ) {
-            int cp = text.codePointAt(i);
-            if (cp <= 255) {
-                sb.appendCodePoint(cp);
-            }
-            i += Character.charCount(cp);
-        }
-        return sb.toString();
+        return useWinAnsiFallback ? sanitizeForWinAnsi(text) : text;
     }
 
     /**
@@ -681,7 +690,7 @@ public final class ArticleExporter {
     public static void exportArticlesToPdf(java.util.List<Article> articles) {
         if(articles == null) throw new IllegalArgumentException("Articles cannot be null");
         File fileToSave = chooseSaveFile(MainGUI.articleGUI,
-                "Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"
+            "Artikel_Auswahl_" + nowFileTimestamp() + "." + PDF_EXTENSION
         );
         if (fileToSave == null) {
             return;
@@ -785,7 +794,7 @@ public final class ArticleExporter {
         if(articles == null) throw new IllegalArgumentException("Articles cannot be null");
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("CSV Speichern");
-        fileChooser.setSelectedFile(new File("Artikel_Auswahl_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".csv"));
+        fileChooser.setSelectedFile(new File("Artikel_Auswahl_" + nowFileTimestamp() + ".csv"));
         int userSelection = fileChooser.showSaveDialog(MainGUI.articleGUI);
         if (userSelection != JFileChooser.APPROVE_OPTION) {
             return;
@@ -866,7 +875,7 @@ public final class ArticleExporter {
         }
 
         File fileToSave = chooseSaveFile(frame,
-                "Logs_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"
+            "Logs_Export_" + nowFileTimestamp() + "." + PDF_EXTENSION
         );
         if (fileToSave == null) {
             return;
@@ -940,13 +949,10 @@ public final class ArticleExporter {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("PDF Speichern");
         fileChooser.setSelectedFile(new File(defaultFileName));
-
-        if ("pdf" != null && !"pdf".isBlank()) {
-            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
-                    "pdf".toUpperCase(Locale.ROOT) + " Dateien (*." + "pdf".toLowerCase(Locale.ROOT) + ")",
-                    "pdf".toLowerCase(Locale.ROOT)
-            ));
-        }
+        fileChooser.setFileFilter(new FileNameExtensionFilter(
+            PDF_EXTENSION.toUpperCase(Locale.ROOT) + " Dateien (*." + PDF_EXTENSION + ")",
+            PDF_EXTENSION
+        ));
 
         int userSelection = fileChooser.showSaveDialog(parent);
         if (userSelection != JFileChooser.APPROVE_OPTION) {
@@ -959,9 +965,8 @@ public final class ArticleExporter {
         }
 
         String nameLower = selected.getName().toLowerCase(Locale.ROOT);
-        String extLower = "pdf" == null ? "" : "pdf".toLowerCase(Locale.ROOT);
-        if (!extLower.isBlank() && !nameLower.endsWith("." + extLower)) {
-            selected = new File(selected.getAbsolutePath() + "." + extLower);
+        if (!nameLower.endsWith("." + PDF_EXTENSION)) {
+            selected = new File(selected.getAbsolutePath() + "." + PDF_EXTENSION);
         }
 
         if (selected.exists()) {

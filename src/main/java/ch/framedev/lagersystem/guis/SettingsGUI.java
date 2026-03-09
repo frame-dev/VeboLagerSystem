@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.*;
 import ch.framedev.lagersystem.utils.ArticleUtils;
+import ch.framedev.lagersystem.utils.ArticleUtils.CategoryRange;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.SettingsUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -32,7 +33,6 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.List;
 import static ch.framedev.lagersystem.main.Main.databaseManager;
-import static ch.framedev.lagersystem.main.Main.settings;
 import static ch.framedev.lagersystem.utils.ArticleUtils.categories;
 import static ch.framedev.lagersystem.utils.ArticleUtils.loadCategories;
 
@@ -158,7 +158,7 @@ public class SettingsGUI extends JFrame {
          * kürzeres Intervall angeben, um schneller auf Lagerbestandsänderungen zu
          * reagieren, oder ein längeres Intervall, um Ressourcen zu schonen.
          */
-        STOCK_CHECK_INTERVAL(settings.getProperty("stock_check_interval")),
+        STOCK_CHECK_INTERVAL("stock_check_interval"),
         /**
          * Ob die automatische Anzeige von ungelesenen Warnungen aktiviert ist.
          * Beeinflusst, ob die Anwendung regelmäßig auf ungelesene Warnungen prüft und
@@ -169,7 +169,7 @@ public class SettingsGUI extends JFrame {
          * entscheiden, ob sie diese proaktive Benachrichtigungsfunktion nutzen möchten
          * oder lieber manuell nach Warnungen suchen wollen.
          */
-        ENABLE_WARNING_INTERVAL(settings.getProperty("enable_houtly_warnings")),
+        ENABLE_WARNING_INTERVAL("enable_hourly_warnings"),
         /**
          * Intervall (in Stunden), in dem die Anwendung auf ungelesene Warnungen prüft
          * und diese automatisch anzeigt. Beeinflusst, wie häufig die Anwendung nach
@@ -179,7 +179,7 @@ public class SettingsGUI extends JFrame {
          * neue Warnungen zu reagieren, oder ein längeres Intervall, um Ressourcen zu
          * schonen.
          */
-        WARNING_DISPLAY_INTERVAL(settings.getProperty("warning_display_interval")),
+        WARNING_DISPLAY_INTERVAL("warning_display_interval"),
         /**
          * Ob die automatische Lagerbestandsprüfung aktiviert ist. Beeinflusst, ob die
          * Anwendung regelmäßig den Lagerbestand überprüft und Warnungen erstellt, wenn
@@ -190,7 +190,7 @@ public class SettingsGUI extends JFrame {
          * Benutzer können hier entscheiden, ob sie diese proaktive Überprüfungsfunktion
          * nutzen möchten oder lieber manuell den Lagerbestand überwachen wollen.
          */
-        ENABLE_AUTO_STOCK_CHECK(settings.getProperty("enable_auto_stock_check")),
+        ENABLE_AUTO_STOCK_CHECK("enable_auto_stock_check"),
         /**
          * Die URL, von der die Anwendung Warnungsdaten (z.B. Lagerwarnungen) abruft.
          * Beeinflusst, wo die Anwendung nach Warnungsinformationen sucht. Standard ist
@@ -201,7 +201,7 @@ public class SettingsGUI extends JFrame {
          * korrekt formatiert ist und auf eine gültige Ressource zeigt, damit die
          * Anwendung Warnungsinformationen erfolgreich abrufen kann.
          */
-        SERVER_URL(settings.getProperty("server_url")),
+        SERVER_URL("server_url"),
         /**
          * Ob die automatische Anzeige von ungelesenen Warnungen aktiviert ist.
          * Beeinflusst, ob die Anwendung automatisch eine Warnungs-Karte anzeigt, wenn
@@ -213,7 +213,7 @@ public class SettingsGUI extends JFrame {
          * Benachrichtigungsfunktion nutzen möchten oder lieber manuell nach Warnungen
          * suchen.
          */
-        ENABLE_AUTOMATIC_IMPORT_QRCODE(settings.getProperty("enable_automatic_import_qrcode")),
+        ENABLE_AUTOMATIC_IMPORT_QRCODE("enable_automatic_import_qrcode"),
         /**
          * Intervall (in Minuten) für den automatischen Import von QR-Code Scans.
          * Beeinflusst, wie häufig die Anwendung nach neuen QR-Code Scans sucht und
@@ -222,7 +222,7 @@ public class SettingsGUI extends JFrame {
          * Intervall angeben, um schneller auf neue Scans zu reagieren, oder ein
          * längeres Intervall, um Ressourcen zu schonen.
          */
-        QRCODE_IMPORT_INTERVAL(settings.getProperty("qrcode_import_interval")),
+        QRCODE_IMPORT_INTERVAL("qrcode_import_interval"),
         /**
          * Ob der Dunkelmodus aktiviert ist. Beeinflusst die Farbpalette der gesamten
          * Anwendung. Standard ist {@code false} (Hellmodus). Wenn aktiviert, verwendet
@@ -231,7 +231,7 @@ public class SettingsGUI extends JFrame {
          * können hier zwischen Dunkel- und Hellmodus wechseln, je nach ihren
          * Präferenzen und Umgebungslichtbedingungen.
          */
-        DARK_MODE(settings.getProperty("dark_mode")),
+        DARK_MODE("dark_mode"),
         /**
          * Die Schriftgröße, die in Tabellen (z.B. Artikelkarte, Warnungskarte)
          * verwendet wird. Beeinflusst die Lesbarkeit der Tabellen und die
@@ -240,7 +240,7 @@ public class SettingsGUI extends JFrame {
          * oder kleinere Schriftgröße angeben, je nach ihren Präferenzen und
          * Bildschirmauflösung.
          */
-        TABLE_FONT_SIZE(settings.getProperty("table_font_size")),
+        TABLE_FONT_SIZE("table_font_size"),
         /**
          * Die Schriftgröße, die in Tab-Labels (z.B. im Hauptbereich) verwendet wird.
          * Beeinflusst die Lesbarkeit der Tabs und die Gesamtästhetik der Anwendung.
@@ -248,7 +248,7 @@ public class SettingsGUI extends JFrame {
          * bietet. Benutzer können hier eine größere oder kleinere Schriftgröße angeben,
          * je nach ihren Präferenzen und Bildschirmauflösung.
          */
-        TABLE_FONT_SIZE_TAB(settings.getProperty("table_font_size_tab")),
+        TABLE_FONT_SIZE_TAB("table_font_size_tab"),
         /**
          * Die Schriftart, die in der gesamten Anwendung verwendet wird (z.B. für
          * Labels, Buttons, Tabellen). Standard ist "Dialog", was eine
@@ -258,25 +258,25 @@ public class SettingsGUI extends JFrame {
          * die angegebene Schriftart zu laden und verwenden, und falls diese nicht
          * verfügbar ist, auf die Standardschriftart zurückfallen.
          */
-        FONT_STYLE(settings.getProperty("font_style")),
+        FONT_STYLE("font_style"),
         /**
          * Die Akzentfarbe der Anwendung, z.B. für Links, Icons und Hervorhebungen. Wird
          * in der gesamten Anwendung verwendet, z.B. für Link-Farben, Icons in Buttons
          * und Hervorhebungen in Karten-UI.
          */
-        THEME_ACCENT_COLOR(settings.getProperty("theme_accent_color")),
+        THEME_ACCENT_COLOR("theme_accent_color"),
         /**
          * Die Farbe des Headers in der Einstellungen-GUI. Wird auch in anderen
          * Bereichen der Anwendung verwendet, z.B. für die Header-Farbe in den Karten-UI
          * (Artikelkarte, Warnungskarte, etc.).
          */
-        THEME_HEADER_COLOR(settings.getProperty("theme_header_color")),
+        THEME_HEADER_COLOR("theme_header_color"),
         /**
          * Die Farbe von Buttons (z.B. Speichern, Abbrechen) in der Einstellungen-GUI.
          * Wird auch in anderen Bereichen der Anwendung verwendet, z.B. für die
          * "Hinzufügen"-Buttons in der Artikelverwaltung.
          */
-        THEME_BUTTON_COLOR(settings.getProperty("theme_button_color"));
+        THEME_BUTTON_COLOR("theme_button_color");
 
         final String value;
 
@@ -332,9 +332,18 @@ public class SettingsGUI extends JFrame {
         loadSettings();
     }
 
+    @Override
+    public void dispose() {
+        ThemeManager.getInstance().unregisterWindow(this);
+        super.dispose();
+    }
+
     private void initFrame() {
+        ThemeManager.getInstance().registerWindow(this);
+        ThemeManager.applyUIDefaults();
         setTitle("Einstellungen");
         setSize(1200, 850);
+        setMinimumSize(new Dimension(1100, 760));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
@@ -397,21 +406,14 @@ public class SettingsGUI extends JFrame {
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
                 BorderFactory.createEmptyBorder(12, 12, 12, 12)));
 
-        // Tabs (TOP placement) + Search bar below the tab strip (visual hierarchy)
+        // Search bar + tabs (tabs stay in center to use full available height)
         JTabbedPane tabbedPane = createTabbedPane();
         JPanel searchPanel = createSearchPanel();
 
-        // Put the tabs above the search (search belongs to the tab contents area)
-        JPanel tabsAndSearch = new JPanel();
-        tabsAndSearch.setOpaque(false);
-        tabsAndSearch.setLayout(new BoxLayout(tabsAndSearch, BoxLayout.Y_AXIS));
-        tabbedPane.setAlignmentX(Component.LEFT_ALIGNMENT);
-        searchPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        tabsAndSearch.add(tabbedPane);
-        tabsAndSearch.add(Box.createVerticalStrut(10));
-        tabsAndSearch.add(searchPanel);
-
-        contentCard.add(tabsAndSearch, BorderLayout.NORTH);
+        JPanel searchWrapper = new JPanel(new BorderLayout());
+        searchWrapper.setOpaque(false);
+        searchWrapper.add(searchPanel, BorderLayout.CENTER);
+        contentCard.add(searchWrapper, BorderLayout.NORTH);
 
         // The tabbed pane itself contains the scrollable content; we only need to
         // ensure it expands.
@@ -536,13 +538,13 @@ public class SettingsGUI extends JFrame {
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
         JButton resetAllButton = createStyledButton(UnicodeSymbols.REFRESH + " Alles zurücksetzen",
-                new Color(231, 76, 60));
+            ThemeManager.getWarningColor());
         resetAllButton.addActionListener(e -> resetAllDefaults());
 
-        JButton cancelButton = createStyledButton(UnicodeSymbols.CLOSE + " Abbrechen", new Color(155, 89, 182));
+        JButton cancelButton = createStyledButton(UnicodeSymbols.CLOSE + " Abbrechen", ThemeManager.getSecondaryColor());
         cancelButton.addActionListener(e -> dispose());
 
-        JButton saveButton = createStyledButton(UnicodeSymbols.FLOPPY + " Speichern", new Color(46, 204, 113));
+        JButton saveButton = createStyledButton(UnicodeSymbols.FLOPPY + " Speichern", ThemeManager.getSuccessColor());
         saveButton.addActionListener(e -> saveSettings());
 
         buttonPanel.add(resetAllButton);
@@ -612,103 +614,131 @@ public class SettingsGUI extends JFrame {
     }
 
     private void buildSystemAutomaticTab(JTabbedPane tabbedPane) {
-        // === CATEGORY 1: System & Automatisierung ===
+        // === CATEGORY 1: System & Automatisierung (Prettier, Left-Aligned) ===
         JPanel systemPanel = createCategoryPanel();
+        systemPanel.setLayout(new BoxLayout(systemPanel, BoxLayout.Y_AXIS));
         JScrollPane systemScroll = createScrollablePanel(systemPanel);
-        // Stock Check Section
-        JPanel stockCheckSection = createSectionPanel(UnicodeSymbols.PACKAGE + " Lagerbestandsprüfung",
-                "Automatische Überprüfung des Lagerbestands und Warnerstellung");
-        addSectionResetButton(stockCheckSection, this::resetStockCheckDefaults);
+
+        // Card: Stock Check
+        JPanel stockCheckCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.PACKAGE + " Lagerbestandsprüfung",
+            "Automatische Überprüfung des Lagerbestands und Warnerstellung",
+            null);
+        stockCheckCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        stockCheckCard.setBackground(ThemeManager.getCardBackgroundColor());
+        stockCheckCard.setLayout(new BoxLayout(stockCheckCard, BoxLayout.Y_AXIS));
+        stockCheckCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addSectionResetButton(stockCheckCard, this::resetStockCheckDefaults);
 
         enableAutoStockCheckCheckbox = new JCheckBox("Automatische Lagerbestandsprüfung aktivieren");
         styleCheckbox(enableAutoStockCheckCheckbox);
         enableAutoStockCheckCheckbox.setSelected(true);
+        enableAutoStockCheckCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         stockCheckIntervalSpinner = new JSpinner(new SpinnerNumberModel(30, 5, 1440, 5));
         JPanel intervalPanel = createLabeledSpinnerPanel("Prüfintervall:", stockCheckIntervalSpinner, "Minuten", 6);
+        intervalPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        stockCheckSection.add(Box.createVerticalStrut(18));
-        stockCheckSection.add(enableAutoStockCheckCheckbox);
-        stockCheckSection.add(Box.createVerticalStrut(15));
-        stockCheckSection.add(intervalPanel);
+        stockCheckCard.add(Box.createVerticalStrut(18));
+        stockCheckCard.add(enableAutoStockCheckCheckbox);
+        stockCheckCard.add(Box.createVerticalStrut(15));
+        stockCheckCard.add(intervalPanel);
 
-        systemPanel.add(stockCheckSection);
-        systemPanel.add(Box.createVerticalStrut(25));
+        systemPanel.add(stockCheckCard);
+        systemPanel.add(Box.createVerticalStrut(22));
 
-        // === SECTION 2: Warnungen ===
-        JPanel warningSection = createSectionPanel(UnicodeSymbols.WARNING + " Warnungsanzeige",
-                "Konfiguration der automatischen Warnanzeige");
-        addSectionResetButton(warningSection, this::resetWarningDefaults);
+        // Card: Warnungen
+        JPanel warningCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.WARNING + " Warnungsanzeige",
+            "Konfiguration der automatischen Warnanzeige",
+            null);
+        warningCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        warningCard.setBackground(ThemeManager.getCardBackgroundColor());
+        warningCard.setLayout(new BoxLayout(warningCard, BoxLayout.Y_AXIS));
+        warningCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addSectionResetButton(warningCard, this::resetWarningDefaults);
 
         enableWarningDisplayCheckbox = new JCheckBox("Automatische Anzeige ungelesener Warnungen aktivieren");
         styleCheckbox(enableWarningDisplayCheckbox);
         enableWarningDisplayCheckbox.setSelected(true);
+        enableWarningDisplayCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         warningDisplayIntervalSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 24, 1));
-        JPanel warningIntervalPanel = createLabeledSpinnerPanel("Anzeigeintervall:", warningDisplayIntervalSpinner,
-                "Stunde(n)", 6);
+        JPanel warningIntervalPanel = createLabeledSpinnerPanel("Anzeigeintervall:", warningDisplayIntervalSpinner, "Stunde(n)", 6);
+        warningIntervalPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel warningInfoLabel = getWarningInfoLabel();
+        warningInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        warningSection.add(Box.createVerticalStrut(18));
-        warningSection.add(enableWarningDisplayCheckbox);
-        warningSection.add(Box.createVerticalStrut(15));
-        warningSection.add(warningIntervalPanel);
-        warningSection.add(Box.createVerticalStrut(10));
-        warningSection.add(warningInfoLabel);
+        warningCard.add(Box.createVerticalStrut(18));
+        warningCard.add(enableWarningDisplayCheckbox);
+        warningCard.add(Box.createVerticalStrut(15));
+        warningCard.add(warningIntervalPanel);
+        warningCard.add(Box.createVerticalStrut(10));
+        warningCard.add(warningInfoLabel);
 
-        systemPanel.add(warningSection);
+        systemPanel.add(warningCard);
+        systemPanel.add(Box.createVerticalStrut(22));
 
-        systemPanel.add(Box.createVerticalStrut(25));
-
-        // QR-Code Section
-        JPanel qrCodeOptionsPanel = createSectionPanel(UnicodeSymbols.PHONE + " QR-Code Import",
-                "Automatischer Import von QR-Code Scans");
-        addSectionResetButton(qrCodeOptionsPanel, this::resetQrCodeDefaults);
+        // Card: QR-Code Import
+        JPanel qrCodeCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.PHONE + " QR-Code Import",
+            "Automatischer Import von QR-Code Scans",
+            null);
+        qrCodeCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        qrCodeCard.setBackground(ThemeManager.getCardBackgroundColor());
+        qrCodeCard.setLayout(new BoxLayout(qrCodeCard, BoxLayout.Y_AXIS));
+        qrCodeCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addSectionResetButton(qrCodeCard, this::resetQrCodeDefaults);
 
         automaticImportCheckBox = new JCheckBox("Automatisches Importieren von QR-Codes aktivieren");
         styleCheckbox(automaticImportCheckBox);
         automaticImportCheckBox.setSelected(false);
+        automaticImportCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        qrCodeOptionsPanel.add(Box.createVerticalStrut(18));
-        qrCodeOptionsPanel.add(automaticImportCheckBox);
-        qrCodeOptionsPanel.add(Box.createVerticalStrut(15));
+        qrCodeCard.add(Box.createVerticalStrut(18));
+        qrCodeCard.add(automaticImportCheckBox);
+        qrCodeCard.add(Box.createVerticalStrut(15));
 
         qrCodeImportIntervalSpinner = new JSpinner(new SpinnerNumberModel(10, 1, 60, 5));
-        JPanel qrIntervalPanel = createLabeledSpinnerPanel("Import-Intervall:", qrCodeImportIntervalSpinner, "Minuten",
-                6);
+        JPanel qrIntervalPanel = createLabeledSpinnerPanel("Import-Intervall:", qrCodeImportIntervalSpinner, "Minuten", 6);
+        qrIntervalPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        qrCodeCard.add(qrIntervalPanel);
 
-        qrCodeOptionsPanel.add(qrIntervalPanel);
+        systemPanel.add(qrCodeCard);
+        systemPanel.add(Box.createVerticalStrut(22));
 
-        systemPanel.add(qrCodeOptionsPanel);
-        systemPanel.add(Box.createVerticalStrut(25));
-
+        // Card: Kategorien
         JList<String> categoryList = new JList<>();
-        JPanel categoryPanel = createSectionPanel(UnicodeSymbols.FOLDER + " Kategorien",
-            "Einstellungen zu verschiedenen Kategorien");
-        // Ensure left alignment for the whole section
-        categoryPanel.setLayout(new BoxLayout(categoryPanel, BoxLayout.Y_AXIS));
-        categoryPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel categoryCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.FOLDER + " Kategorien",
+            "Einstellungen zu verschiedenen Kategorien",
+            null);
+        categoryCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        categoryCard.setBackground(ThemeManager.getCardBackgroundColor());
+        categoryCard.setLayout(new BoxLayout(categoryCard, BoxLayout.Y_AXIS));
+        categoryCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel categoryInfoLabel = createInfoLabel(
-            "Hier können Sie Kategorien hinzufügen oder die Datei direkt bearbeiten. " +
-                "Optional können Sie einen Nummernbereich (Von/Bis) angeben.");
+        JLabel categoryInfoLabel = createInfoLabel("Hier können Sie Kategorien hinzufügen oder die Datei direkt bearbeiten. Optional können Sie einen Nummernbereich (Von/Bis) angeben.");
         categoryInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Top actions row
-        JPanel categoryActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        JPanel categoryActions = new JPanel();
+        categoryActions.setLayout(new BoxLayout(categoryActions, BoxLayout.X_AXIS));
         categoryActions.setOpaque(false);
         categoryActions.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JButton categorySettingsFileButton = createStyledButton(
-                UnicodeSymbols.FOLDER + " Kategorien-Datei öffnen",
-                new Color(52, 152, 219));
+        JButton categorySettingsFileButton = createStyledButton(UnicodeSymbols.FOLDER + " Kategorien-Datei öffnen", ThemeManager.getSecondaryColor());
         categorySettingsFileButton.setToolTipText("Öffnet categories.json im Standard-Editor");
         categorySettingsFileButton.addActionListener(e -> openCategorySettingsFile());
-
-        JButton reloadCategoriesButton = createStyledButton(
-                UnicodeSymbols.REFRESH + " Kategorien neu laden",
-                new Color(155, 89, 182));
+        JButton reloadCategoriesButton = createStyledButton(UnicodeSymbols.REFRESH + " Kategorien neu laden", ThemeManager.getAccentColor());
         reloadCategoriesButton.setToolTipText("Lädt categories.json neu ein (ohne Neustart)");
         reloadCategoriesButton.addActionListener(e -> {
             loadCategories();
@@ -718,20 +748,19 @@ public class SettingsGUI extends JFrame {
                     JOptionPane.INFORMATION_MESSAGE,
                     Main.iconSmall);
         });
-
         categoryActions.add(categorySettingsFileButton);
+        categoryActions.add(Box.createHorizontalStrut(8));
         categoryActions.add(reloadCategoriesButton);
-
-        categoryPanel.add(categoryInfoLabel);
-        categoryPanel.add(Box.createVerticalStrut(10));
-        categoryPanel.add(categoryActions);
-        categoryPanel.add(Box.createVerticalStrut(14));
+        categoryCard.add(categoryInfoLabel);
+        categoryCard.add(Box.createVerticalStrut(10));
+        categoryCard.add(categoryActions);
+        categoryCard.add(Box.createVerticalStrut(14));
 
         JSeparator catSep = new JSeparator();
         catSep.setForeground(ThemeManager.getBorderColor());
         catSep.setAlignmentX(Component.LEFT_ALIGNMENT);
-        categoryPanel.add(catSep);
-        categoryPanel.add(Box.createVerticalStrut(14));
+        categoryCard.add(catSep);
+        categoryCard.add(Box.createVerticalStrut(14));
 
         // ---- Add Category Form (improved layout, left-aligned) ----
         JLabel categoryFormTitle = new JLabel("Neue Kategorie hinzufügen");
@@ -739,11 +768,7 @@ public class SettingsGUI extends JFrame {
         categoryFormTitle.setForeground(ThemeManager.getTextPrimaryColor());
         categoryFormTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel categoryFormHint = new JLabel(
-                "<html><div style='padding-top:2px;'>" +
-                        "<span style='font-size:11px;'>Tipp: Drücken Sie Enter im Namen-Feld, um hinzuzufügen. Z.b von 1000 bis 1999</span>"
-                        +
-                        "</div></html>");
+        JLabel categoryFormHint = new JLabel("<html><div style='padding-top:2px;'><span style='font-size:11px;'>Tipp: Drücken Sie Enter im Namen-Feld, um hinzuzufügen. Z.b von 1000 bis 1999</span></div></html>");
         categoryFormHint.setFont(getFontByName(Font.PLAIN, 12));
         categoryFormHint.setForeground(ThemeManager.getTextSecondaryColor());
         categoryFormHint.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -754,7 +779,6 @@ public class SettingsGUI extends JFrame {
 
         NumberFormat intFormat = NumberFormat.getIntegerInstance();
         intFormat.setGroupingUsed(false);
-
         NumberFormatter intFormatter = new NumberFormatter(intFormat);
         intFormatter.setValueClass(Integer.class);
         intFormatter.setAllowsInvalid(true);
@@ -784,9 +808,7 @@ public class SettingsGUI extends JFrame {
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)));
 
-        JButton addCategoryButton = createStyledButton(
-                UnicodeSymbols.PLUS + " Hinzufügen",
-                new Color(46, 204, 113));
+        JButton addCategoryButton = createStyledButton(UnicodeSymbols.PLUS + " Hinzufügen", ThemeManager.getSuccessColor());
         addCategoryButton.setToolTipText("Fügt die Kategorie hinzu");
         addCategoryButton.setEnabled(false);
 
@@ -944,170 +966,281 @@ public class SettingsGUI extends JFrame {
         addCategoryOuterPanel.add(Box.createVerticalStrut(10));
         addCategoryOuterPanel.add(addCategoryFormPanel);
 
-        categoryPanel.add(addCategoryOuterPanel);
-        categoryPanel.add(Box.createVerticalStrut(18));
-        
+        categoryCard.add(addCategoryOuterPanel);
+        categoryCard.add(Box.createVerticalStrut(18));
+
         JLabel categoryListLabel = new JLabel("Aktuelle Kategorien");
-        categoryListLabel.setFont(getFontByName(Font.BOLD, 17));
+        categoryListLabel.setFont(getFontByName(Font.BOLD, 18));
         categoryListLabel.setForeground(ThemeManager.getTextPrimaryColor());
         categoryListLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        categoryPanel.add(categoryListLabel);
-        categoryPanel.add(Box.createVerticalStrut(10));
-        categoryList.setFont(getFontByName(Font.PLAIN, 13));
+        categoryCard.add(categoryListLabel);
+        categoryCard.add(Box.createVerticalStrut(10));
+        categoryList.setFont(getFontByName(Font.PLAIN, 15));
         categoryList.setBackground(ThemeManager.getInputBackgroundColor());
         categoryList.setForeground(ThemeManager.getTextPrimaryColor());
         categoryList.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
         categoryList.setAlignmentX(Component.LEFT_ALIGNMENT);
         loadCategoriesIntoList(categoryList);
-        categoryPanel.add(categoryList);
-        categoryPanel.add(Box.createVerticalStrut(14));
+        JScrollPane categoryListScroll = new JScrollPane(categoryList);
+        categoryListScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+        categoryCard.add(categoryListScroll);
+        categoryCard.add(Box.createVerticalStrut(14));
 
-        // finally add to system panel
-        systemPanel.add(categoryPanel);
-        systemPanel.add(Box.createVerticalGlue());
-        systemPanel.add(Box.createVerticalStrut(25));
-        JPanel otherSection = createSectionPanel("Sonstiges", "Allgemeine Einstellungen");
-        otherSection.add(Box.createVerticalStrut(18));
-        JLabel openSettingsLabel = createInfoLabel(
-                "Öffnet den Ordner, in dem die Einstellungsdateien gespeichert sind.");
-        otherSection.add(openSettingsLabel);
-        otherSection.add(Box.createVerticalStrut(10));
-        JButton openSettingsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Einstellungen-Ordner öffnen",
-                new Color(52, 152, 219));
+        systemPanel.add(categoryCard);
+        systemPanel.add(Box.createVerticalStrut(22));
+
+        // Card: Sonstiges
+        JPanel otherCard = SettingsUtils.createSectionPanel(
+            "Sonstiges",
+            "Allgemeine Einstellungen",
+            null);
+        otherCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        otherCard.setBackground(ThemeManager.getCardBackgroundColor());
+        otherCard.setLayout(new BoxLayout(otherCard, BoxLayout.Y_AXIS));
+        otherCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        otherCard.add(Box.createVerticalStrut(18));
+        JLabel openSettingsLabel = createInfoLabel("Öffnet den Ordner, in dem die Einstellungsdateien gespeichert sind.");
+        openSettingsLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        otherCard.add(openSettingsLabel);
+        otherCard.add(Box.createVerticalStrut(10));
+        JButton openSettingsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Einstellungen-Ordner öffnen", ThemeManager.getSecondaryColor());
         openSettingsFolderButton.addActionListener(e -> openSettingsFolder());
-        otherSection.add(openSettingsFolderButton);
+        openSettingsFolderButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        otherCard.add(openSettingsFolderButton);
         JLabel logsLabel = createInfoLabel("Öffnet den Ordner, in dem die Anwendungsprotokolle gespeichert sind.");
-        otherSection.add(Box.createVerticalStrut(15));
-        otherSection.add(logsLabel);
-        otherSection.add(Box.createVerticalStrut(10));
-        JButton openLogsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Protokolle-Ordner öffnen",
-                new Color(52, 152, 219));
+        logsLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        otherCard.add(Box.createVerticalStrut(15));
+        otherCard.add(logsLabel);
+        otherCard.add(Box.createVerticalStrut(10));
+        JButton openLogsFolderButton = createStyledButton(UnicodeSymbols.FOLDER + " Protokolle-Ordner öffnen", ThemeManager.getSecondaryColor());
         openLogsFolderButton.addActionListener(e -> openLogsFolder());
-        otherSection.add(openLogsFolderButton);
-        otherSection.add(Box.createVerticalStrut(15));
-        JLabel logsDelete = createInfoLabel(
-                "Löscht alle Anwendungsprotokolle aus dem Protokolle-Ordner. So wie in der Datenbank.");
-        otherSection.add(Box.createVerticalStrut(15));
-        otherSection.add(logsDelete);
-        JButton deleteLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alle Protokolle löschen",
-                new Color(220, 53, 69));
+        openLogsFolderButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        otherCard.add(openLogsFolderButton);
+        otherCard.add(Box.createVerticalStrut(15));
+        JLabel logsDelete = createInfoLabel("Löscht alle Anwendungsprotokolle aus dem Protokolle-Ordner. So wie in der Datenbank.");
+        logsDelete.setAlignmentX(Component.LEFT_ALIGNMENT);
+        otherCard.add(Box.createVerticalStrut(15));
+        otherCard.add(logsDelete);
+        JButton deleteLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alle Protokolle löschen", ThemeManager.getDangerColor());
         deleteLogsButton.addActionListener(e -> deleteAllLogs());
-        otherSection.add(Box.createVerticalStrut(10));
-        otherSection.add(deleteLogsButton);
-        otherSection.add(Box.createVerticalStrut(15));
-        JLabel logsDeleteTime = createInfoLabel(
-                "Löscht alle Anwendungsprotokolle, die älter als 30 Tage sind, aus dem Protokolle-Ordner. So wie in der Datenbank.");
-        otherSection.add(Box.createVerticalStrut(15));
-        otherSection.add(logsDeleteTime);
+        deleteLogsButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        otherCard.add(Box.createVerticalStrut(10));
+        otherCard.add(deleteLogsButton);
+        otherCard.add(Box.createVerticalStrut(15));
+        JLabel logsDeleteTime = createInfoLabel("Löscht alle Anwendungsprotokolle, die älter als 30 Tage sind, aus dem Protokolle-Ordner. So wie in der Datenbank.");
+        logsDeleteTime.setAlignmentX(Component.LEFT_ALIGNMENT);
+        otherCard.add(Box.createVerticalStrut(15));
+        otherCard.add(logsDeleteTime);
         JCheckBox deleteOldLogsCheckBox = new JCheckBox("Alte Protokolle (älter als 30 Tage) löschen");
         styleCheckbox(deleteOldLogsCheckBox);
-        otherSection.add(Box.createVerticalStrut(10));
-        otherSection.add(deleteOldLogsCheckBox);
-        JButton deleteOldLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alte Protokolle löschen",
-                new Color(220, 53, 69));
+        deleteOldLogsCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        otherCard.add(Box.createVerticalStrut(10));
+        otherCard.add(deleteOldLogsCheckBox);
+        JButton deleteOldLogsButton = createStyledButton(UnicodeSymbols.TRASH + " Alte Protokolle löschen", ThemeManager.getDangerColor());
         deleteOldLogsButton.addActionListener(e -> deleteOldLogs());
-        otherSection.add(Box.createVerticalStrut(10));
-        otherSection.add(deleteOldLogsButton);
-        systemPanel.add(otherSection);
+        deleteOldLogsButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        otherCard.add(Box.createVerticalStrut(10));
+        otherCard.add(deleteOldLogsButton);
+
+        systemPanel.add(otherCard);
+        systemPanel.add(Box.createVerticalGlue());
+
         // Add system panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.WRENCH + " System", systemScroll);
     }
 
     private void loadCategoriesIntoList(JList<String> categoryList) {
-        categoryList.setListData(new String[0]);
-        List<String> categories = new ArrayList<>();
-        ArticleUtils.categories.forEach((key, value) -> {
-            String range = "";
-            if (value.rangeStart != Integer.MIN_VALUE || value.rangeEnd != Integer.MAX_VALUE) {
-                String fromStr = value.rangeStart == Integer.MIN_VALUE ? "" : String.valueOf(value.rangeStart);
-                String toStr = value.rangeEnd == Integer.MAX_VALUE ? "" : String.valueOf(value.rangeEnd);
-                range = " (" + fromStr + " - " + toStr + ")";
+        Objects.requireNonNull(categoryList, "categoryList must not be null");
+
+        // Count articles per category once (instead of re-scanning for every category).
+        Map<String, Integer> articleCountsByCategory = new HashMap<>();
+        for (Article article : ArticleManager.getInstance().getAllArticles()) {
+            if (article == null || article.getCategory() == null || article.getCategory().isBlank()) {
+                continue;
             }
-            categories.add(key + range);
-        });
-        categoryList.setListData(categories.toArray(new String[0]));
+            articleCountsByCategory.merge(normalizeCategoryKey(article.getCategory()), 1, Integer::sum);
+        }
+
+        List<String> sortedCategoryNames = new ArrayList<>(ArticleUtils.categories.keySet());
+        sortedCategoryNames.sort(String.CASE_INSENSITIVE_ORDER);
+
+        List<String> displayEntries = new ArrayList<>(sortedCategoryNames.size());
+        for (String categoryName : sortedCategoryNames) {
+            CategoryRange categoryRange = ArticleUtils.categories.get(categoryName);
+            int count = articleCountsByCategory.getOrDefault(normalizeCategoryKey(categoryName), 0);
+            displayEntries.add(buildCategoryDisplayLabel(categoryName, categoryRange, count));
+        }
+
+        categoryList.setListData(displayEntries.toArray(new String[0]));
+    }
+
+    private String buildCategoryDisplayLabel(String categoryName, CategoryRange categoryRange, int articleCount) {
+        String baseLabel = categoryName + formatCategoryRange(categoryRange);
+        return baseLabel + formatArticleCountSuffix(articleCount);
+    }
+
+    private String formatArticleCountSuffix(int articleCount) {
+        if (articleCount <= 0) {
+            return "";
+        }
+        String articleText = articleCount == 1 ? "1 Artikel" : articleCount + " Artikel";
+        return " | " + articleText + " in dieser Kategorie";
+    }
+
+    private String formatCategoryRange(CategoryRange categoryRange) {
+        if (categoryRange == null) {
+            return "";
+        }
+
+        int min = Integer.MIN_VALUE;
+        int max = Integer.MAX_VALUE;
+        int from = categoryRange.rangeStart;
+        int to = categoryRange.rangeEnd;
+
+        if (from == min && to == max) {
+            return "";
+        }
+
+        String fromStr = from == min ? "" : String.valueOf(from);
+        String toStr = to == max ? "" : String.valueOf(to);
+        return " (" + fromStr + " - " + toStr + ")";
+    }
+
+    private String normalizeCategoryKey(String category) {
+        return category == null ? "" : category.trim().toLowerCase(Locale.ROOT);
     }
 
     private void buildDesignTab(JTabbedPane tabbedPane) {
-        // === CATEGORY 1b: Darstellung ===
-        // One-page layout (no right-side sticky panel). Everything scrolls together.
+        // === CATEGORY 1b: Darstellung (Prettier, Left-Aligned) ===
         JPanel appearancePanel = createCategoryPanel();
-        JScrollPane appearanceScroll = createScrollablePanel(appearancePanel);
-        JLabel appearanceIntro = new JLabel(
-                "<html><div style='padding:2px 0;'><b>Darstellung</b><br/>" +
-                        "<span style='font-size:11px;'>Änderungen werden nach dem Speichern übernommen. " +
-                        "Die Vorschau aktualisiert sich automatisch.</span></div></html>");
+        appearancePanel.setLayout(new BoxLayout(appearancePanel, BoxLayout.Y_AXIS));
+        // Removed unused appearanceScroll variable
+
+        // Card: Schriftart
+        JPanel fontCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.ABC + " Schriftart",
+            "Schriftart für die Anwendung festlegen",
+            null);
+        fontCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        fontCard.setBackground(ThemeManager.getCardBackgroundColor());
+        fontCard.setLayout(new BoxLayout(fontCard, BoxLayout.Y_AXIS));
+        fontCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addSectionResetButton(fontCard, this::resetFontDefaults);
+
+        JLabel appearanceIntro = new JLabel("<html><div style='padding:2px 0;'><b>Darstellung</b><br/><span style='font-size:11px;'>Änderungen werden nach dem Speichern übernommen. Die Vorschau aktualisiert sich automatisch.</span></div></html>");
         appearanceIntro.setFont(getFontByName(Font.PLAIN, 12));
         appearanceIntro.setForeground(ThemeManager.getTextSecondaryColor());
         appearanceIntro.setAlignmentX(Component.LEFT_ALIGNMENT);
-        // ---- Schriftart --------------------------------------------------------
-        JPanel fontSettingsPanel = createSectionPanel(UnicodeSymbols.ABC + " Schriftart",
-                "Schriftart für die Anwendung festlegen");
-        addSectionResetButton(fontSettingsPanel, this::resetFontDefaults);
-        fontSettingsPanel.add(Box.createVerticalStrut(12));
-        fontSettingsPanel.add(appearanceIntro);
-        fontSettingsPanel.add(Box.createVerticalStrut(12));
-        JLabel fontInfoLabel = new JLabel(
-                "<html><div><span style='font-size: 11px;'>" +
-                        "Wählen Sie eine Schriftart. Die Vorschau unten zeigt das Ergebnis.</span></div></html>");
+        fontCard.add(Box.createVerticalStrut(12));
+        fontCard.add(appearanceIntro);
+        fontCard.add(Box.createVerticalStrut(12));
+
+        JLabel fontInfoLabel = new JLabel("<html><div><span style='font-size: 11px;'>Wählen Sie eine Schriftart. Die Vorschau unten zeigt das Ergebnis.</span></div></html>");
         fontInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
         fontInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         fontInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fontSettingsPanel.add(fontInfoLabel);
-        fontSettingsPanel.add(Box.createVerticalStrut(10));
+        fontCard.add(fontInfoLabel);
+        fontCard.add(Box.createVerticalStrut(10));
+
         fontComboBox = new JComboBox<>();
         getAllFonts().forEach(fontComboBox::addItem);
         styleComboBox(fontComboBox);
         fontComboBox.addActionListener(e -> updatePreview());
         JPanel fontSelectionPanel = createLabeledComboBoxPanel("Schriftart auswählen:", fontComboBox);
-        fontSettingsPanel.add(fontSelectionPanel);
+        fontSelectionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fontCard.add(fontSelectionPanel);
         fontSample.setFont(getFontByName(Font.PLAIN, 16));
         fontSample.setForeground(ThemeManager.getTextPrimaryColor());
         fontSample.setAlignmentX(Component.LEFT_ALIGNMENT);
-        fontSettingsPanel.add(Box.createVerticalStrut(12));
-        fontSettingsPanel.add(fontSample);
-        // ---- Tabellen & Tabs ---------------------------------------------------
-        JPanel tableSettingsPanel = createSectionPanel(UnicodeSymbols.CLIPBOARD + " Tabellen & Tabs",
-                "Schriftgröße für Tabellen und Tabs anpassen");
-        addSectionResetButton(tableSettingsPanel, this::resetTableDefaults);
+        fontCard.add(Box.createVerticalStrut(12));
+        fontCard.add(fontSample);
+
+        appearancePanel.add(fontCard);
+        appearancePanel.add(Box.createVerticalStrut(22));
+
+        // Card: Tabellen & Tabs
+        JPanel tableCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.CLIPBOARD + " Tabellen & Tabs",
+            "Schriftgröße für Tabellen und Tabs anpassen",
+            null);
+        tableCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        tableCard.setBackground(ThemeManager.getCardBackgroundColor());
+        tableCard.setLayout(new BoxLayout(tableCard, BoxLayout.Y_AXIS));
+        tableCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addSectionResetButton(tableCard, this::resetTableDefaults);
+
         fontSizeTableSpinner = new JSpinner(new SpinnerNumberModel(16, 10, 44, 1));
         JPanel fontSizePanel = createLabeledSpinnerPanel("Tabellen-Schriftgröße:", fontSizeTableSpinner, "px", 4);
-        tableSettingsPanel.add(Box.createVerticalStrut(12));
-        tableSettingsPanel.add(fontSizePanel);
-        tableSettingsPanel.add(Box.createVerticalStrut(8));
+        fontSizePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        tableCard.add(Box.createVerticalStrut(12));
+        tableCard.add(fontSizePanel);
+        tableCard.add(Box.createVerticalStrut(8));
         configureSlider(tableFontSlider, fontSizeTableSpinner, tableFontSample);
-        tableSettingsPanel.add(tableFontSlider);
-        tableSettingsPanel.add(Box.createVerticalStrut(6));
-        tableSettingsPanel.add(tableFontSample);
+        tableCard.add(tableFontSlider);
+        tableCard.add(Box.createVerticalStrut(6));
+        tableFontSample.setAlignmentX(Component.LEFT_ALIGNMENT);
+        fontSelectionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        tableCard.add(tableFontSample);
+
         fontSizeTabSpinner = new JSpinner(new SpinnerNumberModel(15, 10, 40, 1));
         JPanel fontTabSizePanel = createLabeledSpinnerPanel("Tabs-Schriftgröße:", fontSizeTabSpinner, "px", 4);
-        tableSettingsPanel.add(Box.createVerticalStrut(14));
-        tableSettingsPanel.add(fontTabSizePanel);
-        tableSettingsPanel.add(Box.createVerticalStrut(8));
+        fontTabSizePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        tableCard.add(Box.createVerticalStrut(14));
+        tableCard.add(fontTabSizePanel);
+        tableCard.add(Box.createVerticalStrut(8));
         configureSlider(tabFontSlider, fontSizeTabSpinner, tabFontSample);
-        tableSettingsPanel.add(tabFontSlider);
-        tableSettingsPanel.add(Box.createVerticalStrut(6));
-        tableSettingsPanel.add(tabFontSample);
-        // Keep preview in sync even if user types into spinners
+        tableCard.add(tabFontSlider);
+        tableCard.add(Box.createVerticalStrut(6));
+        tabFontSample.setAlignmentX(Component.LEFT_ALIGNMENT);
+        tableCard.add(tabFontSample);
+
         fontSizeTableSpinner.addChangeListener(e -> updatePreview());
         fontSizeTabSpinner.addChangeListener(e -> updatePreview());
-        // ---- Design / Theme ----------------------------------------------------
-        JPanel themeSection = createSectionPanel(UnicodeSymbols.COLOR_PALETTE + " Design & Darstellung",
-                "Passen Sie das Erscheinungsbild der Anwendung an");
-        addSectionResetButton(themeSection, this::resetThemeDefaults);
+
+        appearancePanel.add(tableCard);
+        appearancePanel.add(Box.createVerticalStrut(22));
+
+        // Card: Design / Theme
+        JPanel themeCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.COLOR_PALETTE + " Design & Darstellung",
+            "Passen Sie das Erscheinungsbild der Anwendung an",
+            null);
+        fontSizePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        themeCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        themeCard.setBackground(ThemeManager.getCardBackgroundColor());
+        tableFontSlider.setAlignmentX(Component.LEFT_ALIGNMENT);
+        themeCard.setLayout(new BoxLayout(themeCard, BoxLayout.Y_AXIS));
+        themeCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        tableFontSample.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addSectionResetButton(themeCard, this::resetThemeDefaults);
+
         darkModeCheckbox = new JCheckBox("Dark Mode aktivieren");
         styleCheckbox(darkModeCheckbox);
+        fontTabSizePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         darkModeCheckbox.setSelected(ThemeManager.isDarkMode());
-        themeSection.add(Box.createVerticalStrut(16));
-        themeSection.add(darkModeCheckbox);
-        themeSection.add(Box.createVerticalStrut(12));
+        darkModeCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        themeCard.add(Box.createVerticalStrut(16));
+        themeCard.add(darkModeCheckbox);
+        tabFontSlider.setAlignmentX(Component.LEFT_ALIGNMENT);
+        themeCard.add(Box.createVerticalStrut(12));
         String[] themes = { "Light", "Dark" };
+        tabFontSample.setAlignmentX(Component.LEFT_ALIGNMENT);
         themeComboBox = new JComboBox<>(themes);
         styleComboBox(themeComboBox);
         themeComboBox.setSelectedItem(ThemeManager.isDarkMode() ? "Dark" : "Light");
         JPanel themeSelectionPanel = createLabeledComboBoxPanel("Design-Schema:", themeComboBox);
+        themeSelectionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         darkModeCheckbox.addActionListener(e -> {
             boolean isDark = darkModeCheckbox.isSelected();
             themeComboBox.setEnabled(!isDark);
@@ -1124,88 +1257,195 @@ public class SettingsGUI extends JFrame {
             darkModeCheckbox.setSelected("Dark".equals(selected));
             updatePreview();
         });
-        themeSection.add(themeSelectionPanel);
-        themeSection.add(Box.createVerticalStrut(12));
-        JLabel themeInfoLabel = new JLabel("<html><div style='padding: 6px 0;'>" +
-                "<i>Hinweis: Nach dem Speichern werden alle Fenster mit dem neuen Design aktualisiert.<br/>" +
-                "Der Dark Mode schont die Augen bei Arbeiten in dunkler Umgebung.</i>" +
-                "</div></html>");
+        themeCard.add(themeSelectionPanel);
+        themeCard.add(Box.createVerticalStrut(12));
+
+        darkModeCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel themeLookAndFeelInfo = new JLabel("Look & Feel: " + ThemeManager.getCurrentLookAndFeelName());
+        themeLookAndFeelInfo.setFont(getFontByName(Font.PLAIN, 12));
+        themeLookAndFeelInfo.setForeground(ThemeManager.getTextSecondaryColor());
+        themeLookAndFeelInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        themeCard.add(themeLookAndFeelInfo);
+        themeCard.add(Box.createHorizontalStrut(10));
+        JList<String> lafList = new JList<>();
+        lafList.setListData(ThemeManager.getAllLookAndFeels().toArray(new String[0]));
+        lafList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        lafList.setSelectedValue(ThemeManager.getCurrentLookAndFeelName(), false);
+        themeSelectionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lafList.setFont(getFontByName(Font.PLAIN, 13));
+        lafList.setBackground(ThemeManager.getInputBackgroundColor());
+        lafList.setForeground(ThemeManager.getTextPrimaryColor());
+        lafList.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+        lafList.setAlignmentX(Component.LEFT_ALIGNMENT);
+        lafList.setVisibleRowCount(5);
+        JScrollPane lafScroll = new JScrollPane(lafList);
+        lafScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+        themeCard.add(lafScroll);
+        JButton applyLafButton = createStyledButton(UnicodeSymbols.CHECK + " Look & Feel anwenden", ThemeManager.getSuccessColor());
+        applyLafButton.setToolTipText("Wendet das ausgewählte Look & Feel an (nur in der Vorschau)");
+        applyLafButton.addActionListener(e -> {
+            String selectedLaf = lafList.getSelectedValue();
+            if (selectedLaf != null) {
+                ThemeManager.setLookAndFeel(selectedLaf);
+                updatePreview();
+                Main.settings.setProperty("look_and_feel", selectedLaf);
+                Main.settings.save();
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "Bitte wählen Sie ein Look & Feel aus der Liste aus.",
+                        "Hinweis",
+                        JOptionPane.WARNING_MESSAGE,
+                        Main.iconSmall);
+            }
+        });
+        themeLookAndFeelInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        themeCard.add(Box.createVerticalStrut(10));
+        applyLafButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        themeCard.add(applyLafButton);
+
+        JLabel themeInfoLabel = new JLabel("<html><div style='padding: 6px 0;'><i>Hinweis: Nach dem Speichern werden alle Fenster mit dem neuen Design aktualisiert.<br/>Der Dark Mode schont die Augen bei Arbeiten in dunkler Umgebung.</i></div></html>");
         themeInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
         themeInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
+        lafScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
         themeInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        themeSection.add(themeInfoLabel);
-        // ---- Farben ------------------------------------------------------------
-        JPanel colorSection = createSectionPanel(UnicodeSymbols.COLOR_PALETTE + " Farbthemen",
-                "Akzent-, Header- und Buttonfarbe anpassen");
-        addSectionResetButton(colorSection, this::resetColorDefaults);
-        colorSection.add(Box.createVerticalStrut(12));
-        colorSection.add(createColorRow("Akzentfarbe:", "theme_accent_color"));
-        colorSection.add(Box.createVerticalStrut(10));
-        colorSection.add(createColorRow("Headerfarbe:", "theme_header_color"));
-        colorSection.add(Box.createVerticalStrut(10));
-        colorSection.add(createColorRow("Buttonfarbe:", "theme_button_color"));
-        // ---- Vorschau ----------------------------------------------------------
-        JPanel previewSection = createSectionPanel(UnicodeSymbols.BULB + " Live Vorschau",
-                "Vorschau auf Schrift und Farben basierend auf Ihren Einstellungen");
-        previewSection.add(Box.createVerticalStrut(12));
-        previewSection.add(createPreviewPanel());
-        // ---- Assemble ----------------------------------------------------------
-        appearancePanel.add(fontSettingsPanel);
+        themeCard.add(themeInfoLabel);
+
+        applyLafButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        appearancePanel.add(themeCard);
         appearancePanel.add(Box.createVerticalStrut(22));
-        appearancePanel.add(tableSettingsPanel);
+        appearancePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Card: Farben
+        JPanel colorCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.COLOR_PALETTE + " Farbthemen",
+            "Akzent-, Header- und Buttonfarbe anpassen",
+            null);
+        colorCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        colorCard.setBackground(ThemeManager.getCardBackgroundColor());
+        colorCard.setLayout(new BoxLayout(colorCard, BoxLayout.Y_AXIS));
+        colorCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addSectionResetButton(colorCard, this::resetColorDefaults);
+        colorCard.add(Box.createVerticalStrut(12));
+        colorCard.add(createColorRow("Akzentfarbe:", "theme_accent_color"));
+        colorCard.add(Box.createVerticalStrut(10));
+        colorCard.add(createColorRow("Headerfarbe:", "theme_header_color"));
+        colorCard.add(Box.createVerticalStrut(10));
+        colorCard.add(createColorRow("Buttonfarbe:", "theme_button_color"));
+        themeInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        appearancePanel.add(colorCard);
         appearancePanel.add(Box.createVerticalStrut(22));
-        appearancePanel.add(themeSection);
-        appearancePanel.add(Box.createVerticalStrut(22));
-        appearancePanel.add(colorSection);
-        appearancePanel.add(Box.createVerticalStrut(22));
-        appearancePanel.add(previewSection);
-        appearancePanel.add(Box.createVerticalGlue());
-        // Add appearance panel to tabbed pane
+
+        // Card: Vorschau
+        JPanel previewCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.BULB + " Live Vorschau",
+            "Vorschau auf Schrift und Farben basierend auf Ihren Einstellungen",
+            null);
+        previewCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        previewCard.setBackground(ThemeManager.getCardBackgroundColor());
+        previewCard.setLayout(new BoxLayout(previewCard, BoxLayout.Y_AXIS));
+        previewCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        previewCard.add(Box.createVerticalStrut(12));
+        JComponent previewPanelComponent = createPreviewPanel();
+        previewPanelComponent.setAlignmentX(Component.LEFT_ALIGNMENT);
+        previewCard.add(previewPanelComponent);
+
+        // Remove duplicate color rows (already added above)
+        // Add appearance panel to tabbed pane with scroll
+        JScrollPane appearanceScroll = createScrollablePanel(appearancePanel);
+        appearanceScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
         tabbedPane.addTab(UnicodeSymbols.COLOR_PALETTE + " Darstellung", appearanceScroll);
     }
 
     private void buildConnectionTab(JTabbedPane tabbedPane) {
-        // === CATEGORY 2: Verbindung ===
+        // === CATEGORY 2: Verbindung (Prettier, Left-Aligned) ===
         JPanel connectionPanel = createCategoryPanel();
+        connectionPanel.setLayout(new BoxLayout(connectionPanel, BoxLayout.Y_AXIS));
         JScrollPane connectionScroll = createScrollablePanel(connectionPanel);
-        // Server-Einstellungen
-        JPanel serverSection = createSectionPanel(UnicodeSymbols.GLOBE + " Server-Verbindung",
-                "URL des QR-Code Scan-Servers");
-        addSectionResetButton(serverSection, this::resetServerDefaults);
-        JLabel serverHint = createInfoLabel(
-                "Tipp: Nutzen Sie https (wenn möglich). Mit den Aktionen können Sie die URL testen oder kopieren.");
+
+        // Card: Server Connection
+        JPanel serverCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.GLOBE + " Server-Verbindung",
+            "URL des QR-Code Scan-Servers",
+            null);
+        serverCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        // Removed stray previewPanel/previewCard lines (not relevant to connection tab)
+        serverCard.setLayout(new BoxLayout(serverCard, BoxLayout.Y_AXIS));
+        serverCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel serverTitle = new JLabel(UnicodeSymbols.GLOBE + " Server-Verbindung");
+        serverTitle.setFont(getFontByName(Font.BOLD, 22));
+        serverTitle.setForeground(ThemeManager.getTitleTextColor());
+        serverTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        serverCard.add(serverTitle);
+        serverCard.add(Box.createVerticalStrut(8));
+
+        JLabel serverDesc = new JLabel("Konfigurieren Sie die Server-URL für den QR-Code Scan-Service. Nutzen Sie https, wenn möglich.");
+        serverDesc.setFont(getFontByName(Font.PLAIN, 13));
+        serverDesc.setForeground(ThemeManager.getTextSecondaryColor());
+        serverDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
+        serverCard.add(serverDesc);
+        serverCard.add(Box.createVerticalStrut(14));
+
+        JLabel serverHint = createInfoLabel("Tipp: Nutzen Sie https (wenn möglich). Mit den Aktionen können Sie die URL testen oder kopieren.");
         serverHint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        serverCard.add(serverHint);
+        serverCard.add(Box.createVerticalStrut(10));
+
         // Actions row
-        JPanel serverActions = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JPanel serverActions = new JPanel();
+        serverActions.setLayout(new BoxLayout(serverActions, BoxLayout.X_AXIS));
         serverActions.setOpaque(false);
         serverActions.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JButton openUrlButton = createStyledButton(UnicodeSymbols.GLOBE + " Öffnen", new Color(52, 152, 219));
+        JButton openUrlButton = createStyledButton(UnicodeSymbols.GLOBE + " Öffnen", ThemeManager.getSecondaryColor());
         openUrlButton.setToolTipText("Öffnet die URL im Browser");
-        JButton copyUrlButton = createStyledButton(UnicodeSymbols.CLIPBOARD + " Kopieren", new Color(155, 89, 182));
+        JButton copyUrlButton = createStyledButton(UnicodeSymbols.CLIPBOARD + " Kopieren", ThemeManager.getAccentColor());
         copyUrlButton.setToolTipText("Kopiert die URL in die Zwischenablage");
-        JButton testUrlButton = createStyledButton(UnicodeSymbols.BULB + " Prüfen", new Color(46, 204, 113));
+        JButton testUrlButton = createStyledButton(UnicodeSymbols.BULB + " Prüfen", ThemeManager.getSuccessColor());
         testUrlButton.setToolTipText("Prüft, ob die URL syntaktisch gültig ist");
         serverActions.add(openUrlButton);
+        serverActions.add(Box.createHorizontalStrut(8));
         serverActions.add(copyUrlButton);
+        serverActions.add(Box.createHorizontalStrut(8));
         serverActions.add(testUrlButton);
+        serverCard.add(serverActions);
+        serverCard.add(Box.createVerticalStrut(14));
+
         // URL field
-        JPanel serverUrlPanel = new JPanel(new BorderLayout(0, 10));
+        JPanel serverUrlPanel = new JPanel();
+        serverUrlPanel.setLayout(new BoxLayout(serverUrlPanel, BoxLayout.Y_AXIS));
         serverUrlPanel.setOpaque(false);
         serverUrlPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
         serverUrlPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel serverUrlLabel = new JLabel("Server URL:");
         serverUrlLabel.setFont(getFontByName(Font.BOLD, 13));
         serverUrlLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        serverUrlLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        serverUrlPanel.add(serverUrlLabel);
         serverUrlField = new JTextField(DEFAULT_SERVER_URL);
         styleInputField(serverUrlField);
         serverUrlField.setToolTipText("z.B. https://example.com/scans.json");
         serverUrlField.setPreferredSize(new Dimension(600, 40));
         serverUrlField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        serverUrlField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        serverUrlPanel.add(serverUrlField);
+        serverCard.add(serverUrlPanel);
+        serverCard.add(Box.createVerticalStrut(8));
+
         // Small validation badge
         JLabel urlStatusLabel = new JLabel(" ");
         urlStatusLabel.setFont(getFontByName(Font.PLAIN, 12));
         urlStatusLabel.setForeground(ThemeManager.getTextSecondaryColor());
         urlStatusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        serverCard.add(urlStatusLabel);
+
         Runnable validateUrl = () -> {
             String raw = serverUrlField.getText() == null ? "" : serverUrlField.getText().trim();
             if (raw.isEmpty()) {
@@ -1233,6 +1473,7 @@ public class SettingsGUI extends JFrame {
                 urlStatusLabel.setForeground(new Color(231, 76, 60));
             }
         };
+
         // Wire actions
         openUrlButton.addActionListener(e -> {
             validateUrl.run();
@@ -1284,201 +1525,268 @@ public class SettingsGUI extends JFrame {
                 u();
             }
         });
-        serverUrlPanel.add(serverUrlLabel, BorderLayout.NORTH);
-        serverUrlPanel.add(serverUrlField, BorderLayout.CENTER);
-        serverSection.add(Box.createVerticalStrut(14));
-        serverSection.add(serverHint);
-        serverSection.add(Box.createVerticalStrut(10));
-        serverSection.add(serverActions);
-        serverSection.add(Box.createVerticalStrut(14));
-        serverSection.add(serverUrlPanel);
-        serverSection.add(Box.createVerticalStrut(8));
-        serverSection.add(urlStatusLabel);
         // initial status
         validateUrl.run();
-        connectionPanel.add(serverSection);
+
+        // Add card to main panel
+        connectionPanel.add(serverCard);
         connectionPanel.add(Box.createVerticalGlue());
+
         // Add connection panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.GLOBE + " Verbindung", connectionScroll);
     }
 
     private void buildDatabaseTab(JTabbedPane tabbedPane) {
-        // === CATEGORY 3: Datenbank ===
+        // === CATEGORY 3: Datenbank (Prettier, Left-Aligned) ===
         JPanel databasePanel = createCategoryPanel();
+        databasePanel.setLayout(new BoxLayout(databasePanel, BoxLayout.Y_AXIS));
         JScrollPane databaseScroll = createScrollablePanel(databasePanel);
-        // Datenbank-Bereinigung Section
-        JPanel databaseSection = createSectionPanel(UnicodeSymbols.FLOPPY + " Datenbank-Verwaltung",
-                "Datenbank bereinigen und Tabellen verwalten");
+
+        // Card: Database Management
+        JPanel dbCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.FLOPPY + " Datenbank-Verwaltung",
+            "Datenbank bereinigen und Tabellen verwalten",
+            null);
+        dbCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        dbCard.setBackground(ThemeManager.getCardBackgroundColor());
+        dbCard.setLayout(new BoxLayout(dbCard, BoxLayout.Y_AXIS));
+        dbCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel dbTitle = new JLabel(UnicodeSymbols.FLOPPY + " Datenbank-Verwaltung");
+        dbTitle.setFont(getFontByName(Font.BOLD, 22));
+        dbTitle.setForeground(ThemeManager.getTitleTextColor());
+        dbTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        dbCard.add(dbTitle);
+        dbCard.add(Box.createVerticalStrut(8));
+
+        JLabel dbDesc = new JLabel("Verwalten und bereinigen Sie Ihre Datenbank. Löschen Sie gezielt Tabellen oder führen Sie eine Komplettbereinigung durch.");
+        dbDesc.setFont(getFontByName(Font.PLAIN, 13));
+        dbDesc.setForeground(ThemeManager.getTextSecondaryColor());
+        dbDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
+        dbCard.add(dbDesc);
+        dbCard.add(Box.createVerticalStrut(18));
+
+        // Database clear info
         JLabel databaseClearLabel = getDatabaseClearLabel();
-        JPanel databaseButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        databaseButtonPanel.setOpaque(false);
-        databaseButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        databaseButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        databaseClearLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        dbCard.add(databaseClearLabel);
+        dbCard.add(Box.createVerticalStrut(15));
+
+        // Button row: Clear database
+        JPanel dbButtonRow = new JPanel();
+        dbButtonRow.setLayout(new BoxLayout(dbButtonRow, BoxLayout.X_AXIS));
+        dbButtonRow.setOpaque(false);
+        dbButtonRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         JButton clearDatabaseButton = createStyledButton(UnicodeSymbols.TRASH + " Datenbank Bereinigen",
-                new Color(220, 53, 69));
+            ThemeManager.getDangerColor());
         clearDatabaseButton.addActionListener(e -> clearDatabase());
-        databaseButtonPanel.add(clearDatabaseButton);
-        databaseSection.add(Box.createVerticalStrut(18));
-        databaseSection.add(databaseClearLabel);
-        databaseSection.add(Box.createVerticalStrut(15));
-        databaseSection.add(databaseButtonPanel);
+        clearDatabaseButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        dbButtonRow.add(clearDatabaseButton);
+        dbCard.add(dbButtonRow);
+        dbCard.add(Box.createVerticalStrut(18));
+
+        // Selected table clear info
         JLabel selectedDatabaseClear = getSelectedDatabaseClear();
-        databaseSection.add(Box.createVerticalStrut(10));
-        databaseSection.add(selectedDatabaseClear);
+        selectedDatabaseClear.setAlignmentX(Component.LEFT_ALIGNMENT);
+        dbCard.add(selectedDatabaseClear);
+        dbCard.add(Box.createVerticalStrut(12));
+
+        // Table selection row
         List<String> tableNames = new ArrayList<>(DatabaseManager.ALLOWED_TABLES);
         JComboBox<String> tableComboBox = new JComboBox<>(tableNames.toArray(new String[0]));
         styleComboBox(tableComboBox);
         JPanel tableSelectionPanel = createLabeledComboBoxPanel("Tabelle auswählen:", tableComboBox);
-        databaseSection.add(Box.createVerticalStrut(15));
-        databaseSection.add(tableSelectionPanel);
+        tableSelectionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        dbCard.add(tableSelectionPanel);
+        dbCard.add(Box.createVerticalStrut(14));
+
+        // Button row: Delete selected table
+        JPanel deleteTableButtonPanel = new JPanel();
+        deleteTableButtonPanel.setLayout(new BoxLayout(deleteTableButtonPanel, BoxLayout.X_AXIS));
+        deleteTableButtonPanel.setOpaque(false);
+        deleteTableButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         JButton deleteSelectedTableButton = createStyledButton(UnicodeSymbols.TRASH + " Ausgewählte Tabelle Löschen",
-                new Color(230, 126, 34));
+            ThemeManager.getWarningColor());
         deleteSelectedTableButton.addActionListener(e -> {
             String selectedTable = (String) tableComboBox.getSelectedItem();
             if (selectedTable == null || selectedTable.trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "Bitte wählen Sie eine Tabelle aus.",
-                        "Keine Tabelle ausgewählt",
-                        JOptionPane.WARNING_MESSAGE);
-                return;
+            JOptionPane.showMessageDialog(this,
+                "Bitte wählen Sie eine Tabelle aus.",
+                "Keine Tabelle ausgewählt",
+                JOptionPane.WARNING_MESSAGE);
+            return;
             }
             int confirm = JOptionPane.showConfirmDialog(this,
-                    String.format("<html><b>WARNUNG: Tabelle '%s' wirklich löschen?</b><br/><br/>" +
-                            "Diese Aktion kann <b>NICHT</b> rückgängig gemacht werden!<br/>" +
-                            "Alle Daten in der Tabelle '%s' werden permanent gelöscht.<br/><br/>" +
-                            "Möchten Sie fortfahren?</html>", selectedTable, selectedTable),
-                    "Tabelle löschen bestätigen",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE);
+                String.format("<html><b>WARNUNG: Tabelle '%s' wirklich löschen?</b><br/><br/>" +
+                    "Diese Aktion kann <b>NICHT</b> rückgängig gemacht werden!<br/>" +
+                    "Alle Daten in der Tabelle '%s' werden permanent gelöscht.<br/><br/>" +
+                    "Möchten Sie fortfahren?</html>", selectedTable, selectedTable),
+                "Tabelle löschen bestätigen",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
             if (confirm == JOptionPane.YES_OPTION) {
-                // Second confirmation for safety
-                String userInput = JOptionPane.showInputDialog(this,
-                        String.format("<html>Bitte geben Sie den Tabellennamen '<b>%s</b>' ein,<br/>" +
-                                "um die Löschung zu bestätigen:</html>", selectedTable),
-                        "Löschung bestätigen",
-                        JOptionPane.WARNING_MESSAGE);
-                if (userInput != null && userInput.trim().equals(selectedTable)) {
-                    deleteTable(selectedTable);
-                } else if (userInput != null) {
-                    JOptionPane.showMessageDialog(this,
-                            "Der eingegebene Tabellenname stimmt nicht überein.\nLöschung abgebrochen.",
-                            "Abgebrochen",
-                            JOptionPane.INFORMATION_MESSAGE);
-                }
+            // Second confirmation for safety
+            String userInput = JOptionPane.showInputDialog(this,
+                String.format("<html>Bitte geben Sie den Tabellennamen '<b>%s</b>' ein,<br/>" +
+                    "um die Löschung zu bestätigen:</html>", selectedTable),
+                "Löschung bestätigen",
+                JOptionPane.WARNING_MESSAGE);
+            if (userInput != null && userInput.trim().equals(selectedTable)) {
+                deleteTable(selectedTable);
+            } else if (userInput != null) {
+                JOptionPane.showMessageDialog(this,
+                    "Der eingegebene Tabellenname stimmt nicht überein.\nLöschung abgebrochen.",
+                    "Abgebrochen",
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
             }
         });
-        JPanel deleteTableButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        deleteTableButtonPanel.setOpaque(false);
-        deleteTableButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        deleteTableButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        deleteSelectedTableButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         deleteTableButtonPanel.add(deleteSelectedTableButton);
-        databaseSection.add(Box.createVerticalStrut(15));
-        databaseSection.add(deleteTableButtonPanel);
-        databasePanel.add(databaseSection);
+        dbCard.add(deleteTableButtonPanel);
+
+        // Add card to main panel
+        databasePanel.add(dbCard);
         databasePanel.add(Box.createVerticalGlue());
+
         // Add database panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.FLOPPY + " Datenbank", databaseScroll);
     }
 
     private void buildImportExportTab(JTabbedPane tabbedPane) {
-        // === CATEGORY 4: Import & Export ===
+        // === CATEGORY 4: Import & Export (Prettier, Left-Aligned) ===
         JPanel importExportPanel = createCategoryPanel();
+        importExportPanel.setLayout(new BoxLayout(importExportPanel, BoxLayout.Y_AXIS));
         JScrollPane importExportScroll = createScrollablePanel(importExportPanel);
-        JPanel importExportSection = createSectionPanel(
-                UnicodeSymbols.ARROW_UP + UnicodeSymbols.ARROW_DOWN + "️ Import & Export",
-                "Datenimport und -export Funktionen");
-        importExportSection.add(Box.createVerticalStrut(15));
-        importExportSection.add(createStyledLabel("Import:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
-        importExportSection.add(Box.createVerticalStrut(5));
-        importExportSection.add(createInfoLabel("<html><div style='width:650px;'>" +
-                "Importieren Sie Artikel, Lieferanten oder andere Daten aus CSV-Dateien.<br/>" +
-                "Stellen Sie sicher, dass die CSV-Dateien das richtige Format haben.</div></html>"));
-        importExportSection.add(Box.createVerticalStrut(10));
-        JButton importButton = createStyledButton(UnicodeSymbols.ARROW_UP + " Datenbank Importieren",
-                new Color(39, 174, 96));
+
+        // Card: Import & Export
+        JPanel importExportCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.ARROW_UP + UnicodeSymbols.ARROW_DOWN + "️ Import & Export",
+            "Datenimport und -export Funktionen",
+            null);
+        importExportCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        importExportCard.setBackground(ThemeManager.getCardBackgroundColor());
+        importExportCard.setLayout(new BoxLayout(importExportCard, BoxLayout.Y_AXIS));
+        importExportCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        importExportCard.add(Box.createVerticalStrut(15));
+        JLabel importLabel = createStyledLabel("Import:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor());
+        importLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        importExportCard.add(importLabel);
+        importExportCard.add(Box.createVerticalStrut(5));
+        JLabel importInfo = createInfoLabel("<html><div style='width:650px;'>Importieren Sie Artikel, Lieferanten oder andere Daten aus CSV-Dateien.<br/>Stellen Sie sicher, dass die CSV-Dateien das richtige Format haben.</div></html>");
+        importInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        importExportCard.add(importInfo);
+        importExportCard.add(Box.createVerticalStrut(10));
+        JButton importButton = createStyledButton(UnicodeSymbols.ARROW_UP + " Datenbank Importieren", ThemeManager.getSuccessColor());
+        importButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         importButton.addActionListener(e -> importFromCsv());
-        importExportSection.add(importButton);
-        importExportSection.add(Box.createVerticalStrut(20));
-        importExportSection.add(Box.createVerticalStrut(15));
-        importExportSection.add(createStyledLabel("Export:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor()));
-        importExportSection.add(Box.createVerticalStrut(5));
-        importExportSection.add(createInfoLabel("<html><div style='width:650px;'>" +
-                "Exportieren Sie Ihre Datenbankinhalte in CSV-Dateien zur Sicherung oder Weiterverarbeitung.</div></html>"));
-        importExportSection.add(Box.createVerticalStrut(10));
-        JButton exportButton = createStyledButton(UnicodeSymbols.ARROW_DOWN + " Datenbank Exportieren",
-                new Color(52, 152, 219));
+        importExportCard.add(importButton);
+        importExportCard.add(Box.createVerticalStrut(20));
+
+        JLabel exportLabel = createStyledLabel("Export:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor());
+        exportLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        importExportCard.add(exportLabel);
+        importExportCard.add(Box.createVerticalStrut(5));
+        JLabel exportInfo = createInfoLabel("<html><div style='width:650px;'>Exportieren Sie Ihre Datenbankinhalte in CSV-Dateien zur Sicherung oder Weiterverarbeitung.</div></html>");
+        exportInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        importExportCard.add(exportInfo);
+        importExportCard.add(Box.createVerticalStrut(10));
+        JButton exportButton = createStyledButton(UnicodeSymbols.ARROW_DOWN + " Datenbank Exportieren", ThemeManager.getSecondaryColor());
+        exportButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         exportButton.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(this,
-                    "<html><b>Datenbank nach CSV exportieren?</b><br/><br/>" +
-                            "Dies erstellt CSV-Dateien für:<br/>" +
-                            "- Artikel (articles_export.csv)<br/>" +
-                            "- Lieferanten (vendors_export.csv)<br/>" +
-                            "- Kunden (clients_export.csv)<br/>" +
-                            "- Bestellungen (orders_export.csv)<br/><br/>" +
-                            "Speicherort: " + Main.getAppDataDir().getAbsolutePath() + "</html>",
-                    "Exportieren bestätigen",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    Main.iconSmall);
+                "<html><b>Datenbank nach CSV exportieren?</b><br/><br/>" +
+                    "Dies erstellt CSV-Dateien für:<br/>" +
+                    "- Artikel (articles_export.csv)<br/>" +
+                    "- Lieferanten (vendors_export.csv)<br/>" +
+                    "- Kunden (clients_export.csv)<br/>" +
+                    "- Bestellungen (orders_export.csv)<br/><br/>" +
+                    "Speicherort: " + Main.getAppDataDir().getAbsolutePath() + "</html>",
+                "Exportieren bestätigen",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                Main.iconSmall);
             if (confirm == JOptionPane.YES_OPTION) {
-                try {
-                    exportToCsv();
-                    JOptionPane.showMessageDialog(this,
-                            "<html><b>OK Export erfolgreich!</b><br/><br/>" +
-                                    "Alle Tabellen wurden erfolgreich exportiert.<br/>" +
-                                    "Speicherort: <br/>" +
-                                    Main.getAppDataDir().getAbsolutePath() + "</html>",
-                            "Export erfolgreich",
-                            JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this,
-                            "<html><b>X Fehler beim Export!</b><br/><br/>" +
-                                    ex.getMessage() + "</html>",
-                            "Fehler",
-                            JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
-                }
+            try {
+                exportToCsv();
+                JOptionPane.showMessageDialog(this,
+                    "<html><b>OK Export erfolgreich!</b><br/><br/>" +
+                        "Alle Tabellen wurden erfolgreich exportiert.<br/>" +
+                        "Speicherort: <br/>" +
+                        Main.getAppDataDir().getAbsolutePath() + "</html>",
+                    "Export erfolgreich",
+                    JOptionPane.INFORMATION_MESSAGE,
+                    Main.iconSmall);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                    "<html><b>X Fehler beim Export!</b><br/><br/>" +
+                        ex.getMessage() + "</html>",
+                    "Fehler",
+                    JOptionPane.ERROR_MESSAGE,
+                    Main.iconSmall);
+            }
             }
         });
-        importExportSection.add(exportButton);
-        importExportPanel.add(importExportSection);
+        importExportCard.add(exportButton);
+
+        importExportPanel.add(importExportCard);
         importExportPanel.add(Box.createVerticalStrut(25));
-        JPanel settingsProfileSection = createSectionPanel(UnicodeSymbols.FLOPPY + " Einstellungen Profil",
-                "Importieren oder exportieren Sie Ihre Einstellungen als Profil-Datei");
-        settingsProfileSection.add(Box.createVerticalStrut(15));
-        JButton exportSettingsButton = createStyledButton(UnicodeSymbols.DOWNLOAD + " Einstellungen exportieren",
-                new Color(52, 152, 219));
+
+        // Card: Einstellungen Profil
+        JPanel settingsProfileCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.FLOPPY + " Einstellungen Profil",
+            "Importieren oder exportieren Sie Ihre Einstellungen als Profil-Datei",
+            null);
+        settingsProfileCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        settingsProfileCard.setBackground(ThemeManager.getCardBackgroundColor());
+        settingsProfileCard.setLayout(new BoxLayout(settingsProfileCard, BoxLayout.Y_AXIS));
+        settingsProfileCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        settingsProfileCard.add(Box.createVerticalStrut(15));
+        JButton exportSettingsButton = createStyledButton(UnicodeSymbols.DOWNLOAD + " Einstellungen exportieren", ThemeManager.getSecondaryColor());
+        exportSettingsButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         exportSettingsButton.addActionListener(e -> exportSettingsProfile());
-        JButton importSettingsButton = createStyledButton(UnicodeSymbols.UPLOAD + " Einstellungen importieren",
-                new Color(39, 174, 96));
+        JButton importSettingsButton = createStyledButton(UnicodeSymbols.UPLOAD + " Einstellungen importieren", ThemeManager.getSuccessColor());
+        importSettingsButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         importSettingsButton.addActionListener(e -> importSettingsProfile());
-        settingsProfileSection.add(exportSettingsButton);
-        settingsProfileSection.add(Box.createVerticalStrut(10));
-        settingsProfileSection.add(importSettingsButton);
-        importExportPanel.add(settingsProfileSection);
+        settingsProfileCard.add(exportSettingsButton);
+        settingsProfileCard.add(Box.createVerticalStrut(10));
+        settingsProfileCard.add(importSettingsButton);
+
+        importExportPanel.add(settingsProfileCard);
         importExportPanel.add(Box.createVerticalGlue());
+
         // Add import/export panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.DOWNLOAD + " Import/Export", importExportScroll);
     }
 
     private void buildAboutTab(JTabbedPane tabbedPane) {
-        // === CATEGORY 5: About ===
+        // === CATEGORY 5: About (Prettier) ===
         JPanel aboutPanel = createCategoryPanel();
         JScrollPane aboutScroll = createScrollablePanel(aboutPanel);
-        JPanel aboutSection = createSectionPanel(UnicodeSymbols.INFO + " Über VEBO Lagersystem",
-                "Informationen über die Anwendung");
-        // Application Info
-        JPanel appInfoPanel = new JPanel();
-        appInfoPanel.setLayout(new BoxLayout(appInfoPanel, BoxLayout.Y_AXIS));
-        appInfoPanel.setOpaque(false);
-        appInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        appInfoPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-        // Logo/Title
-        JLabel appNameLabel = new JLabel("VEBO Lagersystem");
-        appNameLabel.setFont(getFontByName(Font.BOLD, 28));
+
+        // Card: Application Info
+        JPanel appInfoCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.INFO + " Über VEBO Lagersystem",
+            "Informationen über die Anwendung",
+            null);
+        appInfoCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        appInfoCard.setBackground(ThemeManager.getCardBackgroundColor());
+
+        JLabel appNameLabel = new JLabel(UnicodeSymbols.BOX + " VEBO Lagersystem");
+        appNameLabel.setFont(getFontByName(Font.BOLD, 30));
         appNameLabel.setForeground(ThemeManager.getTitleTextColor());
         appNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        appNameLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        appNameLabel.setToolTipText("Besuchen Sie unsere Website: https://vebo.ch");
         appNameLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -1488,165 +1796,200 @@ public class SettingsGUI extends JFrame {
                     logger.error("Fehler beim Öffnen der VEBO-Website: {}", ex.getMessage());
                 }
             }
-
             @Override
             public void mouseEntered(MouseEvent e) {
                 appNameLabel.setForeground(ThemeManager.getTitleTextHighlightColor());
-                appNameLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
             }
-
             @Override
             public void mouseExited(MouseEvent e) {
                 appNameLabel.setForeground(ThemeManager.getTitleTextColor());
-                appNameLabel.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
             }
         });
-        appNameLabel.setToolTipText("Besuchen Sie unsere Website: https://vebo.ch");
-        JLabel versionLabel = new JLabel("Version " + Main.VERSION);
-        versionLabel.setFont(getFontByName(Font.PLAIN, 14));
+        JLabel versionLabel = new JLabel(UnicodeSymbols.TAG + " Version " + Main.VERSION);
+        versionLabel.setFont(getFontByName(Font.PLAIN, 15));
         versionLabel.setForeground(ThemeManager.getTextSecondaryColor());
         versionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        appInfoPanel.add(appNameLabel);
-        appInfoPanel.add(Box.createVerticalStrut(5));
-        appInfoPanel.add(versionLabel);
-        aboutSection.add(Box.createVerticalStrut(18));
-        aboutSection.add(appInfoPanel);
-        // Description
-        JPanel descriptionPanel = new JPanel(new BorderLayout(0, 10));
-        descriptionPanel.setOpaque(false);
-        descriptionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
-        descriptionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        appInfoCard.setLayout(new BoxLayout(appInfoCard, BoxLayout.Y_AXIS));
+        appInfoCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        appNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        versionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        appInfoCard.add(appNameLabel);
+        appInfoCard.add(Box.createVerticalStrut(8));
+        appInfoCard.add(versionLabel);
+
+        // Card: Description
+        JPanel descCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.INFO + " Beschreibung",
+            "Was macht das VEBO Lagersystem?",
+            null);
+        descCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(16, 22, 16, 22)));
+        descCard.setBackground(ThemeManager.getInputBackgroundColor());
+        descCard.setLayout(new BoxLayout(descCard, BoxLayout.Y_AXIS));
+        descCard.setAlignmentX(Component.LEFT_ALIGNMENT);
         JLabel descTitle = new JLabel("Beschreibung:");
-        descTitle.setFont(getFontByName(Font.PLAIN, 14));
+        descTitle.setFont(getFontByName(Font.BOLD, 15));
         descTitle.setForeground(ThemeManager.getTextPrimaryColor());
+        descTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         JTextArea descriptionArea = new JTextArea(
-                "VEBO Lagersystem ist eine moderne Lagerverwaltungssoftware für die effiziente " +
-                        "Verwaltung von Artikeln, Bestellungen, Lieferanten und Kunden. Die Anwendung " +
-                        "bietet umfangreiche Funktionen für die Bestandsverwaltung, automatische Warnungen " +
-                        "bei niedrigem Lagerbestand und QR-Code-basierte Artikelerfassung.");
+            "VEBO Lagersystem ist eine moderne Lagerverwaltungssoftware für die effiziente Verwaltung von Artikeln, Bestellungen, Lieferanten und Kunden. Die Anwendung bietet umfangreiche Funktionen für die Bestandsverwaltung, automatische Warnungen bei niedrigem Lagerbestand und QR-Code-basierte Artikelerfassung.");
         descriptionArea.setWrapStyleWord(true);
         descriptionArea.setLineWrap(true);
         descriptionArea.setEditable(false);
         descriptionArea.setFont(getFontByName(Font.PLAIN, 13));
         descriptionArea.setForeground(ThemeManager.getTextPrimaryColor());
         descriptionArea.setBackground(ThemeManager.getInputBackgroundColor());
-        descriptionArea.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+        descriptionArea.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
         descriptionArea.setRows(4);
-        descriptionPanel.add(descTitle, BorderLayout.NORTH);
-        descriptionPanel.add(descriptionArea, BorderLayout.CENTER);
-        aboutSection.add(Box.createVerticalStrut(15));
-        aboutSection.add(descriptionPanel);
-        // Developer Info
-        JPanel developerPanel = new JPanel();
-        developerPanel.setLayout(new BoxLayout(developerPanel, BoxLayout.Y_AXIS));
-        developerPanel.setOpaque(false);
-        developerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        developerPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-        developerPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " Entwickler:", 14, Font.BOLD,
-                ThemeManager.getTextPrimaryColor()));
-        developerPanel.add(Box.createVerticalStrut(8));
-        developerPanel.add(createStyledLabel("Darryl Huber", 13, Font.PLAIN, ThemeManager.getTextPrimaryColor()));
-        developerPanel.add(Box.createVerticalStrut(5));
-        developerPanel.add(createStyledLabel("Organisation: VEBO Oensingen", 13, Font.PLAIN,
-                ThemeManager.getTextSecondaryColor()));
-        aboutSection.add(Box.createVerticalStrut(15));
-        aboutSection.add(developerPanel);
-        // System Info
-        JPanel systemInfoPanel = new JPanel();
-        systemInfoPanel.setLayout(new BoxLayout(systemInfoPanel, BoxLayout.Y_AXIS));
-        systemInfoPanel.setOpaque(false);
-        systemInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        systemInfoPanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-        systemInfoPanel.add(createStyledLabel(UnicodeSymbols.DEVELOPER + " System-Information:", 14, Font.BOLD,
-                ThemeManager.getTextPrimaryColor()));
-        systemInfoPanel.add(Box.createVerticalStrut(8));
-        systemInfoPanel.add(createStyledLabel("Java Version: " + System.getProperty("java.version"), 12, Font.PLAIN,
-                ThemeManager.getTextSecondaryColor()));
-        systemInfoPanel.add(Box.createVerticalStrut(5));
-        systemInfoPanel.add(createStyledLabel(
-                "Betriebssystem: " + System.getProperty("os.name") + " " + System.getProperty("os.version"), 12,
-                Font.PLAIN, ThemeManager.getTextSecondaryColor()));
-        systemInfoPanel.add(Box.createVerticalStrut(5));
-        systemInfoPanel.add(createStyledLabel("Datenverzeichnis: " + Main.getAppDataDir().getAbsolutePath(), 12,
-                Font.PLAIN, ThemeManager.getTextSecondaryColor()));
-        aboutSection.add(Box.createVerticalStrut(15));
-        aboutSection.add(systemInfoPanel);
-        // Update Manager Section
-        JPanel updatePanel = new JPanel();
-        updatePanel.setLayout(new BoxLayout(updatePanel, BoxLayout.Y_AXIS));
-        updatePanel.setOpaque(false);
-        updatePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        updatePanel.setBorder(BorderFactory.createEmptyBorder(15, 0, 15, 0));
-        updatePanel.add(createStyledLabel(UnicodeSymbols.DOWNLOAD + " Update-Verwaltung:", 14, Font.BOLD,
-                ThemeManager.getTextPrimaryColor()));
-        updatePanel.add(Box.createVerticalStrut(12));
-        // Create update button rows with better layout
+        descriptionArea.setAlignmentX(Component.LEFT_ALIGNMENT);
+        descCard.add(descTitle);
+        descCard.add(Box.createVerticalStrut(6));
+        descCard.add(descriptionArea);
+
+        // Card: Developer Info
+        JPanel devCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.DEVELOPER + " Entwickler",
+            "Wer hat das System entwickelt?",
+            null);
+        devCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(16, 22, 16, 22)));
+        devCard.setBackground(ThemeManager.getCardBackgroundColor());
+        devCard.setLayout(new BoxLayout(devCard, BoxLayout.Y_AXIS));
+        devCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel devName = createStyledLabel(UnicodeSymbols.USER + " Darryl Huber", 14, Font.BOLD, ThemeManager.getTextPrimaryColor());
+        JLabel devOrg = createStyledLabel(UnicodeSymbols.BUILDING + " Organisation: VEBO Oensingen", 13, Font.PLAIN, ThemeManager.getTextSecondaryColor());
+        devName.setAlignmentX(Component.LEFT_ALIGNMENT);
+        devOrg.setAlignmentX(Component.LEFT_ALIGNMENT);
+        devCard.add(devName);
+        devCard.add(Box.createVerticalStrut(5));
+        devCard.add(devOrg);
+
+        // Card: System Info
+        JPanel sysCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.DEVELOPER + " System-Information",
+            "Technische Details zur Laufzeitumgebung",
+            null);
+        sysCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(16, 22, 16, 22)));
+        sysCard.setBackground(ThemeManager.getInputBackgroundColor());
+        sysCard.setLayout(new BoxLayout(sysCard, BoxLayout.Y_AXIS));
+        sysCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel sysJava = createStyledLabel(UnicodeSymbols.LAPTOP + " Java Version: " + System.getProperty("java.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor());
+        JLabel sysOs = createStyledLabel(UnicodeSymbols.MONITOR + " Betriebssystem: " + System.getProperty("os.name") + " " + System.getProperty("os.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor());
+        JLabel sysDir = createStyledLabel(UnicodeSymbols.FOLDER + " Datenverzeichnis: " + Main.getAppDataDir().getAbsolutePath(), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor());
+        sysJava.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sysOs.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sysDir.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sysCard.add(sysJava);
+        sysCard.add(Box.createVerticalStrut(5));
+        sysCard.add(sysOs);
+        sysCard.add(Box.createVerticalStrut(5));
+        sysCard.add(sysDir);
+
+        // Card: Update Manager
+        JPanel updateCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.DOWNLOAD + " Update-Verwaltung",
+            "Prüfen Sie auf neue Versionen und Kanäle",
+            null);
+        updateCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(16, 22, 16, 22)));
+        updateCard.setBackground(ThemeManager.getCardBackgroundColor());
+        updateCard.setLayout(new BoxLayout(updateCard, BoxLayout.Y_AXIS));
+        updateCard.setAlignmentX(Component.LEFT_ALIGNMENT);
         JPanel updateRow1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         updateRow1.setOpaque(false);
         updateRow1.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
         updateRow1.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JButton checkStableUpdateBtn = createStyledButton("Stable-Updates", new Color(52, 152, 219));
+        JButton checkStableUpdateBtn = createStyledButton(UnicodeSymbols.CHECK + " Stable-Updates", ThemeManager.getSecondaryColor());
         checkStableUpdateBtn.setToolTipText("Prüft auf neue stabile Versionen");
         checkStableUpdateBtn.addActionListener(e -> checkForUpdates("stable"));
         checkStableUpdateBtn.setPreferredSize(new Dimension(180, 40));
-        JButton checkBetaUpdateBtn = createStyledButton("Beta-Updates", new Color(243, 156, 18));
+        JButton checkBetaUpdateBtn = createStyledButton(UnicodeSymbols.BETA + " Beta-Updates", ThemeManager.getWarningColor());
         checkBetaUpdateBtn.setToolTipText("Prüft auf neue Beta-Versionen");
         checkBetaUpdateBtn.addActionListener(e -> checkForUpdates("beta"));
         checkBetaUpdateBtn.setPreferredSize(new Dimension(180, 40));
+        checkStableUpdateBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        checkBetaUpdateBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        updateRow1.setAlignmentX(Component.LEFT_ALIGNMENT);
         updateRow1.add(checkStableUpdateBtn);
         updateRow1.add(checkBetaUpdateBtn);
-        updatePanel.add(updateRow1);
-        updatePanel.add(Box.createVerticalStrut(8));
+        updateCard.add(updateRow1);
+        updateCard.add(Box.createVerticalStrut(8));
         JPanel updateRow2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         updateRow2.setOpaque(false);
         updateRow2.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
         updateRow2.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JButton checkAlphaUpdateBtn = createStyledButton("Alpha-Updates", new Color(231, 76, 60));
+        JButton checkAlphaUpdateBtn = createStyledButton(UnicodeSymbols.EXPERIMENT + " Alpha-Updates", ThemeManager.getDangerColor());
         checkAlphaUpdateBtn.setToolTipText("Prüft auf neue Alpha-Versionen (experimentell)");
         checkAlphaUpdateBtn.addActionListener(e -> checkForUpdates("alpha"));
         checkAlphaUpdateBtn.setPreferredSize(new Dimension(180, 40));
-        JButton checkTestingUpdateBtn = createStyledButton("Testing-Updates", new Color(155, 89, 182));
+        JButton checkTestingUpdateBtn = createStyledButton("🧪 Testing-Updates", ThemeManager.getAccentColor());
         checkTestingUpdateBtn.setToolTipText("Prüft auf neue Testing-Versionen (Entwicklung)");
         checkTestingUpdateBtn.addActionListener(e -> checkForUpdates("testing"));
         checkTestingUpdateBtn.setPreferredSize(new Dimension(180, 40));
+        checkAlphaUpdateBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        checkTestingUpdateBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        updateRow2.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Ensure all children in updateRow2 are left-aligned
+        FlowLayout fl2 = (FlowLayout) updateRow2.getLayout();
+        fl2.setAlignment(FlowLayout.LEFT);
         updateRow2.add(checkAlphaUpdateBtn);
         updateRow2.add(checkTestingUpdateBtn);
-        updatePanel.add(updateRow2);
-        updatePanel.add(Box.createVerticalStrut(12));
-        // Add info text about version
+        updateCard.add(updateRow2);
+        updateCard.add(Box.createVerticalStrut(12));
         JLabel versionInfoLabel = new JLabel("<html><div style='padding: 8px; background: "
-                + toHexColor(ThemeManager.getInputBackgroundColor()) + "; border-radius: 6px;'>" +
-                "<b>Aktuelle Version:</b> " + Main.VERSION + "<br/>" +
-                "<span style='font-size: 11px; color: #666;'>Kanal: " + UpdateManager.detectChannel(Main.VERSION)
-                + "</span>" +
-                "</div></html>");
+            + toHexColor(ThemeManager.getInputBackgroundColor()) + "; border-radius: 6px; margin-top: 8px; margin-bottom: 4px;'><b>Aktuelle Version:</b> " + Main.VERSION + "<br/>"
+            + "<span style='font-size: 11px; color: #666;'>Kanal: " + UpdateManager.detectChannel(Main.VERSION) + "</span></div></html>");
         versionInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
         versionInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        updatePanel.add(versionInfoLabel);
-        aboutSection.add(Box.createVerticalStrut(15));
-        aboutSection.add(updatePanel);
-        // Copyright
-        JPanel copyrightPanel = new JPanel();
-        copyrightPanel.setLayout(new BoxLayout(copyrightPanel, BoxLayout.Y_AXIS));
-        copyrightPanel.setOpaque(false);
-        copyrightPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        copyrightPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
-                BorderFactory.createEmptyBorder(15, 0, 0, 0)));
-        copyrightPanel.add(createStyledLabel("© 2026 VEBO Oensingen. Alle Rechte vorbehalten.", 11, Font.PLAIN,
-                ThemeManager.getTextSecondaryColor()));
-        copyrightPanel.add(Box.createVerticalStrut(5));
-        JLabel licenseLabel = createStyledLabel(
-                "Diese Software wird bereitgestellt \"wie sie ist\", ohne jegliche Garantie.", 11, Font.ITALIC,
-                ThemeManager.getTextSecondaryColor());
-        copyrightPanel.add(licenseLabel);
-        aboutSection.add(Box.createVerticalStrut(20));
-        aboutSection.add(copyrightPanel);
-        aboutPanel.add(aboutSection);
+        updateCard.add(versionInfoLabel);
+
+        // Card: Copyright
+        JPanel copyrightCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.COPYRIGHT + " Copyright",
+            "Rechtliche Hinweise zur Software",
+            null);
+        copyrightCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(14, 20, 14, 20)));
+        copyrightCard.setBackground(ThemeManager.getInputBackgroundColor());
+        copyrightCard.setLayout(new BoxLayout(copyrightCard, BoxLayout.Y_AXIS));
+        copyrightCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel copyrightLabel = createStyledLabel("© 2026 VEBO Oensingen. Alle Rechte vorbehalten.", 11, Font.PLAIN, ThemeManager.getTextSecondaryColor());
+        JLabel licenseLabel = createStyledLabel("Diese Software wird bereitgestellt \"wie sie ist\", ohne jegliche Garantie.", 11, Font.ITALIC, ThemeManager.getTextSecondaryColor());
+        copyrightLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        licenseLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        copyrightCard.add(copyrightLabel);
+        copyrightCard.add(Box.createVerticalStrut(5));
+        copyrightCard.add(licenseLabel);
+
+        // Add all cards to aboutPanel with spacing
+        aboutPanel.setLayout(new BoxLayout(aboutPanel, BoxLayout.Y_AXIS));
+        aboutPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        // Ensure all cards are left-aligned
+        appInfoCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        descCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        devCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        sysCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        updateCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        copyrightCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        aboutPanel.add(appInfoCard);
+        aboutPanel.add(Box.createVerticalStrut(18));
+        aboutPanel.add(descCard);
+        aboutPanel.add(Box.createVerticalStrut(18));
+        aboutPanel.add(devCard);
+        aboutPanel.add(Box.createVerticalStrut(18));
+        aboutPanel.add(sysCard);
+        aboutPanel.add(Box.createVerticalStrut(18));
+        aboutPanel.add(updateCard);
+        aboutPanel.add(Box.createVerticalStrut(18));
+        aboutPanel.add(copyrightCard);
         aboutPanel.add(Box.createVerticalGlue());
-        // Add about panel to tabbed pane
         tabbedPane.addTab(UnicodeSymbols.INFO + " Über", aboutScroll);
     }
 
@@ -1871,15 +2214,6 @@ public class SettingsGUI extends JFrame {
         warningInfoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         warningInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         return warningInfoLabel;
-    }
-
-    /**
-     * Creates a modern styled section panel with card-like appearance
-     */
-    private JPanel createSectionPanel(String title, String description) {
-        if (title == null || description == null)
-            throw new NullPointerException("Title and description cannot be null");
-        return SettingsUtils.createSectionPanel(title, description, searchableSections);
     }
 
     private void addSectionResetButton(JPanel section, Runnable action) {
@@ -2305,70 +2639,17 @@ public class SettingsGUI extends JFrame {
     private void loadSettings() {
         try {
             if (Main.settings != null) {
-                // Load stock check interval (default 30 minutes)
-                String intervalStr = Main.settings.getProperty("stock_check_interval");
-                int interval = (intervalStr != null) ? Integer.parseInt(intervalStr) : 30;
-                stockCheckIntervalSpinner.setValue(interval);
-
-                // Load warning display setting (default true)
-                String enableWarningsStr = Main.settings.getProperty("enable_hourly_warnings");
-                boolean enableWarnings = enableWarningsStr == null || Boolean.parseBoolean(enableWarningsStr);
-                enableWarningDisplayCheckbox.setSelected(enableWarnings);
-
-                // Load warning display interval (default 1 hour)
-                String warningIntervalStr = Main.settings.getProperty("warning_display_interval");
-                int warningInterval = (warningIntervalStr != null) ? Integer.parseInt(warningIntervalStr) : 1;
-                warningDisplayIntervalSpinner.setValue(warningInterval);
-
-                // Load auto stock check setting (default true)
-                String enableAutoCheckStr = Main.settings.getProperty("enable_auto_stock_check");
-                boolean enableAutoCheck = enableAutoCheckStr == null || Boolean.parseBoolean(enableAutoCheckStr);
-                enableAutoStockCheckCheckbox.setSelected(enableAutoCheck);
-
-                // Load server URL
-                String serverUrl = Main.settings.getProperty("server_url");
-                if (serverUrl == null || serverUrl.trim().isEmpty()) {
-                    serverUrl = "https://framedev.ch/vebo/scans.json";
+                Properties props = new Properties();
+                for (Variable variable : Variable.values()) {
+                    String key = variable.getValue();
+                    String value = Main.settings.getProperty(key);
+                    if (value != null) {
+                        props.setProperty(key, value);
+                    }
                 }
-                serverUrlField.setText(serverUrl);
-
-                String enableAutomaticImportStr = Main.settings.getProperty("enable_automatic_import_qrcode");
-                boolean enableAutomaticImport = enableAutomaticImportStr == null
-                        || Boolean.parseBoolean(enableAutomaticImportStr);
-                automaticImportCheckBox.setSelected(enableAutomaticImport);
-
-                String qrCodeImportIntervalStr = Main.settings.getProperty("qrcode_import_interval");
-                int qrCodeImportInterval = (qrCodeImportIntervalStr != null) ? Integer.parseInt(qrCodeImportIntervalStr)
-                        : 10;
-                qrCodeImportIntervalSpinner.setValue(qrCodeImportInterval);
-
-                // Load dark mode setting (default false)
-                String darkModeStr = Main.settings.getProperty("dark_mode");
-                boolean darkMode = Boolean.parseBoolean(darkModeStr);
-                darkModeCheckbox.setSelected(darkMode);
-                themeComboBox.setSelectedItem(darkMode ? "Dark" : "Light");
-                themeComboBox.setEnabled(!darkMode);
-
-                // Load font size setting (default 14)
-                String fontSizeStr = Main.settings.getProperty("table_font_size");
-                int fontSize = (fontSizeStr != null) ? Integer.parseInt(fontSizeStr) : 16;
-                fontSizeTableSpinner.setValue(fontSize);
-                tableFontSlider.setValue(fontSize);
-
-                String fontSizeTabStr = Main.settings.getProperty("table_font_size_tab");
-                int fontSizeTab = (fontSizeTabStr != null) ? Integer.parseInt(fontSizeTabStr) : 15;
-                fontSizeTabSpinner.setValue(fontSizeTab);
-                tabFontSlider.setValue(fontSizeTab);
-
-                String fontStyle = Main.settings.getProperty("font_style");
-                if (fontStyle != null) {
-                    fontComboBox.setSelectedItem(fontStyle);
-                }
-                selectedAccentColor = parseColor(Main.settings.getProperty("theme_accent_color"));
-                selectedHeaderColor = parseColor(Main.settings.getProperty("theme_header_color"));
-                selectedButtonColor = parseColor(Main.settings.getProperty("theme_button_color"));
-                updateColorControls();
-                updatePreview();
+                applySettingsProperties(props);
+                tableFontSlider.setValue((Integer) fontSizeTableSpinner.getValue());
+                tabFontSlider.setValue((Integer) fontSizeTabSpinner.getValue());
 
                 System.out.println("[SettingsGUI] Einstellungen geladen");
             }
@@ -2426,6 +2707,9 @@ public class SettingsGUI extends JFrame {
                 int fontSizeTab = (Integer) fontSizeTabSpinner.getValue();
                 Main.settings.setProperty("table_font_size_tab", String.valueOf(fontSizeTab));
                 String fontStyle = (String) fontComboBox.getSelectedItem();
+                if (fontStyle == null || fontStyle.trim().isEmpty()) {
+                    fontStyle = DEFAULT_FONT_STYLE;
+                }
                 Main.settings.setProperty("font_style", fontStyle);
 
                 Main.settings.save();
@@ -3560,21 +3844,18 @@ public class SettingsGUI extends JFrame {
         List<String> result = new ArrayList<>();
         boolean inQuotes = false;
         StringBuilder current = new StringBuilder();
-
         for (int i = 0; i < line.length(); i++) {
             char c = line.charAt(i);
-
             if (c == '"') {
                 inQuotes = !inQuotes;
             } else if (c == ',' && !inQuotes) {
                 result.add(current.toString());
                 current = new StringBuilder();
             } else {
-                current.append("©");
+                current.append(c);
             }
         }
         result.add(current.toString());
-
         return result.toArray(new String[0]);
     }
 
@@ -3733,19 +4014,14 @@ public class SettingsGUI extends JFrame {
             public Component getListCellRendererComponent(
                     JList<?> list, Object value, int index,
                     boolean isSelected, boolean cellHasFocus) {
-
                 JLabel c = (JLabel) super.getListCellRendererComponent(
                         list, value, index, isSelected, cellHasFocus);
-
-                // enforce list base colors too (popup JList)
                 list.setBackground(bg);
                 list.setForeground(fg);
                 list.setSelectionBackground(selBg);
                 list.setSelectionForeground(selFg);
-
                 c.setOpaque(true);
                 c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-
                 if (isSelected) {
                     c.setBackground(selBg);
                     c.setForeground(selFg);
@@ -3753,6 +4029,7 @@ public class SettingsGUI extends JFrame {
                     c.setBackground(bg);
                     c.setForeground(fg);
                 }
+                c.setToolTipText(value != null ? value.toString() : null);
                 return c;
             }
         });

@@ -23,7 +23,6 @@ import java.util.List;
 /**
  * This class provides methods to display warnings in a modern, styled dialog. It can show individual warnings with details and actions, as well as a table overview of all warnings. It uses the WarningManager to retrieve and update warnings. The dialogs are designed to be visually appealing and user-friendly, with responsive layouts and consistent theming. The code is structured to separate UI construction from data handling, and includes helper methods for common UI components like headers, buttons, and status chips.
  */
-@SuppressWarnings("DuplicatedCode")
 public class DisplayWarningDialog {
 
     /**
@@ -71,9 +70,7 @@ public class DisplayWarningDialog {
             );
             chrome.add(header, BorderLayout.NORTH);
 
-            ArticleGUI.RoundedPanel contentCard = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
-            contentCard.setLayout(new GridBagLayout());
-            contentCard.setBorder(BorderFactory.createEmptyBorder(22, 22, 18, 22));
+            JPanel contentCard = createCardPanel(new GridBagLayout(), 22, 22, 18, 22);
 
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.gridx = 0;
@@ -209,9 +206,7 @@ public class DisplayWarningDialog {
 
         // Content
         if (warnings.isEmpty()) {
-            ArticleGUI.RoundedPanel emptyCard = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
-            emptyCard.setBorder(BorderFactory.createEmptyBorder(34, 30, 34, 30));
-            emptyCard.setLayout(new GridBagLayout());
+            JPanel emptyCard = createCardPanel(new GridBagLayout(), 34, 30, 34, 30);
 
             JLabel emptyLabel = new JLabel(UnicodeSymbols.CHECKMARK + " Keine Warnungen vorhanden");
             emptyLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 16));
@@ -508,12 +503,9 @@ public class DisplayWarningDialog {
     }
 
     private static JPanel createDialogChrome(Color bg) {
-        ArticleGUI.RoundedPanel chrome = new ArticleGUI.RoundedPanel(bg, 18);
-        chrome.setOpaque(false);
-
+        JPanel chrome = createCardPanel(new BorderLayout(), 0, 0, 0, 0, bg, 18);
         Color shadow = ThemeManager.withAlpha(Color.BLACK, ThemeManager.isDarkMode() ? 90 : 35);
         Color border = ThemeManager.getBorderColor();
-
         chrome.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(shadow, 1, true),
                 BorderFactory.createCompoundBorder(
@@ -521,8 +513,19 @@ public class DisplayWarningDialog {
                         BorderFactory.createEmptyBorder(0, 0, 0, 0)
                 )
         ));
-
         return chrome;
+    }
+
+    // Unified card panel creation
+    private static JPanel createCardPanel(LayoutManager layout, int top, int left, int bottom, int right) {
+        return createCardPanel(layout, top, left, bottom, right, ThemeManager.getCardBackgroundColor(), 14);
+    }
+    private static JPanel createCardPanel(LayoutManager layout, int top, int left, int bottom, int right, Color bg, int radius) {
+        JPanel panel = new ArticleGUI.RoundedPanel(bg, radius);
+        panel.setLayout(layout);
+        panel.setBorder(BorderFactory.createEmptyBorder(top, left, bottom, right));
+        panel.setOpaque(false);
+        return panel;
     }
 
     private static JPanel createGradientHeader(Color a, Color b, String title, String subtitle, JDialog dialog) {

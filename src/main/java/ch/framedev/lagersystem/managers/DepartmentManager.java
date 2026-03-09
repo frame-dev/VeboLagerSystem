@@ -20,9 +20,9 @@ import ch.framedev.lagersystem.main.Main;
 @SuppressWarnings({"deprecation"})
 public class DepartmentManager {
 
-    private final Logger logger = LogManager.getLogger(DepartmentManager.class);
+    private static final Logger logger = LogManager.getLogger(DepartmentManager.class);
 
-    private static volatile DepartmentManager instance;
+    private static volatile DepartmentManager instance = null;
     private final DatabaseManager databaseManager;
 
     // ==================== Cache ====================
@@ -50,11 +50,10 @@ public class DepartmentManager {
         DepartmentManager local = instance;
         if (local == null) {
             synchronized (DepartmentManager.class) {
-                local = instance;
-                if (local == null) {
-                    local = new DepartmentManager();
-                    instance = local;
+                if (instance == null) {
+                    instance = new DepartmentManager();
                 }
+                local = instance;
             }
         }
         return local;
@@ -243,7 +242,13 @@ public class DepartmentManager {
             logger.error("Error while getting all departments", e);
             Main.logUtils.addLog("Error while getting all departments");
         }
-        return departments;
+        if (allDepartmentsCache != null) {
+            return allDepartmentsCache;
+        } else if (!departments.isEmpty()) {
+            return Collections.unmodifiableList(departments);
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     /**

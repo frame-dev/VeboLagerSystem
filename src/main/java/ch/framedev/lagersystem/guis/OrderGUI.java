@@ -48,10 +48,12 @@ public class OrderGUI extends JFrame {
      * Initializes the OrderGUI by setting up the main window, including the header, toolbar, order table, and search bar. The GUI allows users to view, filter, create, edit, delete, and complete orders. It also includes a search functionality to filter orders based on various criteria. The order data is loaded from the OrderManager and displayed in a JTable with custom styling and interactions. The GUI is designed to be responsive and user-friendly, with tooltips and confirmation dialogs for critical actions.
      */
     public OrderGUI() {
+        ThemeManager.getInstance().registerWindow(this);
         ThemeManager.applyUIDefaults();
         setTitle("Bestellungen Verwaltung");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(1100, 600);
+        setMinimumSize(new Dimension(980, 560));
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
@@ -338,6 +340,12 @@ public class OrderGUI extends JFrame {
         SwingUtilities.invokeLater(this::adjustColumnWidths);
 
         setVisible(true);
+    }
+
+    @Override
+    public void dispose() {
+        ThemeManager.getInstance().unregisterWindow(this);
+        super.dispose();
     }
 
     private void loadOrders() {
@@ -627,14 +635,7 @@ public class OrderGUI extends JFrame {
     // -------------------- UI helpers --------------------
 
     private void styleTextField(JTextField tf) {
-        if (tf == null) return;
-        tf.setBackground(ThemeManager.getInputBackgroundColor());
-        tf.setForeground(ThemeManager.getTextPrimaryColor());
-        tf.setCaretColor(ThemeManager.getTextPrimaryColor());
-        tf.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)
-        ));
+        JFrameUtils.styleTextField(tf);
     }
 
     /**

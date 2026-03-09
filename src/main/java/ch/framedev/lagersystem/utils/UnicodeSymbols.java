@@ -271,7 +271,22 @@ public final class UnicodeSymbols {
     public static final String DEVELOPER = getSymbol("\uD83D\uDCBB", "DEV");
     /** A shopping cart icon. Unicode: U+D83D U+DED2. */
     public static final String SHOPPING_CART = getSymbol("\uD83D\uDED2", "CART");
-
+    /** A laptop or computer icon. Unicode: U+D83D U+DCBB. */
+    public static final String LAPTOP = getSymbol("\uD83D\uDCBB", "LAP");
+    /** A monitor icon. Unicode: U+D83D U+DCFA. */
+    public static final String MONITOR = getSymbol("\uD83D\uDCFA", "MON");
+    /** An experiment icon. Unicode: U+D83D U+DCAD. */
+    public static final String EXPERIMENT = getSymbol("\uD83D\uDCAD", "EXP");
+    /** A test tube icon. Unicode: U+D83E U+DD2C. */
+    public static final String TEST_TUBE = getSymbol("\uD83E\uDD2C", "TEST");
+    /** A beta icon. Unicode: U+1F171. */
+    public static final String BETA = getSymbol("\uD83C\uDD71", "BETA");
+    /** An alpha icon. Unicode: U+1F170. */
+    public static final String ALPHA = getSymbol("\uD83C\uDD70", "ALPHA");
+    /** A box icon. Unicode: U+1F4E6. */
+    public static final String BOX = getSymbol("\uD83D\uDCE6", "BOX");
+    /** A test icon. Unicode: U+1F4DD. */
+    public static final String TEST = getSymbol("\uD83D\uDCDD", "TEST");
     // ===================== Table/Column Icons =====================
     /** An icon for an article number column. */
     public static final String ARTIKELNUMMER = NUMBERS;

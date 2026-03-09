@@ -10,12 +10,12 @@ import java.util.List;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings({"UnusedReturnValue", "unused", "deprecation", "DuplicatedCode"})
+@SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
 public class UserManager {
 
-    private final Logger logger = LogManager.getLogger(UserManager.class);
+    private static final Logger logger = LogManager.getLogger(UserManager.class);
 
-    private static volatile UserManager instance;
+    private static volatile UserManager instance = null;
     private static final Object LOCK = new Object();
     private final DatabaseManager databaseManager;
 
@@ -36,11 +36,10 @@ public class UserManager {
         UserManager local = instance;
         if (local == null) {
             synchronized (LOCK) {
-                local = instance;
-                if (local == null) {
-                    local = new UserManager();
-                    instance = local;
+                if (instance == null) {
+                    instance = new UserManager();
                 }
+                local = instance;
             }
         }
         return local;
@@ -221,7 +220,13 @@ public class UserManager {
             return allUsernamesCache;
         } catch (Exception e) {
             logger.error("Error while retrieving all usernames", e);
-            return new ArrayList<>();
+        }
+        if (allUsernamesCache != null) {
+            return allUsernamesCache;
+        } else if (!usernames.isEmpty()) {
+            return Collections.unmodifiableList(usernames);
+        } else {
+            return Collections.emptyList();
         }
     }
 

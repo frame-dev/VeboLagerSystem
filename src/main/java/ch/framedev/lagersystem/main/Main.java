@@ -37,6 +37,7 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.UpdateManager;
 import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.managers.VendorManager;
+import ch.framedev.lagersystem.managers.ThemeManager.LookAndFeelOption;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
@@ -58,32 +59,41 @@ public class Main {
     }
 
     /**
-     * Logger instance for logging application events and errors. Configured to log to both console and file, providing detailed information for debugging and monitoring application behavior.
+     * Logger instance for logging application events and errors. Configured to log
+     * to both console and file, providing detailed information for debugging and
+     * monitoring application behavior.
      */
     private static final Logger logger = LogManager.getLogger(Main.class);
     /**
-     * Cached application data directory to avoid redundant lookups. Initialized on first access and reused for subsequent calls to getAppDataDir().
+     * Cached application data directory to avoid redundant lookups. Initialized on
+     * first access and reused for subsequent calls to getAppDataDir().
      */
     private static volatile File appDataDirCache;
     /**
-     * Flag to ensure that update checks are only performed once per application run, preventing redundant checks and potential performance issues.
+     * Flag to ensure that update checks are only performed once per application
+     * run, preventing redundant checks and potential performance issues.
      */
     private static volatile boolean updatesChecked;
 
     /**
-     * Database manager instance, responsible for all database interactions. Initialized at startup and used throughout the application.
+     * Database manager instance, responsible for all database interactions.
+     * Initialized at startup and used throughout the application.
      */
     public static DatabaseManager databaseManager;
     /**
-     * Main GUI instance, responsible for displaying the main application window. Initialized after loading settings and used to manage the main interface.
+     * Main GUI instance, responsible for displaying the main application window.
+     * Initialized after loading settings and used to manage the main interface.
      */
     public static ArticleListGUI articleListGUI;
     /**
-     * Log utility instance, responsible for managing application logs. Initialized at startup and used for logging important events and errors throughout the application.
+     * Log utility instance, responsible for managing application logs. Initialized
+     * at startup and used for logging important events and errors throughout the
+     * application.
      */
     public static final LogUtils logUtils = new LogUtils();
     /**
-     * Application settings loaded from properties file, accessible throughout the application.
+     * Application settings loaded from properties file, accessible throughout the
+     * application.
      */
     public static Settings settings;
     /**
@@ -95,12 +105,17 @@ public class Main {
      */
     public static ImageIcon iconSmall;
     /**
-     * Application version string, used for display in the GUI and logging. Should be updated with each release to reflect the current version of the application.
+     * Application version string, used for display in the GUI and logging. Should
+     * be updated with each release to reflect the current version of the
+     * application.
      */
     public static final String VERSION = "0.3-TESTING";
 
     /**
-     * Main method - entry point of the application. Initializes the application, shows the splash screen, and starts the main GUI. Handles any exceptions that occur during startup and logs them appropriately.
+     * Main method - entry point of the application. Initializes the application,
+     * shows the splash screen, and starts the main GUI. Handles any exceptions that
+     * occur during startup and logs them appropriately.
+     * 
      * @param args command-line arguments (not used in this application)
      */
     public static void main(String[] args) {
@@ -186,6 +201,7 @@ public class Main {
         updateProgress(progressListener, 25, "Icons geladen...");
         updateProgress(progressListener, 34, "Initialisiere Theme...");
         initializeTheme();
+        applyLookAndFeelFromSettings();
         updateProgress(progressListener, 35, "Theme gesetzt...");
         updateProgress(progressListener, 44, "Prüfe Datenverzeichnis...");
         ensureAppDataDirectory();
@@ -198,15 +214,13 @@ public class Main {
             int result = showConfirmDialogOnEdt(
                     "Willkommen zum VEBO Lagersystem!\nMöchten Sie die anfänglichen Daten jetzt importieren?",
                     "Erster Start",
-                    iconSmall
-            );
+                    iconSmall);
             if (result == JOptionPane.YES_OPTION) {
                 updateProgress(progressListener, 62, "QR-Code Abfrage...");
                 int resultQr = showConfirmDialogOnEdt(
                         "QR-Codes Erstellen?",
                         "QR-Codes",
-                        null
-                );
+                        null);
                 if (resultQr == JOptionPane.YES_OPTION) {
                     updateProgress(progressListener, 68, "Erstelle QR-Codes...");
                     logger.info("QR-Codes werden erstellt...");
@@ -258,7 +272,8 @@ public class Main {
     /**
      * Create a scaled ImageIcon from a resource file
      */
-    private static ImageIcon createScaledIcon(SimpleJavaUtils utils, String resourceName, int width, int height) throws MalformedURLException {
+    private static ImageIcon createScaledIcon(SimpleJavaUtils utils, String resourceName, int width, int height)
+            throws MalformedURLException {
         try {
             ImageIcon originalIcon = new ImageIcon(utils.getFromResourceFile(resourceName).toURI().toURL());
             Image scaledImage = originalIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
@@ -343,7 +358,8 @@ public class Main {
     /**
      * Process single article import
      */
-    private static void processArticleImport(ArticleManager articleManager, Article article, ImportResult result, java.util.Set<String> importedItems) {
+    private static void processArticleImport(ArticleManager articleManager, Article article, ImportResult result,
+            java.util.Set<String> importedItems) {
         if (importedItems.contains(article.getArticleNumber())) {
             result.incrementSkipped();
             return;
@@ -380,8 +396,7 @@ public class Main {
                 minStockLevel,
                 sellPrice,
                 buyPrice,
-                vendorName
-        );
+                vendorName);
     }
 
     private static String getString(Map<String, Object> data, String key) {
@@ -437,7 +452,8 @@ public class Main {
     /**
      * Process single vendor import
      */
-    private static void processVendorImport(VendorManager vendorManager, Map<String, Object> itemData, ImportResult result, java.util.Set<String> importedItems) {
+    private static void processVendorImport(VendorManager vendorManager, Map<String, Object> itemData,
+            ImportResult result, java.util.Set<String> importedItems) {
         String vendorName = (String) itemData.get("name");
 
         if (importedItems.contains(vendorName)) {
@@ -449,7 +465,7 @@ public class Main {
         String email = getString(itemData, "email");
         String address = getString(itemData, "address");
 
-        String[] columns = {"contactPerson", "phoneNumber", "email", "address"};
+        String[] columns = { "contactPerson", "phoneNumber", "email", "address" };
         Object[] dataValues = {
                 contactPerson, phoneNumber, email, address
         };
@@ -464,7 +480,6 @@ public class Main {
             logUtils.addLog("Fehler beim Importieren des Lieferanten: " + vendorName);
         }
     }
-
 
     /**
      * Import departments from departments file
@@ -486,7 +501,8 @@ public class Main {
     /**
      * Process single department import
      */
-    private static void processDepartmentImport(DepartmentManager departmentManager, Map<String, Object> itemData, ImportResult result, java.util.Set<String> importedItems) {
+    private static void processDepartmentImport(DepartmentManager departmentManager, Map<String, Object> itemData,
+            ImportResult result, java.util.Set<String> importedItems) {
         String departmentName = getString(itemData, "department");
         String kontoNumber = getString(itemData, "kontoNumber");
 
@@ -526,7 +542,8 @@ public class Main {
     /**
      * Process single client import
      */
-    private static void processClientImport(ClientManager clientManager, Map<String, Object> itemData, ImportResult result, java.util.Set<String> importedItems) {
+    private static void processClientImport(ClientManager clientManager, Map<String, Object> itemData,
+            ImportResult result, java.util.Set<String> importedItems) {
         String firstLastName = getString(itemData, "firstLastName");
         String department = getString(itemData, "department");
 
@@ -549,7 +566,8 @@ public class Main {
     /**
      * Check if import should be skipped
      */
-    private static boolean shouldSkipImport(String itemName, boolean existsInManager, java.util.Set<String> importedItems) {
+    private static boolean shouldSkipImport(String itemName, boolean existsInManager,
+            java.util.Set<String> importedItems) {
         return importedItems.contains(itemName) || existsInManager;
     }
 
@@ -603,12 +621,11 @@ public class Main {
      */
     private static SchedulerConfig loadSchedulerConfig() {
         return new SchedulerConfig(
-                getIntSetting("stock_check_interval", 30),
+                getPositiveIntSetting("stock_check_interval", 30),
                 getBooleanSetting("enable_auto_stock_check", true),
-                getBooleanSetting("enable_hourly_warnings", true),
+                getBooleanSetting("enable_hourly_warnings", true, "enable_houtly_warnings"),
                 getBooleanSetting("enable_automatic_import_qrcode", true),
-                getIntSetting("qrcode_import_interval", 10)
-        );
+                getPositiveIntSetting("qrcode_import_interval", 10));
     }
 
     /**
@@ -627,11 +644,57 @@ public class Main {
     }
 
     /**
+     * Get positive integer setting with default value fallback.
+     */
+    private static int getPositiveIntSetting(String key, int defaultValue) {
+        int value = getIntSetting(key, defaultValue);
+        return value > 0 ? value : defaultValue;
+    }
+
+    /**
      * Get boolean setting with a default value
      */
     private static boolean getBooleanSetting(String key, boolean defaultValue) {
         String value = settings.getProperty(key);
         return value == null ? defaultValue : Boolean.parseBoolean(value);
+    }
+
+    /**
+     * Get boolean setting with support for legacy key aliases.
+     */
+    private static boolean getBooleanSetting(String key, boolean defaultValue, String... aliases) {
+        String value = settings.getProperty(key);
+        if (value != null) {
+            return Boolean.parseBoolean(value);
+        }
+
+        if (aliases != null) {
+            for (String alias : aliases) {
+                if (alias == null || alias.isBlank()) {
+                    continue;
+                }
+
+                String aliasValue = settings.getProperty(alias);
+                if (aliasValue != null) {
+                    logger.info("Using legacy setting key '{}' for '{}'.", alias, key);
+                    return Boolean.parseBoolean(aliasValue);
+                }
+            }
+        }
+
+        return defaultValue;
+    }
+
+    /**
+     * Applies look-and-feel from settings with a safe fallback.
+     */
+    private static void applyLookAndFeelFromSettings() {
+        String lookAndFeel = settings.getProperty("look_and_feel");
+        if (lookAndFeel != null && !lookAndFeel.isBlank()) {
+            ThemeManager.setLookAndFeel(lookAndFeel.trim());
+        } else {
+            ThemeManager.setLookAndFeel(LookAndFeelOption.SYSTEM);
+        }
     }
 
     /**
@@ -659,7 +722,8 @@ public class Main {
      */
     private static void startQRCodeImportScheduler(SchedulerManager schedulerManager, SchedulerConfig config) {
         if (config.enableAutomaticImport) {
-            schedulerManager.startAutoImportQrCodes(config.automaticImportInterval, java.util.concurrent.TimeUnit.MINUTES);
+            schedulerManager.startAutoImportQrCodes(config.automaticImportInterval,
+                    java.util.concurrent.TimeUnit.MINUTES);
             System.out.println("✓ Automatischer QR-Code Import gestartet");
         }
     }
@@ -819,7 +883,8 @@ public class Main {
             } else if (comparison.isCurrent()) {
                 System.out.println("✓ Anwendung ist auf dem neuesten Stand");
             } else if (comparison.isNewer()) {
-                System.out.println("✓ Entwicklungsversion (neuer als letzte Release: " + comparison.latestVersion() + ")");
+                System.out.println(
+                        "✓ Entwicklungsversion (neuer als letzte Release: " + comparison.latestVersion() + ")");
             }
 
             // Log all available channels
@@ -837,7 +902,8 @@ public class Main {
             }
 
             // Show GUI dialog if any update is available
-            if (channelResult.hasStableUpdate() || channelResult.hasBetaUpdate() || channelResult.hasAlphaUpdate() || channelResult.hasTestingUpdate()) {
+            if (channelResult.hasStableUpdate() || channelResult.hasBetaUpdate() || channelResult.hasAlphaUpdate()
+                    || channelResult.hasTestingUpdate()) {
                 displayUpdateDialog(channelResult);
             }
 
@@ -913,8 +979,7 @@ public class Main {
                     "Updates verfügbar",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.INFORMATION_MESSAGE,
-                    iconSmall
-            );
+                    iconSmall);
 
             if (option == JOptionPane.YES_OPTION) {
                 openDownloadPage();
@@ -939,8 +1004,7 @@ public class Main {
                         "Bitte öffnen Sie diesen Link in Ihrem Browser:\n" + downloadUrl,
                         "Download-Link",
                         JOptionPane.INFORMATION_MESSAGE,
-                        iconSmall
-                );
+                        iconSmall);
                 logger.warn("Browser not supported, showed URL in dialog instead");
             }
         } catch (HeadlessException | IOException e) {
@@ -953,8 +1017,7 @@ public class Main {
                             https://github.com/frame-dev/VeboLagerSystem/releases""",
                     "Fehler",
                     JOptionPane.ERROR_MESSAGE,
-                    iconSmall
-            );
+                    iconSmall);
         }
     }
 
@@ -994,8 +1057,7 @@ public class Main {
             boolean enableAutoCheck,
             boolean enableWarnings,
             boolean enableAutomaticImport,
-            int automaticImportInterval
-    ) {
+            int automaticImportInterval) {
     }
 
     private interface ProgressListener {
@@ -1067,8 +1129,7 @@ public class Main {
                             null,
                             "Die Anwendung konnte nicht gestartet werden.\nDetails: " + initException.getMessage(),
                             "Startfehler",
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                            JOptionPane.ERROR_MESSAGE);
                     System.exit(1);
                     return;
                 }
@@ -1093,7 +1154,8 @@ public class Main {
 
     private static int showConfirmDialogOnEdt(Object message, String title, Icon icon) {
         if (SwingUtilities.isEventDispatchThread()) {
-            return JOptionPane.showConfirmDialog(null, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, icon);
+            return JOptionPane.showConfirmDialog(null, message, title, JOptionPane.YES_NO_OPTION,
+                    JOptionPane.INFORMATION_MESSAGE, icon);
         }
         final int[] result = new int[1];
         try {
@@ -1103,8 +1165,7 @@ public class Main {
                     title,
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.INFORMATION_MESSAGE,
-                    icon
-            ));
+                    icon));
         } catch (InterruptedException | InvocationTargetException e) {
             throw new RuntimeException("Dialog konnte nicht angezeigt werden", e);
         }

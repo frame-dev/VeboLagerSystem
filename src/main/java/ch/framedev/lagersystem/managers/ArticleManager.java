@@ -28,12 +28,12 @@ import ch.framedev.lagersystem.main.Main;
  * - Configurable cache size
  */
 @SuppressWarnings({"unused", "deprecation"})
-public class ArticleManager {
 
-    private final Logger logger = LogManager.getLogger(ArticleManager.class);
+public class ArticleManager {
+    private static final Logger logger = LogManager.getLogger(ArticleManager.class);
 
     private final DatabaseManager databaseManager;
-    private static ArticleManager instance;
+    private static volatile ArticleManager instance;
 
     // Cache configuration
     private static final int MAX_CACHE_SIZE = 500; // Maximum number of cached articles
@@ -82,11 +82,26 @@ public class ArticleManager {
      *
      * @return ArticleManager instance
      */
-    public static synchronized ArticleManager getInstance() {
+    public static ArticleManager getInstance() {
         if (instance == null) {
-            instance = new ArticleManager();
+            synchronized (ArticleManager.class) {
+                if (instance == null) {
+                    instance = new ArticleManager();
+                }
+            }
         }
         return instance;
+    }
+
+    /**
+     * For testing or reinitialization: resets the singleton instance (use with caution).
+     */
+    public static void resetInstance() {
+        synchronized (ArticleManager.class) {
+            if (instance != null) {
+                instance = null;
+            }
+        }
     }
 
     private void createTable() {
@@ -453,7 +468,16 @@ public class ArticleManager {
         ResultSet resultSet = null;
         try {
             resultSet = databaseManager.executeQuery(sql, new Object[]{});
-            if (resultSet == null) return List.of();
+            if (resultSet == null) {
+                allArticlesLock.writeLock().lock();
+                try {
+                    allArticlesCache = List.of();
+                    allArticlesCacheTime = System.currentTimeMillis();
+                } finally {
+                    allArticlesLock.writeLock().unlock();
+                }
+                return List.of();
+            }
 
             List<Article> articles = new ArrayList<>();
             while (resultSet.next()) {
@@ -480,7 +504,7 @@ public class ArticleManager {
 
             allArticlesLock.writeLock().lock();
             try {
-                allArticlesCache = Collections.unmodifiableList(new ArrayList<>(articles));
+                allArticlesCache = articles.isEmpty() ? List.of() : Collections.unmodifiableList(new ArrayList<>(articles));
                 allArticlesCacheTime = System.currentTimeMillis();
                 logger.debug("All articles cached ({} articles)", articles.size());
             } finally {
@@ -491,6 +515,13 @@ public class ArticleManager {
         } catch (SQLException e) {
             logger.error("Error while getting all articles", e);
             Main.logUtils.addLog("Error while getting all articles");
+            allArticlesLock.writeLock().lock();
+            try {
+                allArticlesCache = List.of();
+                allArticlesCacheTime = System.currentTimeMillis();
+            } finally {
+                allArticlesLock.writeLock().unlock();
+            }
             return List.of();
         } finally {
             databaseManager.closeQuery(resultSet);

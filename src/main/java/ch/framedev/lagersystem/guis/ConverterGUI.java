@@ -3,7 +3,6 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
-import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.SettingsUtils;
 
 import javax.swing.*;
@@ -36,6 +35,8 @@ public class ConverterGUI extends JFrame {
      */
     public ConverterGUI(Article article) {
         this.article = article;
+        ThemeManager.getInstance().registerWindow(this);
+        ThemeManager.applyUIDefaults();
 
         setTitle("Befüllungsrechner");
         setSize(1020, 640);
@@ -45,12 +46,11 @@ public class ConverterGUI extends JFrame {
 
         JPanel root = new JPanel(new GridBagLayout());
         root.setBackground(ThemeManager.getBackgroundColor());
-        root.setBorder(new EmptyBorder(28,28,28,28));
+        root.setBorder(new EmptyBorder(36,36,36,36));
 
-        JFrameUtils.RoundedPanel card =
-                new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 4);
-        card.setLayout(new BorderLayout(0,16));
-        card.setBorder(new EmptyBorder(15,15,15,15));
+        ShadowRoundedPanel card = new ShadowRoundedPanel(ThemeManager.getCardBackgroundColor(), 22, 12);
+        card.setLayout(new BorderLayout(0, 22));
+        card.setBorder(new EmptyBorder(28, 32, 28, 32));
 
         card.add(buildHeader(), BorderLayout.NORTH);
         card.add(buildContent(), BorderLayout.CENTER);
@@ -78,6 +78,12 @@ public class ConverterGUI extends JFrame {
         if (calcButton != null) calcButton.setEnabled(enabled);
 
         amountField.addActionListener(e -> calculate());
+    }
+
+    @Override
+    public void dispose() {
+        ThemeManager.getInstance().unregisterWindow(this);
+        super.dispose();
     }
 
     // ---------- HEADER ------------------------------------------------------
@@ -278,24 +284,76 @@ public class ConverterGUI extends JFrame {
     private JButton createBigButton(String text, boolean primary){
         if(text == null) throw new NullPointerException("text must not be null");
         JButton b = new JButton(text);
-        b.setFont(SettingsUtils.getFontByName(Font.BOLD,15));
-        b.setPreferredSize(new Dimension(160,46));
+        b.setFont(SettingsUtils.getFontByName(Font.BOLD, 15));
+        b.setPreferredSize(new Dimension(148, 40));
         b.setFocusPainted(false);
-        b.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor()));
+        b.setOpaque(true);
+        b.setContentAreaFilled(true);
+        b.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder((primary ? ThemeManager.getPrimaryColor().darker() : ThemeManager.getBorderColor()), 1, true),
+                new EmptyBorder(10, 22, 10, 22)));
         b.setBackground(primary ? ThemeManager.getPrimaryColor() : ThemeManager.getCardBackgroundColor());
-        b.setForeground(ThemeManager.getTextPrimaryColor());
+        b.setForeground(ThemeManager.getTextOnPrimaryColor());
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-        // Hover effect (simple brighten/darken without hardcoding colors)
         final Color normalBg = b.getBackground();
-        final Color hoverBg = brighten(normalBg, 0.08f);
+        final Color hoverBg = brighten(normalBg, 0.10f);
+        final Color pressedBg = brighten(normalBg, primary ? -0.08f : 0.04f);
 
         b.addMouseListener(new MouseAdapter() {
-            @Override public void mouseEntered(MouseEvent e) { b.setBackground(hoverBg); }
-            @Override public void mouseExited(MouseEvent e)  { b.setBackground(normalBg); }
+            @Override public void mouseEntered(MouseEvent e) {
+                b.setBackground(hoverBg);
+                b.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder((primary ? ThemeManager.getPrimaryColor().darker() : ThemeManager.getBorderColor()).darker(), 1, true),
+                        new EmptyBorder(10, 22, 10, 22)));
+            }
+            @Override public void mouseExited(MouseEvent e) {
+                b.setBackground(normalBg);
+                b.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder((primary ? ThemeManager.getPrimaryColor().darker() : ThemeManager.getBorderColor()), 1, true),
+                        new EmptyBorder(10, 22, 10, 22)));
+            }
+            @Override public void mousePressed(MouseEvent e) {
+                b.setBackground(pressedBg);
+            }
+            @Override public void mouseReleased(MouseEvent e) {
+                b.setBackground(b.contains(e.getPoint()) ? hoverBg : normalBg);
+            }
         });
 
         return b;
+    }
+
+    // Modern shadowed rounded panel for card look
+    private static class ShadowRoundedPanel extends JPanel {
+        private final Color backgroundColor;
+        private final int radius;
+        private final int shadowSize;
+        ShadowRoundedPanel(Color bg, int radius, int shadowSize) {
+            this.backgroundColor = bg;
+            this.radius = radius;
+            this.shadowSize = shadowSize;
+            setOpaque(false);
+        }
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth();
+            int h = getHeight();
+            // Draw soft shadow
+            for (int i = shadowSize; i > 0; i--) {
+                int alpha = (int)(18.0 * i/shadowSize);
+                g2.setColor(new Color(0,0,0,alpha));
+                g2.fillRoundRect(i, i, w-i*2, h-i*2, radius, radius);
+            }
+            // Draw subtle gradient background
+            GradientPaint gp = new GradientPaint(0, 0, backgroundColor.brighter(), 0, h, backgroundColor.darker());
+            g2.setPaint(gp);
+            g2.fillRoundRect(0, 0, w-shadowSize, h-shadowSize, radius, radius);
+            g2.dispose();
+            super.paintComponent(g);
+        }
     }
 
     private static String formatCHF(double v){

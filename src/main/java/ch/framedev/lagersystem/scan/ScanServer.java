@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.scan;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.utils.NetUtils;
 import com.google.gson.*;
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.*;
@@ -202,11 +203,11 @@ public class ScanServer {
         return null;
     }
 
-    private static void respond(com.sun.net.httpserver.HttpExchange ex, int code, String body) throws IOException {
+    private static void respond(HttpExchange ex, int code, String body) throws IOException {
         respond(ex, code, body, "text/plain; charset=utf-8");
     }
 
-    private static void respond(com.sun.net.httpserver.HttpExchange ex, int code, String body, String contentType) throws IOException {
+    private static void respond(HttpExchange ex, int code, String body, String contentType) throws IOException {
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
         ex.getResponseHeaders().set("Content-Type", contentType);
         ex.sendResponseHeaders(code, bytes.length);

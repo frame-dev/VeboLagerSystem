@@ -57,6 +57,7 @@ public class EditOrderGUI extends JFrame {
 
         setTitle("Bestellung Bearbeiten");
         setSize(1000, 700);
+        setMinimumSize(new Dimension(900, 620));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(0, 0));

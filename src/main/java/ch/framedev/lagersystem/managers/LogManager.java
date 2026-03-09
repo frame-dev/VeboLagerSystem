@@ -23,7 +23,7 @@ public class LogManager {
 
     private static final Logger logger = org.apache.logging.log4j.LogManager.getLogger(LogManager.class);
 
-    private static volatile LogManager instance;
+    private static volatile LogManager instance = null;
     private final DatabaseManager databaseManager;
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
@@ -62,12 +62,16 @@ public class LogManager {
     }
 
     public static LogManager getInstance() {
-        synchronized (LogManager.class) {
-            if (instance == null) {
-                instance = new LogManager();
+        LogManager local = instance;
+        if (local == null) {
+            synchronized (LogManager.class) {
+                if (instance == null) {
+                    instance = new LogManager();
+                }
+                local = instance;
             }
         }
-        return instance;
+        return local;
     }
 
     private void createTable() {
@@ -177,8 +181,13 @@ public class LogManager {
         } catch (SQLException e) {
             logger.error("Error retrieving logs: {}", e.getMessage(), e);
         }
-
-        return logs;
+        if (allLogsCache != null) {
+            return allLogsCache;
+        } else if (!logs.isEmpty()) {
+            return Collections.unmodifiableList(logs);
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     /**

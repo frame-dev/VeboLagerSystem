@@ -24,13 +24,22 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.getSelectedArticles;
 /**
  * Modern Main Dashboard for VEBO Lagersystem with Tabbed Interface
  */
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 @SuppressWarnings("DuplicatedCode")
 public class MainGUI extends JFrame {
+    private static final Logger logger = LogManager.getLogger(MainGUI.class);
 
     private JTabbedPane tabbedPane;
 
     /**
-     * IMPORTANT: These are the actual content frames for each tab. We keep them as fields to maintain state and avoid reloading when switching tabs. They are initialized lazily when the user first clicks on the respective tab. Do NOT dispose these frames when switching tabs, as that would kill listeners and resources. Instead, we just add/remove their content panels to the tab wrappers.
+     * IMPORTANT: These are the actual content frames for each tab. We keep them as
+     * fields to maintain state and avoid reloading when switching tabs. They are
+     * initialized lazily when the user first clicks on the respective tab. Do NOT
+     * dispose these frames when switching tabs, as that would kill listeners and
+     * resources. Instead, we just add/remove their content panels to the tab
+     * wrappers.
      */
     public static ArticleGUI articleGUI;
     private VendorGUI vendorGUI;
@@ -50,9 +59,17 @@ public class MainGUI extends JFrame {
     private final JPanel logsWrapper = createTabWrapper();
 
     /**
-     * Constructs the main GUI window for the VEBO Lagersystem application. This constructor initializes the main window, sets up the layout, and prepares the header, tabbed pane, and footer. It also registers the window with the ThemeManager to ensure that theme changes are applied correctly. The constructor does not load the content of the tabs immediately; instead, it sets up lazy loading to optimize performance and resource usage. The main window is configured to be maximized on startup and includes a custom icon if available.
+     * Constructs the main GUI window for the VEBO Lagersystem application. This
+     * constructor initializes the main window, sets up the layout, and prepares the
+     * header, tabbed pane, and footer. It also registers the window with the
+     * ThemeManager to ensure that theme changes are applied correctly. The
+     * constructor does not load the content of the tabs immediately; instead, it
+     * sets up lazy loading to optimize performance and resource usage. The main
+     * window is configured to be maximized on startup and includes a custom icon if
+     * available.
      */
     public MainGUI() {
+        logger.info("Initializing MainGUI window");
         ThemeManager.getInstance().registerWindow(this);
         ThemeManager.applyUIDefaults();
         ThemeManager.JOptionPaneTheme.apply();
@@ -67,27 +84,28 @@ public class MainGUI extends JFrame {
         }
         setExtendedState(JFrame.MAXIMIZED_BOTH);
 
-        // Background
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(ThemeManager.getBackgroundColor());
 
-        // ===== HEADER =====
+        // HEADER
         JPanel headerPanel = createHeaderPanel();
         mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // ===== TABS =====
+        // TABS
         initializeTabbedPane();
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
-        // ===== FOOTER =====
+        // FOOTER
         JPanel footerPanel = createFooterPanel();
         mainPanel.add(footerPanel, BorderLayout.SOUTH);
 
         setContentPane(mainPanel);
+        logger.info("MainGUI window initialized");
     }
 
     @Override
     public void dispose() {
+        logger.info("Disposing MainGUI window");
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
@@ -104,46 +122,56 @@ public class MainGUI extends JFrame {
 
     /**
      * Loads the content for a specific tab into the wrapper.
-     * IMPORTANT: We do NOT dispose of the child frames. Disposing kills listeners/resources.
+     * IMPORTANT: We do NOT dispose of the child frames. Disposing kills
+     * listeners/resources.
      */
     private void loadTabContent(int tabIndex, JPanel wrapper) {
         wrapper.removeAll();
-
-        JFrame frame = switch (tabIndex) {
-            case 0 -> {
-                if (articleGUI == null) articleGUI = new ArticleGUI();
-                yield articleGUI;
-            }
-            case 1 -> {
-                if (vendorGUI == null) vendorGUI = new VendorGUI();
-                yield vendorGUI;
-            }
-            case 2 -> {
-                if (orderGUI == null) orderGUI = new OrderGUI();
-                yield orderGUI;
-            }
-            case 3 -> {
-                if (clientGUI == null) clientGUI = new ClientGUI();
-                yield clientGUI;
-            }
-            case 4 -> {
-                if (supplierOrderGUI == null) supplierOrderGUI = new SupplierOrderGUI();
-                yield supplierOrderGUI;
-            }
-            case 5 -> {
-                if (logsGUI == null) logsGUI = new LogsGUI();
-                yield logsGUI;
-            }
-            default -> null;
-        };
-
-        if (frame == null) return;
-
-        // Keep it from behaving like an independent window
+        JFrame frame = null;
+        try {
+            frame = switch (tabIndex) {
+                case 0 -> {
+                    if (articleGUI == null)
+                        articleGUI = new ArticleGUI();
+                    yield articleGUI;
+                }
+                case 1 -> {
+                    if (vendorGUI == null)
+                        vendorGUI = new VendorGUI();
+                    yield vendorGUI;
+                }
+                case 2 -> {
+                    if (orderGUI == null)
+                        orderGUI = new OrderGUI();
+                    yield orderGUI;
+                }
+                case 3 -> {
+                    if (clientGUI == null)
+                        clientGUI = new ClientGUI();
+                    yield clientGUI;
+                }
+                case 4 -> {
+                    if (supplierOrderGUI == null)
+                        supplierOrderGUI = new SupplierOrderGUI();
+                    yield supplierOrderGUI;
+                }
+                case 5 -> {
+                    if (logsGUI == null)
+                        logsGUI = new LogsGUI();
+                    yield logsGUI;
+                }
+                default -> null;
+            };
+        } catch (Exception ex) {
+            logger.error("Error loading tab content for tab {}: {}", tabIndex, ex.getMessage(), ex);
+            return;
+        }
+        if (frame == null) {
+            logger.warn("No frame found for tab index {}", tabIndex);
+            return;
+        }
         frame.setVisible(false);
         frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-
-        // Extract content panel (safe)
         Container cp = frame.getContentPane();
         if (cp instanceof JPanel panel) {
             wrapper.add(panel, BorderLayout.CENTER);
@@ -153,9 +181,9 @@ public class MainGUI extends JFrame {
             fallback.add(cp, BorderLayout.CENTER);
             wrapper.add(fallback, BorderLayout.CENTER);
         }
-
         wrapper.revalidate();
         wrapper.repaint();
+        logger.debug("Loaded tab content for tab {}", tabIndex);
     }
 
     /**
@@ -179,14 +207,12 @@ public class MainGUI extends JFrame {
     private static JFrameUtils.GradientPanel getGradientPanel() {
         JFrameUtils.GradientPanel headerPanel = new JFrameUtils.GradientPanel(
                 ThemeManager.getHeaderBackgroundColor(),
-                ThemeManager.getHeaderGradientColor()
-        );
+                ThemeManager.getHeaderGradientColor());
         headerPanel.setLayout(new BorderLayout());
         headerPanel.setPreferredSize(new Dimension(0, 180));
         headerPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 0, 0, 30)),
-                BorderFactory.createEmptyBorder(30, 60, 30, 60)
-        ));
+                BorderFactory.createEmptyBorder(30, 60, 30, 60)));
         return headerPanel;
     }
 
@@ -229,7 +255,8 @@ public class MainGUI extends JFrame {
         subtitleRow.setOpaque(false);
         subtitleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Add invisible spacer matching icon width (approximately 42px + 10px gap = 52px)
+        // Add invisible spacer matching icon width (approximately 42px + 10px gap =
+        // 52px)
         subtitleRow.add(Box.createHorizontalStrut(12));
         subtitleRow.add(subtitleLabel);
 
@@ -247,18 +274,22 @@ public class MainGUI extends JFrame {
         rightPanel.setOpaque(false);
 
         Font headerButtonFont = SettingsGUI.getFontByName(Font.BOLD, 12);
-        JButton settingsButton = new JButton(UnicodeSymbols.safeSymbol(UnicodeSymbols.BETTER_GEAR, "CFG", headerButtonFont) + " Einstellungen");
+        JButton settingsButton = new JButton(
+                UnicodeSymbols.safeSymbol(UnicodeSymbols.BETTER_GEAR, "CFG", headerButtonFont) + " Einstellungen");
         styleHeaderButton(settingsButton);
         settingsButton.setToolTipText("Einstellungen des Programms öffnen");
         settingsButton.addActionListener(e -> settingsGUI = showOrCreateWindow(settingsGUI, SettingsGUI::new));
         settingsButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        JButton notesButton = new JButton(UnicodeSymbols.safeSymbol(UnicodeSymbols.CLIPBOARD, "CLIP", headerButtonFont) + " Notizen");
+        JButton notesButton = new JButton(
+                UnicodeSymbols.safeSymbol(UnicodeSymbols.CLIPBOARD, "CLIP", headerButtonFont) + " Notizen");
         styleHeaderButton(notesButton);
         notesButton.setToolTipText("Persönliche Notizen verwalten");
         notesButton.addActionListener(e -> notesGUI = showOrCreateWindow(notesGUI, NotesGUI::new));
         notesButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        JButton converterButton = new JButton(UnicodeSymbols.safeSymbol(UnicodeSymbols.CALCULATOR, "CALC", headerButtonFont) + " Einheitenrechner/Befüllungshilfe");
+        JButton converterButton = new JButton(
+                UnicodeSymbols.safeSymbol(UnicodeSymbols.CALCULATOR, "CALC", headerButtonFont)
+                        + " Einheitenrechner/Befüllungshilfe");
         styleHeaderButton(converterButton);
         converterButton.setToolTipText("Einheitenrechner und Befüllungshilfe öffnen");
         converterButton.addActionListener(e -> {
@@ -271,7 +302,9 @@ public class MainGUI extends JFrame {
                 ConverterGUI converterGUI = new ConverterGUI(articles.getFirst());
                 converterGUI.setVisible(true);
             } else {
-                JOptionPane.showMessageDialog(this, "Mehr als ein Artikel ausgewählt! Es wird der erste Artikel verwendet: " + articles.getFirst().getName());
+                JOptionPane.showMessageDialog(this,
+                        "Mehr als ein Artikel ausgewählt! Es wird der erste Artikel verwendet: "
+                                + articles.getFirst().getName());
                 ConverterGUI converterGUI = new ConverterGUI(articles.getFirst());
                 converterGUI.setVisible(true);
             }
@@ -303,19 +336,24 @@ public class MainGUI extends JFrame {
         tabbedPane = new JTabbedPane(JTabbedPane.TOP) {
             @Override
             public void updateUI() {
+                // Use ThemeManager's improved tabbed pane styling
                 UIManager.put("TabbedPane.tabAreaBackground", ThemeManager.getBackgroundColor());
                 UIManager.put("TabbedPane.selected", ThemeManager.getAccentColor());
                 UIManager.put("TabbedPane.focus", ThemeManager.getAccentColor().darker());
-                UIManager.put("TabbedPane.borderHightlightColor", ThemeManager.getBorderColor()); // note: typo in key, see below
-                UIManager.put("TabbedPane.lightHighlight", ThemeManager.getBorderColor().brighter());
+                UIManager.put("TabbedPane.borderHighlightColor", ThemeManager.getBorderColor());
+                UIManager.put("TabbedPane.light", ThemeManager.getBorderColor().brighter());
                 UIManager.put("TabbedPane.shadow", ThemeManager.getBorderColor().darker());
                 UIManager.put("TabbedPane.darkShadow", ThemeManager.getBorderColor().darker().darker());
-
-                // This affects height, but only if the current LAF/UI delegate honors it
-                // UIManager.put("TabbedPane.tabInsets", new Insets(25, 25, 25, 25));
-
+                UIManager.put("TabbedPane.selectedTabPadInsets", new Insets(4, 12, 4, 12));
+                UIManager.put("TabbedPane.tabInsets", new Insets(8, 18, 8, 18));
+                UIManager.put("TabbedPane.tabAreaInsets", new Insets(2, 2, 0, 2));
+                UIManager.put("TabbedPane.contentBorderInsets", new Insets(2, 2, 2, 2));
+                UIManager.put("TabbedPane.underlineColor", ThemeManager.getAccentColor());
+                UIManager.put("TabbedPane.underlineHeight", 3);
+                UIManager.put("TabbedPane.underlineAtTop", Boolean.FALSE);
+                UIManager.put("TabbedPane.opaque", Boolean.TRUE);
+                UIManager.put("TabbedPane.showContentSeparator", Boolean.TRUE);
                 super.updateUI();
-
                 // Force layout recalc
                 revalidate();
                 repaint();
@@ -327,7 +365,7 @@ public class MainGUI extends JFrame {
         tabbedPane.updateUI();
 
         // Use larger font for bigger tabs
-        //tabbedPane.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 2));
+        // tabbedPane.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 2));
         tabbedPane.setBackground(ThemeManager.getBackgroundColor());
         tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
 
@@ -336,9 +374,7 @@ public class MainGUI extends JFrame {
                 BorderFactory.createEmptyBorder(8, 15, 8, 15),
                 BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(2, 2, 2, 2)
-                )
-        ));
+                        BorderFactory.createEmptyBorder(2, 2, 2, 2))));
 
         // Add tabs
         addTabs();
@@ -380,11 +416,15 @@ public class MainGUI extends JFrame {
         String tabPeople = UnicodeSymbols.safeSymbol(UnicodeSymbols.PEOPLE, "USERS", tabFont);
         // Add extra spacing for bigger, more prominent tabs
         tabbedPane.addTab("<html>   " + tabPackage + "  Artikel   </html>", null, articleWrapper, "Artikelverwaltung");
-        tabbedPane.addTab("<html>   " + tabTruck + "  Lieferanten   </html>", null, vendorWrapper, "Lieferantenverwaltung");
-        tabbedPane.addTab("<html>   " + tabClipboard + "  Bestellungen   </html>", null, orderWrapper, "Bestellungsverwaltung");
+        tabbedPane.addTab("<html>   " + tabTruck + "  Lieferanten   </html>", null, vendorWrapper,
+                "Lieferantenverwaltung");
+        tabbedPane.addTab("<html>   " + tabClipboard + "  Bestellungen   </html>", null, orderWrapper,
+                "Bestellungsverwaltung");
         tabbedPane.addTab("<html>   " + tabPeople + "  Kunden   </html>", null, clientWrapper, "Kundenverwaltung");
-        tabbedPane.addTab("<html>   " + tabTruck + tabPackage + "  Lieferantenbestellungen   </html>", null, supplierOrderWrapper, "Lieferantenbestellungen verwalten");
-        tabbedPane.addTab("<html>   " + tabClipboard + " Protokolle   </html>", null, logsWrapper, "Systemprotokolle anzeigen");
+        tabbedPane.addTab("<html>   " + tabTruck + tabPackage + "  Lieferantenbestellungen   </html>", null,
+                supplierOrderWrapper, "Lieferantenbestellungen verwalten");
+        tabbedPane.addTab("<html>   " + tabClipboard + " Protokolle   </html>", null, logsWrapper,
+                "Systemprotokolle anzeigen");
     }
 
     /**
@@ -418,11 +458,10 @@ public class MainGUI extends JFrame {
         tabbedPane.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(4, 4, 4, 4)
-                ),
+                        BorderFactory.createEmptyBorder(4, 4, 4, 4)),
                 BorderFactory.createLineBorder(
-                        ThemeManager.adjustColor(ThemeManager.getBorderColor(), ThemeManager.isDarkMode() ? 20 : -10), 1)
-        ));
+                        ThemeManager.adjustColor(ThemeManager.getBorderColor(), ThemeManager.isDarkMode() ? 20 : -10),
+                        1)));
     }
 
     /**
@@ -464,10 +503,10 @@ public class MainGUI extends JFrame {
         footerPanel.setBackground(ThemeManager.getBackgroundColor());
         footerPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
-                BorderFactory.createEmptyBorder(12, 0, 12, 0)
-        ));
+                BorderFactory.createEmptyBorder(12, 0, 12, 0)));
 
-        JLabel footerLabel = new JLabel("© 2026 VEBO Lagersystem | Entwickelt von Darryl Huber | Version " + Main.VERSION);
+        JLabel footerLabel = new JLabel(
+                "© 2026 VEBO Lagersystem | Entwickelt von Darryl Huber | Version " + Main.VERSION);
         footerLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
         footerLabel.setForeground(ThemeManager.getTextSecondaryColor());
         footerPanel.add(footerLabel);
@@ -493,8 +532,7 @@ public class MainGUI extends JFrame {
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(base.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 20, 10, 20)
-        ));
+                BorderFactory.createEmptyBorder(10, 20, 10, 20)));
 
         button.addMouseListener(new MouseAdapter() {
             @Override
@@ -502,8 +540,7 @@ public class MainGUI extends JFrame {
                 button.setBackground(hover);
                 button.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(hover.darker(), 2),
-                        BorderFactory.createEmptyBorder(8, 18, 8, 18)
-                ));
+                        BorderFactory.createEmptyBorder(8, 18, 8, 18)));
             }
 
             @Override
@@ -511,8 +548,7 @@ public class MainGUI extends JFrame {
                 button.setBackground(base);
                 button.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(base.darker(), 1),
-                        BorderFactory.createEmptyBorder(10, 20, 10, 20)
-                ));
+                        BorderFactory.createEmptyBorder(10, 20, 10, 20)));
             }
 
             @Override
@@ -598,39 +634,34 @@ public class MainGUI extends JFrame {
     public void showHelp() {
         try {
             java.net.URI helpUri = null;
-
-            // 1) Wenn du help.html später ins JAR packst: src/main/resources/help.html
             java.net.URL res = getClass().getResource("/help.html");
             if (res != null) {
                 helpUri = res.toURI();
             } else {
-                // 2) Dev-Fallback: aus Projektordner /web/help.html
                 java.nio.file.Path p = java.nio.file.Paths.get("web", "help.html");
                 if (java.nio.file.Files.exists(p)) {
                     helpUri = p.toAbsolutePath().toUri();
                 }
             }
-
             if (helpUri != null && java.awt.Desktop.isDesktopSupported()
                     && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE)) {
                 java.awt.Desktop.getDesktop().browse(helpUri);
+                logger.info("Help opened: {}", helpUri);
                 return;
             }
-
+            logger.warn("Help file not found or browse not supported");
             javax.swing.JOptionPane.showMessageDialog(
                     this,
                     "Hilfe konnte nicht geöffnet werden (help.html nicht gefunden oder Browse nicht unterstützt).",
                     "Hilfe",
-                    javax.swing.JOptionPane.WARNING_MESSAGE
-            );
-
+                    javax.swing.JOptionPane.WARNING_MESSAGE);
         } catch (Exception e) {
+            logger.error("Error opening help: {}", e.getMessage(), e);
             javax.swing.JOptionPane.showMessageDialog(
                     this,
                     "Hilfe konnte nicht geöffnet werden: " + e.getMessage(),
                     "Hilfe",
-                    javax.swing.JOptionPane.ERROR_MESSAGE
-            );
+                    javax.swing.JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -638,7 +669,8 @@ public class MainGUI extends JFrame {
      * Generates QR codes for all articles in the application.
      * <p>
      * This method retrieves the full list of articles using the article manager.
-     * If no articles are available, it displays a warning dialog to inform the user.
+     * If no articles are available, it displays a warning dialog to inform the
+     * user.
      * Otherwise, it invokes the {@code generateQrCodesForList} method to generate
      * QR codes for the retrieved list of articles with a confirmation prompt.
      * <p>
@@ -652,8 +684,7 @@ public class MainGUI extends JFrame {
                     this,
                     "Keine Artikel vorhanden.",
                     "QR-Codes generieren",
-                    JOptionPane.WARNING_MESSAGE
-            );
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
         generateQrCodesForList(articles, "QR-Codes fuer alle Artikel generieren?");
@@ -671,7 +702,8 @@ public class MainGUI extends JFrame {
      * the user for confirmation before proceeding with the QR code generation.
      * <p>
      * Preconditions:
-     * - The article GUI tab must be opened, and at least one article should be selected.
+     * - The article GUI tab must be opened, and at least one article should be
+     * selected.
      * <p>
      * Postconditions:
      * - Invokes the {@code generateQrCodesForList} method to generate QR codes
@@ -689,8 +721,7 @@ public class MainGUI extends JFrame {
                     this,
                     "Bitte zuerst den Artikel-Tab oeffnen und eine Auswahl treffen.",
                     "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE
-            );
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
         List<Article> selectedArticles = getSelectedArticles(articleGUI.articleTable);
@@ -699,35 +730,40 @@ public class MainGUI extends JFrame {
                     this,
                     "Bitte waehlen Sie mindestens einen Artikel aus.",
                     "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE
-            );
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
-        generateQrCodesForList(selectedArticles, "QR-Codes fuer " + selectedArticles.size() + " ausgewählte Artikel generieren?");
+        generateQrCodesForList(selectedArticles,
+                "QR-Codes fuer " + selectedArticles.size() + " ausgewählte Artikel generieren?");
     }
 
     /**
-     * Generates QR codes for a given list of articles after displaying a confirmation dialog.
+     * Generates QR codes for a given list of articles after displaying a
+     * confirmation dialog.
      * <p>
-     * This method allows the user to confirm whether they want to proceed with generating QR codes
-     * for the provided list of articles. A progress dialog is displayed during the generation process.
-     * Upon completion, the user is notified about the result, including the number of QR codes
+     * This method allows the user to confirm whether they want to proceed with
+     * generating QR codes
+     * for the provided list of articles. A progress dialog is displayed during the
+     * generation process.
+     * Upon completion, the user is notified about the result, including the number
+     * of QR codes
      * generated and the output directory.
      *
      * @param articles   the list of articles for which QR codes will be generated
      * @param promptText the text to display in the confirmation dialog prompt
      */
     private void generateQrCodesForList(List<Article> articles, String promptText) {
-        if (articles == null) return;
-        if (promptText == null) promptText = "";
+        if (articles == null)
+            return;
+        if (promptText == null)
+            promptText = "";
         File outputDir = new File(Main.getAppDataDir(), "qr_codes");
         int result = JOptionPane.showConfirmDialog(
                 this,
                 promptText + "\nSpeicherort: " + outputDir.getAbsolutePath(),
                 "QR-Codes generieren",
                 JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.INFORMATION_MESSAGE
-        );
+                JOptionPane.INFORMATION_MESSAGE);
         if (result != JOptionPane.OK_OPTION) {
             return;
         }
@@ -757,23 +793,21 @@ public class MainGUI extends JFrame {
                                 MainGUI.this,
                                 "Es konnten keine QR-Codes erstellt werden.",
                                 "QR-Codes generieren",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                                JOptionPane.WARNING_MESSAGE);
                         return;
                     }
                     JOptionPane.showMessageDialog(
                             MainGUI.this,
-                            "QR-Codes wurden erstellt.\nAnzahl: " + files.size() + "\nOrdner: " + outputDir.getAbsolutePath(),
+                            "QR-Codes wurden erstellt.\nAnzahl: " + files.size() + "\nOrdner: "
+                                    + outputDir.getAbsolutePath(),
                             "QR-Codes generieren",
-                            JOptionPane.INFORMATION_MESSAGE
-                    );
+                            JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(
                             MainGUI.this,
                             "Fehler beim Erstellen der QR-Codes: " + ex.getMessage(),
                             "QR-Codes generieren",
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                            JOptionPane.ERROR_MESSAGE);
                 }
             }
         };

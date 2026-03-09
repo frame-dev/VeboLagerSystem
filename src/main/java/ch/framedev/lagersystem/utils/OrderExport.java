@@ -18,10 +18,10 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.io.File;
 import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -54,6 +54,7 @@ public class OrderExport {
 
     private static final Locale LOCALE_CH = Locale.forLanguageTag("de-CH");
     private static final DecimalFormat CHF = new DecimalFormat("0.00", new DecimalFormatSymbols(LOCALE_CH));
+    private static final DateTimeFormatter FOOTER_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     /** Utility class: prevent instantiation. */
     private OrderExport() {
@@ -125,123 +126,95 @@ public class OrderExport {
         try (PDDocument doc = new PDDocument()) {
 
             Fonts fonts = loadFonts(doc);
+            List<Article> articles = OrderManager.getInstance().getOrderArticles(order);
+            if (articles == null || articles.isEmpty()) {
+                JOptionPane.showMessageDialog(frame,
+                        "Diese Bestellung enthält keine exportierbaren Artikel.",
+                        "Hinweis",
+                        JOptionPane.WARNING_MESSAGE,
+                        Main.iconSmall);
+                return;
+            }
 
-            // Create first page
-            PageState ps = new PageState(new PDPage());
-            doc.addPage(ps.page);
+            double total = 0.0;
+            boolean alternateRow = false;
+            int articleIndex = 0;
+            boolean firstPage = true;
 
-            try (PDPageContentStream cs = new PDPageContentStream(doc, ps.page)) {
-                PDRectangle mediaBox = ps.page.getMediaBox();
-                float pageWidth = mediaBox.getWidth();
-                float pageHeight = mediaBox.getHeight();
+            while (articleIndex < articles.size()) {
+                PageState ps = new PageState(new PDPage());
+                doc.addPage(ps.page);
 
-                ps.y = pageHeight - MARGIN;
+                try (PDPageContentStream cs = new PDPageContentStream(doc, ps.page)) {
+                    PDRectangle mediaBox = ps.page.getMediaBox();
+                    float pageWidth = mediaBox.getWidth();
+                    float pageHeight = mediaBox.getHeight();
 
-                // Header
-                ps.y = drawHeader(cs, fonts.bold, pageWidth, ps.y);
+                    ps.y = pageHeight - MARGIN;
+                    ps.y = drawHeader(cs, fonts.bold, pageWidth, ps.y);
 
-                // Order info
-                ps.y = drawOrderInfo(cs, fonts, orderDate, orderId, status, ps.y);
+                    if (firstPage) {
+                        ps.y = drawOrderInfo(cs, fonts, orderDate, orderId, status, ps.y);
+                        ps.y = drawSenderReceiver(cs, fonts, pageWidth,
+                                senderName, senderKontoNumber,
+                                receiverName, receiverKontoNumber, department,
+                                ps.y);
+                    } else {
+                        ps.y -= 10f;
+                    }
 
-                // Sender/Receiver boxes
-                ps.y = drawSenderReceiver(cs, fonts, pageWidth,
-                        senderName, senderKontoNumber,
-                        receiverName, receiverKontoNumber, department,
-                        ps.y);
+                    ps.y = drawTableHeader(cs, fonts.bold, pageWidth, ps.y);
 
-                // Table header
-                ps.y = drawTableHeader(cs, fonts.bold, pageWidth, ps.y);
+                    while (articleIndex < articles.size() && ps.y >= MIN_Y_BEFORE_PAGE_BREAK) {
+                        Article article = articles.get(articleIndex);
 
-                // Rows
-                List<Article> articles = OrderManager.getInstance().getOrderArticles(order);
-                double total = 0.0;
-                boolean alternateRow = false;
-
-                for (Article article : articles) {
-                    // Page break if we reach the bottom
-                    if (ps.y < MIN_Y_BEFORE_PAGE_BREAK) {
-                        // finish footer on current page
-                        drawFooter(cs, fonts.regular);
-
-                        // close current stream before starting a new one
-                        cs.close();
-
-                        // new page
-                        ps = new PageState(new PDPage());
-                        doc.addPage(ps.page);
-
-                        try (PDPageContentStream cs2 = new PDPageContentStream(doc, ps.page)) {
-                            PDRectangle mb = ps.page.getMediaBox();
-                            float w = mb.getWidth();
-                            float h = mb.getHeight();
-
-                            ps.y = h - MARGIN;
-
-                            // Repeat header (optional)
-                            ps.y = drawHeader(cs2, fonts.bold, w, ps.y);
-
-                            // Repeat table header
-                            ps.y = ps.y - 10; // little spacing
-                            ps.y = drawTableHeader(cs2, fonts.bold, w, ps.y);
-
-                            // Continue rows on new page using cs2
-                            total = renderRemainingRows(cs2, fonts, w, ps, orderedArticles, articles, article, total, alternateRow);
-                            // renderRemainingRows already did footer + last page footer as needed.
+                        int qty = orderedArticles.getOrDefault(safe(article.getArticleNumber()), 0);
+                        if (qty == 0) {
+                            qty = orderedArticles.getOrDefault(safe(article.getName()), 0);
                         }
-                        // We handled the rest in renderRemainingRows
-                        doc.save(outputFile);
 
-                        JOptionPane.showMessageDialog(frame,
-                                "PDF erfolgreich erstellt:\n" + outputFile.getAbsolutePath(),
-                                "Erfolg",
-                                JOptionPane.INFORMATION_MESSAGE,
-                                Main.iconSmall);
-                        return;
+                        double unit = article.getSellPrice();
+                        double line = unit * qty;
+                        total += line;
+
+                        if (alternateRow) {
+                            cs.setNonStrokingColor(250f / 255f, 250f / 255f, 250f / 255f);
+                            cs.addRect(MARGIN, ps.y - 15, pageWidth - 2 * MARGIN, 18);
+                            cs.fill();
+                        }
+
+                        cs.beginText();
+                        cs.setNonStrokingColor(0f, 0f, 0f);
+                        cs.setFont(fonts.regular, 9);
+                        cs.newLineAtOffset(MARGIN + 5, ps.y - 10);
+
+                        String articleName = safe(article.getName());
+                        if (articleName.length() > 35) {
+                            articleName = articleName.substring(0, 32) + "...";
+                        }
+
+                        cs.showText(articleName + " (" + safe(article.getArticleNumber()) + ")");
+                        cs.newLineAtOffset(200, 0);
+                        cs.showText(String.valueOf(qty));
+                        cs.newLineAtOffset(60, 0);
+                        cs.showText(CHF.format(unit) + " CHF");
+                        cs.newLineAtOffset(80, 0);
+                        cs.showText(CHF.format(line) + " CHF");
+                        cs.endText();
+
+                        ps.y -= ROW_HEIGHT;
+                        alternateRow = !alternateRow;
+                        articleIndex++;
                     }
 
-                    int qty = orderedArticles.getOrDefault(safe(article.getArticleNumber()), 0);
-                    if (qty == 0) {
-                        qty = orderedArticles.getOrDefault(safe(article.getName()), 0);
+                    if (articleIndex >= articles.size()) {
+                        ps.y = drawTotals(cs, fonts.bold, pageWidth, ps.y, total);
                     }
 
-                    double unit = article.getSellPrice();
-                    double line = unit * qty;
-                    total += line;
-
-                    if (alternateRow) {
-                        cs.setNonStrokingColor(250f / 255f, 250f / 255f, 250f / 255f);
-                        cs.addRect(MARGIN, ps.y - 15, pageWidth - 2 * MARGIN, 18);
-                        cs.fill();
-                    }
-
-                    cs.beginText();
-                    cs.setNonStrokingColor(0f, 0f, 0f);
-                    cs.setFont(fonts.regular, 9);
-                    cs.newLineAtOffset(MARGIN + 5, ps.y - 10);
-
-                    String articleName = safe(article.getName());
-                    if (articleName.length() > 35) {
-                        articleName = articleName.substring(0, 32) + "...";
-                    }
-
-                    cs.showText(articleName + " (" + safe(article.getArticleNumber()) + ")");
-                    cs.newLineAtOffset(200, 0);
-                    cs.showText(String.valueOf(qty));
-                    cs.newLineAtOffset(60, 0);
-                    cs.showText(CHF.format(unit) + " CHF");
-                    cs.newLineAtOffset(80, 0);
-                    cs.showText(CHF.format(line) + " CHF");
-                    cs.endText();
-
-                    ps.y -= ROW_HEIGHT;
-                    alternateRow = !alternateRow;
+                    drawFooter(cs, fonts.regular);
                 }
 
-                // Totals
-                ps.y = drawTotals(cs, fonts.bold, pageWidth, ps.y, total);
-
-                // Footer
-                drawFooter(cs, fonts.regular);
+                firstPage = false;
             }
 
             doc.save(outputFile);
@@ -260,81 +233,6 @@ public class OrderExport {
                     JOptionPane.ERROR_MESSAGE,
                     Main.iconSmall);
         }
-    }
-
-    /**
-     * Continues rendering rows starting with the given currentArticle (inclusive) on a newly created page stream.
-     * This is a helper to keep the page-break logic simple without rewriting the entire method.
-     */
-    private static double renderRemainingRows(PDPageContentStream cs, Fonts fonts, float pageWidth, PageState ps,
-                                             Map<String, Integer> orderedArticles,
-                                             List<Article> allArticles,
-                                             Article currentArticle,
-                                             double total,
-                                             boolean alternateRow) throws Exception {
-
-        boolean start = false;
-        for (Article article : allArticles) {
-            if (!start) {
-                if (article == currentArticle) {
-                    start = true;
-                } else {
-                    continue;
-                }
-            }
-
-            if (ps.y < MIN_Y_BEFORE_PAGE_BREAK) {
-                drawFooter(cs, fonts.regular);
-                cs.close();
-
-                // new page
-                // NOTE: the caller owns doc creation; here we can only stop if we need more pages.
-                // The current implementation avoids multi-multi-page recursion. If you need unlimited pages,
-                // we can refactor to a loop that manages doc + streams outside.
-                throw new IllegalStateException("Zu viele Artikel für den aktuellen PDF-Renderer (mehrere Seitenwechsel). Bitte Refactor anfordern.");
-            }
-
-            int qty = orderedArticles.getOrDefault(safe(article.getArticleNumber()), 0);
-            if (qty == 0) {
-                qty = orderedArticles.getOrDefault(safe(article.getName()), 0);
-            }
-
-            double unit = article.getSellPrice();
-            double line = unit * qty;
-            total += line;
-
-            if (alternateRow) {
-                cs.setNonStrokingColor(250f / 255f, 250f / 255f, 250f / 255f);
-                cs.addRect(MARGIN, ps.y - 15, pageWidth - 2 * MARGIN, 18);
-                cs.fill();
-            }
-
-            cs.beginText();
-            cs.setNonStrokingColor(0f, 0f, 0f);
-            cs.setFont(fonts.regular, 9);
-            cs.newLineAtOffset(MARGIN + 5, ps.y - 10);
-
-            String articleName = safe(article.getName());
-            if (articleName.length() > 35) {
-                articleName = articleName.substring(0, 32) + "...";
-            }
-
-            cs.showText(articleName + " (" + safe(article.getArticleNumber()) + ")");
-            cs.newLineAtOffset(200, 0);
-            cs.showText(String.valueOf(qty));
-            cs.newLineAtOffset(60, 0);
-            cs.showText(CHF.format(unit) + " CHF");
-            cs.newLineAtOffset(80, 0);
-            cs.showText(CHF.format(line) + " CHF");
-            cs.endText();
-
-            ps.y -= ROW_HEIGHT;
-            alternateRow = !alternateRow;
-        }
-
-        ps.y = drawTotals(cs, fonts.bold, pageWidth, ps.y, total);
-        drawFooter(cs, fonts.regular);
-        return total;
     }
 
     private static float drawHeader(PDPageContentStream cs, PDFont boldFont, float pageWidth, float y) throws Exception {
@@ -455,7 +353,7 @@ public class OrderExport {
         cs.setNonStrokingColor(150f / 255f, 150f / 255f, 150f / 255f);
         cs.setFont(regularFont, 8);
         cs.newLineAtOffset(MARGIN, FOOTER_Y);
-        cs.showText("VEBO Lagersystem - Generiert am " + new SimpleDateFormat("dd.MM.yyyy HH:mm").format(new Date()));
+        cs.showText("VEBO Lagersystem - Generiert am " + LocalDateTime.now().format(FOOTER_TIMESTAMP_FORMATTER));
         cs.endText();
     }
 

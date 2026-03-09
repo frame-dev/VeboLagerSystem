@@ -23,13 +23,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings({"deprecation", "BooleanMethodIsAlwaysInverted"})
 public class NotesManager {
 
-    private final Logger LOGGER = LogManager.getLogger(NotesManager.class);
+    private static final Logger LOGGER = LogManager.getLogger(NotesManager.class);
 
     private static final DateTimeFormatter DATE_FORMAT =
             DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss", Locale.ROOT);
 
     private final String TABLE = DatabaseManager.TABLE_NOTES;
-    private static volatile NotesManager instance;
+    private static volatile NotesManager instance = null;
     private final DatabaseManager databaseManager;
 
     // ==================== Cache ====================
@@ -62,11 +62,10 @@ public class NotesManager {
         NotesManager local = instance;
         if (local == null) {
             synchronized (NotesManager.class) {
-                local = instance;
-                if (local == null) {
-                    local = new NotesManager();
-                    instance = local;
+                if (instance == null) {
+                    instance = new NotesManager();
                 }
+                local = instance;
             }
         }
         return local;
@@ -193,13 +192,17 @@ public class NotesManager {
         } catch (SQLException e) {
             LOGGER.error("Error fetching all notes", e);
             Main.logUtils.addLog("Fehler beim Laden aller Notizen");
-            return List.of();
         } catch (Exception ex) {
             LOGGER.error("Error fetching all notes", ex);
             Main.logUtils.addLog("Fehler beim Laden aller Notizen");
-            return List.of();
         }
-        return notes;
+        if (allNotesCache != null) {
+            return allNotesCache;
+        } else if (!notes.isEmpty()) {
+            return Collections.unmodifiableList(notes);
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     /**

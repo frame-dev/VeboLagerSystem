@@ -1,5 +1,7 @@
 package ch.framedev.lagersystem.guis;
 
+import ch.framedev.lagersystem.managers.ThemeManager;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -56,8 +58,10 @@ public class SplashscreenGUI extends JFrame {
      * and starts the animation timer.
      */
     public SplashscreenGUI() {
+        ThemeManager.getInstance().registerWindow(this);
         setTitle("Lagersystem - Splashscreen");
         setSize(920, 620);
+        setMinimumSize(new Dimension(760, 500));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setUndecorated(true);
@@ -258,6 +262,7 @@ public class SplashscreenGUI extends JFrame {
     @Override
     public void dispose() {
         stopAnimation();
+        ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
 

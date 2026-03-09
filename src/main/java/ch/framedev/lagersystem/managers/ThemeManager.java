@@ -6,17 +6,25 @@ import java.awt.Container;
 import java.awt.Font;
 import java.awt.Insets;
 import java.awt.Window;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -44,10 +52,103 @@ import ch.framedev.lagersystem.main.Main;
  * <p>The manager is implemented as a singleton and integrates with
  * {@link UIManager} to apply consistent defaults across the entire UI.
  */
-@SuppressWarnings({"unused", "SameReturnValue"})
-public class ThemeManager {
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-    private static ThemeManager instance;
+@SuppressWarnings({ "SameReturnValue" })
+public class ThemeManager {
+        /**
+         * Available LookAndFeel options for the application.
+         */
+        public enum LookAndFeelOption {
+            SYSTEM("System", UIManager.getSystemLookAndFeelClassName()),
+            METAL("Metal", "javax.swing.plaf.metal.MetalLookAndFeel"),
+            NIMBUS("Nimbus", "javax.swing.plaf.nimbus.NimbusLookAndFeel"),
+            MOTIF("Motif", "com.sun.java.swing.plaf.motif.MotifLookAndFeel"),
+            GTK("GTK+", "com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
+
+            public final String displayName;
+            public final String className;
+            LookAndFeelOption(String displayName, String className) {
+                this.displayName = displayName;
+                this.className = className;
+            }
+        }
+
+        /**
+         * Set the LookAndFeel by option. Falls back to system if not available.
+         */
+        public static void setLookAndFeel(LookAndFeelOption option) {
+            try {
+                UIManager.setLookAndFeel(option.className);
+                logger.info("Set LookAndFeel: {} ({})", option.displayName, option.className);
+            } catch (Exception e) {
+                logger.warn("Could not set LookAndFeel: {} ({}), falling back to system.", option.displayName, option.className, e);
+                try {
+                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                } catch (Exception ex) {
+                    logger.error("Could not set system LookAndFeel", ex);
+                }
+            }
+        }
+
+        /**
+         * Set the LookAndFeel by option. Falls back to system if not available.
+         */
+        public static void setLookAndFeel(String name) {
+            try {
+                for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                    if (info.getName().equalsIgnoreCase(name)) {
+                        UIManager.setLookAndFeel(info.getClassName());
+                        logger.info("Set LookAndFeel: {} ({})", info.getName(), info.getClassName());
+                        return;
+                    }
+                }
+                logger.warn("LookAndFeel not found: {}, falling back to system.", name);
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception e) {
+                logger.error("Could not set LookAndFeel: {}", name, e);
+                try {
+                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                } catch (Exception ex) {
+                    logger.error("Could not set system LookAndFeel", ex);
+                }
+            }
+        }
+
+        /**
+         * Log all installed LookAndFeels for debugging.
+         */
+        public static void logAvailableLookAndFeels() {
+            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                logger.info("Available LookAndFeel: {} ({})", info.getName(), info.getClassName());
+            }
+        }
+    private static final Logger logger = LogManager.getLogger(ThemeManager.class);
+    // Set the system LookAndFeel for native appearance, but keep custom theming
+    static {
+        try {
+            // Use system L&F for native controls (Windows, macOS, Linux)
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            // Fallback: log and ignore, will use default L&F
+            logger.warn("Could not set system LookAndFeel", e);
+        }
+    }
+
+    public static String getCurrentLookAndFeelName() {
+        return UIManager.getLookAndFeel().getName();
+    }
+
+    public static List<String> getAllLookAndFeels() {
+        List<String> lafNames = new ArrayList<>();
+        for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+            lafNames.add(info.getName());
+        }
+        return lafNames;
+    }
+
+    private static volatile ThemeManager instance;
     private static Theme currentTheme = Theme.LIGHT;
     private static Color customAccentColor;
     private static Color customHeaderColor;
@@ -70,7 +171,6 @@ public class ThemeManager {
     // Theme color palettes
     // =========================
 
-    @SuppressWarnings("unused")
     public static class Light {
 
         // Base surfaces
@@ -152,7 +252,6 @@ public class ThemeManager {
     /**
      * Dark Theme
      */
-    @SuppressWarnings("unused")
     public static class Dark {
 
         // Base surfaces
@@ -249,12 +348,26 @@ public class ThemeManager {
      * @return theme manager instance
      */
     public static ThemeManager getInstance() {
-        synchronized (ThemeManager.class) {
-            if (instance == null) {
-                instance = new ThemeManager();
+        if (instance == null) {
+            synchronized (ThemeManager.class) {
+                if (instance == null) {
+                    instance = new ThemeManager();
+                }
             }
         }
         return instance;
+    }
+
+    /**
+     * For testing or reinitialization: resets the singleton instance (use with
+     * caution).
+     */
+    public static void resetInstance() {
+        synchronized (ThemeManager.class) {
+            if (instance != null) {
+                instance = null;
+            }
+        }
     }
 
     // =========================
@@ -283,7 +396,8 @@ public class ThemeManager {
     }
 
     /**
-     * Changes the current theme, persists the setting, and refreshes all registered windows.
+     * Changes the current theme, persists the setting, and refreshes all registered
+     * windows.
      *
      * @param theme new theme to apply
      */
@@ -410,10 +524,10 @@ public class ThemeManager {
          */
         public static void apply() {
             // Base colors
-            Color bg = ThemeManager.getCardBackgroundColor();          // dialog panel background
-            Color surfaceBg = ThemeManager.getBackgroundColor();       // surface/window background
-            Color fg = ThemeManager.getTextPrimaryColor();             // main text color
-            Color secondaryFg = ThemeManager.getTextSecondaryColor();  // secondary text
+            Color bg = ThemeManager.getCardBackgroundColor(); // dialog panel background
+            Color surfaceBg = ThemeManager.getBackgroundColor(); // surface/window background
+            Color fg = ThemeManager.getTextPrimaryColor(); // main text color
+            Color secondaryFg = ThemeManager.getTextSecondaryColor(); // secondary text
             Color border = ThemeManager.getBorderColor();
 
             // Inputs
@@ -451,7 +565,7 @@ public class ThemeManager {
             UIManager.put("Button.background", new ColorUIResource(btnBg));
             UIManager.put("Button.foreground", new ColorUIResource(btnFg));
             UIManager.put("Button.select", new ColorUIResource(btnPressed));
-            UIManager.put("Button.focus", new ColorUIResource(btnBg));  // Keep original on focus
+            UIManager.put("Button.focus", new ColorUIResource(btnBg)); // Keep original on focus
 
             // Hover effect colors
             UIManager.put("Button.highlight", new ColorUIResource(btnHover));
@@ -461,16 +575,17 @@ public class ThemeManager {
 
             // Create prettier button border with subtle shadow effect
             Color btnBorderColor = ThemeManager.isDarkMode()
-                    ? new Color(Math.max(0, btnBg.getRed() - 30), Math.max(0, btnBg.getGreen() - 30), Math.max(0, btnBg.getBlue() - 30))
-                    : new Color(Math.max(0, btnBg.getRed() - 20), Math.max(0, btnBg.getGreen() - 20), Math.max(0, btnBg.getBlue() - 20));
+                    ? new Color(Math.max(0, btnBg.getRed() - 30), Math.max(0, btnBg.getGreen() - 30),
+                            Math.max(0, btnBg.getBlue() - 30))
+                    : new Color(Math.max(0, btnBg.getRed() - 20), Math.max(0, btnBg.getGreen() - 20),
+                            Math.max(0, btnBg.getBlue() - 20));
 
             UIManager.put("Button.border", BorderFactory.createCompoundBorder(
                     BorderFactory.createCompoundBorder(
                             BorderFactory.createLineBorder(btnBorderColor, 1, true),
-                            BorderFactory.createEmptyBorder(1, 1, 2, 1)  // Subtle shadow for depth
+                            BorderFactory.createEmptyBorder(1, 1, 2, 1) // Subtle shadow for depth
                     ),
-                    BorderFactory.createEmptyBorder(8, 20, 8, 20)
-            ));
+                    BorderFactory.createEmptyBorder(8, 20, 8, 20)));
             UIManager.put("Button.margin", new Insets(8, 20, 8, 20));
             UIManager.put("Button.opaque", Boolean.TRUE);
             UIManager.put("Button.contentAreaFilled", Boolean.TRUE);
@@ -663,6 +778,24 @@ public class ThemeManager {
             UIManager.put("TabbedPane.tabInsets", new Insets(18, 25, 18, 25));
             UIManager.put("TabbedPane.selectedTabPadInsets", new Insets(2, 2, 2, 2));
             UIManager.put("TabbedPane.tabAreaInsets", new Insets(2, 2, 0, 2));
+            // ---- ScrollBar (modern look) ----
+            UIManager.put("ScrollBar.background", new ColorUIResource(ThemeManager.getScrollbarBackgroundColor()));
+            UIManager.put("ScrollBar.foreground", new ColorUIResource(ThemeManager.getScrollbarForegroundColor()));
+            UIManager.put("ScrollBar.thumb", new ColorUIResource(ThemeManager.getScrollbarThumbColor()));
+            UIManager.put("ScrollBar.thumbHighlight",
+                    new ColorUIResource(ThemeManager.withAlpha(ThemeManager.getScrollbarThumbColor(), 180)));
+            UIManager.put("ScrollBar.thumbDarkShadow",
+                    new ColorUIResource(ThemeManager.withAlpha(ThemeManager.getScrollbarThumbColor(), 120)));
+            UIManager.put("ScrollBar.thumbShadow",
+                    new ColorUIResource(ThemeManager.withAlpha(ThemeManager.getScrollbarThumbColor(), 150)));
+            UIManager.put("ScrollBar.track", new ColorUIResource(ThemeManager.getScrollbarBackgroundColor()));
+            UIManager.put("ScrollBar.trackHighlight", new ColorUIResource(ThemeManager.getAccentColor()));
+            UIManager.put("ScrollBar.border", BorderFactory.createLineBorder(ThemeManager.getDividerColor(), 1, true));
+            // Use a slightly thinner scrollbar on macOS for native feel
+            UIManager.put("ScrollBar.width", isMac() ? 10 : 14);
+            UIManager.put("ScrollBar.minimumThumbSize", new java.awt.Dimension(30, 30));
+            UIManager.put("ScrollBar.maximumThumbSize", new java.awt.Dimension(100, 100));
+            UIManager.put("ScrollBar.opaque", Boolean.TRUE);
         }
     }
 
@@ -817,12 +950,98 @@ public class ThemeManager {
         // ---------- Borders ----------
         d.put("Separator.foreground", new ColorUIResource(border));
         d.put("Separator.background", new ColorUIResource(border));
+
+        // ---------- TabbedPane (modern look) ----------
+        d.put("TabbedPane.background", new ColorUIResource(bg));
+        d.put("TabbedPane.foreground", new ColorUIResource(fg));
+        d.put("TabbedPane.selected", new ColorUIResource(selBg));
+        d.put("TabbedPane.selectedForeground", new ColorUIResource(fg));
+        d.put("TabbedPane.contentAreaColor", new ColorUIResource(bg));
+        d.put("TabbedPane.focus", new ColorUIResource(getBorderFocusColor()));
+        d.put("TabbedPane.borderHightlightColor", new ColorUIResource(getBorderFocusColor()));
+        d.put("TabbedPane.light", new ColorUIResource(getBorderLightColor()));
+        d.put("TabbedPane.shadow", new ColorUIResource(border));
+        d.put("TabbedPane.darkShadow", new ColorUIResource(border.darker()));
+        d.put("TabbedPane.unselectedBackground", new ColorUIResource(bg));
+        d.put("TabbedPane.unselectedForeground", new ColorUIResource(fg2));
+        d.put("TabbedPane.tabAreaBackground", new ColorUIResource(bg));
+        d.put("TabbedPane.selectedTabPadInsets", new Insets(4, 12, 4, 12));
+        d.put("TabbedPane.tabInsets", new Insets(8, 18, 8, 18));
+        d.put("TabbedPane.tabAreaInsets", new Insets(2, 2, 0, 2));
+        d.put("TabbedPane.contentBorderInsets", new Insets(2, 2, 2, 2));
+        d.put("TabbedPane.focusHighlight", new ColorUIResource(getBorderFocusColor()));
+        d.put("TabbedPane.selectedTabHighlight", new ColorUIResource(getHeaderGradientColor()));
+        d.put("TabbedPane.selectedTabBackground", new ColorUIResource(selBg));
+        d.put("TabbedPane.selectedTabForeground", new ColorUIResource(fg));
+        d.put("TabbedPane.borderColor", new ColorUIResource(border));
+        d.put("TabbedPane.selectedTabBorderColor", new ColorUIResource(getBorderFocusColor()));
+        d.put("TabbedPane.underlineColor", new ColorUIResource(getAccentColor()));
+        d.put("TabbedPane.underlineHeight", 3);
+        d.put("TabbedPane.underlineAtTop", Boolean.FALSE);
+        d.put("TabbedPane.opaque", Boolean.TRUE);
+        d.put("TabbedPane.showContentSeparator", Boolean.TRUE);
+        d.put("TabbedPane.tabRunOverlay", 2);
+        d.put("TabbedPane.tabRunIndent", 8);
+        d.put("TabbedPane.tabSelectionHeight", 4);
+        d.put("TabbedPane.tabSelectionColor", new ColorUIResource(getAccentColor()));
+        d.put("TabbedPane.tabSelectionUnderlineColor", new ColorUIResource(getAccentColor()));
+        d.put("TabbedPane.tabSelectionUnderlineHeight", 3);
+        d.put("TabbedPane.tabSelectionUnderlineAtTop", Boolean.FALSE);
+        d.put("TabbedPane.tabSelectionUnderlineInsets", new Insets(0, 8, 0, 8));
+        d.put("TabbedPane.tabFocusColor", new ColorUIResource(getBorderFocusColor()));
+        d.put("TabbedPane.tabFocusHighlightColor", new ColorUIResource(getBorderFocusColor()));
+        d.put("TabbedPane.tabFocusHighlightThickness", 2);
+        d.put("TabbedPane.tabFocusHighlightInsets", new Insets(2, 8, 2, 8));
+        d.put("TabbedPane.tabBackground", new ColorUIResource(bg));
+        d.put("TabbedPane.tabForeground", new ColorUIResource(fg));
+        d.put("TabbedPane.tabDisabledBackground", new ColorUIResource(getDisabledBackgroundColor()));
+        d.put("TabbedPane.tabDisabledForeground", new ColorUIResource(getDisabledForegroundColor()));
+        d.put("TabbedPane.tabBorderColor", new ColorUIResource(border));
+        d.put("TabbedPane.tabSelectedBorderColor", new ColorUIResource(getBorderFocusColor()));
+        d.put("TabbedPane.tabHighlight", new ColorUIResource(getHeaderGradientColor()));
+        d.put("TabbedPane.tabShadow", new ColorUIResource(border.darker()));
+        d.put("TabbedPane.tabAreaBorderColor", new ColorUIResource(border));
+        d.put("TabbedPane.tabAreaHighlightColor", new ColorUIResource(getHeaderGradientColor()));
+        d.put("TabbedPane.tabAreaShadowColor", new ColorUIResource(border.darker()));
+        d.put("TabbedPane.tabAreaOpaque", Boolean.TRUE);
+        d.put("TabbedPane.tabOpaque", Boolean.TRUE);
+        d.put("TabbedPane.tabSelectedOpaque", Boolean.TRUE);
+        d.put("TabbedPane.tabDisabledOpaque", Boolean.TRUE);
+        // ---------- ScrollBar (modern look) ----------
+        d.put("ScrollBar.background", new ColorUIResource(getScrollbarBackgroundColor()));
+        d.put("ScrollBar.foreground", new ColorUIResource(getScrollbarForegroundColor()));
+        d.put("ScrollBar.thumb", new ColorUIResource(getScrollbarThumbColor()));
+        d.put("ScrollBar.thumbHighlight", new ColorUIResource(withAlpha(getScrollbarThumbColor(), 180)));
+        d.put("ScrollBar.thumbDarkShadow", new ColorUIResource(withAlpha(getScrollbarThumbColor(), 120)));
+        d.put("ScrollBar.thumbShadow", new ColorUIResource(withAlpha(getScrollbarThumbColor(), 150)));
+        d.put("ScrollBar.track", new ColorUIResource(getScrollbarBackgroundColor()));
+        d.put("ScrollBar.trackHighlight", new ColorUIResource(getAccentColor()));
+        d.put("ScrollBar.border", BorderFactory.createLineBorder(getDividerColor(), 1, true));
+        // Use a slightly thinner scrollbar on macOS for native feel
+        d.put("ScrollBar.width", isMac() ? 10 : 14);
+        d.put("ScrollBar.minimumThumbSize", new java.awt.Dimension(30, 30));
+        d.put("ScrollBar.maximumThumbSize", new java.awt.Dimension(100, 100));
+        d.put("ScrollBar.opaque", Boolean.TRUE);
     }
 
     private static Font withEmojiFallback(Font font) {
         if (font == null) {
             return null;
         }
+        // On macOS, use the system font for best compatibility
+        if (isMac()) {
+            return new Font("San Francisco", font.getStyle(), font.getSize());
+        }
+        // On Windows, fallback to Segoe UI for emoji support
+        if (isWindows()) {
+            return new Font("Segoe UI Emoji", font.getStyle(), font.getSize());
+        }
+        // On Linux, fallback to DejaVu Sans if available
+        String osName = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT);
+        if (osName.contains("nux") || osName.contains("nix")) {
+            return new Font("DejaVu Sans", font.getStyle(), font.getSize());
+        }
+        // Default fallback
         if (font.canDisplayUpTo("\uD83D\uDCC1") != -1) {
             return new Font("Dialog", font.getStyle(), font.getSize());
         }
@@ -830,9 +1049,19 @@ public class ThemeManager {
     }
 
     private static boolean isWindowsOrMac() {
+        return isWindows() || isMac();
+    }
+
+    private static boolean isWindows() {
         String osName = System.getProperty("os.name", "");
         String lower = osName.toLowerCase(java.util.Locale.ROOT);
-        return lower.contains("win") || lower.contains("mac");
+        return lower.contains("win");
+    }
+
+    private static boolean isMac() {
+        String osName = System.getProperty("os.name", "");
+        String lower = osName.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("mac");
     }
 
     // =========================
@@ -847,6 +1076,13 @@ public class ThemeManager {
     public void registerWindow(Window window) {
         if (window != null) {
             registeredWindows.put(window, Boolean.TRUE);
+            // Run once after the current EDT cycle so components built in constructors
+            // receive the same visual baseline across all windows.
+            SwingUtilities.invokeLater(() -> {
+                updateComponentTree(window);
+                window.revalidate();
+                window.repaint();
+            });
         }
     }
 
@@ -903,14 +1139,44 @@ public class ThemeManager {
 
         // Panels
         if (comp instanceof JPanel panel) {
-            panel.setBackground(getBackgroundColor());
+            if (panel.isOpaque()) {
+                panel.setBackground(getBackgroundColor());
+            }
         }
 
         // Scroll panes: set a viewport background too
         if (comp instanceof JScrollPane sp) {
             sp.setBackground(getBackgroundColor());
-            if (sp.getViewport() != null) sp.getViewport().setBackground(getBackgroundColor());
-            if (sp.getColumnHeader() != null) sp.getColumnHeader().setBackground(getBackgroundColor());
+            if (sp.getViewport() != null)
+                sp.getViewport().setBackground(getCardBackgroundColor());
+            if (sp.getColumnHeader() != null)
+                sp.getColumnHeader().setBackground(getBackgroundColor());
+        }
+
+        if (comp instanceof JSplitPane splitPane) {
+            splitPane.setBackground(getBackgroundColor());
+            splitPane.setForeground(getBorderColor());
+            if (splitPane.getDividerSize() < 8) {
+                splitPane.setDividerSize(8);
+            }
+        }
+
+        if (comp instanceof JTabbedPane tabbedPane) {
+            tabbedPane.setBackground(getBackgroundColor());
+            tabbedPane.setForeground(getTextPrimaryColor());
+            tabbedPane.setOpaque(true);
+        }
+
+        if (comp instanceof JList<?> list) {
+            list.setBackground(getCardBackgroundColor());
+            list.setForeground(getTextPrimaryColor());
+            list.setSelectionBackground(getSelectionBackgroundColor());
+            list.setSelectionForeground(getSelectionForegroundColor());
+        }
+
+        if (comp instanceof JComboBox<?> comboBox) {
+            comboBox.setBackground(getInputBackgroundColor());
+            comboBox.setForeground(getTextPrimaryColor());
         }
 
         // Tables
@@ -932,8 +1198,16 @@ public class ThemeManager {
         if (comp instanceof JComponent jc) {
             boolean enabled = jc.isEnabled();
 
-            if (jc instanceof JLabel || jc instanceof JButton || jc instanceof JCheckBox || jc instanceof JRadioButton) {
+            if (jc instanceof JLabel || jc instanceof JButton || jc instanceof JCheckBox
+                    || jc instanceof JRadioButton) {
                 jc.setForeground(enabled ? getTextPrimaryColor() : getDisabledForeground());
+            }
+
+            if (jc instanceof JButton button) {
+                button.setBackground(enabled ? getButtonBackgroundColor() : getDisabledBackgroundColor());
+                button.setForeground(enabled ? getButtonForegroundColor() : getDisabledForeground());
+                button.setFocusPainted(false);
+                installConsistentButtonStyle(button);
             }
 
             if (jc instanceof JTextField field) {
@@ -945,8 +1219,7 @@ public class ThemeManager {
 
                 field.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(enabled ? getInputBorderColor() : getBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(8, 12, 8, 12)
-                ));
+                        BorderFactory.createEmptyBorder(8, 12, 8, 12)));
             }
 
             if (jc instanceof JTextArea area) {
@@ -957,6 +1230,64 @@ public class ThemeManager {
                 area.setSelectedTextColor(getSelectionForegroundColor());
             }
         }
+    }
+
+    private void installConsistentButtonStyle(JButton button) {
+        if (button == null) {
+            return;
+        }
+
+        Color base = button.isEnabled() ? button.getBackground() : getDisabledBackgroundColor();
+        if (base == null) {
+            base = getButtonBackgroundColor();
+            button.setBackground(base);
+        }
+        final Color buttonBase = base;
+
+        // Keep custom colors (danger/success/etc.) but normalize spacing and border style.
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(getButtonPressedColor(buttonBase), 1, true),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)));
+
+        Object marker = button.getClientProperty("theme.button.hover.installed");
+        if (Boolean.TRUE.equals(marker)) {
+            return;
+        }
+
+        button.putClientProperty("theme.button.hover.installed", Boolean.TRUE);
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (button.isEnabled()) {
+                    button.setBackground(getButtonHoverColor(buttonBase));
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (button.isEnabled()) {
+                    button.setBackground(buttonBase);
+                }
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (button.isEnabled()) {
+                    button.setBackground(getButtonPressedColor(buttonBase));
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (!button.isEnabled()) {
+                    return;
+                }
+                button.setBackground(button.contains(e.getPoint()) ? getButtonHoverColor(buttonBase) : buttonBase);
+            }
+        });
     }
 
     // =========================
@@ -1228,16 +1559,14 @@ public class ThemeManager {
         return new Color(
                 Math.min(255, baseColor.getRed() + 20),
                 Math.min(255, baseColor.getGreen() + 20),
-                Math.min(255, baseColor.getBlue() + 20)
-        );
+                Math.min(255, baseColor.getBlue() + 20));
     }
 
     public static Color getButtonPressedColor(Color baseColor) {
         return new Color(
                 Math.max(0, baseColor.getRed() - 40),
                 Math.max(0, baseColor.getGreen() - 40),
-                Math.max(0, baseColor.getBlue() - 40)
-        );
+                Math.max(0, baseColor.getBlue() - 40));
     }
 
     public static Color getBorderLightColor() {
@@ -1292,8 +1621,7 @@ public class ThemeManager {
         return new Color(
                 clamp(base.getRed() + delta),
                 clamp(base.getGreen() + delta),
-                clamp(base.getBlue() + delta)
-        );
+                clamp(base.getBlue() + delta));
     }
 
     private static int clamp(int value) {
@@ -1313,7 +1641,8 @@ public class ThemeManager {
     }
 
     private static Color getContrastingTextColor(Color bg) {
-        if (bg == null) return Color.WHITE;
+        if (bg == null)
+            return Color.WHITE;
 
         // Relative luminance (sRGB)
         double r = bg.getRed() / 255.0;

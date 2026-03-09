@@ -59,6 +59,7 @@ public class SupplierOrderGUI extends JFrame {
     private final List<OrderItem> orderItems = new ArrayList<>();
     private final DefaultTableModel tableModel;
     private final JTable table;
+    private final JLabel statusLabel = new JLabel();
 
     /**
      * Creates and initializes the supplier order management window.
@@ -73,6 +74,7 @@ public class SupplierOrderGUI extends JFrame {
         // UI setup
         setTitle("Lieferantenbestellung");
         setSize(1100, 700);
+        setMinimumSize(new Dimension(920, 560));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout(0, 0));
@@ -134,6 +136,7 @@ public class SupplierOrderGUI extends JFrame {
         table.setRowHeight(28);
         table.setShowGrid(true);
         table.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
+        table.setFillsViewportHeight(true);
         table.setBackground(ThemeManager.getCardBackgroundColor());
         table.setForeground(ThemeManager.getTextPrimaryColor());
         table.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
@@ -160,6 +163,9 @@ public class SupplierOrderGUI extends JFrame {
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         actionPanel.setOpaque(false);
 
+        styleStatusBadge(statusLabel);
+        updateStatusLabel();
+
         JButton removeBtn = createPrimaryButton(UnicodeSymbols.TRASH + " Entfernen", ThemeManager.getErrorColor(), e -> removeSelected());
         JButton clearBtn = createPrimaryButton(UnicodeSymbols.BROOM + " Alle löschen", ThemeManager.getWarningColor(), e -> clearAll());
         JButton saveBtn = createPrimaryButton(UnicodeSymbols.FLOPPY + " Speichern", ThemeManager.getAccentColor(), e -> persist());
@@ -170,6 +176,7 @@ public class SupplierOrderGUI extends JFrame {
         actionPanel.add(saveBtn);
         actionPanel.add(refreshBtn);
 
+        actionCard.add(statusLabel, BorderLayout.WEST);
         actionCard.add(actionPanel, BorderLayout.EAST);
 
         JPanel centerWrapper = new JPanel(new BorderLayout(0, 12));
@@ -183,6 +190,11 @@ public class SupplierOrderGUI extends JFrame {
 
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoCreateRowSorter(true);
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                updateStatusLabel();
+            }
+        });
 
         loadFromFile();
         refreshTable();
@@ -284,6 +296,24 @@ public class SupplierOrderGUI extends JFrame {
                         item.stock(),
                         item.addedAt()
                 }));
+        updateStatusLabel();
+    }
+
+    private void updateStatusLabel() {
+        int total = tableModel.getRowCount();
+        int selected = table.getSelectedRow() >= 0 ? 1 : 0;
+        statusLabel.setText("Einträge: " + total + (selected > 0 ? " • Auswahl: 1" : ""));
+    }
+
+    private void styleStatusBadge(JLabel label) {
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        label.setOpaque(true);
+        label.setBackground(ThemeManager.getSurfaceColor());
+        label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
     }
 
     /**
@@ -445,6 +475,7 @@ public class SupplierOrderGUI extends JFrame {
     @Override
     public void dispose() {
         ThemeManager.getInstance().unregisterWindow(this);
+        INSTANCE = null;
         super.dispose();
     }
 
