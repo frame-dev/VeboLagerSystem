@@ -29,16 +29,17 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 
 /**
  * ArticleGUI with category support for better organization.
- * Categories are loaded from categories.json and mapped to articles based on article number ranges.
+ * Categories are loaded from categories.json and mapped to articles based on
+ * article number ranges.
  */
-@SuppressWarnings({"ALL"})
+@SuppressWarnings({ "ALL" })
 public class ArticleGUI extends JFrame {
 
     public final JTable articleTable;
     // scroll pane reference so we can read viewport width on resize
     private final JScrollPane tableScrollPane;
     // base column widths - added category column between Name and Details
-    private final int[] baseColumnWidths = new int[]{150, 200, 150, 290, 110, 110, 150, 150, 200};
+    private final int[] baseColumnWidths = new int[] { 150, 200, 150, 290, 110, 110, 150, 150, 200 };
     private final JLabel countLabel;
     private boolean isUpdatingTable = false;
     private JTextField vendorFilterField;
@@ -51,7 +52,8 @@ public class ArticleGUI extends JFrame {
     private JComboBox<String> categoryFilter;
 
     /**
-     * Initializes the ArticleGUI, sets up the layout, loads categories and articles, and configures interactions.
+     * Initializes the ArticleGUI, sets up the layout, loads categories and
+     * articles, and configures interactions.
      */
     @SuppressWarnings("unchecked")
     public ArticleGUI() {
@@ -81,38 +83,43 @@ public class ArticleGUI extends JFrame {
         topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
         topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
 
-        // Header card (no fixed height -> prevents clipping)
-        RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-        headerPanel.setLayout(new BorderLayout());
-        headerPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(14, 18, 14, 18)
-        ));
-        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel headerWrapper = null;
+        boolean disableHeader = Main.settings.getProperty("disable_header") != null
+                && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
+        if (!disableHeader) {
 
-        JLabel titleLabel = new JLabel(UnicodeSymbols.ARTICLE_NAME + " Artikel Verwaltung");
-        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+            // Header card (no fixed height -> prevents clipping)
+            RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
+            headerPanel.setLayout(new BorderLayout());
+            headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                    BorderFactory.createEmptyBorder(14, 18, 14, 18)));
+            headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Artikel verwalten, filtern und durchsuchen");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+            JLabel titleLabel = new JLabel(UnicodeSymbols.ARTICLE_NAME + " Artikel Verwaltung");
+            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+            titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-        JPanel headerText = new JPanel();
-        headerText.setOpaque(false);
-        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerText.add(titleLabel);
-        headerText.add(Box.createVerticalStrut(4));
-        headerText.add(subtitleLabel);
+            JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Artikel verwalten, filtern und durchsuchen");
+            subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+            subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        headerPanel.add(headerText, BorderLayout.WEST);
+            JPanel headerText = new JPanel();
+            headerText.setOpaque(false);
+            headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            headerText.add(titleLabel);
+            headerText.add(Box.createVerticalStrut(4));
+            headerText.add(subtitleLabel);
 
-        JPanel headerWrapper = new JPanel(new BorderLayout());
-        headerWrapper.setOpaque(false);
-        headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerWrapper.add(headerPanel, BorderLayout.CENTER);
+            headerPanel.add(headerText, BorderLayout.WEST);
+
+            headerWrapper = new JPanel(new BorderLayout());
+            headerWrapper.setOpaque(false);
+            headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+            headerWrapper.add(headerPanel, BorderLayout.CENTER);
+        }
 
         // =========================
         // Toolbar
@@ -121,8 +128,7 @@ public class ArticleGUI extends JFrame {
         toolbarCard.setLayout(new BorderLayout());
         toolbarCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
+                BorderFactory.createEmptyBorder(8, 12, 8, 12)));
 
         JPanel toolbarWrapper = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 10));
         toolbarWrapper.setOpaque(false);
@@ -153,8 +159,7 @@ public class ArticleGUI extends JFrame {
                         (Integer) row[4],
                         (Double) row[5],
                         (Double) row[6],
-                        (String) row[7]
-                );
+                        (String) row[7]);
                 if (!articleManager.insertArticle(article)) {
                     JOptionPane.showMessageDialog(this,
                             "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.",
@@ -188,7 +193,8 @@ public class ArticleGUI extends JFrame {
             if (updatedRow != null) {
                 if (updatedRow.length != 8)
                     throw new IllegalArgumentException("Invalid number of fields in update article dialog");
-                // updatedRow: [artikelNr, name, details, lager, mindest, verkauf, einkauf, lieferant]
+                // updatedRow: [artikelNr, name, details, lager, mindest, verkauf, einkauf,
+                // lieferant]
                 DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
 
                 model.setValueAt(updatedRow[0], modelRow, 0); // Artikelnummer
@@ -296,16 +302,17 @@ public class ArticleGUI extends JFrame {
         JScrollPane toolbarScrollPane = new JScrollPane(
                 toolbarCard,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
-        );
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         toolbarScrollPane.setBorder(BorderFactory.createEmptyBorder());
         toolbarScrollPane.setOpaque(false);
         toolbarScrollPane.getViewport().setOpaque(false);
         toolbarScrollPane.getHorizontalScrollBar().setUnitIncrement(16);
 
         // Top area: header + toolbar stacked
-        topContainer.add(headerWrapper);
-        topContainer.add(Box.createVerticalStrut(10));
+        if (headerWrapper != null) {
+            topContainer.add(headerWrapper);
+            topContainer.add(Box.createVerticalStrut(10));
+        }
         topContainer.add(toolbarScrollPane);
         add(topContainer, BorderLayout.NORTH);
 
@@ -320,8 +327,7 @@ public class ArticleGUI extends JFrame {
         tableScrollPane = new JScrollPane(articleTable);
         tableScrollPane.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)
-        ));
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
         tableScrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
         tableScrollPane.setBackground(ThemeManager.getCardBackgroundColor());
         card.add(tableScrollPane, BorderLayout.CENTER);
@@ -350,8 +356,7 @@ public class ArticleGUI extends JFrame {
         searchCard.setLayout(new BorderLayout(10, 0));
         searchCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
 
         JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche:");
         searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
@@ -429,7 +434,7 @@ public class ArticleGUI extends JFrame {
             String text = searchField.getText().trim();
             TableRowSorter<DefaultTableModel> sorter;
             if (articleTable.getRowSorter() instanceof TableRowSorter) {
-                //noinspection unchecked
+                // noinspection unchecked
                 sorter = (TableRowSorter<DefaultTableModel>) articleTable.getRowSorter();
             } else {
                 sorter = new TableRowSorter<>((DefaultTableModel) articleTable.getModel());
@@ -482,8 +487,7 @@ public class ArticleGUI extends JFrame {
                     updateCountLabel();
                 },
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
-                JComponent.WHEN_FOCUSED
-        );
+                JComponent.WHEN_FOCUSED);
 
         // Auto-resize columns when the window or viewport changes size
         ComponentAdapter resizeListener = new ComponentAdapter() {
@@ -509,7 +513,8 @@ public class ArticleGUI extends JFrame {
     }
 
     /**
-     * Shows a polished modal dialog to enter a new article. Returns the table row or null if canceled.
+     * Shows a polished modal dialog to enter a new article. Returns the table row
+     * or null if canceled.
      */
     private Object[] showAddArticleDialog() {
         return ArticleDialog.showAddArticleDialog(this);
@@ -519,7 +524,8 @@ public class ArticleGUI extends JFrame {
         if (articleTable == null) {
             throw new IllegalStateException("Article table has not been initialized");
         }
-        // Provide a typed, non-editable table model so sorting & renderers behave correctly
+        // Provide a typed, non-editable table model so sorting & renderers behave
+        // correctly
         DefaultTableModel model = getDefaultTableModel();
 
         // Set model
@@ -531,10 +537,12 @@ public class ArticleGUI extends JFrame {
         articleTable.setAutoCreateRowSorter(true);
         articleTable.getTableHeader().setReorderingAllowed(false);
         articleTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        // Let JTable resize all columns proportionally to fill the viewport when the window resizes
+        // Let JTable resize all columns proportionally to fill the viewport when the
+        // window resizes
         articleTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
-        // Make grid lines visible and subtle (adds vertical+horizontal lines like in your mockup)
+        // Make grid lines visible and subtle (adds vertical+horizontal lines like in
+        // your mockup)
         articleTable.setShowGrid(true);
         articleTable.setShowHorizontalLines(true);
         articleTable.setShowVerticalLines(true);
@@ -542,15 +550,16 @@ public class ArticleGUI extends JFrame {
         articleTable.setIntercellSpacing(new Dimension(1, 1));
         articleTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
 
-
         // Alternating row colors for readability (subtle)
         DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
 
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (!isSelected)
-                    c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+                    c.setBackground(
+                            row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
                 return c;
             }
         };
@@ -566,8 +575,10 @@ public class ArticleGUI extends JFrame {
         DefaultTableCellRenderer currencyRenderer = new DefaultTableCellRenderer() {
             @Override
             public void setValue(Object value) {
-                if (value instanceof Number) setText(value + " CHF");
-                else setText(value == null ? "" : value.toString());
+                if (value instanceof Number)
+                    setText(value + " CHF");
+                else
+                    setText(value == null ? "" : value.toString());
                 setHorizontalAlignment(SwingConstants.RIGHT);
             }
         };
@@ -618,7 +629,8 @@ public class ArticleGUI extends JFrame {
 
     /**
      * Export the article table as a PDF with all data on a single page.
-     * Uses a landscape A3 format for maximum space and dynamically scales content to fit.
+     * Uses a landscape A3 format for maximum space and dynamically scales content
+     * to fit.
      */
     private void exportTableAsPDF() {
         ArticleExporter.exportTableAsPdf(this, articleTable, baseColumnWidths, Main.iconSmall);
@@ -629,8 +641,8 @@ public class ArticleGUI extends JFrame {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 return switch (columnIndex) {
-                    case 4, 5 -> Integer.class;  // Lagerbestand, Mindestbestand (shifted by 1)
-                    case 6, 7 -> Double.class;   // Verkaufspreis, Einkaufspreis (shifted by 1)
+                    case 4, 5 -> Integer.class; // Lagerbestand, Mindestbestand (shifted by 1)
+                    case 6, 7 -> Double.class; // Verkaufspreis, Einkaufspreis (shifted by 1)
                     default -> String.class;
                 };
             }
@@ -643,7 +655,7 @@ public class ArticleGUI extends JFrame {
 
         model.addColumn(UnicodeSymbols.NUMBERS + " Artikelnummer");
         model.addColumn(UnicodeSymbols.ARTICLE_NAME + " Name");
-        model.addColumn(UnicodeSymbols.CATEGORY + " Kategorie");  // New category column
+        model.addColumn(UnicodeSymbols.CATEGORY + " Kategorie"); // New category column
         model.addColumn(UnicodeSymbols.CLIPBOARD + " Details");
         model.addColumn(UnicodeSymbols.COL_LAGERBESTAND + " Lagerbestand");
         model.addColumn(UnicodeSymbols.COL_MINDESTBESTAND + " Mindestbestand");
@@ -654,7 +666,8 @@ public class ArticleGUI extends JFrame {
     }
 
     /**
-     * Displays the ArticleGUI window. This method can be called from the main menu or other parts of the application to show the article management interface.
+     * Displays the ArticleGUI window. This method can be called from the main menu
+     * or other parts of the application to show the article management interface.
      */
     public void display() {
         setVisible(true);
@@ -677,17 +690,19 @@ public class ArticleGUI extends JFrame {
     private void loadArticles() {
         ArticleManager articleManager = ArticleManager.getInstance();
         List<Article> articles = articleManager.getAllArticles();
-        if (articles == null) return;
+        if (articles == null)
+            return;
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
         isUpdatingTable = true;
         model.setRowCount(0);
         for (Article a : articles) {
-            if (a == null) throw new NullPointerException("Article is null");
+            if (a == null)
+                throw new NullPointerException("Article is null");
             String category = getCategoryForArticle(a.getArticleNumber());
-            model.addRow(new Object[]{
+            model.addRow(new Object[] {
                     a.getArticleNumber(),
                     a.getName(),
-                    category,  // Category column
+                    category, // Category column
                     a.getDetails(),
                     a.getStockQuantity(),
                     a.getMinStockLevel(),
@@ -765,8 +780,7 @@ public class ArticleGUI extends JFrame {
                 minStock,
                 sellPrice,
                 purchasePrice,
-                vendor
-        );
+                vendor);
 
         if (!ArticleManager.getInstance().updateArticle(article)) {
             showInlineEditError("Fehler beim Speichern der Aenderung.", articleNumber, modelRow);
@@ -831,14 +845,17 @@ public class ArticleGUI extends JFrame {
     private void deleteSelectedArticle() {
         int selectedRow = articleTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Löschen aus.", "Keine Auswahl", JOptionPane.WARNING_MESSAGE,
+            JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Löschen aus.", "Keine Auswahl",
+                    JOptionPane.WARNING_MESSAGE,
                     Main.iconSmall);
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Artikel wirklich löschen?", "Artikel löschen", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,
+        int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Artikel wirklich löschen?",
+                "Artikel löschen", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,
                 Main.iconSmall);
-        if (confirm != JOptionPane.YES_OPTION) return;
+        if (confirm != JOptionPane.YES_OPTION)
+            return;
 
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
         int modelRow = articleTable.convertRowIndexToModel(selectedRow);
@@ -850,9 +867,11 @@ public class ArticleGUI extends JFrame {
             // Only remove from the table if DB deletion succeeded
             model.removeRow(modelRow);
             updateCountLabel();
-            JOptionPane.showMessageDialog(this, "Artikel erfolgreich gelöscht.", "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+            JOptionPane.showMessageDialog(this, "Artikel erfolgreich gelöscht.", "Erfolg",
+                    JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
         } else {
-            JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Artikels aus der Datenbank.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+            JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Artikels aus der Datenbank.", "Fehler",
+                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
         }
     }
 
@@ -926,7 +945,7 @@ public class ArticleGUI extends JFrame {
 
         boolean hasNegative = false;
         for (Article article : selected) {
-            if(article == null) {
+            if (article == null) {
                 throw new IllegalArgumentException("Artikel ist null.");
             }
             if (article.getStockQuantity() + delta < 0) {
@@ -965,8 +984,7 @@ public class ArticleGUI extends JFrame {
                     article.getMinStockLevel(),
                     article.getSellPrice(),
                     article.getPurchasePrice(),
-                    article.getVendorName()
-            );
+                    article.getVendorName());
             if (articleManager.updateArticle(updated)) {
                 model.setValueAt(newStock, modelRow, 4);
             }
@@ -975,7 +993,8 @@ public class ArticleGUI extends JFrame {
     }
 
     /**
-     * Generate QR codes for the selected articles and save them to disk, showing a progress dialog during generation.
+     * Generate QR codes for the selected articles and save them to disk, showing a
+     * progress dialog during generation.
      * Uses a SwingWorker to keep the UI responsive and handles errors gracefully.
      */
     private void generateQrCodesForSelectedArticles() {
@@ -992,11 +1011,11 @@ public class ArticleGUI extends JFrame {
         File outputDir = new File(Main.getAppDataDir(), "qr_codes");
         int result = JOptionPane.showConfirmDialog(
                 this,
-                "QR-Codes fuer " + selectedArticles.size() + " ausgewählte Artikel generieren?\nSpeicherort: " + outputDir.getAbsolutePath(),
+                "QR-Codes fuer " + selectedArticles.size() + " ausgewählte Artikel generieren?\nSpeicherort: "
+                        + outputDir.getAbsolutePath(),
                 "QR-Codes generieren",
                 JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.INFORMATION_MESSAGE
-        );
+                JOptionPane.INFORMATION_MESSAGE);
         if (result != JOptionPane.OK_OPTION) {
             return;
         }
@@ -1027,25 +1046,23 @@ public class ArticleGUI extends JFrame {
                                 "Es konnten keine QR-Codes erstellt werden.",
                                 "QR-Codes generieren",
                                 JOptionPane.WARNING_MESSAGE,
-                                Main.iconSmall
-                        );
+                                Main.iconSmall);
                         return;
                     }
                     JOptionPane.showMessageDialog(
                             ArticleGUI.this,
-                            "QR-Codes wurden erstellt.\nAnzahl: " + files.size() + "\nOrdner: " + outputDir.getAbsolutePath(),
+                            "QR-Codes wurden erstellt.\nAnzahl: " + files.size() + "\nOrdner: "
+                                    + outputDir.getAbsolutePath(),
                             "QR-Codes generieren",
                             JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall
-                    );
+                            Main.iconSmall);
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(
                             ArticleGUI.this,
                             "Fehler beim Erstellen der QR-Codes: " + ex.getMessage(),
                             "QR-Codes generieren",
                             JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall
-                    );
+                            Main.iconSmall);
                 }
             }
         };
@@ -1055,14 +1072,17 @@ public class ArticleGUI extends JFrame {
     }
 
     /**
-     * Show a preview dialog for the QR codes of the selected articles, allowing users to see and print them without saving to disk.
+     * Show a preview dialog for the QR codes of the selected articles, allowing
+     * users to see and print them without saving to disk.
      */
     private void showQrCodePreviewDialog() {
         ArticleQrPreviewDialog.show(this, getSelectedArticles(articleTable));
     }
 
     /**
-     * A custom JPanel with rounded corners and a specified background color. Used for the header section of the ArticleGUI to create a visually appealing design that stands out from the rest of the interface.
+     * A custom JPanel with rounded corners and a specified background color. Used
+     * for the header section of the ArticleGUI to create a visually appealing
+     * design that stands out from the rest of the interface.
      */
     public static class RoundedPanel extends JPanel {
         private final Color backgroundColor;
@@ -1092,7 +1112,8 @@ public class ArticleGUI extends JFrame {
     }
 
     /**
-     * Set up mouse interactions for the article table, including double-click to add to order list and right-click context menu
+     * Set up mouse interactions for the article table, including double-click to
+     * add to order list and right-click context menu
      */
     private void setupTableInteractions() {
         JPopupMenu popup = createTablePopup();
@@ -1113,15 +1134,18 @@ public class ArticleGUI extends JFrame {
                 // Double left-click: Add to order list
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
                     int row = articleTable.rowAtPoint(e.getPoint());
-                    if (row == -1) return;
+                    if (row == -1)
+                        return;
 
                     int modelRow = articleTable.convertRowIndexToModel(row);
-                    Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector().elementAt(modelRow).toArray();
+                    Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector()
+                            .elementAt(modelRow).toArray();
                     String artikelNr = (String) existingData[0];
 
                     Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
                     if (article == null) {
-                        JOptionPane.showMessageDialog(ArticleGUI.this, "Artikel konnte nicht gefunden werden.", "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                        JOptionPane.showMessageDialog(ArticleGUI.this, "Artikel konnte nicht gefunden werden.",
+                                "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                         return;
                     }
 
@@ -1130,12 +1154,14 @@ public class ArticleGUI extends JFrame {
                             "Zur Bestellung hinzufügen",
                             JOptionPane.PLAIN_MESSAGE);
 
-                    if (input == null) return; // User cancelled
+                    if (input == null)
+                        return; // User cancelled
 
                     try {
                         int quantity = Integer.parseInt(input.trim());
                         if (quantity <= 0) {
-                            JOptionPane.showMessageDialog(ArticleGUI.this, "Menge muss größer als 0 sein.", "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                            JOptionPane.showMessageDialog(ArticleGUI.this, "Menge muss größer als 0 sein.",
+                                    "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                             return;
                         }
 
@@ -1166,7 +1192,8 @@ public class ArticleGUI extends JFrame {
                         }
 
                     } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(ArticleGUI.this, "Ungültige Menge: " + input, "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                        JOptionPane.showMessageDialog(ArticleGUI.this, "Ungültige Menge: " + input, "Fehler",
+                                JOptionPane.ERROR_MESSAGE, Main.iconSmall);
                     }
                 }
             }
@@ -1184,7 +1211,8 @@ public class ArticleGUI extends JFrame {
     }
 
     /**
-     * Create a context menu for the article table with options to edit or delete the selected article
+     * Create a context menu for the article table with options to edit or delete
+     * the selected article
      */
     private JPopupMenu createTablePopup() {
         JPopupMenu popup = new JPopupMenu();
@@ -1193,16 +1221,19 @@ public class ArticleGUI extends JFrame {
 
         editItem.addActionListener(e -> {
             int sel = articleTable.getSelectedRow();
-            if (sel == -1) return;
+            if (sel == -1)
+                return;
             int modelRow = articleTable.convertRowIndexToModel(sel);
-            Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector().elementAt(modelRow).toArray();
+            Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector().elementAt(modelRow)
+                    .toArray();
             Object[] updated = showUpdateArticleDialog(existingData);
             if (updated != null) {
                 DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-                for (int i = 0; i < updated.length; i++) model.setValueAt(updated[i], modelRow, i);
+                for (int i = 0; i < updated.length; i++)
+                    model.setValueAt(updated[i], modelRow, i);
                 ArticleManager.getInstance().updateArticle(new Article(
-                        (String) updated[0], (String) updated[1], (String) updated[2], (Integer) updated[3], (Integer) updated[4], (Double) updated[5], (Double) updated[6], (String) updated[7]
-                ));
+                        (String) updated[0], (String) updated[1], (String) updated[2], (Integer) updated[3],
+                        (Integer) updated[4], (Double) updated[5], (Double) updated[6], (String) updated[7]));
             }
         });
 
@@ -1368,8 +1399,7 @@ public class ArticleGUI extends JFrame {
         categoryPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 12, 8));
         categoryPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
 
         // Create and style a label with an icon
         JLabel categoryLabel = new JLabel(UnicodeSymbols.FOLDER + " Kategorie:");
@@ -1415,8 +1445,7 @@ public class ArticleGUI extends JFrame {
         filterPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 12, 8));
         filterPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
 
         JLabel vendorLabel = new JLabel(UnicodeSymbols.TRUCK + " Lieferant:");
         vendorLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
@@ -1471,8 +1500,7 @@ public class ArticleGUI extends JFrame {
         field.setCaretColor(ThemeManager.getTextPrimaryColor());
         field.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                BorderFactory.createEmptyBorder(4, 6, 4, 6)
-        ));
+                BorderFactory.createEmptyBorder(4, 6, 4, 6)));
         field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
     }
 
@@ -1523,8 +1551,7 @@ public class ArticleGUI extends JFrame {
         label.setBackground(ThemeManager.getSurfaceColor());
         label.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)
-        ));
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
     }
 
     private JComponent createMiniDivider() {

@@ -22,7 +22,15 @@ import java.util.regex.Pattern;
 import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 
 /**
- * The OrderGUI class provides a graphical user interface for managing orders in the inventory system. It allows users to view, filter, create, edit, delete, and complete orders. The GUI displays a list of orders in a table format, with options to search and filter the orders based on various criteria. Users can also access detailed information about each order and perform actions such as editing or deleting orders directly from the interface. The class implements caching for order data to improve performance and reduce database load, while ensuring that the displayed information is up-to-date when necessary.
+ * The OrderGUI class provides a graphical user interface for managing orders in
+ * the inventory system. It allows users to view, filter, create, edit, delete,
+ * and complete orders. The GUI displays a list of orders in a table format,
+ * with options to search and filter the orders based on various criteria. Users
+ * can also access detailed information about each order and perform actions
+ * such as editing or deleting orders directly from the interface. The class
+ * implements caching for order data to improve performance and reduce database
+ * load, while ensuring that the displayed information is up-to-date when
+ * necessary.
  *
  * @author framedev
  */
@@ -31,7 +39,7 @@ public class OrderGUI extends JFrame {
 
     private final JTable orderTable;
     private final JScrollPane tableScrollPane;
-    private final int[] baseColumnWidths = new int[]{150, 180, 150, 150, 120, 120, 120};
+    private final int[] baseColumnWidths = new int[] { 150, 180, 150, 150, 120, 120, 120 };
     private final JLabel orderCountLabel;
 
     // ---- Order cache (GUI-level) ----------------------------------------------
@@ -41,11 +49,16 @@ public class OrderGUI extends JFrame {
     private volatile long ordersCacheTime = 0L;
 
     // Fast lookup by ID for edit/details without extra DB hits
-    private final ConcurrentHashMap<String, Order> orderByIdCache =
-            new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Order> orderByIdCache = new ConcurrentHashMap<>();
 
     /**
-     * Initializes the OrderGUI by setting up the main window, including the header, toolbar, order table, and search bar. The GUI allows users to view, filter, create, edit, delete, and complete orders. It also includes a search functionality to filter orders based on various criteria. The order data is loaded from the OrderManager and displayed in a JTable with custom styling and interactions. The GUI is designed to be responsive and user-friendly, with tooltips and confirmation dialogs for critical actions.
+     * Initializes the OrderGUI by setting up the main window, including the header,
+     * toolbar, order table, and search bar. The GUI allows users to view, filter,
+     * create, edit, delete, and complete orders. It also includes a search
+     * functionality to filter orders based on various criteria. The order data is
+     * loaded from the OrderManager and displayed in a JTable with custom styling
+     * and interactions. The GUI is designed to be responsive and user-friendly,
+     * with tooltips and confirmation dialogs for critical actions.
      */
     public OrderGUI() {
         ThemeManager.getInstance().registerWindow(this);
@@ -63,42 +76,46 @@ public class OrderGUI extends JFrame {
         topPanel.setBackground(ThemeManager.getBackgroundColor());
         topPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 8, 12));
 
-        // Header card
-        JFrameUtils.RoundedPanel headerCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-        headerCard.setLayout(new BorderLayout());
-        headerCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(14, 18, 14, 18)
-        ));
+        JFrameUtils.RoundedPanel headerCard = null;
+        boolean disableHeader = Main.settings.getProperty("disable_header") != null
+                && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
+        if (!disableHeader) {
 
-        JLabel titleLabel = new JLabel(UnicodeSymbols.PACKAGE + " Bestellungen Verwaltung");
-        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+            // Header card
+            headerCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
+            headerCard.setLayout(new BorderLayout());
+            headerCard.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                    BorderFactory.createEmptyBorder(14, 18, 14, 18)));
 
-        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Bestellungen verwalten, filtern und exportieren");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+            JLabel titleLabel = new JLabel(UnicodeSymbols.PACKAGE + " Bestellungen Verwaltung");
+            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+            titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-        JPanel titleBox = new JPanel();
-        titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
-        titleBox.setOpaque(false);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        titleBox.add(titleLabel);
-        titleBox.add(Box.createVerticalStrut(4));
-        titleBox.add(subtitleLabel);
+            JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Bestellungen verwalten, filtern und exportieren");
+            subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+            subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        headerCard.add(titleBox, BorderLayout.WEST);
+            JPanel titleBox = new JPanel();
+            titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
+            titleBox.setOpaque(false);
+            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            titleBox.add(titleLabel);
+            titleBox.add(Box.createVerticalStrut(4));
+            titleBox.add(subtitleLabel);
+
+            headerCard.add(titleBox, BorderLayout.WEST);
+        }
 
         // Toolbar card
         JFrameUtils.RoundedPanel toolbarCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
         toolbarCard.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
         toolbarCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)
-        ));
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 
-        JComboBox<String> filterComboBox = new JComboBox<>(new String[]{
+        JComboBox<String> filterComboBox = new JComboBox<>(new String[] {
                 "Alle Bestellungen", "Abgeschlossene Bestellungen", "Offene Bestellungen"
         });
         styleComboBox(filterComboBox);
@@ -121,10 +138,12 @@ public class OrderGUI extends JFrame {
         toolbarCard.add(completeOrderButton);
         toolbarCard.add(refreshButton);
 
-        headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        toolbarCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        topPanel.add(headerCard);
-        topPanel.add(Box.createVerticalStrut(10));
+        if (headerCard != null) {
+            headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+            toolbarCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+            topPanel.add(headerCard);
+            topPanel.add(Box.createVerticalStrut(10));
+        }
         topPanel.add(toolbarCard);
 
         add(topPanel, BorderLayout.NORTH);
@@ -157,8 +176,7 @@ public class OrderGUI extends JFrame {
         searchCard.setLayout(new BorderLayout(10, 0));
         searchCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
 
         orderCountLabel = new JLabel("Anzahl Bestellungen: 0");
         orderCountLabel.setForeground(ThemeManager.getTextPrimaryColor());
@@ -211,7 +229,8 @@ public class OrderGUI extends JFrame {
         editOrderButton.addActionListener(e -> {
             Vector<Object> rowData = getSelectedOrderData();
             if (rowData == null) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl",
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.",
+                        "Keine Auswahl",
                         JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                 return;
             }
@@ -232,14 +251,16 @@ public class OrderGUI extends JFrame {
         deleteOrderButton.addActionListener(e -> {
             int sel = orderTable.getSelectedRow();
             if (sel == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Löschen aus.", "Keine Auswahl",
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Löschen aus.",
+                        "Keine Auswahl",
                         JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                 return;
             }
             int modelRow = orderTable.convertRowIndexToModel(sel);
             String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
 
-            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen",
+            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?",
+                    "Löschen",
                     JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, Main.iconSmall);
 
             if (confirm == JOptionPane.YES_OPTION) {
@@ -313,8 +334,7 @@ public class OrderGUI extends JFrame {
                     updateOrderCount();
                 },
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
-                JComponent.WHEN_FOCUSED
-        );
+                JComponent.WHEN_FOCUSED);
 
         filterComboBox.addActionListener(e -> {
             String selected = (String) filterComboBox.getSelectedItem();
@@ -355,8 +375,9 @@ public class OrderGUI extends JFrame {
         model.setRowCount(0);
 
         for (Order o : orders) {
-            if (o == null) continue;
-            model.addRow(new Object[]{
+            if (o == null)
+                continue;
+            model.addRow(new Object[] {
                     o.getOrderId(),
                     o.getReceiverName(),
                     o.getSenderName(),
@@ -377,8 +398,9 @@ public class OrderGUI extends JFrame {
         model.setRowCount(0);
 
         for (Order o : orders) {
-            if (o == null) continue;
-            model.addRow(new Object[]{
+            if (o == null)
+                continue;
+            model.addRow(new Object[] {
                     o.getOrderId(),
                     o.getReceiverName(),
                     o.getSenderName(),
@@ -392,7 +414,8 @@ public class OrderGUI extends JFrame {
     }
 
     private void updateOrderCount() {
-        if (orderCountLabel == null) return;
+        if (orderCountLabel == null)
+            return;
 
         int count;
         if (orderTable.getRowSorter() != null) {
@@ -418,7 +441,8 @@ public class OrderGUI extends JFrame {
         edit.addActionListener(e -> {
             Vector<Object> rowData = getSelectedOrderData();
             if (rowData == null) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.", "Keine Auswahl",
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.",
+                        "Keine Auswahl",
                         JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                 return;
             }
@@ -437,12 +461,14 @@ public class OrderGUI extends JFrame {
 
         del.addActionListener(e -> {
             int sel = orderTable.getSelectedRow();
-            if (sel == -1) return;
+            if (sel == -1)
+                return;
 
             int modelRow = orderTable.convertRowIndexToModel(sel);
             String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
 
-            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?", "Löschen",
+            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?",
+                    "Löschen",
                     JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, Main.iconSmall);
 
             if (confirm == JOptionPane.YES_OPTION) {
@@ -466,7 +492,8 @@ public class OrderGUI extends JFrame {
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
                     Vector<Object> rowData = getSelectedOrderData();
                     if (rowData == null) {
-                        JOptionPane.showMessageDialog(OrderGUI.this, "Bitte wählen Sie eine Bestellung zum Anzeigen aus.", "Keine Auswahl",
+                        JOptionPane.showMessageDialog(OrderGUI.this,
+                                "Bitte wählen Sie eine Bestellung zum Anzeigen aus.", "Keine Auswahl",
                                 JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                         return;
                     }
@@ -502,7 +529,8 @@ public class OrderGUI extends JFrame {
 
     private Vector<Object> getSelectedOrderData() {
         int sel = orderTable.getSelectedRow();
-        if (sel == -1) return null;
+        if (sel == -1)
+            return null;
         int modelRow = orderTable.convertRowIndexToModel(sel);
 
         Vector<Object> rowData = new Vector<>();
@@ -566,8 +594,9 @@ public class OrderGUI extends JFrame {
         DefaultTableCellRenderer statusRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value,
-                                                           boolean isSelected, boolean hasFocus, int row, int column) {
-                JLabel c = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel c = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row,
+                        column);
                 c.setHorizontalAlignment(SwingConstants.CENTER);
 
                 if (isSelected) {
@@ -577,7 +606,8 @@ public class OrderGUI extends JFrame {
                 }
 
                 // base alternating background
-                Color baseBg = (row % 2 == 0) ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor();
+                Color baseBg = (row % 2 == 0) ? ThemeManager.getTableRowEvenColor()
+                        : ThemeManager.getTableRowOddColor();
                 c.setBackground(baseBg);
                 c.setForeground(ThemeManager.getTextPrimaryColor());
 
@@ -596,20 +626,25 @@ public class OrderGUI extends JFrame {
         };
 
         TableColumnModel tcm = orderTable.getColumnModel();
-        if (tcm.getColumnCount() > 0) tcm.getColumn(0).setCellRenderer(center);
-        if (tcm.getColumnCount() > 6) tcm.getColumn(6).setCellRenderer(statusRenderer);
+        if (tcm.getColumnCount() > 0)
+            tcm.getColumn(0).setCellRenderer(center);
+        if (tcm.getColumnCount() > 6)
+            tcm.getColumn(6).setCellRenderer(statusRenderer);
 
         for (int i = 0; i < baseColumnWidths.length && i < tcm.getColumnCount(); i++) {
             tcm.getColumn(i).setPreferredWidth(baseColumnWidths[i]);
         }
 
-        // Alternating row colors for readability (subtle) - DO NOT override status renderer
+        // Alternating row colors for readability (subtle) - DO NOT override status
+        // renderer
         DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (!isSelected) {
-                    c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+                    c.setBackground(
+                            row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
                     c.setForeground(ThemeManager.getTextPrimaryColor());
                 }
                 return c;
@@ -639,15 +674,21 @@ public class OrderGUI extends JFrame {
     }
 
     /**
-     * Adds hover and press effects to a button by changing its background color. The button's original background color should be set to 'base' for this to work properly.
+     * Adds hover and press effects to a button by changing its background color.
+     * The button's original background color should be set to 'base' for this to
+     * work properly.
      *
      * @param button  The JButton to which the hover effects should be added.
-     * @param base    The base background color of the button when it is in its normal state.
-     * @param hover   The background color of the button when the mouse is hovering over it.
-     * @param pressed The background color of the button when it is being pressed (mouse click).
+     * @param base    The base background color of the button when it is in its
+     *                normal state.
+     * @param hover   The background color of the button when the mouse is hovering
+     *                over it.
+     * @param pressed The background color of the button when it is being pressed
+     *                (mouse click).
      */
     public static void addHoverEffects(JButton button, Color base, Color hover, Color pressed) {
-        if (button == null) return;
+        if (button == null)
+            return;
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -672,7 +713,8 @@ public class OrderGUI extends JFrame {
     }
 
     private void showOrderDetailsDialog(Order order) {
-        if (order == null) return;
+        if (order == null)
+            return;
         JDialog detailsDialog = new JDialog(this, "Bestelldetails - " + order.getOrderId(), true);
         detailsDialog.setSize(600, 500);
         detailsDialog.setLocationRelativeTo(this);
@@ -687,7 +729,8 @@ public class OrderGUI extends JFrame {
         StringBuilder articlesHtml = new StringBuilder();
 
         for (Article a : articles) {
-            if (a == null) continue;
+            if (a == null)
+                continue;
             int quantity = order.getOrderedArticles().getOrDefault(a.getArticleNumber(), 0);
             if (quantity == 0) {
                 quantity = order.getOrderedArticles().getOrDefault(a.getName(), 0);
@@ -728,7 +771,8 @@ public class OrderGUI extends JFrame {
     }
 
     private void createPDFExport(Order order) {
-        if (order == null) return;
+        if (order == null)
+            return;
         OrderExport.createPDFExport(this, order);
     }
 
@@ -748,14 +792,16 @@ public class OrderGUI extends JFrame {
                 "<tr><td><b>Absender Konto:</b></td><td>" + order.getSenderKontoNumber() + "</td></tr>" +
                 "</table>" +
                 "<h3 style='color: #1e3a5f; margin-top: 20px; margin-bottom: 10px;'>Bestellte Artikel</h3>" +
-                "<table border='1' cellpadding='8' cellspacing='0' style='width: 100%; border-collapse: collapse; border-color: #ddd;'>" +
+                "<table border='1' cellpadding='8' cellspacing='0' style='width: 100%; border-collapse: collapse; border-color: #ddd;'>"
+                +
                 "<tr style='background-color: #3e5462; color: white;'>" +
                 "<th>Art.-Nr.</th><th>Name</th><th>Menge</th><th>Einzelpreis</th><th>Gesamt</th>" +
                 "</tr>" +
                 articlesHtml +
                 "<tr style='background-color: #f0f0f0; font-weight: bold;'>" +
                 "<td colspan='4' align='right'>Gesamtpreis:</td>" +
-                "<td align='right' style='color: #1e3a5f; font-size: 16px;'>" + String.format("%.2f", totalPrice) + " CHF</td>" +
+                "<td align='right' style='color: #1e3a5f; font-size: 16px;'>" + String.format("%.2f", totalPrice)
+                + " CHF</td>" +
                 "</tr>" +
                 "</table>" +
                 "</body></html>";
@@ -800,10 +846,12 @@ public class OrderGUI extends JFrame {
     }
 
     private Order getOrderCached(String orderId) {
-        if (orderId == null) return null;
+        if (orderId == null)
+            return null;
 
         Order cached = orderByIdCache.get(orderId);
-        if (cached != null) return cached;
+        if (cached != null)
+            return cached;
 
         // If list cache is valid but map entry missing, rebuild map from list (cheap)
         if (isOrdersCacheValid() && ordersCache != null) {
@@ -817,7 +865,8 @@ public class OrderGUI extends JFrame {
 
         // Fallback: fetch single order from manager and cache it
         Order fresh = OrderManager.getInstance().getOrder(orderId);
-        if (fresh != null) orderByIdCache.put(orderId, fresh);
+        if (fresh != null)
+            orderByIdCache.put(orderId, fresh);
         return fresh;
     }
 }

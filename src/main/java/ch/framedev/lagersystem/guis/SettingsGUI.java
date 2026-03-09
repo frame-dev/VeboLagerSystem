@@ -14,10 +14,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import javax.swing.plaf.basic.BasicComboPopup;
+import javax.swing.plaf.basic.BasicScrollBarUI;
 import javax.swing.plaf.basic.ComboPopup;
 import javax.swing.text.NumberFormatter;
 import java.text.NumberFormat;
@@ -128,6 +130,13 @@ public class SettingsGUI extends JFrame {
     private static final boolean DEFAULT_ENABLE_WARNINGS = true;
     private static final boolean DEFAULT_ENABLE_QR_IMPORT = true;
     private static final boolean DEFAULT_DARK_MODE = false;
+    private enum GlassIntensity {
+        SUBTLE,
+        MEDIUM
+    }
+
+    // Change this to MEDIUM for a stronger frosted look.
+    private static final GlassIntensity GLASS_INTENSITY = GlassIntensity.MEDIUM;
     /**
      * Standard-Schriftfamilie, falls keine Einstellung vorhanden ist.
      */
@@ -330,6 +339,7 @@ public class SettingsGUI extends JFrame {
 
         // Load current settings
         loadSettings();
+        applySettingsVisualPolish(getContentPane());
     }
 
     @Override
@@ -356,10 +366,14 @@ public class SettingsGUI extends JFrame {
 
     private JPanel createHeaderPanel() {
         // VendorGUI-style header card (consistent with other screens)
-        JFrameUtils.RoundedPanel headerCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
+        JFrameUtils.RoundedPanel headerCard = new JFrameUtils.RoundedPanel(
+            getSoftGlassSurface(ThemeManager.getCardBackgroundColor()),
+            20);
         headerCard.setLayout(new BorderLayout());
         headerCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(getSoftGlassHighlight(), 1, true),
+                BorderFactory.createLineBorder(getSoftGlassBorder(), 1, true)),
                 BorderFactory.createEmptyBorder(14, 18, 14, 18)));
         headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -399,11 +413,15 @@ public class SettingsGUI extends JFrame {
         contentWrapper.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
 
         // Content card (tabs + search) for a cleaner, consistent design
-        JFrameUtils.RoundedPanel contentCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        JFrameUtils.RoundedPanel contentCard = new JFrameUtils.RoundedPanel(
+            getSoftGlassSurface(ThemeManager.getCardBackgroundColor()),
+            18);
         contentCard.setLayout(new BorderLayout(0, 10));
-        contentCard.setOpaque(false);
+        contentCard.setOpaque(true);
         contentCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(getSoftGlassHighlight(), 1, true),
+                BorderFactory.createLineBorder(getSoftGlassBorder(), 1, true)),
                 BorderFactory.createEmptyBorder(12, 12, 12, 12)));
 
         // Search bar + tabs (tabs stay in center to use full available height)
@@ -529,7 +547,176 @@ public class SettingsGUI extends JFrame {
         tabbedPane.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor()));
 
         buildTabs(tabbedPane);
+        applyTabVisualStyle(tabbedPane);
         return tabbedPane;
+    }
+
+    private void applyTabVisualStyle(JTabbedPane tabbedPane) {
+        if (tabbedPane == null) {
+            return;
+        }
+        if (Boolean.TRUE.equals(tabbedPane.getClientProperty("settings.tab.style.installed"))) {
+            refreshTabPills(tabbedPane);
+            return;
+        }
+
+        tabbedPane.putClientProperty("settings.tab.style.installed", Boolean.TRUE);
+        tabbedPane.putClientProperty("settings.tab.refresh", (Runnable) () -> refreshTabPills(tabbedPane));
+        tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
+        tabbedPane.setUI(new javax.swing.plaf.basic.BasicTabbedPaneUI() {
+            @Override
+            protected int calculateTabHeight(int tabPlacement, int tabIndex, int fontHeight) {
+                return 42;
+            }
+
+            @Override
+            protected int calculateTabWidth(int tabPlacement, int tabIndex, FontMetrics metrics) {
+                return super.calculateTabWidth(tabPlacement, tabIndex, metrics) + 14;
+            }
+        });
+
+        tabbedPane.addChangeListener(e -> refreshTabPills(tabbedPane));
+        refreshTabPills(tabbedPane);
+    }
+
+    private void refreshTabPills(JTabbedPane tabbedPane) {
+        if (tabbedPane == null) {
+            return;
+        }
+        for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+            String title = tabbedPane.getTitleAt(i);
+            boolean selected = i == tabbedPane.getSelectedIndex();
+            tabbedPane.setTabComponentAt(i, createTabPill(title, selected));
+        }
+    }
+
+    private JComponent createTabPill(String title, boolean selected) {
+        Color selectedBg = ThemeManager.getAccentColor();
+        Color unselectedBg = ThemeManager.getInputBackgroundColor();
+        Color borderColor = selected ? adjustColor(selectedBg, -0.20f) : ThemeManager.getBorderColor();
+
+        JFrameUtils.RoundedPanel pill = new JFrameUtils.RoundedPanel(selected ? selectedBg : unselectedBg, 16);
+        pill.setLayout(new BorderLayout());
+        pill.setOpaque(false);
+        pill.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(borderColor, 1, true),
+                BorderFactory.createEmptyBorder(6, 12, 6, 12)));
+
+        JLabel label = new JLabel(title == null ? "" : title);
+        label.setFont(getFontByName(Font.BOLD, 13));
+        label.setForeground(selected ? getReadableTextColor(selectedBg) : ThemeManager.getTextPrimaryColor());
+        pill.add(label, BorderLayout.CENTER);
+        return pill;
+    }
+
+    private void applySettingsVisualPolish(Container root) {
+        if (root == null) {
+            return;
+        }
+        styleContainerRecursively(root);
+    }
+
+    private void styleContainerRecursively(Container container) {
+        for (Component component : container.getComponents()) {
+            if (component instanceof JComponent jc) {
+                if (jc.getClientProperty("searchText") != null) {
+                    styleSettingsSectionCard(jc);
+                }
+                if (jc instanceof JScrollPane scrollPane) {
+                    styleScrollPane(scrollPane);
+                }
+                if (jc instanceof JSeparator separator) {
+                    separator.setForeground(ThemeManager.getBorderColor());
+                }
+                if (jc instanceof JTextArea area && !area.isEditable()) {
+                    area.setLineWrap(true);
+                    area.setWrapStyleWord(true);
+                    area.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                            BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+                }
+            }
+            if (component instanceof Container child) {
+                styleContainerRecursively(child);
+            }
+        }
+    }
+
+    private void styleSettingsSectionCard(JComponent sectionCard) {
+        if (sectionCard == null) {
+            return;
+        }
+        sectionCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createMatteBorder(3, 0, 0, 0, ThemeManager.getAccentColor()),
+                BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(getSoftGlassHighlight(), 1, true),
+                    BorderFactory.createLineBorder(getSoftGlassBorder(), 1, true))),
+                BorderFactory.createEmptyBorder(22, 26, 20, 26)));
+        sectionCard.setBackground(getSoftGlassSurface(ThemeManager.getCardBackgroundColor()));
+    }
+
+    private void styleScrollPane(JScrollPane scrollPane) {
+        if (scrollPane == null) {
+            return;
+        }
+        scrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)));
+        scrollPane.getViewport().setBackground(ThemeManager.getBackgroundColor());
+        if (scrollPane.getVerticalScrollBar() != null) {
+            scrollPane.getVerticalScrollBar().setUnitIncrement(14);
+            scrollPane.getVerticalScrollBar().setUI(createModernScrollBarUI());
+        }
+        if (scrollPane.getHorizontalScrollBar() != null) {
+            scrollPane.getHorizontalScrollBar().setUI(createModernScrollBarUI());
+        }
+    }
+
+    private BasicScrollBarUI createModernScrollBarUI() {
+        Color track = ThemeManager.getInputBackgroundColor();
+        Color thumb = adjustColor(ThemeManager.getBorderColor(), -0.08f);
+        Color thumbHover = adjustColor(ThemeManager.getAccentColor(), -0.12f);
+
+        return new BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                this.trackColor = track;
+                this.thumbColor = thumb;
+            }
+
+            @Override
+            protected JButton createDecreaseButton(int orientation) {
+                return createZeroButton();
+            }
+
+            @Override
+            protected JButton createIncreaseButton(int orientation) {
+                return createZeroButton();
+            }
+
+            private JButton createZeroButton() {
+                JButton button = new JButton();
+                button.setPreferredSize(new Dimension(0, 0));
+                button.setMinimumSize(new Dimension(0, 0));
+                button.setMaximumSize(new Dimension(0, 0));
+                return button;
+            }
+
+            @Override
+            protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
+                if (!scrollbar.isEnabled() || thumbBounds.width <= 0 || thumbBounds.height <= 0) {
+                    return;
+                }
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(isThumbRollover() ? thumbHover : thumb);
+                int arc = 10;
+                g2.fillRoundRect(thumbBounds.x + 2, thumbBounds.y + 2,
+                        thumbBounds.width - 4, thumbBounds.height - 4, arc, arc);
+                g2.dispose();
+            }
+        };
     }
 
     private JPanel createBottomButtonPanel() {
@@ -844,6 +1031,9 @@ public class SettingsGUI extends JFrame {
                             Main.iconSmall);
                     return;
                 }
+            } else {
+                addNewCategory(newCategory, Integer.MIN_VALUE, Integer.MAX_VALUE);
+                loadCategoriesIntoList(categoryList);
             }
 
             categoryNameField.setText("");
@@ -1355,6 +1545,38 @@ public class SettingsGUI extends JFrame {
         previewPanelComponent.setAlignmentX(Component.LEFT_ALIGNMENT);
         previewCard.add(previewPanelComponent);
 
+        JPanel headerCard = SettingsUtils.createSectionPanel(
+            UnicodeSymbols.INFO + " Header-Einstellungen",
+            "Optionen zur Anpassung der Header-Panels",
+            null);
+        headerCard.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
+        headerCard.setBackground(ThemeManager.getCardBackgroundColor());
+        headerCard.setLayout(new BoxLayout(headerCard, BoxLayout.Y_AXIS));
+        headerCard.setOpaque(true);
+        JLabel disableHeaderPanels = createInfoLabel("Deaktivieren der Header-Panels");
+        disableHeaderPanels.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerCard.add(disableHeaderPanels);
+        boolean disable = Main.settings.getProperty("disable_header") != null && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
+        JCheckBox disableHeaderColorCheckbox = new JCheckBox("Header-Panels deaktivieren (entfernt die farbigen Header-Balken) ("+ (disable ? "Deaktiviert" : "Aktiviert") + ")");
+        styleCheckbox(disableHeaderColorCheckbox);
+        disableHeaderColorCheckbox.setSelected(disable);
+        disableHeaderColorCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        disableHeaderColorCheckbox.addActionListener(e -> {
+            boolean disableHeader = disableHeaderColorCheckbox.isSelected();
+            Main.settings.setProperty("disable_header", Boolean.toString(disableHeader));
+            Main.settings.save();
+            ThemeManager.getInstance().updateAllWindows();
+        });
+        headerCard.add(Box.createVerticalStrut(8));
+        headerCard.add(disableHeaderColorCheckbox);
+        headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        appearancePanel.add(headerCard);
+        appearancePanel.add(Box.createVerticalStrut(12));
+
+        appearancePanel.add(previewCard);
+
         // Remove duplicate color rows (already added above)
         // Add appearance panel to tabbed pane with scroll
         JScrollPane appearanceScroll = createScrollablePanel(appearancePanel);
@@ -1450,7 +1672,7 @@ public class SettingsGUI extends JFrame {
             String raw = serverUrlField.getText() == null ? "" : serverUrlField.getText().trim();
             if (raw.isEmpty()) {
                 urlStatusLabel.setText("Bitte eine URL eingeben.");
-                urlStatusLabel.setForeground(new Color(231, 76, 60));
+                urlStatusLabel.setForeground(getStatusErrorColor());
                 return;
             }
             try {
@@ -1458,19 +1680,19 @@ public class SettingsGUI extends JFrame {
                 String scheme = uri.getScheme();
                 if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
                     urlStatusLabel.setText("Ungültiges Schema (nur http/https).");
-                    urlStatusLabel.setForeground(new Color(231, 76, 60));
+                    urlStatusLabel.setForeground(getStatusErrorColor());
                     return;
                 }
                 if (uri.getHost() == null || uri.getHost().trim().isEmpty()) {
                     urlStatusLabel.setText("Ungültige URL (Host fehlt).");
-                    urlStatusLabel.setForeground(new Color(231, 76, 60));
+                    urlStatusLabel.setForeground(getStatusErrorColor());
                     return;
                 }
                 urlStatusLabel.setText("URL sieht gültig aus.");
-                urlStatusLabel.setForeground(new Color(46, 204, 113));
+                urlStatusLabel.setForeground(getStatusSuccessColor());
             } catch (Exception ex) {
                 urlStatusLabel.setText("Ungültige URL (Syntaxfehler).");
-                urlStatusLabel.setForeground(new Color(231, 76, 60));
+                urlStatusLabel.setForeground(getStatusErrorColor());
             }
         };
 
@@ -1767,25 +1989,22 @@ public class SettingsGUI extends JFrame {
     }
 
     private void buildAboutTab(JTabbedPane tabbedPane) {
-        // === CATEGORY 5: About (Prettier) ===
         JPanel aboutPanel = createCategoryPanel();
+        aboutPanel.setLayout(new BoxLayout(aboutPanel, BoxLayout.Y_AXIS));
+        aboutPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         JScrollPane aboutScroll = createScrollablePanel(aboutPanel);
 
-        // Card: Application Info
-        JPanel appInfoCard = SettingsUtils.createSectionPanel(
-            UnicodeSymbols.INFO + " Über VEBO Lagersystem",
-            "Informationen über die Anwendung",
-            null);
-        appInfoCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-            BorderFactory.createEmptyBorder(18, 24, 18, 24)));
-        appInfoCard.setBackground(ThemeManager.getCardBackgroundColor());
+        JPanel appInfoCard = createAboutCard(
+                UnicodeSymbols.INFO + " Über VEBO Lagersystem",
+                "Informationen über die Anwendung",
+                ThemeManager.getCardBackgroundColor(),
+                new Insets(18, 24, 18, 24));
 
         JLabel appNameLabel = new JLabel(UnicodeSymbols.BOX + " VEBO Lagersystem");
         appNameLabel.setFont(getFontByName(Font.BOLD, 30));
-        appNameLabel.setForeground(ThemeManager.getTitleTextColor());
+        appNameLabel.setForeground(ThemeManager.getTextPrimaryColor());
         appNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        appNameLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        appNameLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         appNameLabel.setToolTipText("Besuchen Sie unsere Website: https://vebo.ch");
         appNameLabel.addMouseListener(new MouseAdapter() {
             @Override
@@ -1796,45 +2015,85 @@ public class SettingsGUI extends JFrame {
                     logger.error("Fehler beim Öffnen der VEBO-Website: {}", ex.getMessage());
                 }
             }
+
             @Override
             public void mouseEntered(MouseEvent e) {
-                appNameLabel.setForeground(ThemeManager.getTitleTextHighlightColor());
+                appNameLabel.setForeground(adjustColor(ThemeManager.getAccentColor(), -0.20f));
             }
+
             @Override
             public void mouseExited(MouseEvent e) {
-                appNameLabel.setForeground(ThemeManager.getTitleTextColor());
+                appNameLabel.setForeground(ThemeManager.getTextPrimaryColor());
             }
         });
+
         JLabel versionLabel = new JLabel(UnicodeSymbols.TAG + " Version " + Main.VERSION);
         versionLabel.setFont(getFontByName(Font.PLAIN, 15));
         versionLabel.setForeground(ThemeManager.getTextSecondaryColor());
         versionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        appInfoCard.setLayout(new BoxLayout(appInfoCard, BoxLayout.Y_AXIS));
-        appInfoCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        appNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        versionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel aboutLeadLabel = new JLabel("Moderne Lagerverwaltung für den täglichen Einsatz.");
+        aboutLeadLabel.setFont(getFontByName(Font.PLAIN, 13));
+        aboutLeadLabel.setForeground(ThemeManager.getTextSecondaryColor());
+        aboutLeadLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel aboutMetaRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        aboutMetaRow.setOpaque(false);
+        aboutMetaRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        aboutMetaRow.add(createAboutMetaBadge(
+                "Kanal: " + UpdateManager.detectChannel(Main.VERSION),
+                ThemeManager.getInputBackgroundColor(),
+                ThemeManager.getTextSecondaryColor()));
+        aboutMetaRow.add(createAboutMetaBadge(
+                "Java " + System.getProperty("java.version"),
+                ThemeManager.getInputBackgroundColor(),
+                ThemeManager.getTextSecondaryColor()));
+
+        JPanel aboutActionsRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        aboutActionsRow.setOpaque(false);
+        aboutActionsRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        aboutActionsRow.add(createAboutMiniActionButton(
+                UnicodeSymbols.GLOBE + " Website",
+                "Öffnet https://vebo.ch",
+                () -> {
+                    try {
+                        Desktop.getDesktop().browse(new URI("https://vebo.ch"));
+                    } catch (Exception ex) {
+                        logger.error("Fehler beim Öffnen der VEBO-Website: {}", ex.getMessage());
+                    }
+                }));
+        aboutActionsRow.add(createAboutMiniActionButton(
+                UnicodeSymbols.FOLDER + " Datenordner",
+                "Öffnet den VEBO-Datenordner",
+                () -> {
+                    try {
+                        Desktop.getDesktop().open(Main.getAppDataDir());
+                    } catch (Exception ex) {
+                        logger.error("Fehler beim Öffnen des Datenordners: {}", ex.getMessage());
+                    }
+                }));
+
         appInfoCard.add(appNameLabel);
         appInfoCard.add(Box.createVerticalStrut(8));
         appInfoCard.add(versionLabel);
+        appInfoCard.add(Box.createVerticalStrut(6));
+        appInfoCard.add(aboutLeadLabel);
+        appInfoCard.add(Box.createVerticalStrut(10));
+        appInfoCard.add(aboutMetaRow);
+        appInfoCard.add(Box.createVerticalStrut(10));
+        appInfoCard.add(aboutActionsRow);
 
-        // Card: Description
-        JPanel descCard = SettingsUtils.createSectionPanel(
-            UnicodeSymbols.INFO + " Beschreibung",
-            "Was macht das VEBO Lagersystem?",
-            null);
-        descCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-            BorderFactory.createEmptyBorder(16, 22, 16, 22)));
-        descCard.setBackground(ThemeManager.getInputBackgroundColor());
-        descCard.setLayout(new BoxLayout(descCard, BoxLayout.Y_AXIS));
-        descCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel descCard = createAboutCard(
+                UnicodeSymbols.INFO + " Beschreibung",
+                "Was macht das VEBO Lagersystem?",
+                ThemeManager.getInputBackgroundColor(),
+                new Insets(16, 22, 16, 22));
         JLabel descTitle = new JLabel("Beschreibung:");
         descTitle.setFont(getFontByName(Font.BOLD, 15));
         descTitle.setForeground(ThemeManager.getTextPrimaryColor());
         descTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         JTextArea descriptionArea = new JTextArea(
-            "VEBO Lagersystem ist eine moderne Lagerverwaltungssoftware für die effiziente Verwaltung von Artikeln, Bestellungen, Lieferanten und Kunden. Die Anwendung bietet umfangreiche Funktionen für die Bestandsverwaltung, automatische Warnungen bei niedrigem Lagerbestand und QR-Code-basierte Artikelerfassung.");
+                "VEBO Lagersystem ist eine moderne Lagerverwaltungssoftware für die effiziente Verwaltung von Artikeln, Bestellungen, Lieferanten und Kunden. Die Anwendung bietet umfangreiche Funktionen für die Bestandsverwaltung, automatische Warnungen bei niedrigem Lagerbestand und QR-Code-basierte Artikelerfassung.");
         descriptionArea.setWrapStyleWord(true);
         descriptionArea.setLineWrap(true);
         descriptionArea.setEditable(false);
@@ -1842,45 +2101,48 @@ public class SettingsGUI extends JFrame {
         descriptionArea.setForeground(ThemeManager.getTextPrimaryColor());
         descriptionArea.setBackground(ThemeManager.getInputBackgroundColor());
         descriptionArea.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
-        descriptionArea.setRows(4);
+        descriptionArea.setRows(5);
         descriptionArea.setAlignmentX(Component.LEFT_ALIGNMENT);
         descCard.add(descTitle);
         descCard.add(Box.createVerticalStrut(6));
         descCard.add(descriptionArea);
 
-        // Card: Developer Info
-        JPanel devCard = SettingsUtils.createSectionPanel(
-            UnicodeSymbols.DEVELOPER + " Entwickler",
-            "Wer hat das System entwickelt?",
-            null);
-        devCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-            BorderFactory.createEmptyBorder(16, 22, 16, 22)));
-        devCard.setBackground(ThemeManager.getCardBackgroundColor());
-        devCard.setLayout(new BoxLayout(devCard, BoxLayout.Y_AXIS));
-        devCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel devName = createStyledLabel(UnicodeSymbols.USER + " Darryl Huber", 14, Font.BOLD, ThemeManager.getTextPrimaryColor());
-        JLabel devOrg = createStyledLabel(UnicodeSymbols.BUILDING + " Organisation: VEBO Oensingen", 13, Font.PLAIN, ThemeManager.getTextSecondaryColor());
+        JPanel devCard = createAboutCard(
+                UnicodeSymbols.DEVELOPER + " Entwickler",
+                "Wer hat das System entwickelt?",
+                ThemeManager.getCardBackgroundColor(),
+                new Insets(16, 22, 16, 22));
+        JLabel devName = createStyledLabel(UnicodeSymbols.USER + " Darryl Huber", 14, Font.BOLD,
+                ThemeManager.getTextPrimaryColor());
+        JLabel devOrg = createStyledLabel(UnicodeSymbols.BUILDING + " Organisation: VEBO Oensingen", 13, Font.PLAIN,
+                ThemeManager.getTextSecondaryColor());
         devName.setAlignmentX(Component.LEFT_ALIGNMENT);
         devOrg.setAlignmentX(Component.LEFT_ALIGNMENT);
         devCard.add(devName);
         devCard.add(Box.createVerticalStrut(5));
         devCard.add(devOrg);
 
-        // Card: System Info
-        JPanel sysCard = SettingsUtils.createSectionPanel(
-            UnicodeSymbols.DEVELOPER + " System-Information",
-            "Technische Details zur Laufzeitumgebung",
-            null);
-        sysCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-            BorderFactory.createEmptyBorder(16, 22, 16, 22)));
-        sysCard.setBackground(ThemeManager.getInputBackgroundColor());
-        sysCard.setLayout(new BoxLayout(sysCard, BoxLayout.Y_AXIS));
-        sysCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel sysJava = createStyledLabel(UnicodeSymbols.LAPTOP + " Java Version: " + System.getProperty("java.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor());
-        JLabel sysOs = createStyledLabel(UnicodeSymbols.MONITOR + " Betriebssystem: " + System.getProperty("os.name") + " " + System.getProperty("os.version"), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor());
-        JLabel sysDir = createStyledLabel(UnicodeSymbols.FOLDER + " Datenverzeichnis: " + Main.getAppDataDir().getAbsolutePath(), 12, Font.PLAIN, ThemeManager.getTextSecondaryColor());
+        JPanel sysCard = createAboutCard(
+                UnicodeSymbols.DEVELOPER + " System-Information",
+                "Technische Details zur Laufzeitumgebung",
+                ThemeManager.getInputBackgroundColor(),
+                new Insets(16, 22, 16, 22));
+        JLabel sysJava = createStyledLabel(
+                UnicodeSymbols.LAPTOP + " Java Version: " + System.getProperty("java.version"),
+                12,
+                Font.PLAIN,
+                ThemeManager.getTextSecondaryColor());
+        JLabel sysOs = createStyledLabel(
+                UnicodeSymbols.MONITOR + " Betriebssystem: " + System.getProperty("os.name") + " "
+                        + System.getProperty("os.version"),
+                12,
+                Font.PLAIN,
+                ThemeManager.getTextSecondaryColor());
+        JLabel sysDir = createStyledLabel(
+                UnicodeSymbols.FOLDER + " Datenverzeichnis: " + Main.getAppDataDir().getAbsolutePath(),
+                12,
+                Font.PLAIN,
+                ThemeManager.getTextSecondaryColor());
         sysJava.setAlignmentX(Component.LEFT_ALIGNMENT);
         sysOs.setAlignmentX(Component.LEFT_ALIGNMENT);
         sysDir.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -1890,94 +2152,70 @@ public class SettingsGUI extends JFrame {
         sysCard.add(Box.createVerticalStrut(5));
         sysCard.add(sysDir);
 
-        // Card: Update Manager
-        JPanel updateCard = SettingsUtils.createSectionPanel(
-            UnicodeSymbols.DOWNLOAD + " Update-Verwaltung",
-            "Prüfen Sie auf neue Versionen und Kanäle",
-            null);
-        updateCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-            BorderFactory.createEmptyBorder(16, 22, 16, 22)));
-        updateCard.setBackground(ThemeManager.getCardBackgroundColor());
-        updateCard.setLayout(new BoxLayout(updateCard, BoxLayout.Y_AXIS));
-        updateCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JPanel updateRow1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        updateRow1.setOpaque(false);
-        updateRow1.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
-        updateRow1.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JButton checkStableUpdateBtn = createStyledButton(UnicodeSymbols.CHECK + " Stable-Updates", ThemeManager.getSecondaryColor());
-        checkStableUpdateBtn.setToolTipText("Prüft auf neue stabile Versionen");
-        checkStableUpdateBtn.addActionListener(e -> checkForUpdates("stable"));
-        checkStableUpdateBtn.setPreferredSize(new Dimension(180, 40));
-        JButton checkBetaUpdateBtn = createStyledButton(UnicodeSymbols.BETA + " Beta-Updates", ThemeManager.getWarningColor());
-        checkBetaUpdateBtn.setToolTipText("Prüft auf neue Beta-Versionen");
-        checkBetaUpdateBtn.addActionListener(e -> checkForUpdates("beta"));
-        checkBetaUpdateBtn.setPreferredSize(new Dimension(180, 40));
-        checkStableUpdateBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        checkBetaUpdateBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        updateRow1.setAlignmentX(Component.LEFT_ALIGNMENT);
-        updateRow1.add(checkStableUpdateBtn);
-        updateRow1.add(checkBetaUpdateBtn);
+        JPanel updateCard = createAboutCard(
+                UnicodeSymbols.DOWNLOAD + " Update-Verwaltung",
+                "Prüfen Sie auf neue Versionen und Kanäle",
+                ThemeManager.getCardBackgroundColor(),
+                new Insets(16, 22, 16, 22));
+        JPanel updateRow1 = createAboutButtonRow();
+        updateRow1.add(createUpdateChannelButton(
+                UnicodeSymbols.CHECK + " Stable-Updates",
+                ThemeManager.getSecondaryColor(),
+                "Prüft auf neue stabile Versionen",
+                "stable"));
+        updateRow1.add(createUpdateChannelButton(
+                UnicodeSymbols.BETA + " Beta-Updates",
+                ThemeManager.getWarningColor(),
+                "Prüft auf neue Beta-Versionen",
+                "beta"));
         updateCard.add(updateRow1);
         updateCard.add(Box.createVerticalStrut(8));
-        JPanel updateRow2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        updateRow2.setOpaque(false);
-        updateRow2.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
-        updateRow2.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JButton checkAlphaUpdateBtn = createStyledButton(UnicodeSymbols.EXPERIMENT + " Alpha-Updates", ThemeManager.getDangerColor());
-        checkAlphaUpdateBtn.setToolTipText("Prüft auf neue Alpha-Versionen (experimentell)");
-        checkAlphaUpdateBtn.addActionListener(e -> checkForUpdates("alpha"));
-        checkAlphaUpdateBtn.setPreferredSize(new Dimension(180, 40));
-        JButton checkTestingUpdateBtn = createStyledButton("🧪 Testing-Updates", ThemeManager.getAccentColor());
-        checkTestingUpdateBtn.setToolTipText("Prüft auf neue Testing-Versionen (Entwicklung)");
-        checkTestingUpdateBtn.addActionListener(e -> checkForUpdates("testing"));
-        checkTestingUpdateBtn.setPreferredSize(new Dimension(180, 40));
-        checkAlphaUpdateBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        checkTestingUpdateBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        updateRow2.setAlignmentX(Component.LEFT_ALIGNMENT);
-        // Ensure all children in updateRow2 are left-aligned
-        FlowLayout fl2 = (FlowLayout) updateRow2.getLayout();
-        fl2.setAlignment(FlowLayout.LEFT);
-        updateRow2.add(checkAlphaUpdateBtn);
-        updateRow2.add(checkTestingUpdateBtn);
+
+        JPanel updateRow2 = createAboutButtonRow();
+        updateRow2.add(createUpdateChannelButton(
+                UnicodeSymbols.EXPERIMENT + " Alpha-Updates",
+                ThemeManager.getDangerColor(),
+                "Prüft auf neue Alpha-Versionen (experimentell)",
+                "alpha"));
+        updateRow2.add(createUpdateChannelButton(
+                "🧪 Testing-Updates",
+                ThemeManager.getAccentColor(),
+                "Prüft auf neue Testing-Versionen (Entwicklung)",
+                "testing"));
         updateCard.add(updateRow2);
         updateCard.add(Box.createVerticalStrut(12));
+
         JLabel versionInfoLabel = new JLabel("<html><div style='padding: 8px; background: "
-            + toHexColor(ThemeManager.getInputBackgroundColor()) + "; border-radius: 6px; margin-top: 8px; margin-bottom: 4px;'><b>Aktuelle Version:</b> " + Main.VERSION + "<br/>"
-            + "<span style='font-size: 11px; color: #666;'>Kanal: " + UpdateManager.detectChannel(Main.VERSION) + "</span></div></html>");
+                + toHexColor(ThemeManager.getInputBackgroundColor())
+                + "; border-radius: 6px; margin-top: 8px; margin-bottom: 4px;'><b>Aktuelle Version:</b> "
+                + Main.VERSION + "<br/>"
+                + "<span style='font-size: 11px; color: " + toHexColor(ThemeManager.getTextSecondaryColor())
+                + ";'>Kanal: " + UpdateManager.detectChannel(Main.VERSION) + "</span></div></html>");
         versionInfoLabel.setFont(getFontByName(Font.PLAIN, 12));
         versionInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         updateCard.add(versionInfoLabel);
 
-        // Card: Copyright
-        JPanel copyrightCard = SettingsUtils.createSectionPanel(
-            UnicodeSymbols.COPYRIGHT + " Copyright",
-            "Rechtliche Hinweise zur Software",
-            null);
-        copyrightCard.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-            BorderFactory.createEmptyBorder(14, 20, 14, 20)));
-        copyrightCard.setBackground(ThemeManager.getInputBackgroundColor());
-        copyrightCard.setLayout(new BoxLayout(copyrightCard, BoxLayout.Y_AXIS));
-        copyrightCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel copyrightLabel = createStyledLabel("© 2026 VEBO Oensingen. Alle Rechte vorbehalten.", 11, Font.PLAIN, ThemeManager.getTextSecondaryColor());
-        JLabel licenseLabel = createStyledLabel("Diese Software wird bereitgestellt \"wie sie ist\", ohne jegliche Garantie.", 11, Font.ITALIC, ThemeManager.getTextSecondaryColor());
+        JPanel copyrightCard = createAboutCard(
+                UnicodeSymbols.COPYRIGHT + " Copyright",
+                "Rechtliche Hinweise zur Software",
+                ThemeManager.getInputBackgroundColor(),
+                new Insets(14, 20, 14, 20));
+        JLabel copyrightLabel = createStyledLabel(
+                "© 2026 VEBO Oensingen. Alle Rechte vorbehalten.",
+                11,
+                Font.PLAIN,
+                ThemeManager.getTextSecondaryColor());
+        JLabel licenseLabel = createStyledLabel(
+                "Diese Software wird bereitgestellt \"wie sie ist\", ohne jegliche Garantie.",
+                11,
+                Font.ITALIC,
+                ThemeManager.getTextSecondaryColor());
         copyrightLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         licenseLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         copyrightCard.add(copyrightLabel);
         copyrightCard.add(Box.createVerticalStrut(5));
         copyrightCard.add(licenseLabel);
 
-        // Add all cards to aboutPanel with spacing
-        aboutPanel.setLayout(new BoxLayout(aboutPanel, BoxLayout.Y_AXIS));
-        aboutPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        // Ensure all cards are left-aligned
-        appInfoCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        descCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        devCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sysCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        updateCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        copyrightCard.setAlignmentX(Component.LEFT_ALIGNMENT);
         aboutPanel.add(appInfoCard);
         aboutPanel.add(Box.createVerticalStrut(18));
         aboutPanel.add(descCard);
@@ -1990,7 +2228,92 @@ public class SettingsGUI extends JFrame {
         aboutPanel.add(Box.createVerticalStrut(18));
         aboutPanel.add(copyrightCard);
         aboutPanel.add(Box.createVerticalGlue());
+
         tabbedPane.addTab(UnicodeSymbols.INFO + " Über", aboutScroll);
+    }
+
+    private JPanel createAboutCard(String title, String description, Color background, Insets padding) {
+        JPanel card = SettingsUtils.createSectionPanel(title, description, null);
+        int top = padding == null ? 16 : padding.top;
+        int left = padding == null ? 22 : padding.left;
+        int bottom = padding == null ? 16 : padding.bottom;
+        int right = padding == null ? 22 : padding.right;
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(getSoftGlassHighlight(), 1, true),
+                        BorderFactory.createLineBorder(getSoftGlassBorder(), 1, true)),
+                BorderFactory.createEmptyBorder(top, left, bottom, right)));
+        Color base = background == null ? ThemeManager.getCardBackgroundColor() : background;
+        card.setBackground(getSoftGlassSurface(base));
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return card;
+    }
+
+    private JPanel createAboutButtonRow() {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        row.setOpaque(false);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return row;
+    }
+
+    private JButton createUpdateChannelButton(String text, Color color, String tooltip, String channel) {
+        JButton button = createStyledButton(text, color);
+        button.setToolTipText(tooltip);
+        button.setPreferredSize(new Dimension(180, 40));
+        button.setAlignmentX(Component.LEFT_ALIGNMENT);
+        button.addActionListener(e -> checkForUpdates(channel));
+        return button;
+    }
+
+    private JLabel createAboutMetaBadge(String text, Color background, Color foreground) {
+        JLabel badge = new JLabel(text == null ? "" : text);
+        badge.setFont(getFontByName(Font.PLAIN, 11));
+        badge.setForeground(foreground == null ? ThemeManager.getTextSecondaryColor() : foreground);
+        badge.setOpaque(true);
+        badge.setBackground(background == null ? ThemeManager.getInputBackgroundColor() : background);
+        badge.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+        return badge;
+    }
+
+    private JButton createAboutMiniActionButton(String text, String tooltip, Runnable action) {
+        JButton button = new JButton(text == null ? "" : text);
+        styleSecondaryActionButton(button);
+        button.setToolTipText(tooltip);
+        if (action != null) {
+            button.addActionListener(e -> action.run());
+        }
+        return button;
+    }
+
+    private void styleSecondaryActionButton(JButton button) {
+        if (button == null) {
+            return;
+        }
+        button.setFont(getFontByName(Font.PLAIN, 12));
+        button.setForeground(ThemeManager.getTextPrimaryColor());
+        button.setBackground(ThemeManager.getSurfaceColor());
+        button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(adjustColor(ThemeManager.getSurfaceColor(), -0.08f));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(ThemeManager.getSurfaceColor());
+            }
+        });
     }
 
     private void styleInputField(JTextField field) {
@@ -2001,8 +2324,23 @@ public class SettingsGUI extends JFrame {
         field.setForeground(ThemeManager.getTextPrimaryColor());
         field.setCaretColor(ThemeManager.getTextPrimaryColor());
         field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+        field.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(ThemeManager.getPrimaryColor(), 2, true),
+                        BorderFactory.createEmptyBorder(7, 9, 7, 9)));
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                field.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                        BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+            }
+        });
     }
 
     private void addNewCategory(String newCategory, int from, int to) {
@@ -2163,7 +2501,7 @@ public class SettingsGUI extends JFrame {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(ThemeManager.getBackgroundColor());
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+        panel.setBorder(BorderFactory.createEmptyBorder(22, 26, 22, 26));
         return panel;
     }
 
@@ -2178,8 +2516,8 @@ public class SettingsGUI extends JFrame {
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
+        scrollPane.setOpaque(true);
+        scrollPane.getViewport().setOpaque(true);
         scrollPane.getViewport().setBackground(ThemeManager.getBackgroundColor());
 
         return scrollPane;
@@ -2275,13 +2613,29 @@ public class SettingsGUI extends JFrame {
 
     private JButton createColorButton() {
         JButton button = new JButton(" ");
-        button.setPreferredSize(new Dimension(36, 22));
+        button.setPreferredSize(new Dimension(42, 24));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
                 BorderFactory.createEmptyBorder(2, 2, 2, 2)));
         button.setFocusPainted(false);
+        button.setOpaque(true);
         button.setContentAreaFilled(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(adjustColor(ThemeManager.getAccentColor(), -0.15f), 2, true),
+                        BorderFactory.createEmptyBorder(1, 1, 1, 1)));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                        BorderFactory.createEmptyBorder(2, 2, 2, 2)));
+            }
+        });
         return button;
     }
 
@@ -2327,14 +2681,7 @@ public class SettingsGUI extends JFrame {
 
     private JButton createHeaderActionButton() {
         JButton button = new JButton("Zuruecksetzen");
-        button.setFont(getFontByName(Font.PLAIN, 12));
-        button.setForeground(ThemeManager.getTextPrimaryColor());
-        button.setBackground(ThemeManager.getSurfaceColor());
-        button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        styleSecondaryActionButton(button);
         return button;
     }
 
@@ -2392,7 +2739,7 @@ public class SettingsGUI extends JFrame {
         int tabSize = fontSizeTabSpinner == null ? 15 : (Integer) fontSizeTabSpinner.getValue();
 
         previewTitleLabel.setFont(new Font(fontName, Font.BOLD, 16));
-        previewTitleLabel.setForeground(Color.WHITE);
+        previewTitleLabel.setForeground(getReadableTextColor(header));
         previewTitleLabel.setOpaque(true);
         previewTitleLabel.setBackground(header);
         previewTitleLabel.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
@@ -2400,7 +2747,7 @@ public class SettingsGUI extends JFrame {
         previewBodyLabel.setForeground(secondary);
         previewButton.setFont(new Font(fontName, Font.BOLD, 12));
         previewButton.setBackground(button);
-        previewButton.setForeground(Color.WHITE);
+        previewButton.setForeground(getReadableTextColor(button));
 
         previewTable.setFont(new Font(fontName, Font.PLAIN, Math.max(11, tableSize - 2)));
         previewTable.setForeground(text);
@@ -2508,18 +2855,18 @@ public class SettingsGUI extends JFrame {
         // Add hover effect for better UX
         checkbox.addMouseListener(new MouseAdapter() {
             private final Color originalForeground = checkbox.getForeground();
-            private final Color hoverForeground = ThemeManager.getPrimaryColor();
+            private final Color hoverForeground = adjustColor(ThemeManager.getPrimaryColor(), -0.08f);
 
             @Override
             public void mouseEntered(MouseEvent e) {
                 checkbox.setForeground(hoverForeground);
-                checkbox.setFont(checkbox.getFont().deriveFont(Font.BOLD));
+                checkbox.setBorder(BorderFactory.createEmptyBorder(8, 6, 8, 0));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
                 checkbox.setForeground(originalForeground);
-                checkbox.setFont(checkbox.getFont().deriveFont(Font.PLAIN));
+                checkbox.setBorder(BorderFactory.createEmptyBorder(8, 2, 8, 0));
             }
         });
     }
@@ -2570,49 +2917,44 @@ public class SettingsGUI extends JFrame {
     private JButton createStyledButton(String text, Color originalBg) {
         if (text == null)
             throw new IllegalArgumentException("text must not be null");
+        Color baseBg = originalBg != null ? originalBg : ThemeManager.getButtonBackgroundColor();
         JButton button = new JButton(text);
         button.setFont(getFontByName(Font.BOLD, 14));
-        button.setForeground(Color.WHITE);
-        button.setBackground(originalBg);
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(originalBg.darker(), 1, true),
-                BorderFactory.createEmptyBorder(14, 28, 14, 28)));
+        button.setForeground(getReadableTextColor(baseBg));
+        button.setBackground(baseBg);
+        Border normalBorder = BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(adjustColor(baseBg, -0.18f), 1, true),
+            BorderFactory.createEmptyBorder(14, 28, 14, 28));
+        button.setBorder(normalBorder);
         button.setFocusPainted(false);
         button.setOpaque(true);
         button.setBorderPainted(true);
         button.setContentAreaFilled(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.putClientProperty("theme.button.custom", Boolean.TRUE);
 
         // Set consistent height
         button.setPreferredSize(new Dimension(
                 button.getPreferredSize().width,
                 48));
 
-        // Enhanced hover effect with smooth color transitions
-        Color hoverBg = new Color(
-                Math.max(0, originalBg.getRed() - 25),
-                Math.max(0, originalBg.getGreen() - 25),
-                Math.max(0, originalBg.getBlue() - 25));
-        Color pressedBg = new Color(
-                Math.max(0, originalBg.getRed() - 50),
-                Math.max(0, originalBg.getGreen() - 50),
-                Math.max(0, originalBg.getBlue() - 50));
+        Color hoverBg = adjustColor(baseBg, -0.08f);
+        Color pressedBg = adjustColor(baseBg, -0.16f);
+        Border hoverBorder = BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(adjustColor(hoverBg, -0.12f), 1, true),
+                BorderFactory.createEmptyBorder(14, 28, 14, 28));
 
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
                 button.setBackground(hoverBg);
-                button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(hoverBg.darker(), 2, true),
-                        BorderFactory.createEmptyBorder(13, 27, 13, 27)));
+                button.setBorder(hoverBorder);
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                button.setBackground(originalBg);
-                button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(originalBg.darker(), 1, true),
-                        BorderFactory.createEmptyBorder(14, 28, 14, 28)));
+                button.setBackground(baseBg);
+                button.setBorder(normalBorder);
             }
 
             @Override
@@ -2625,12 +2967,71 @@ public class SettingsGUI extends JFrame {
                 if (button.contains(e.getPoint())) {
                     button.setBackground(hoverBg);
                 } else {
-                    button.setBackground(originalBg);
+                    button.setBackground(baseBg);
                 }
             }
         });
 
         return button;
+    }
+
+    private Color adjustColor(Color color, float factor) {
+        if (color == null) {
+            return ThemeManager.getButtonBackgroundColor();
+        }
+        int r = clampColor(Math.round(color.getRed() * (1.0f + factor)));
+        int g = clampColor(Math.round(color.getGreen() * (1.0f + factor)));
+        int b = clampColor(Math.round(color.getBlue() * (1.0f + factor)));
+        return new Color(r, g, b, color.getAlpha());
+    }
+
+    private int clampColor(int value) {
+        return Math.max(0, Math.min(255, value));
+    }
+
+    private Color getSoftGlassSurface(Color base) {
+        Color fallback = base == null ? ThemeManager.getCardBackgroundColor() : base;
+        int alpha = switch (GLASS_INTENSITY) {
+            case MEDIUM -> ThemeManager.isDarkMode() ? 186 : 236;
+            case SUBTLE -> ThemeManager.isDarkMode() ? 170 : 228;
+        };
+        return new Color(fallback.getRed(), fallback.getGreen(), fallback.getBlue(), alpha);
+    }
+
+    private Color getSoftGlassBorder() {
+        Color border = ThemeManager.getBorderColor();
+        int alpha = switch (GLASS_INTENSITY) {
+            case MEDIUM -> ThemeManager.isDarkMode() ? 188 : 196;
+            case SUBTLE -> ThemeManager.isDarkMode() ? 165 : 175;
+        };
+        return new Color(border.getRed(), border.getGreen(), border.getBlue(), alpha);
+    }
+
+    private Color getSoftGlassHighlight() {
+        Color light = ThemeManager.isDarkMode()
+                ? adjustColor(ThemeManager.getTextPrimaryColor(), -0.35f)
+                : ThemeManager.getTextPrimaryColor();
+        int alpha = switch (GLASS_INTENSITY) {
+            case MEDIUM -> ThemeManager.isDarkMode() ? 96 : 120;
+            case SUBTLE -> ThemeManager.isDarkMode() ? 70 : 92;
+        };
+        return new Color(light.getRed(), light.getGreen(), light.getBlue(), alpha);
+    }
+
+    private Color getReadableTextColor(Color bg) {
+        if (bg == null) {
+            return ThemeManager.getTextPrimaryColor();
+        }
+        double luminance = (0.2126 * bg.getRed() + 0.7152 * bg.getGreen() + 0.0722 * bg.getBlue()) / 255.0;
+        return luminance > 0.6 ? new Color(20, 20, 20) : Color.WHITE;
+    }
+
+    private Color getStatusErrorColor() {
+        return ThemeManager.getDangerColor();
+    }
+
+    private Color getStatusSuccessColor() {
+        return ThemeManager.getSuccessColor();
     }
 
     /**
@@ -3461,13 +3862,13 @@ public class SettingsGUI extends JFrame {
             throw new IllegalArgumentException("spinner must not be null");
         if (unitText == null)
             throw new IllegalArgumentException("unitText must not be null");
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 2));
         panel.setOpaque(false);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
 
         JLabel label = new JLabel(labelText);
-        label.setFont(getFontByName(Font.PLAIN, 13));
+        label.setFont(getFontByName(Font.BOLD, 13));
         label.setForeground(ThemeManager.getTextPrimaryColor());
 
         spinner.setFont(getFontByName(Font.PLAIN, 13));
@@ -3475,7 +3876,7 @@ public class SettingsGUI extends JFrame {
         styleSpinner(spinner);
 
         JLabel unitLabel = new JLabel(unitText);
-        unitLabel.setFont(getFontByName(Font.PLAIN, 13));
+        unitLabel.setFont(getFontByName(Font.PLAIN, 12));
         unitLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
         panel.add(label);
@@ -3495,16 +3896,16 @@ public class SettingsGUI extends JFrame {
             throw new IllegalArgumentException("labelText must not be null");
         if (comboBox == null)
             throw new IllegalArgumentException("comboBox must not be null");
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 2));
         panel.setOpaque(false);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 52));
 
         JLabel label = new JLabel(labelText);
         label.setFont(getFontByName(Font.BOLD, 13));
         label.setForeground(ThemeManager.getTextPrimaryColor());
 
-        comboBox.setPreferredSize(new Dimension(200, 35));
+        comboBox.setPreferredSize(new Dimension(230, 36));
 
         panel.add(label);
         panel.add(Box.createHorizontalStrut(12));
@@ -3534,7 +3935,11 @@ public class SettingsGUI extends JFrame {
      * Creates an info label with HTML content
      */
     private JLabel createInfoLabel(String htmlContent) {
-        JLabel label = new JLabel(htmlContent);
+        String content = htmlContent == null ? "" : htmlContent.trim();
+        if (!content.toLowerCase(Locale.ROOT).startsWith("<html>")) {
+            content = "<html><div style='line-height:1.45;'>" + content + "</div></html>";
+        }
+        JLabel label = new JLabel(content);
         label.setFont(getFontByName(Font.PLAIN, 13));
         label.setForeground(ThemeManager.getTextSecondaryColor());
         label.setAlignmentX(Component.LEFT_ALIGNMENT);

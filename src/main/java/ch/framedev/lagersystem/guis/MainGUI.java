@@ -30,6 +30,7 @@ import org.apache.logging.log4j.Logger;
 @SuppressWarnings("DuplicatedCode")
 public class MainGUI extends JFrame {
     private static final Logger logger = LogManager.getLogger(MainGUI.class);
+    private static final String TAB_LOADED_PROPERTY = "loaded";
 
     private JTabbedPane tabbedPane;
 
@@ -231,13 +232,13 @@ public class MainGUI extends JFrame {
         Font headerIconFont = SettingsGUI.getFontByName(Font.BOLD, 42);
         JLabel iconLabel = new JLabel(UnicodeSymbols.safeSymbol(UnicodeSymbols.PACKAGE, "PKG", headerIconFont));
         iconLabel.setFont(getEmojiCapableFont(headerIconFont));
-        iconLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
+        iconLabel.setForeground(ThemeManager.getTitleTextColor());
         titleRow.add(iconLabel);
 
         JLabel titleLabel = new JLabel("VEBO Lagersystem");
         Font titleFont = SettingsGUI.getFontByName(Font.BOLD, 52);
         titleLabel.setFont(titleFont);
-        titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
+        titleLabel.setForeground(ThemeManager.getTitleTextColor());
         titleRow.add(titleLabel);
 
         titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -248,7 +249,7 @@ public class MainGUI extends JFrame {
         // Subtitle aligned with the "V" in "VEBO" (after icon)
         JLabel subtitleLabel = new JLabel("Zentrale Verwaltung für Artikel, Bestellungen und Lieferanten");
         subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 15));
-        subtitleLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 230));
+        subtitleLabel.setForeground(ThemeManager.getSubTitleTextColor());
 
         // Create wrapper with FlowLayout matching the title row
         JPanel subtitleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
@@ -274,44 +275,23 @@ public class MainGUI extends JFrame {
         rightPanel.setOpaque(false);
 
         Font headerButtonFont = SettingsGUI.getFontByName(Font.BOLD, 12);
-        JButton settingsButton = new JButton(
-                UnicodeSymbols.safeSymbol(UnicodeSymbols.BETTER_GEAR, "CFG", headerButtonFont) + " Einstellungen");
-        styleHeaderButton(settingsButton);
-        settingsButton.setToolTipText("Einstellungen des Programms öffnen");
-        settingsButton.addActionListener(e -> settingsGUI = showOrCreateWindow(settingsGUI, SettingsGUI::new));
-        settingsButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        JButton notesButton = new JButton(
-                UnicodeSymbols.safeSymbol(UnicodeSymbols.CLIPBOARD, "CLIP", headerButtonFont) + " Notizen");
-        styleHeaderButton(notesButton);
-        notesButton.setToolTipText("Persönliche Notizen verwalten");
-        notesButton.addActionListener(e -> notesGUI = showOrCreateWindow(notesGUI, NotesGUI::new));
-        notesButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        JButton settingsButton = createHeaderActionButton(
+            UnicodeSymbols.safeSymbol(UnicodeSymbols.BETTER_GEAR, "CFG", headerButtonFont) + " Einstellungen",
+            "Einstellungen des Programms öffnen",
+            e -> settingsGUI = showOrCreateWindow(settingsGUI, SettingsGUI::new));
 
-        JButton converterButton = new JButton(
-                UnicodeSymbols.safeSymbol(UnicodeSymbols.CALCULATOR, "CALC", headerButtonFont)
-                        + " Einheitenrechner/Befüllungshilfe");
-        styleHeaderButton(converterButton);
-        converterButton.setToolTipText("Einheitenrechner und Befüllungshilfe öffnen");
-        converterButton.addActionListener(e -> {
-            if (getSelectedArticles(articleGUI.articleTable).isEmpty()) {
-                JOptionPane.showMessageDialog(MainGUI.this, "Keine Artikel gefunden!");
-                return;
-            }
-            List<Article> articles = getSelectedArticles(articleGUI.articleTable);
-            if (articles.size() == 1) {
-                ConverterGUI converterGUI = new ConverterGUI(articles.getFirst());
-                converterGUI.setVisible(true);
-            } else {
-                JOptionPane.showMessageDialog(this,
-                        "Mehr als ein Artikel ausgewählt! Es wird der erste Artikel verwendet: "
-                                + articles.getFirst().getName());
-                ConverterGUI converterGUI = new ConverterGUI(articles.getFirst());
-                converterGUI.setVisible(true);
-            }
-        });
-        converterButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        JButton notesButton = createHeaderActionButton(
+            UnicodeSymbols.safeSymbol(UnicodeSymbols.CLIPBOARD, "CLIP", headerButtonFont) + " Notizen",
+            "Persönliche Notizen verwalten",
+            e -> notesGUI = showOrCreateWindow(notesGUI, NotesGUI::new));
 
-        JLabel dateLabel = new JLabel(new SimpleDateFormat("EEEE, dd. MMMM yyyy").format(new Date()));
+        JButton converterButton = createHeaderActionButton(
+            UnicodeSymbols.safeSymbol(UnicodeSymbols.CALCULATOR, "CALC", headerButtonFont)
+                + " Einheitenrechner/Befüllungshilfe",
+            "Einheitenrechner und Befüllungshilfe öffnen",
+            e -> openConverterForSelection());
+
+        JLabel dateLabel = new JLabel(new SimpleDateFormat("EEEE, dd. MMMM yyyy", Locale.GERMAN).format(new Date()));
         dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         dateLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
         dateLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
@@ -327,42 +307,52 @@ public class MainGUI extends JFrame {
         return rightPanel;
     }
 
+    private JButton createHeaderActionButton(String text, String tooltip, java.awt.event.ActionListener listener) {
+        JButton button = new JButton(text);
+        styleHeaderButton(button);
+        button.setToolTipText(tooltip);
+        button.addActionListener(listener);
+        button.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        return button;
+    }
+
+    private void openConverterForSelection() {
+        if (articleGUI == null || articleGUI.articleTable == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Bitte zuerst den Artikel-Tab öffnen und einen Artikel auswählen.",
+                    "Keine Auswahl",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        List<Article> articles = getSelectedArticles(articleGUI.articleTable);
+        if (articles.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Keine Artikel ausgewählt.",
+                    "Keine Auswahl",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        Article first = articles.getFirst();
+        if (articles.size() > 1) {
+            JOptionPane.showMessageDialog(this,
+                    "Mehr als ein Artikel ausgewählt. Es wird der erste Artikel verwendet: " + first.getName(),
+                    "Hinweis",
+                    JOptionPane.INFORMATION_MESSAGE);
+        }
+
+        ConverterGUI converterGUI = new ConverterGUI(first);
+        converterGUI.setVisible(true);
+    }
+
     /**
      * Initializes the tabbed pane with all tabs and lazy loading
      */
     private void initializeTabbedPane() {
         int fontSizeTab = getTabFontSize();
-
-        tabbedPane = new JTabbedPane(JTabbedPane.TOP) {
-            @Override
-            public void updateUI() {
-                // Use ThemeManager's improved tabbed pane styling
-                UIManager.put("TabbedPane.tabAreaBackground", ThemeManager.getBackgroundColor());
-                UIManager.put("TabbedPane.selected", ThemeManager.getAccentColor());
-                UIManager.put("TabbedPane.focus", ThemeManager.getAccentColor().darker());
-                UIManager.put("TabbedPane.borderHighlightColor", ThemeManager.getBorderColor());
-                UIManager.put("TabbedPane.light", ThemeManager.getBorderColor().brighter());
-                UIManager.put("TabbedPane.shadow", ThemeManager.getBorderColor().darker());
-                UIManager.put("TabbedPane.darkShadow", ThemeManager.getBorderColor().darker().darker());
-                UIManager.put("TabbedPane.selectedTabPadInsets", new Insets(4, 12, 4, 12));
-                UIManager.put("TabbedPane.tabInsets", new Insets(8, 18, 8, 18));
-                UIManager.put("TabbedPane.tabAreaInsets", new Insets(2, 2, 0, 2));
-                UIManager.put("TabbedPane.contentBorderInsets", new Insets(2, 2, 2, 2));
-                UIManager.put("TabbedPane.underlineColor", ThemeManager.getAccentColor());
-                UIManager.put("TabbedPane.underlineHeight", 3);
-                UIManager.put("TabbedPane.underlineAtTop", Boolean.FALSE);
-                UIManager.put("TabbedPane.opaque", Boolean.TRUE);
-                UIManager.put("TabbedPane.showContentSeparator", Boolean.TRUE);
-                super.updateUI();
-                // Force layout recalc
-                revalidate();
-                repaint();
-                this.setFont(getEmojiCapableFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 3)));
-            }
-        };
-
-        // Trigger UI update
-        tabbedPane.updateUI();
+        tabbedPane = new JTabbedPane(JTabbedPane.TOP);
+        tabbedPane.setFont(getEmojiCapableFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 3)));
 
         // Use larger font for bigger tabs
         // tabbedPane.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 2));
@@ -388,7 +378,7 @@ public class MainGUI extends JFrame {
 
         // Load the first tab immediately
         loadTabContent(0, articleWrapper);
-        articleWrapper.putClientProperty("loaded", Boolean.TRUE);
+        articleWrapper.putClientProperty(TAB_LOADED_PROPERTY, Boolean.TRUE);
         setJMenuBar(createMenuBar());
     }
 
@@ -396,6 +386,9 @@ public class MainGUI extends JFrame {
      * Gets the tab font size from settings
      */
     private int getTabFontSize() {
+        if (Main.settings == null) {
+            return 15;
+        }
         String fontSizeTabStr = Main.settings.getProperty("table_font_size_tab");
         int fontSizeTab = 15;
         try {
@@ -431,19 +424,17 @@ public class MainGUI extends JFrame {
      * Applies theme-safe subtle backgrounds to tabs
      */
     private void applyTabBackgrounds() {
-        // More visible and attractive tab backgrounds with better contrast
+        updateTabColors(tabbedPane.getSelectedIndex());
+    }
+
+    private void updateTabColors(int selectedIndex) {
         Color unselectedBg = ThemeManager.getSurfaceColor();
         Color selectedBg = ThemeManager.getCardBackgroundColor();
-
-        // Set initial background colors
         for (int i = 0; i < tabbedPane.getTabCount(); i++) {
-            if (i == tabbedPane.getSelectedIndex()) {
-                tabbedPane.setBackgroundAt(i, selectedBg);
-                tabbedPane.setForegroundAt(i, ThemeManager.getTextPrimaryColor());
-            } else {
-                tabbedPane.setBackgroundAt(i, unselectedBg);
-                tabbedPane.setForegroundAt(i, ThemeManager.getTextSecondaryColor());
-            }
+            boolean selected = i == selectedIndex;
+            tabbedPane.setBackgroundAt(i, selected ? selectedBg : unselectedBg);
+            tabbedPane.setForegroundAt(i,
+                    selected ? ThemeManager.getTextPrimaryColor() : ThemeManager.getTextSecondaryColor());
         }
     }
 
@@ -468,29 +459,16 @@ public class MainGUI extends JFrame {
      * Sets up lazy loading for tabs
      */
     private void setupLazyLoading() {
-        // Define colors for tab backgrounds
-        Color unselectedBg = ThemeManager.getSurfaceColor();
-        Color selectedBg = ThemeManager.getCardBackgroundColor();
-
         tabbedPane.addChangeListener(e -> {
             int idx = tabbedPane.getSelectedIndex();
 
-            // Update tab backgrounds when switching
-            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
-                if (i == idx) {
-                    tabbedPane.setBackgroundAt(i, selectedBg);
-                    tabbedPane.setForegroundAt(i, ThemeManager.getTextPrimaryColor());
-                } else {
-                    tabbedPane.setBackgroundAt(i, unselectedBg);
-                    tabbedPane.setForegroundAt(i, ThemeManager.getTextSecondaryColor());
-                }
-            }
+            updateTabColors(idx);
 
             // Lazy load content
             JPanel wrapper = (JPanel) tabbedPane.getComponentAt(idx);
-            if (wrapper.getClientProperty("loaded") == null) {
+            if (wrapper.getClientProperty(TAB_LOADED_PROPERTY) == null) {
                 loadTabContent(idx, wrapper);
-                wrapper.putClientProperty("loaded", Boolean.TRUE);
+                wrapper.putClientProperty(TAB_LOADED_PROPERTY, Boolean.TRUE);
             }
         });
     }
@@ -610,8 +588,8 @@ public class MainGUI extends JFrame {
 
         JMenu helpMenu = new JMenu("Hilfe");
         JMenuItem settingsMenuItem = new JMenuItem("Einstellungen");
-        settingsMenuItem.addActionListener(e -> showOrCreateWindow(settingsGUI, SettingsGUI::new));
-        JMenuItem useHelpMenuItem = new JMenuItem("Hilfe zur anwendung");
+        settingsMenuItem.addActionListener(e -> settingsGUI = showOrCreateWindow(settingsGUI, SettingsGUI::new));
+        JMenuItem useHelpMenuItem = new JMenuItem("Hilfe zur Anwendung");
         useHelpMenuItem.addActionListener(e -> showHelp());
 
         helpMenu.add(settingsMenuItem);

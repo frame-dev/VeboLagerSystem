@@ -33,6 +33,7 @@ import javax.swing.UIDefaults;
 import javax.swing.UIManager;
 import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.FontUIResource;
+import javax.swing.plaf.UIResource;
 import javax.swing.table.JTableHeader;
 
 import ch.framedev.lagersystem.main.Main;
@@ -129,7 +130,7 @@ public class ThemeManager {
     static {
         try {
             // Use system L&F for native controls (Windows, macOS, Linux)
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            setLookAndFeel(LookAndFeelOption.METAL);
         } catch (Exception e) {
             // Fallback: log and ignore, will use default L&F
             logger.warn("Could not set system LookAndFeel", e);
@@ -185,9 +186,10 @@ public class ThemeManager {
         public static final Color TEXT_SECONDARY = new Color(108, 117, 125);
         public static final Color TEXT_DISABLED = new Color(160, 170, 180);
         public static final Color TEXT_LINK = new Color(52, 152, 219);
-        public static final Color TITLE_TEXT = new Color(26, 26, 26);
+        public static final Color TITLE_TEXT = new Color(255, 255, 255);
         public static final Color TITLE_TEXT_HIGHLIGHT = new Color(52, 152, 219);
         public static final Color TITLE_TEXT_HIGHLIGHT_DARK = new Color(41, 128, 185);
+        public static final Color SUB_TITLE_TEXT = new Color(220, 220, 220);
 
         // Borders & dividers
         public static final Color BORDER = new Color(220, 225, 230);
@@ -269,6 +271,7 @@ public class ThemeManager {
         public static final Color TITLE_TEXT = new Color(255, 255, 255);
         public static final Color TITLE_TEXT_HIGHLIGHT = new Color(170, 186, 255);
         public static final Color TITLE_TEXT_HIGHLIGHT_DARK = new Color(130, 150, 255);
+        public static final Color SUB_TITLE_TEXT = new Color(200, 200, 200);
 
         // Borders & dividers
         public static final Color BORDER = new Color(60, 60, 60);
@@ -1165,6 +1168,10 @@ public class ThemeManager {
             tabbedPane.setBackground(getBackgroundColor());
             tabbedPane.setForeground(getTextPrimaryColor());
             tabbedPane.setOpaque(true);
+            Object refreshTabs = tabbedPane.getClientProperty("settings.tab.refresh");
+            if (refreshTabs instanceof Runnable runnable) {
+                runnable.run();
+            }
         }
 
         if (comp instanceof JList<?> list) {
@@ -1198,16 +1205,31 @@ public class ThemeManager {
         if (comp instanceof JComponent jc) {
             boolean enabled = jc.isEnabled();
 
-            if (jc instanceof JLabel || jc instanceof JButton || jc instanceof JCheckBox
-                    || jc instanceof JRadioButton) {
-                jc.setForeground(enabled ? getTextPrimaryColor() : getDisabledForeground());
+            if (jc instanceof JLabel || jc instanceof JCheckBox || jc instanceof JRadioButton) {
+                // Preserve custom foreground colors (e.g. header/title labels).
+                Color fg = jc.getForeground();
+                if (fg == null || fg instanceof UIResource) {
+                    jc.setForeground(enabled ? getTextPrimaryColor() : getDisabledForeground());
+                }
             }
 
             if (jc instanceof JButton button) {
-                button.setBackground(enabled ? getButtonBackgroundColor() : getDisabledBackgroundColor());
-                button.setForeground(enabled ? getButtonForegroundColor() : getDisabledForeground());
+                boolean customButtonStyle = Boolean.TRUE.equals(button.getClientProperty("theme.button.custom"));
+                // Preserve explicit button text colors when they are custom.
+                Color buttonFg = button.getForeground();
+                boolean useDefaultButtonFg = buttonFg == null || buttonFg instanceof UIResource;
+                Color buttonBg = button.getBackground();
+                boolean useDefaultButtonBg = buttonBg == null || buttonBg instanceof UIResource;
+                if (!customButtonStyle && useDefaultButtonBg) {
+                    button.setBackground(enabled ? getButtonBackgroundColor() : getDisabledBackgroundColor());
+                }
+                if (!customButtonStyle && useDefaultButtonFg) {
+                    button.setForeground(enabled ? getButtonForegroundColor() : getDisabledForeground());
+                }
                 button.setFocusPainted(false);
-                installConsistentButtonStyle(button);
+                if (!customButtonStyle) {
+                    installConsistentButtonStyle(button);
+                }
             }
 
             if (jc instanceof JTextField field) {
@@ -1599,6 +1621,10 @@ public class ThemeManager {
 
     public static Color getTitleTextHighlightDarkColor() {
         return isDarkMode() ? Dark.TITLE_TEXT_HIGHLIGHT_DARK : Light.TITLE_TEXT_HIGHLIGHT_DARK;
+    }
+
+    public static Color getSubTitleTextColor() {
+        return isDarkMode() ? Dark.SUB_TITLE_TEXT : Light.SUB_TITLE_TEXT;
     }
 
     public static Color withAlpha(Color base, int alpha) {

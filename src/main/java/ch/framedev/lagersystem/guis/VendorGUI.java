@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.VendorManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
@@ -60,6 +61,10 @@ public class VendorGUI extends JFrame {
         topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
         topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
 
+        JPanel headerWrapper = null;
+        boolean disableHeader = Main.settings.getProperty("disable_header") != null
+                && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
+        if (!disableHeader) {
         // Header card (no fixed height -> prevents clipping)
         RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
         headerPanel.setLayout(new BorderLayout());
@@ -88,10 +93,11 @@ public class VendorGUI extends JFrame {
 
         headerPanel.add(headerText, BorderLayout.WEST);
 
-        JPanel headerWrapper = new JPanel(new BorderLayout());
+        headerWrapper = new JPanel(new BorderLayout());
         headerWrapper.setOpaque(false);
         headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
         headerWrapper.add(headerPanel, BorderLayout.CENTER);
+    }
 
         // Toolbar card
         RoundedPanel toolbar = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
@@ -120,8 +126,10 @@ public class VendorGUI extends JFrame {
         toolbarWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
         toolbarWrapper.add(toolbar, BorderLayout.SOUTH);
 
-        topContainer.add(headerWrapper);
-        topContainer.add(Box.createVerticalStrut(10));
+        if(headerWrapper != null) {
+            topContainer.add(headerWrapper);
+            topContainer.add(Box.createVerticalStrut(10));
+        }
         topContainer.add(toolbarWrapper);
 
         add(topContainer, BorderLayout.NORTH);

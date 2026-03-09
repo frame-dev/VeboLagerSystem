@@ -20,14 +20,21 @@ import java.util.regex.PatternSyntaxException;
 import static ch.framedev.lagersystem.utils.JFrameUtils.createSecondaryButton;
 
 /**
- * The ClientGUI class provides a graphical user interface for managing clients in the inventory system. It allows users to view, add, edit, delete, and filter clients based on their names and associated departments. The GUI is designed with a modern look and feel, utilizing theming from the ThemeManager to ensure consistency across the application. It features a responsive layout that adjusts to window resizing and includes interactive components such as tables, buttons, combo boxes, and search fields for an efficient user experience.
+ * The ClientGUI class provides a graphical user interface for managing clients
+ * in the inventory system. It allows users to view, add, edit, delete, and
+ * filter clients based on their names and associated departments. The GUI is
+ * designed with a modern look and feel, utilizing theming from the ThemeManager
+ * to ensure consistency across the application. It features a responsive layout
+ * that adjusts to window resizing and includes interactive components such as
+ * tables, buttons, combo boxes, and search fields for an efficient user
+ * experience.
  */
-@SuppressWarnings({"MismatchedQueryAndUpdateOfCollection", "DuplicatedCode"})
+@SuppressWarnings({ "MismatchedQueryAndUpdateOfCollection", "DuplicatedCode" })
 public class ClientGUI extends JFrame {
 
     private final JTable clientTable;
     private final JScrollPane tableScrollPane;
-    private final int[] baseColumnWidths = new int[]{300, 300};
+    private final int[] baseColumnWidths = new int[] { 300, 300 };
     private final List<Client> clients = new ArrayList<>();
     private final JLabel clientCountLabel = new JLabel();
 
@@ -36,7 +43,11 @@ public class ClientGUI extends JFrame {
     private static final String ALL_DEPARTMENTS_LABEL = UnicodeSymbols.DEPARTMENT + " Alle Abteilungen";
 
     /**
-     * Initializes the ClientGUI, setting up the layout, components, and event handlers for managing clients. The GUI includes a header, a toolbar with filtering options and action buttons, a main area with a table displaying clients, and a search bar at the bottom. It also loads the initial client data from the database and applies theming to all components.
+     * Initializes the ClientGUI, setting up the layout, components, and event
+     * handlers for managing clients. The GUI includes a header, a toolbar with
+     * filtering options and action buttons, a main area with a table displaying
+     * clients, and a search bar at the bottom. It also loads the initial client
+     * data from the database and applies theming to all components.
      */
     public ClientGUI() {
         ThemeManager.getInstance().registerWindow(this);
@@ -54,46 +65,50 @@ public class ClientGUI extends JFrame {
         topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
         topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
 
-        // Header card (no fixed height -> prevents clipping)
-        JFrameUtils.RoundedPanel headerPanel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-        headerPanel.setLayout(new BorderLayout());
-        headerPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(14, 18, 14, 18)
-        ));
-        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel headerWrapper = null;
+        boolean disableHeader = Main.settings.getProperty("disable_header") != null
+                && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
+        if (!disableHeader) {
+            // Header card (no fixed height -> prevents clipping)
+            JFrameUtils.RoundedPanel headerPanel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(),
+                    20);
+            headerPanel.setLayout(new BorderLayout());
+            headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                    BorderFactory.createEmptyBorder(14, 18, 14, 18)));
+            headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel titleLabel = new JLabel(UnicodeSymbols.CLIENT + " Kunden Verwaltung");
-        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+            JLabel titleLabel = new JLabel(UnicodeSymbols.CLIENT + " Kunden Verwaltung");
+            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+            titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Kunden verwalten, filtern und durchsuchen");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+            JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Kunden verwalten, filtern und durchsuchen");
+            subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+            subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        JPanel headerText = new JPanel();
-        headerText.setOpaque(false);
-        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerText.add(titleLabel);
-        headerText.add(Box.createVerticalStrut(4));
-        headerText.add(subtitleLabel);
+            JPanel headerText = new JPanel();
+            headerText.setOpaque(false);
+            headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            headerText.add(titleLabel);
+            headerText.add(Box.createVerticalStrut(4));
+            headerText.add(subtitleLabel);
 
-        headerPanel.add(headerText, BorderLayout.WEST);
+            headerPanel.add(headerText, BorderLayout.WEST);
 
-        JPanel headerWrapper = new JPanel(new BorderLayout());
-        headerWrapper.setOpaque(false);
-        headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerWrapper.add(headerPanel, BorderLayout.CENTER);
+            headerWrapper = new JPanel(new BorderLayout());
+            headerWrapper.setOpaque(false);
+            headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+            headerWrapper.add(headerPanel, BorderLayout.CENTER);
+        }
 
         // Toolbar card
         JFrameUtils.RoundedPanel toolbar = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
         toolbar.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
         toolbar.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)
-        ));
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 
         JLabel filterLabel = new JLabel(UnicodeSymbols.SEARCH + " Nach Abteilung:");
         filterLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
@@ -129,18 +144,19 @@ public class ClientGUI extends JFrame {
         toolbar.add(refreshButton);
 
         JScrollPane toolbarScrollPane = new JScrollPane(
-            toolbar,
-            ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
-            ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
-        );
+                toolbar,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         toolbarScrollPane.setBorder(BorderFactory.createEmptyBorder());
         toolbarScrollPane.setOpaque(false);
         toolbarScrollPane.getViewport().setOpaque(false);
         toolbarScrollPane.getHorizontalScrollBar().setUnitIncrement(16);
         toolbarScrollPane.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        topContainer.add(headerWrapper);
-        topContainer.add(Box.createVerticalStrut(10));
+        if (headerWrapper != null) {
+            topContainer.add(headerWrapper);
+            topContainer.add(Box.createVerticalStrut(10));
+        }
         topContainer.add(toolbarScrollPane);
 
         add(topContainer, BorderLayout.NORTH);
@@ -156,8 +172,7 @@ public class ClientGUI extends JFrame {
         tableScrollPane = new JScrollPane(clientTable);
         tableScrollPane.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)
-        ));
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
         tableScrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
 
         card.add(tableScrollPane, BorderLayout.CENTER);
@@ -177,8 +192,7 @@ public class ClientGUI extends JFrame {
         searchCard.setLayout(new BorderLayout(10, 0));
         searchCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
 
         JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche (Name oder Abteilung):");
         searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
@@ -284,36 +298,37 @@ public class ClientGUI extends JFrame {
                     sorter.setRowFilter(null);
                 },
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
-                JComponent.WHEN_FOCUSED
-        );
-                    updateClientCountLabel(sorter);
+                JComponent.WHEN_FOCUSED);
+        updateClientCountLabel(sorter);
 
         // ===== Table interactions =====
         setupTableInteractions();
-
 
         updateClientCountLabel(sorter);
         // ===== Wire actions =====
         addClientButton.addActionListener(e -> {
             Object[] row = showAddClientDialog();
-            if (row != null) loadClients();
+            if (row != null)
+                loadClients();
         });
 
         editClientButton.addActionListener(e -> {
             int sel = clientTable.getSelectedRow();
             if (sel == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Kunden zum Bearbeiten aus.", "Keine Auswahl",
+                JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Kunden zum Bearbeiten aus.",
+                        "Keine Auswahl",
                         JOptionPane.WARNING_MESSAGE, Main.iconSmall);
                 return;
             }
             int modelRow = clientTable.convertRowIndexToModel(sel);
-            Object[] existing = new Object[]{
+            Object[] existing = new Object[] {
                     clientTable.getModel().getValueAt(modelRow, 0),
                     clientTable.getModel().getValueAt(modelRow, 1)
             };
 
             Object[] updated = showUpdateClientDialog(existing);
-            if (updated != null) loadClients();
+            if (updated != null)
+                loadClients();
         });
 
         deleteClientButton.addActionListener(e -> {
@@ -365,15 +380,17 @@ public class ClientGUI extends JFrame {
         super.dispose();
     }
 
-
     private void fillDepartmentList(JComboBox<String> target, boolean skipFirstItem) {
-        if(target == null) return;
+        if (target == null)
+            return;
         DepartmentManager departmentManager = DepartmentManager.getInstance();
         for (var department : departmentManager.getAllDepartments()) {
             String dept = (String) department.get("department");
-            if (dept == null) continue;
+            if (dept == null)
+                continue;
             String trimmed = dept.trim();
-            if (trimmed.isEmpty()) continue;
+            if (trimmed.isEmpty())
+                continue;
 
             // Avoid duplicates (especially when called multiple times)
             boolean exists = false;
@@ -403,7 +420,7 @@ public class ClientGUI extends JFrame {
             String dept = dbClient.get("department");
 
             clients.add(new Client(name, dept));
-            model.addRow(new Object[]{name, dept});
+            model.addRow(new Object[] { name, dept });
         }
 
         updateClientCountLabel((TableRowSorter<?>) clientTable.getRowSorter());
@@ -422,8 +439,7 @@ public class ClientGUI extends JFrame {
         label.setBackground(ThemeManager.getSurfaceColor());
         label.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)
-        ));
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
     }
 
     private Object[] showAddClientDialog() {
@@ -431,7 +447,8 @@ public class ClientGUI extends JFrame {
     }
 
     private Object[] showUpdateClientDialog(Object[] existing) {
-        if(existing == null) return null;
+        if (existing == null)
+            return null;
         return ClientDialog.showUpdateClientDialog(this, existing);
     }
 
@@ -444,19 +461,22 @@ public class ClientGUI extends JFrame {
 
         edit.addActionListener(e -> {
             int sel = clientTable.getSelectedRow();
-            if (sel == -1) return;
+            if (sel == -1)
+                return;
             int modelRow = clientTable.convertRowIndexToModel(sel);
-            Object[] existing = new Object[]{
+            Object[] existing = new Object[] {
                     clientTable.getModel().getValueAt(modelRow, 0),
                     clientTable.getModel().getValueAt(modelRow, 1)
             };
             Object[] updated = showUpdateClientDialog(existing);
-            if (updated != null) loadClients();
+            if (updated != null)
+                loadClients();
         });
 
         del.addActionListener(e -> {
             int sel = clientTable.getSelectedRow();
-            if (sel == -1) return;
+            if (sel == -1)
+                return;
             int modelRow = clientTable.convertRowIndexToModel(sel);
             String name = (String) clientTable.getModel().getValueAt(modelRow, 0);
 
@@ -478,14 +498,16 @@ public class ClientGUI extends JFrame {
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
                     int row = clientTable.rowAtPoint(e.getPoint());
-                    if (row == -1) return;
+                    if (row == -1)
+                        return;
                     int modelRow = clientTable.convertRowIndexToModel(row);
-                    Object[] existing = new Object[]{
+                    Object[] existing = new Object[] {
                             clientTable.getModel().getValueAt(modelRow, 0),
                             clientTable.getModel().getValueAt(modelRow, 1)
                     };
                     Object[] updated = showUpdateClientDialog(existing);
-                    if (updated != null) loadClients();
+                    if (updated != null)
+                        loadClients();
                 }
             }
 
@@ -512,7 +534,7 @@ public class ClientGUI extends JFrame {
     }
 
     private void initializeClientTable() {
-        DefaultTableModel model = new DefaultTableModel(new String[]{
+        DefaultTableModel model = new DefaultTableModel(new String[] {
                 UnicodeSymbols.PERSON + " Name",
                 UnicodeSymbols.DEPARTMENT + " Abteilung"
         }, 0) {
@@ -559,10 +581,12 @@ public class ClientGUI extends JFrame {
     private static DefaultTableCellRenderer getDefaultTableCellRenderer() {
         return new DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (!isSelected) {
-                    c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+                    c.setBackground(
+                            row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
                     c.setForeground(ThemeManager.getTextPrimaryColor());
                 }
                 return c;
@@ -579,12 +603,14 @@ public class ClientGUI extends JFrame {
     }
 
     private void styleTextField(JTextField tf) {
-        if(tf == null) return;
+        if (tf == null)
+            return;
         JFrameUtils.styleTextField(tf);
     }
 
     private void styleComboBox(JComboBox<String> combo) {
-        if(combo == null) return;
+        if (combo == null)
+            return;
         JFrameUtils.styleComboBox(combo);
     }
 

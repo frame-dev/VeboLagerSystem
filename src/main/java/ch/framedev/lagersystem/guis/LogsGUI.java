@@ -86,6 +86,11 @@ public class LogsGUI extends JFrame {
         // mainPanel already provides outer padding; keep only vertical spacing here
         topContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
+        JPanel headerWrapper = null;
+        boolean disableHeader = Main.settings.getProperty("disable_header") != null
+                && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
+        if(!disableHeader) {
+
         // Header card (VendorGUI-style)
         JFrameUtils.RoundedPanel headerPanel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
         headerPanel.setLayout(new BorderLayout());
@@ -115,16 +120,19 @@ public class LogsGUI extends JFrame {
         headerPanel.add(headerText, BorderLayout.WEST);
 
         // BoxLayout: use a standard wrapper so the header stretches to the left edge/full width
-        JPanel headerWrapper = new JPanel(new BorderLayout());
+        headerWrapper = new JPanel(new BorderLayout());
         headerWrapper.setOpaque(false);
         headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
         headerWrapper.add(headerPanel, BorderLayout.CENTER);
 
         Dimension hpPref = headerPanel.getPreferredSize();
         headerWrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, hpPref.height));
+        }
 
-        topContainer.add(headerWrapper);
-        topContainer.add(Box.createVerticalStrut(10));
+        if (headerWrapper != null) {
+            topContainer.add(headerWrapper);
+            topContainer.add(Box.createVerticalStrut(10));
+        }
 
         // Button panel for log categories (floating card look)
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 18, 12));

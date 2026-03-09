@@ -4,6 +4,7 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import ch.framedev.lagersystem.utils.VendorOrderLogging;
 import org.apache.logging.log4j.LogManager;
@@ -29,12 +30,14 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 /**
  * GUI window that manages supplier reorders for articles.
  *
- * <p>This view displays all pending supplier order items in a table and allows
+ * <p>
+ * This view displays all pending supplier order items in a table and allows
  * users to add, remove, clear, and persist orders to a local text file.
  * The GUI integrates with {@link ArticleManager} to resolve stock values
  * and with {@link VendorOrderLogging} to record order actions.
  *
- * <p>The window is theme-aware and automatically registers itself with
+ * <p>
+ * The window is theme-aware and automatically registers itself with
  * {@link ThemeManager} so colors update dynamically.
  */
 @SuppressWarnings("DuplicatedCode")
@@ -47,12 +50,12 @@ public class SupplierOrderGUI extends JFrame {
     @SuppressWarnings("RegExpEmptyAlternationBranch")
     private static final String SEPARATOR = "|";
     private static final String[] COLUMNS = {
-        UnicodeSymbols.NUMBERS + " Artikelnummer",
-        UnicodeSymbols.ARTICLE_NAME + " Name",
-        UnicodeSymbols.TRUCK + " Lieferant",
-        UnicodeSymbols.PACKAGE + " Bestell Menge",
-        UnicodeSymbols.COL_LAGER_MENGE,
-        UnicodeSymbols.CLOCK + " Hinzugefügt"
+            UnicodeSymbols.NUMBERS + " Artikelnummer",
+            UnicodeSymbols.ARTICLE_NAME + " Name",
+            UnicodeSymbols.TRUCK + " Lieferant",
+            UnicodeSymbols.PACKAGE + " Bestell Menge",
+            UnicodeSymbols.COL_LAGER_MENGE,
+            UnicodeSymbols.CLOCK + " Hinzugefügt"
     };
 
     private static final Path ORDER_FILE = new File(Main.getAppDataDir(), "supplier_orders.txt").toPath();
@@ -64,7 +67,8 @@ public class SupplierOrderGUI extends JFrame {
     /**
      * Creates and initializes the supplier order management window.
      *
-     * <p>Builds the UI layout, configures the table, loads stored orders from disk,
+     * <p>
+     * Builds the UI layout, configures the table, loads stored orders from disk,
      * and refreshes the table contents.
      */
     public SupplierOrderGUI() {
@@ -90,40 +94,47 @@ public class SupplierOrderGUI extends JFrame {
         topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
         topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
 
-        // Header card
-        RoundedPanel headerCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-        headerCard.setLayout(new BorderLayout());
-        headerCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(14, 18, 14, 18)
-        ));
-        headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel headerWrapper = null;
+        boolean disableHeader = Main.settings.getProperty("disable_header") != null
+                && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
+        if (!disableHeader) {
+            // Header card
+            JFrameUtils.RoundedPanel headerCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(),
+                    20);
+            headerCard.setLayout(new BorderLayout());
+            headerCard.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                    BorderFactory.createEmptyBorder(14, 18, 14, 18)));
+            headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel titleLabel = new JLabel(UnicodeSymbols.TRUCK + " Lieferanten-Bestellungen");
-        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+            JLabel titleLabel = new JLabel(UnicodeSymbols.TRUCK + " Lieferanten-Bestellungen");
+            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+            titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Verwalten Sie Ihre Artikel-Nachbestellungen");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+            JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Verwalten Sie Ihre Artikel-Nachbestellungen");
+            subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+            subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        JPanel headerText = new JPanel();
-        headerText.setOpaque(false);
-        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerText.add(titleLabel);
-        headerText.add(Box.createVerticalStrut(4));
-        headerText.add(subtitleLabel);
+            JPanel headerText = new JPanel();
+            headerText.setOpaque(false);
+            headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            headerText.add(titleLabel);
+            headerText.add(Box.createVerticalStrut(4));
+            headerText.add(subtitleLabel);
 
-        headerCard.add(headerText, BorderLayout.WEST);
+            headerCard.add(headerText, BorderLayout.WEST);
 
-        JPanel headerWrapper = new JPanel(new BorderLayout());
-        headerWrapper.setOpaque(false);
-        headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerWrapper.add(headerCard, BorderLayout.CENTER);
+            headerWrapper = new JPanel(new BorderLayout());
+            headerWrapper.setOpaque(false);
+            headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+            headerWrapper.add(headerCard, BorderLayout.CENTER);
+        }
 
-        topContainer.add(headerWrapper);
+        if (headerWrapper != null) {
+            topContainer.add(headerWrapper);
+        }
         mainContainer.add(topContainer, BorderLayout.NORTH);
 
         tableModel = new DefaultTableModel(COLUMNS, 0) {
@@ -166,9 +177,12 @@ public class SupplierOrderGUI extends JFrame {
         styleStatusBadge(statusLabel);
         updateStatusLabel();
 
-        JButton removeBtn = createPrimaryButton(UnicodeSymbols.TRASH + " Entfernen", ThemeManager.getErrorColor(), e -> removeSelected());
-        JButton clearBtn = createPrimaryButton(UnicodeSymbols.BROOM + " Alle löschen", ThemeManager.getWarningColor(), e -> clearAll());
-        JButton saveBtn = createPrimaryButton(UnicodeSymbols.FLOPPY + " Speichern", ThemeManager.getAccentColor(), e -> persist());
+        JButton removeBtn = createPrimaryButton(UnicodeSymbols.TRASH + " Entfernen", ThemeManager.getErrorColor(),
+                e -> removeSelected());
+        JButton clearBtn = createPrimaryButton(UnicodeSymbols.BROOM + " Alle löschen", ThemeManager.getWarningColor(),
+                e -> clearAll());
+        JButton saveBtn = createPrimaryButton(UnicodeSymbols.FLOPPY + " Speichern", ThemeManager.getAccentColor(),
+                e -> persist());
         JButton refreshBtn = createSecondaryButton(UnicodeSymbols.REFRESH + " Aktualisieren", e -> refreshTable());
 
         actionPanel.add(removeBtn);
@@ -204,13 +218,14 @@ public class SupplierOrderGUI extends JFrame {
      * Immutable data holder representing a single supplier order entry.
      *
      * @param articleNumber article identifier
-     * @param name article display name
-     * @param vendor supplier name
-     * @param quantity requested quantity
-     * @param stock current stock level
-     * @param addedAt timestamp when the item was added
+     * @param name          article display name
+     * @param vendor        supplier name
+     * @param quantity      requested quantity
+     * @param stock         current stock level
+     * @param addedAt       timestamp when the item was added
      */
-    private record OrderItem(String articleNumber, String name, String vendor, int quantity, int stock, String addedAt) {
+    private record OrderItem(String articleNumber, String name, String vendor, int quantity, int stock,
+            String addedAt) {
     }
 
     /**
@@ -223,7 +238,8 @@ public class SupplierOrderGUI extends JFrame {
         try {
             List<String> lines = Files.readAllLines(ORDER_FILE, StandardCharsets.UTF_8);
             for (String line : lines) {
-                if (line == null || line.isBlank()) continue;
+                if (line == null || line.isBlank())
+                    continue;
                 String[] parts = line.split("\\" + SEPARATOR, -1);
                 if (parts.length >= 6) {
                     orderItems.add(new OrderItem(
@@ -232,13 +248,13 @@ public class SupplierOrderGUI extends JFrame {
                             parts[2],
                             safeInt(parts[3]),
                             safeInt(parts[4]),
-                            parts[5]
-                    ));
+                            parts[5]));
                 }
             }
         } catch (Exception e) {
             logger.error("Fehler beim Laden der Lieferanten-Bestelldatei: {}", e.getMessage(), e);
-            Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler beim Laden der Lieferanten-Bestelldatei: " + e.getMessage());
+            Main.logUtils
+                    .addLog("[SUPPLIER ORDER|ERROR] Fehler beim Laden der Lieferanten-Bestelldatei: " + e.getMessage());
         }
     }
 
@@ -251,7 +267,8 @@ public class SupplierOrderGUI extends JFrame {
         List<String> lines = new ArrayList<>();
 
         for (OrderItem item : orderItems) {
-            if(item == null) throw new IllegalArgumentException("item must not be null");
+            if (item == null)
+                throw new IllegalArgumentException("item must not be null");
             int stock = item.stock();
             Article a = ArticleManager.getInstance().getArticleByNumber(item.articleNumber());
             if (a != null) {
@@ -264,19 +281,18 @@ public class SupplierOrderGUI extends JFrame {
                     item.vendor(),
                     String.valueOf(item.quantity()),
                     String.valueOf(stock),
-                    item.addedAt()
-            ));
+                    item.addedAt()));
 
             VendorOrderLogging.getInstance().addLog(
-                    "Bestellposten gespeichert: Artikelnummer " + item.articleNumber() + ", Menge: " + item.quantity()
-            );
+                    "Bestellposten gespeichert: Artikelnummer " + item.articleNumber() + ", Menge: " + item.quantity());
         }
 
         try {
             Files.write(ORDER_FILE, lines, StandardCharsets.UTF_8);
         } catch (Exception e) {
             logger.error("Fehler beim Speichern der Lieferanten-Bestellungen: {}", e.getMessage(), e);
-            Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler beim Speichern der Lieferanten-Bestellungen: " + e.getMessage());
+            Main.logUtils.addLog(
+                    "[SUPPLIER ORDER|ERROR] Fehler beim Speichern der Lieferanten-Bestellungen: " + e.getMessage());
         }
     }
 
@@ -288,7 +304,7 @@ public class SupplierOrderGUI extends JFrame {
         tableModel.setRowCount(0);
         orderItems.stream()
                 .sorted(Comparator.comparing(OrderItem::addedAt).reversed())
-                .forEach(item -> tableModel.addRow(new Object[]{
+                .forEach(item -> tableModel.addRow(new Object[] {
                         item.articleNumber(),
                         item.name(),
                         item.vendor(),
@@ -312,18 +328,20 @@ public class SupplierOrderGUI extends JFrame {
         label.setBackground(ThemeManager.getSurfaceColor());
         label.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)
-        ));
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
     }
 
     /**
-     * Removes the currently selected order row from the list and persists the change.
+     * Removes the currently selected order row from the list and persists the
+     * change.
      */
     private void removeSelected() {
         int viewRow = table.getSelectedRow();
-        if (viewRow < 0) return;
+        if (viewRow < 0)
+            return;
         int modelRow = table.convertRowIndexToModel(viewRow);
-        if (modelRow < 0 || modelRow >= orderItems.size()) return;
+        if (modelRow < 0 || modelRow >= orderItems.size())
+            return;
 
         orderItems.remove(modelRow);
         persist();
@@ -347,13 +365,15 @@ public class SupplierOrderGUI extends JFrame {
     }
 
     /**
-     * Adds a new supplier order entry or increases the quantity if it already exists.
+     * Adds a new supplier order entry or increases the quantity if it already
+     * exists.
      *
-     * @param article article to order
+     * @param article  article to order
      * @param quantity amount to add
      */
     private void upsertItem(Article article, int quantity) {
-        if(article == null) throw new IllegalArgumentException("article must not be null");
+        if (article == null)
+            throw new IllegalArgumentException("article must not be null");
         String articleNumber = article.getArticleNumber();
         Optional<OrderItem> existing = orderItems.stream()
                 .filter(it -> Objects.equals(it.articleNumber(), articleNumber))
@@ -361,7 +381,8 @@ public class SupplierOrderGUI extends JFrame {
         if (existing.isPresent()) {
             OrderItem prev = existing.get();
             int idx = orderItems.indexOf(prev);
-            orderItems.set(idx, new OrderItem(prev.articleNumber(), prev.name(), prev.vendor(), prev.quantity() + quantity, article.getStockQuantity(), prev.addedAt()));
+            orderItems.set(idx, new OrderItem(prev.articleNumber(), prev.name(), prev.vendor(),
+                    prev.quantity() + quantity, article.getStockQuantity(), prev.addedAt()));
         } else {
             String added = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
             orderItems.add(new OrderItem(
@@ -370,8 +391,7 @@ public class SupplierOrderGUI extends JFrame {
                     article.getVendorName(),
                     quantity,
                     article.getStockQuantity(),
-                    added
-            ));
+                    added));
         }
         persist();
         refreshTable();
@@ -381,11 +401,12 @@ public class SupplierOrderGUI extends JFrame {
      * Adds an article to the supplier order list using the singleton GUI instance.
      * Executed on the Swing Event Dispatch Thread.
      *
-     * @param article article to add
+     * @param article  article to add
      * @param quantity quantity to order
      */
     public static void addArticleToSupplierOrder(Article article, int quantity) {
-        if (article == null || quantity <= 0) return;
+        if (article == null || quantity <= 0)
+            return;
         SwingUtilities.invokeLater(() -> {
             SupplierOrderGUI gui = getInstance();
             gui.upsertItem(article, quantity);
@@ -400,7 +421,7 @@ public class SupplierOrderGUI extends JFrame {
         try {
             File parent = ORDER_FILE.toFile().getParentFile();
             if (parent != null && !parent.exists()) {
-                //noinspection ResultOfMethodCallIgnored
+                // noinspection ResultOfMethodCallIgnored
                 parent.mkdirs();
             }
             if (!Files.exists(ORDER_FILE)) {
@@ -434,8 +455,7 @@ public class SupplierOrderGUI extends JFrame {
         card.setBackground(ThemeManager.getCardBackgroundColor());
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
         return card;
     }
 
@@ -450,8 +470,10 @@ public class SupplierOrderGUI extends JFrame {
         try {
             orders.addAll(Files.readAllLines(ORDER_FILE, StandardCharsets.UTF_8));
         } catch (Exception e) {
-            LogManager.getLogger(SupplierOrderGUI.class).error("Fehler beim Lesen der Lieferanten-Bestelldatei: {}", e.getMessage(), e);
-            Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler beim Lesen der Lieferanten-Bestelldatei: " + e.getMessage());
+            LogManager.getLogger(SupplierOrderGUI.class).error("Fehler beim Lesen der Lieferanten-Bestelldatei: {}",
+                    e.getMessage(), e);
+            Main.logUtils
+                    .addLog("[SUPPLIER ORDER|ERROR] Fehler beim Lesen der Lieferanten-Bestelldatei: " + e.getMessage());
         }
         return orders;
     }
