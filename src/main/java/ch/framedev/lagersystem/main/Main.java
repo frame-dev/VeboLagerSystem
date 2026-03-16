@@ -41,7 +41,6 @@ import ch.framedev.lagersystem.managers.UpdateManager;
 import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.managers.VendorManager;
 import ch.framedev.lagersystem.managers.ThemeManager.LookAndFeelOption;
-import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
@@ -212,7 +211,6 @@ public class Main {
         updateProgress(progressListener, 35, "Theme gesetzt...");
         handleFirstStartIfNeeded(progressListener);
         updateProgress(progressListener, 96, "Abschluss der Initialisierung...");
-        System.out.println(ArticleUtils.getPartsFromDetails(ArticleManager.getInstance().getArticleByNumber("1213").getDetails(), true));
     }
 
     private static void handleFirstStartIfNeeded(ProgressListener progressListener) {

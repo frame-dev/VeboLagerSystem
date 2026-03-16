@@ -457,8 +457,9 @@ public class ImportUtils {
     }
 
     public static void loadSeparatedArticles() {
+        ArticleManager articleManager = ArticleManager.getInstance();
         List<SeperateArticle> jsonStrings = new ArrayList<>();
-        for(Article article : ArticleManager.getInstance().getAllArticles()) {
+        for(Article article : articleManager.getAllArticles()) {
             if(ArticleUtils.isArticleSeparated(article.getArticleNumber())) {
                 jsonStrings.addAll(ArticleUtils.newSeperatedArticles(article.getArticleNumber()));
             }
@@ -466,6 +467,12 @@ public class ImportUtils {
         JsonElement jsonElement = new JsonArray();
         for(SeperateArticle seperateArticle : jsonStrings) {
             jsonElement.getAsJsonArray().add(new Gson().toJsonTree(seperateArticle));
+            if(!articleManager.existsSeperateArticleByDetail(seperateArticle.getArticleNumber(), seperateArticle.getOtherDetails())) {
+                articleManager.insertSeperateArticle(seperateArticle);
+            } else {
+                articleManager.updateSeperateArticle(seperateArticle);
+            }
+            Main.logUtils.addLog("Loaded separated article with number " + seperateArticle.getArticleNumber() + " and detail '" + seperateArticle.getOtherDetails() + "' into database");
         }
         try (FileWriter writer = new FileWriter(SEPERATED_ARTICLES_FILE)) {
             new GsonBuilder().setPrettyPrinting().create().toJson(jsonElement, writer);
