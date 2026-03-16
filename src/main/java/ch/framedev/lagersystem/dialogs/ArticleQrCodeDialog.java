@@ -21,6 +21,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,10 @@ import static ch.framedev.lagersystem.main.Main.logUtils;
  * Dialog for importing QR code scan data from the server.
  */
 public final class ArticleQrCodeDialog {
+
+    private static final Dimension DIALOG_SIZE = new Dimension(1150, 750);
+    private static final Dimension DIALOG_MIN_SIZE = new Dimension(900, 600);
+
     private static final int COL_TIMESTAMP = 0;
     private static final int COL_DATA = 1;
     private static final int COL_QUANTITY = 2;
@@ -55,10 +60,10 @@ public final class ArticleQrCodeDialog {
         }
         ThemeManager.applyUIDefaults();
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent), "QR-Code Daten vom Server", Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setSize(1150, 750);
+        dialog.setSize(DIALOG_SIZE);
         dialog.setLocationRelativeTo(parent);
         dialog.setLayout(new BorderLayout(0, 0));
-        dialog.setMinimumSize(new Dimension(900, 600));
+        dialog.setMinimumSize(DIALOG_MIN_SIZE);
 
         // ===== Header (gradient like other dialogs) =====
         JPanel headerPanel = getHeaderPanel();
@@ -90,6 +95,7 @@ public final class ArticleQrCodeDialog {
         closeHeaderBtn.setBorderPainted(false);
         closeHeaderBtn.setFocusPainted(false);
         closeHeaderBtn.setContentAreaFilled(false);
+        closeHeaderBtn.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
         closeHeaderBtn.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
         closeHeaderBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         closeHeaderBtn.setPreferredSize(new Dimension(44, 44));
@@ -107,13 +113,19 @@ public final class ArticleQrCodeDialog {
                 closeHeaderBtn.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
                 closeHeaderBtn.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 0));
                 closeHeaderBtn.setContentAreaFilled(false);
-                closeHeaderBtn.setBorder(null);
+                closeHeaderBtn.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
             }
         });
         closeHeaderBtn.addActionListener(e -> dialog.dispose());
 
+        JPanel headerMeta = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        headerMeta.setOpaque(false);
+        headerMeta.add(createHeaderBadge(UnicodeSymbols.CLOUD + " Live Sync", ThemeManager.withAlpha(ThemeManager.getSuccessColor(), 70)));
+        headerMeta.add(createHeaderBadge(UnicodeSymbols.REFRESH + " F5 Refresh", ThemeManager.withAlpha(ThemeManager.getAccentColor(), 70)));
+        headerMeta.add(closeHeaderBtn);
+
         headerPanel.add(headerLeft, BorderLayout.WEST);
-        headerPanel.add(closeHeaderBtn, BorderLayout.EAST);
+        headerPanel.add(headerMeta, BorderLayout.EAST);
         dialog.add(headerPanel, BorderLayout.NORTH);
 
         // ===== Content area =====
@@ -131,6 +143,7 @@ public final class ArticleQrCodeDialog {
 
         JLabel infoIcon = new JLabel(UnicodeSymbols.INFO);
         infoIcon.setFont(SettingsGUI.getFontByName(Font.PLAIN, 18));
+        infoIcon.setForeground(ThemeManager.getAccentColor());
 
         JLabel infoLabel = new JLabel("Lädt QR-Code Scan-Daten vom Server. Bitte warten...");
         infoLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
@@ -153,8 +166,11 @@ public final class ArticleQrCodeDialog {
         qrTable.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         qrTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         qrTable.setShowGrid(true);
+        qrTable.setShowVerticalLines(false);
+        qrTable.setRowMargin(0);
         qrTable.setGridColor(ThemeManager.getTableGridColor());
         qrTable.setIntercellSpacing(new Dimension(1, 1));
+        qrTable.setFillsViewportHeight(true);
         qrTable.setSelectionBackground(ThemeManager.getTableSelectionColor());
         qrTable.setSelectionForeground(ThemeManager.getTextOnPrimaryColor());
         qrTable.setAutoCreateRowSorter(true);
@@ -190,6 +206,7 @@ public final class ArticleQrCodeDialog {
         header.setForeground(ThemeManager.getTextOnPrimaryColor());
         header.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         header.setPreferredSize(new Dimension(header.getWidth(), 40));
+        header.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.withAlpha(ThemeManager.getBorderColor(), 180)));
 
         ArticleGUI.RoundedPanel tableCard = new ArticleGUI.RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
         tableCard.setBorder(BorderFactory.createCompoundBorder(
@@ -215,7 +232,12 @@ public final class ArticleQrCodeDialog {
         ));
 
         JPanel statusArea = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        statusArea.setOpaque(false);
+        statusArea.setOpaque(true);
+        statusArea.setBackground(ThemeManager.withAlpha(ThemeManager.getAccentColor(), 18));
+        statusArea.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(ThemeManager.withAlpha(ThemeManager.getAccentColor(), 80), 1),
+            BorderFactory.createEmptyBorder(6, 8, 6, 8)
+        ));
 
         JLabel statusIcon = new JLabel(UnicodeSymbols.CIRCLE);
         statusIcon.setFont(SettingsGUI.getFontByName(Font.PLAIN, 16));
@@ -231,39 +253,56 @@ public final class ArticleQrCodeDialog {
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttonPanel.setOpaque(false);
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
 
-        JButton refreshBtn = new JButton(UnicodeSymbols.REFRESH + " Aktualisieren");
-        styleButton(refreshBtn, new Color(52, 152, 219), Color.WHITE);
+        Color refreshColor = new Color(52, 152, 219);
+        Color stockInColor = new Color(46, 204, 113);
+        Color importAllColor = new Color(241, 196, 15);
+        Color listColor = new Color(155, 89, 182);
+        Color removeColor = new Color(251, 163, 153);
+        Color orderColor = new Color(52, 152, 219);
+        Color deleteColor = new Color(231, 76, 60);
+        Color closeColor = new Color(149, 165, 166);
+
+        JButton refreshBtn = createActionButton(UnicodeSymbols.REFRESH + " Aktualisieren",
+            "Lädt die QR-Code Daten erneut vom Server",
+            refreshColor,
+            Color.WHITE);
         refreshBtn.setToolTipText("Lädt die QR-Code Daten erneut vom Server");
 
-        JButton importBtn = new JButton(UnicodeSymbols.DOWNLOAD + " Ausgewählte einlagern");
-        styleButton(importBtn, new Color(46, 204, 113), Color.WHITE);
+        JButton importBtn = createActionButton(UnicodeSymbols.DOWNLOAD + " Ausgewählte einlagern",
+            "Lagert die ausgewählten QR-Codes ein",
+            stockInColor,
+            Color.WHITE);
         importBtn.setEnabled(false);
         importBtn.setToolTipText("Lagert die ausgewählten QR-Codes ein");
 
-        JButton importAllBtn = new JButton(UnicodeSymbols.DOWNLOAD + " Alle einlagern");
-        styleButton(importAllBtn, new Color(241, 196, 15), new Color(50, 50, 50));
+        JButton importAllBtn = createActionButton(UnicodeSymbols.DOWNLOAD + " Alle einlagern",
+            "Lagert alle angezeigten QR-Codes ein",
+            importAllColor,
+            new Color(50, 50, 50));
         importAllBtn.setToolTipText("Lagert alle angezeigten QR-Codes ein");
 
-        JButton addToArticleListBtn = new JButton(UnicodeSymbols.HEAVY_PLUS + " Zur Bestellliste");
+        JButton addToArticleListBtn = createActionButton(UnicodeSymbols.HEAVY_PLUS + " Zur Bestellliste",
+            "Fügt die ausgewählten Artikel der Bestellliste hinzu",
+            listColor,
+            Color.WHITE);
         addToArticleListBtn.setToolTipText("Fügt die ausgewählten Artikel der Bestellliste hinzu");
-        styleButton(addToArticleListBtn, new Color(155, 89, 182), Color.WHITE);
         addToArticleListBtn.addActionListener(e -> {
-            int[] selectedRows = qrTable.getSelectedRows();
+            int[] selectedRows = getSelectedModelRows(qrTable);
             if (selectedRows.length == 0) {
-                JOptionPane.showMessageDialog(dialog,
-                        "Bitte wählen Sie mindestens einen Datensatz aus.",
-                        "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                    .setTitle("Keine Auswahl")
+                    .setMessage("Bitte wählen Sie mindestens einen Datensatz aus.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
                 return;
             }
 
             int added = 0;
             for (int row : selectedRows) {
                 String data = (String) tableModel.getValueAt(row, COL_DATA);
-                String artikelNr = QRCodeUtils.getPartsFromData(data)[0];
-                artikelNr = artikelNr.replace("artikelNr:", "");
+                String artikelNr = extractArticleNumber(data);
                 int menge = Integer.parseInt(tableModel.getValueAt(row, COL_QUANTITY).toString());
 
                 Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
@@ -288,28 +327,31 @@ public final class ArticleQrCodeDialog {
             }
         });
 
-        JButton removeFromInventoryBtn = new JButton(UnicodeSymbols.TRASH + " Aus Inventar");
+        JButton removeFromInventoryBtn = createActionButton(UnicodeSymbols.TRASH + " Aus Inventar",
+            "Entfernt den ausgewählten Artikel aus dem Inventar",
+            removeColor,
+            Color.WHITE);
         removeFromInventoryBtn.setToolTipText("Entfernt den ausgewählten Artikel aus dem Inventar");
-        styleButton(removeFromInventoryBtn, new Color(251, 163, 153), Color.WHITE);
         removeFromInventoryBtn.setEnabled(false);
         removeFromInventoryBtn.addActionListener(e -> {
-            int selectedRow = qrTable.getSelectedRow();
-            if (selectedRow == -1) return;
+            int selectedViewRow = qrTable.getSelectedRow();
+            if (selectedViewRow == -1) return;
+
+            int selectedRow = qrTable.convertRowIndexToModel(selectedViewRow);
 
             String data = (String) tableModel.getValueAt(selectedRow, COL_DATA);
-            String artikelNr = QRCodeUtils.getPartsFromData(data)[0];
-            artikelNr = artikelNr.replace("artikelNr:", "");
+            String artikelNr = extractArticleNumber(data);
             int menge = Integer.parseInt(tableModel.getValueAt(selectedRow, COL_QUANTITY).toString());
             Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
 
             if (article != null) {
-                int confirm = JOptionPane.showConfirmDialog(dialog,
-                        String.format("<html><b>%d Stück</b> von <b>\"%s\"</b><br/>aus dem Inventar entfernen?</html>",
-                                menge, article.getName()),
-                        "Entfernen bestätigen",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE,
-                        Main.iconSmall);
+                int confirm = new MessageDialog()
+                        .setTitle("Entfernen bestätigen")
+                        .setMessage(String.format("<html><b>%d Stück</b> von <b>\"%s\"</b><br/>aus dem Inventar entfernen?</html>",
+                                menge, article.getName()))
+                        .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                        .setOptionType(JOptionPane.YES_NO_OPTION)
+                        .displayWithOptions();
 
                 if (confirm == JOptionPane.YES_OPTION) {
                     ArticleManager.getInstance().removeFromStock(artikelNr, menge);
@@ -327,43 +369,36 @@ public final class ArticleQrCodeDialog {
             }
         });
 
-        JButton addToOrderBtn = new JButton("Bestellung beim Lieferant hinzufügen");
+        JButton addToOrderBtn = createActionButton(UnicodeSymbols.PACKAGE + " Lieferantenbestellung",
+            "Fügt die ausgewählten Artikel der Bestellung beim Lieferant hinzu",
+            orderColor,
+            Color.WHITE);
         addToOrderBtn.setToolTipText("Fügt die ausgewählten Artikel der Bestellung beim Lieferant hinzu");
-        styleButton(addToOrderBtn, new Color(52, 152, 219), Color.WHITE);
         addToOrderBtn.setEnabled(false);
         addToOrderBtn.addActionListener(e -> {
-            int[] selectedRows = qrTable.getSelectedRows();
+            int[] selectedRows = getSelectedModelRows(qrTable);
             if (selectedRows.length == 0) {
-                JOptionPane.showMessageDialog(dialog,
-                        "Bitte wählen Sie mindestens einen Datensatz aus.",
-                        "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Keine Auswahl")
+                        .setMessage("Bitte wählen Sie mindestens einen Datensatz aus.")
+                        .setMessageType(JOptionPane.WARNING_MESSAGE)
+                        .display();
                 return;
             }
             int added = 0;
+            int notFound = 0;
             for (int row : selectedRows) {
                 String id = tableModel.getValueAt(row, COL_ID).toString();
                 String data = (String) tableModel.getValueAt(row, COL_DATA);
-                String artikelNr = QRCodeUtils.getPartsFromData(data)[0];
-                artikelNr = artikelNr.replace("artikelNr:", "");
+                String artikelNr = extractArticleNumber(data);
                 int menge = Integer.parseInt(tableModel.getValueAt(row, COL_QUANTITY).toString());
                 Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
                 if (article != null) {
                     SupplierOrderGUI.addArticleToSupplierOrder(article, menge);
                     ImportUtils.addQrCodeImport(id);
-                    JOptionPane.showMessageDialog(dialog,
-                            menge + " Stück von \"" + article.getName() + "\" zur Lieferantenbestellung hinzugefügt.",
-                            "Artikel hinzugefügt",
-                            JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
                     added++;
                 } else {
-                    JOptionPane.showMessageDialog(dialog,
-                            "Artikel mit Nummer \"" + artikelNr + "\" nicht im Inventar gefunden.",
-                            "Artikel nicht gefunden",
-                            JOptionPane.WARNING_MESSAGE,
-                            Main.iconSmall);
+                    notFound++;
                 }
             }
             if (added > 0) {
@@ -372,28 +407,54 @@ public final class ArticleQrCodeDialog {
                 refreshBtn.doClick();
                 logUtils.addLog(added + " Artikel zur Lieferantenbestellung hinzugefügt");
             }
+
+            if (added > 0 || notFound > 0) {
+                StringBuilder result = new StringBuilder("<html><b>Bestellung aktualisiert</b><br/><br/>")
+                        .append(UnicodeSymbols.CHECKMARK)
+                        .append(" Hinzugefügt: ")
+                        .append(added)
+                        .append("<br/>");
+                if (notFound > 0) {
+                    result.append(UnicodeSymbols.WARNING)
+                            .append(" Nicht gefunden: ")
+                            .append(notFound)
+                            .append("<br/>");
+                }
+                result.append("</html>");
+
+                new MessageDialog()
+                        .setTitle("Ergebnis")
+                        .setMessage(result.toString())
+                        .setMessageType(notFound > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE)
+                        .display();
+            }
         });
 
-        JButton deleteBtn = new JButton(UnicodeSymbols.TRASH + " Datensätze löschen");
+        JButton deleteBtn = createActionButton(UnicodeSymbols.TRASH + " Datensätze löschen",
+            "Löscht die ausgewählten QR-Code Datensätze vom Server",
+            deleteColor,
+            Color.WHITE);
         deleteBtn.setToolTipText("Löscht die ausgewählten QR-Code Datensätze vom Server");
-        styleButton(deleteBtn, new Color(231, 76, 60), Color.WHITE);
         deleteBtn.setEnabled(false);
         deleteBtn.addActionListener(e -> {
-            int[] selectedRows = qrTable.getSelectedRows();
+            int[] selectedRows = getSelectedModelRows(qrTable);
             if (selectedRows.length == 0) {
-                JOptionPane.showMessageDialog(dialog,
-                        "Bitte wählen Sie mindestens einen Datensatz aus.",
-                        "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Keine Auswahl")
+                        .setMessage("Bitte wählen Sie mindestens einen Datensatz aus.")
+                        .setMessageType(JOptionPane.WARNING_MESSAGE)
+                        .display();
                 return;
             }
-            int confirm = JOptionPane.showConfirmDialog(dialog,
-                    "Möchten Sie die ausgewählten Datensätze wirklich vom Server löschen?",
-                    "Löschen bestätigen",
-                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, Main.iconSmall);
+            int confirm = new MessageDialog()
+                    .setTitle("Löschen bestätigen")
+                    .setMessage("Möchten Sie die ausgewählten Datensätze wirklich vom Server löschen?")
+                    .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                    .setOptionType(JOptionPane.YES_NO_OPTION)
+                    .displayWithOptions();
             if (confirm == JOptionPane.YES_OPTION) {
                 int deleted = 0;
+                Arrays.sort(selectedRows);
                 for (int i = selectedRows.length - 1; i >= 0; i--) {
                     int row = selectedRows[i];
                     String id = tableModel.getValueAt(row, COL_ID).toString();
@@ -407,9 +468,11 @@ public final class ArticleQrCodeDialog {
             }
         });
 
-        JButton closeBtn = new JButton(UnicodeSymbols.CLOSE + " Schließen");
+        JButton closeBtn = createActionButton(UnicodeSymbols.CLOSE + " Schließen",
+            "Schließt dieses Fenster",
+            closeColor,
+            Color.WHITE);
         closeBtn.setToolTipText("Schließt dieses Fenster");
-        styleButton(closeBtn, new Color(149, 165, 166), Color.WHITE);
         closeBtn.addActionListener(e -> dialog.dispose());
 
         buttonPanel.add(refreshBtn);
@@ -452,36 +515,32 @@ public final class ArticleQrCodeDialog {
             protected void done() {
                 try {
                     List<Map<String, Object>> qrCodeDataList = get();
-
-                    if (qrCodeDataList == null || qrCodeDataList.isEmpty()) {
-                        setInfoPanelState(infoPanel, infoIcon, infoLabel, UnicodeSymbols.WARNING,
-                                "Keine QR-Code Daten vom Server erhalten", ThemeManager.getWarningColor());
-                        statusLabel.setText("Keine Daten verfügbar");
-                        statusIcon.setForeground(ThemeManager.getWarningColor());
-                        importAllBtn.setEnabled(false);
-                        return;
-                    }
-
-                    int availableCount = populateTableWithAvailableRows(tableModel, qrCodeDataList);
-
-                    setInfoPanelState(infoPanel, infoIcon, infoLabel, UnicodeSymbols.CHECKMARK,
-                            availableCount + " QR-Code Datensätze erfolgreich geladen", ThemeManager.getSuccessColor());
-                    statusLabel.setText(availableCount + " Datensätze bereit");
-                    statusIcon.setForeground(ThemeManager.getSuccessColor());
-                    importAllBtn.setEnabled(availableCount > 0);
+                    applyQrDataLoadResult(
+                            tableModel,
+                            qrCodeDataList,
+                            infoPanel,
+                            infoIcon,
+                            infoLabel,
+                            statusLabel,
+                            statusIcon,
+                            importAllBtn,
+                            "QR-Code Datensätze erfolgreich geladen");
 
                 } catch (Exception ex) {
-                    setInfoPanelState(infoPanel, infoIcon, infoLabel, UnicodeSymbols.CLOSE,
-                            "Fehler beim Laden: " + ex.getMessage(), ThemeManager.getErrorColor());
-                    statusLabel.setText("Fehler beim Laden");
-                    statusIcon.setForeground(ThemeManager.getErrorColor());
-                    importAllBtn.setEnabled(false);
+                    applyQrDataLoadFailure(
+                            infoPanel,
+                            infoIcon,
+                            infoLabel,
+                            statusLabel,
+                            statusIcon,
+                            importAllBtn,
+                            "Fehler beim Laden: " + ex.getMessage());
                 }
             }
         };
 
         qrTable.getSelectionModel().addListSelectionListener(e -> {
-            int[] selectedRows = qrTable.getSelectedRows();
+            int[] selectedRows = getSelectedModelRows(qrTable);
             int selectedCount = selectedRows.length;
             boolean hasSelection = selectedCount > 0;
 
@@ -518,14 +577,14 @@ public final class ArticleQrCodeDialog {
             boolean allOwnUseFalse = true;
 
             for (int row : selectedRows) {
-                Object typeObj = qrTable.getValueAt(row, COL_TYPE);
+                Object typeObj = tableModel.getValueAt(row, COL_TYPE);
                 String type = typeObj == null ? "" : typeObj.toString().trim();
 
                 if (!type.equalsIgnoreCase("sell")) allSell = false;
                 if (!type.equalsIgnoreCase("buy")) allBuy = false;
                 if (!type.equalsIgnoreCase("order")) allOrder = false;
 
-                Object ownUseObj = qrTable.getValueAt(row, COL_OWN_USE);
+                Object ownUseObj = tableModel.getValueAt(row, COL_OWN_USE);
                 boolean ownUseVal = parseOwnUse(ownUseObj);
                 if (!ownUseVal) allOwnUseTrue = false;
                 if (ownUseVal) allOwnUseFalse = false;
@@ -576,6 +635,14 @@ public final class ArticleQrCodeDialog {
             if (hasSellType && allOwnUseFalse) {
                 addToArticleListBtn.setEnabled(true);
                 addToArticleListBtn.setVisible(true);
+
+                importAllBtn.setVisible(false);
+                importAllBtn.setEnabled(false);
+                importBtn.setVisible(false);
+                importBtn.setEnabled(false);
+
+                removeFromInventoryBtn.setEnabled(true);
+                removeFromInventoryBtn.setVisible(true);
 
                 deleteBtn.setEnabled(true);
                 deleteBtn.setVisible(true);
@@ -632,27 +699,25 @@ public final class ArticleQrCodeDialog {
                 protected void done() {
                     try {
                         List<Map<String, Object>> qrCodeDataList = get();
-                        if (qrCodeDataList == null || qrCodeDataList.isEmpty()) {
-                            setInfoPanelState(infoPanel, infoIcon, infoLabel, UnicodeSymbols.WARNING,
-                                    "Keine QR-Code Daten vom Server erhalten", ThemeManager.getWarningColor());
-                            statusLabel.setText("Keine Daten verfügbar");
-                            statusIcon.setForeground(ThemeManager.getWarningColor());
-                            importAllBtn.setEnabled(false);
-                            return;
-                        }
-
-                        int availableCount = populateTableWithAvailableRows(tableModel, qrCodeDataList);
-                        setInfoPanelState(infoPanel, infoIcon, infoLabel, UnicodeSymbols.CHECKMARK,
-                                availableCount + " QR-Code Datensätze aktualisiert", ThemeManager.getSuccessColor());
-                        statusLabel.setText(availableCount + " Datensätze bereit");
-                        statusIcon.setForeground(ThemeManager.getSuccessColor());
-                        importAllBtn.setEnabled(availableCount > 0);
+                        applyQrDataLoadResult(
+                                tableModel,
+                                qrCodeDataList,
+                                infoPanel,
+                                infoIcon,
+                                infoLabel,
+                                statusLabel,
+                                statusIcon,
+                                importAllBtn,
+                                "QR-Code Datensätze aktualisiert");
                     } catch (Exception ex) {
-                        setInfoPanelState(infoPanel, infoIcon, infoLabel, UnicodeSymbols.CLOSE,
-                                "Fehler beim Aktualisieren: " + ex.getMessage(), ThemeManager.getErrorColor());
-                        statusLabel.setText("Fehler beim Laden");
-                        statusIcon.setForeground(ThemeManager.getErrorColor());
-                        importAllBtn.setEnabled(false);
+                        applyQrDataLoadFailure(
+                                infoPanel,
+                                infoIcon,
+                                infoLabel,
+                                statusLabel,
+                                statusIcon,
+                                importAllBtn,
+                                "Fehler beim Aktualisieren: " + ex.getMessage());
                     } finally {
                         refreshBtn.setEnabled(true);
                     }
@@ -662,16 +727,16 @@ public final class ArticleQrCodeDialog {
         });
 
         importBtn.addActionListener(e -> {
-            int[] selectedRows = qrTable.getSelectedRows();
+            int[] selectedRows = getSelectedModelRows(qrTable);
             if (selectedRows.length == 0) return;
 
-            int confirm = JOptionPane.showConfirmDialog(dialog,
-                    String.format("<html><b>%d Datensätze</b> importieren?<br/><small>Artikel werden ins Lager eingebucht.</small></html>",
-                            selectedRows.length),
-                    "Import bestätigen",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    Main.iconSmall);
+            int confirm = new MessageDialog()
+                    .setTitle("Import bestätigen")
+                    .setMessage(String.format("<html><b>%d Datensätze</b> importieren?<br/><small>Artikel werden ins Lager eingebucht.</small></html>",
+                            selectedRows.length))
+                    .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                    .setOptionType(JOptionPane.YES_NO_OPTION)
+                    .displayWithOptions();
 
             if (confirm == JOptionPane.YES_OPTION) {
                 int imported = 0;
@@ -685,7 +750,7 @@ public final class ArticleQrCodeDialog {
                         int quantity = Integer.parseInt(tableModel.getValueAt(row, COL_QUANTITY).toString());
 
                         String[] parts = QRCodeUtils.getPartsFromData(data);
-                        String artikelNr = parts[0].replace("artikelNr:", "");
+                        String artikelNr = extractArticleNumber(parts);
                         Article article = articleManager.getArticleByNumber(artikelNr);
 
                         if (article != null && !ImportUtils.getImportedQrCodes().contains(id)) {
@@ -720,11 +785,11 @@ public final class ArticleQrCodeDialog {
                                 (errors > 0 ? UnicodeSymbols.CLOSE + " Fehler: %d<br/>" : ""),
                         imported, errors);
 
-                JOptionPane.showMessageDialog(dialog,
-                        message,
-                        "Import Ergebnis",
-                        errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Import Ergebnis")
+                        .setMessage(message)
+                        .setMessageType(errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE)
+                        .displayWithOptions();
 
                 statusLabel.setText(imported + " Datensätze importiert" + (errors > 0 ? " (" + errors + " Fehler)" : ""));
                 statusIcon.setForeground(errors > 0 ? ThemeManager.getWarningColor() : ThemeManager.getSuccessColor());
@@ -737,13 +802,13 @@ public final class ArticleQrCodeDialog {
             int rowCount = tableModel.getRowCount();
             if (rowCount == 0) return;
 
-            int confirm = JOptionPane.showConfirmDialog(dialog,
-                    String.format("<html><b>Alle %d Datensätze</b> importieren?<br/><small>Dies kann einige Sekunden dauern.</small></html>",
-                            rowCount),
-                    "Import bestätigen",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    Main.iconSmall);
+            int confirm = new MessageDialog()
+                    .setTitle("Import bestätigen")
+                    .setMessage(String.format("<html><b>Alle %d Datensätze</b> importieren?<br/><small>Dies kann einige Sekunden dauern.</small></html>",
+                            rowCount))
+                    .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                    .setOptionType(JOptionPane.YES_NO_OPTION)
+                    .displayWithOptions();
 
             if (confirm == JOptionPane.YES_OPTION) {
                 statusLabel.setText("Importiere " + rowCount + " Datensätze...");
@@ -775,7 +840,7 @@ public final class ArticleQrCodeDialog {
                                 }
 
                                 String[] parts = QRCodeUtils.getPartsFromData(data);
-                                String artikelNr = parts[0].replace("artikelNr:", "");
+                                String artikelNr = extractArticleNumber(parts);
                                 Article article = articleManager.getArticleByNumber(artikelNr);
 
                                 if (article != null) {
@@ -823,11 +888,11 @@ public final class ArticleQrCodeDialog {
                                         (errors > 0 ? UnicodeSymbols.CLOSE + " Fehler: %d<br/>" : ""),
                                 imported, skipped, errors);
 
-                        JOptionPane.showMessageDialog(dialog,
-                                message,
-                                "Import Ergebnis",
-                                errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE,
-                                Main.iconSmall);
+                        new MessageDialog()
+                                .setTitle("Import Ergebnis")
+                                .setMessage(message)
+                                .setMessageType(errors > 0 ? JOptionPane.WARNING_MESSAGE : JOptionPane.INFORMATION_MESSAGE)
+                                .displayWithOptions();
 
                         statusLabel.setText(String.format("%d importiert%s",
                                 imported,
@@ -868,6 +933,50 @@ public final class ArticleQrCodeDialog {
                 BorderFactory.createLineBorder(accentColor, 2),
                 BorderFactory.createEmptyBorder(12, 18, 12, 18)
         ));
+    }
+
+    private static void applyQrDataLoadResult(
+            DefaultTableModel tableModel,
+            List<Map<String, Object>> qrCodeDataList,
+            JPanel infoPanel,
+            JLabel infoIcon,
+            JLabel infoLabel,
+            JLabel statusLabel,
+            JLabel statusIcon,
+            JButton importAllBtn,
+            String successMessageSuffix
+    ) {
+        if (qrCodeDataList == null || qrCodeDataList.isEmpty()) {
+            setInfoPanelState(infoPanel, infoIcon, infoLabel, UnicodeSymbols.WARNING,
+                    "Keine QR-Code Daten vom Server erhalten", ThemeManager.getWarningColor());
+            statusLabel.setText("Keine Daten verfügbar");
+            statusIcon.setForeground(ThemeManager.getWarningColor());
+            importAllBtn.setEnabled(false);
+            return;
+        }
+
+        int availableCount = populateTableWithAvailableRows(tableModel, qrCodeDataList);
+        setInfoPanelState(infoPanel, infoIcon, infoLabel, UnicodeSymbols.CHECKMARK,
+                availableCount + " " + successMessageSuffix, ThemeManager.getSuccessColor());
+        statusLabel.setText(availableCount + " Datensätze bereit");
+        statusIcon.setForeground(ThemeManager.getSuccessColor());
+        importAllBtn.setEnabled(availableCount > 0);
+    }
+
+    private static void applyQrDataLoadFailure(
+            JPanel infoPanel,
+            JLabel infoIcon,
+            JLabel infoLabel,
+            JLabel statusLabel,
+            JLabel statusIcon,
+            JButton importAllBtn,
+            String errorMessage
+    ) {
+        setInfoPanelState(infoPanel, infoIcon, infoLabel, UnicodeSymbols.CLOSE,
+                errorMessage, ThemeManager.getErrorColor());
+        statusLabel.setText("Fehler beim Laden");
+        statusIcon.setForeground(ThemeManager.getErrorColor());
+        importAllBtn.setEnabled(false);
     }
 
     private static int populateTableWithAvailableRows(DefaultTableModel tableModel, List<Map<String, Object>> qrCodeDataList) {
@@ -930,7 +1039,7 @@ public final class ArticleQrCodeDialog {
     }
 
     private static Article retrieveParts(String[] parts) {
-        String artikelNr = parts[0].replace("artikelNr:", "");
+        String artikelNr = extractArticleNumber(parts);
         String name = parts[1].replace("name:", "");
         String details = parts[2].replace("details:", "");
         String sellPrice = parts[3].replace("sellPrice:", "");
@@ -953,6 +1062,7 @@ public final class ArticleQrCodeDialog {
         button.setContentAreaFilled(true);
         button.setOpaque(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setMargin(new Insets(8, 14, 8, 14));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(bgColor.darker(), 1),
                 BorderFactory.createEmptyBorder(10, 16, 10, 16)
@@ -994,5 +1104,51 @@ public final class ArticleQrCodeDialog {
                 button.setBackground(button.contains(e.getPoint()) ? hoverBg : bgColor);
             }
         });
+    }
+
+    private static JButton createActionButton(String text, String tooltip, Color bgColor, Color fgColor) {
+        JButton button = new JButton(text);
+        button.setToolTipText(tooltip);
+        styleButton(button, bgColor, fgColor);
+        return button;
+    }
+
+    private static JComponent createHeaderBadge(String text, Color borderColor) {
+        JLabel badge = new JLabel(text);
+        badge.setFont(SettingsGUI.getFontByName(Font.BOLD, 11));
+        badge.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
+        badge.setOpaque(true);
+        badge.setBackground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 26));
+        badge.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(borderColor, 1),
+                BorderFactory.createEmptyBorder(5, 9, 5, 9)
+        ));
+        return badge;
+    }
+
+    private static int[] getSelectedModelRows(JTable table) {
+        if (table == null) {
+            return new int[0];
+        }
+        int[] selectedViewRows = table.getSelectedRows();
+        int[] selectedModelRows = new int[selectedViewRows.length];
+        for (int i = 0; i < selectedViewRows.length; i++) {
+            selectedModelRows[i] = table.convertRowIndexToModel(selectedViewRows[i]);
+        }
+        return selectedModelRows;
+    }
+
+    private static String extractArticleNumber(String data) {
+        if (data == null || data.isBlank()) {
+            return "";
+        }
+        return extractArticleNumber(QRCodeUtils.getPartsFromData(data));
+    }
+
+    private static String extractArticleNumber(String[] parts) {
+        if (parts == null || parts.length == 0 || parts[0] == null) {
+            return "";
+        }
+        return parts[0].replace("artikelNr:", "");
     }
 }

@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.actions.OrderActions;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
@@ -229,9 +230,11 @@ public class OrderGUI extends JFrame {
         editOrderButton.addActionListener(e -> {
             Vector<Object> rowData = getSelectedOrderData();
             if (rowData == null) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.",
-                        "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+                new MessageDialog()                        
+                .setTitle("Keine Bestellung ausgewählt")
+                        .setMessage("Bitte wählen Sie eine Bestellung zum Bearbeiten aus.")
+                        .setMessageType(JOptionPane.WARNING_MESSAGE)
+                        .display();
                 return;
             }
             String orderId = (String) rowData.getFirst();
@@ -251,28 +254,38 @@ public class OrderGUI extends JFrame {
         deleteOrderButton.addActionListener(e -> {
             int sel = orderTable.getSelectedRow();
             if (sel == -1) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Löschen aus.",
-                        "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Keine Bestellung ausgewählt")
+                        .setMessage("Bitte wählen Sie eine Bestellung zum Löschen aus.")
+                        .setMessageType(JOptionPane.WARNING_MESSAGE)
+                        .display();
                 return;
             }
             int modelRow = orderTable.convertRowIndexToModel(sel);
             String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
 
-            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?",
-                    "Löschen",
-                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+            int confirm = new MessageDialog().setTitle("Löschen")
+            .setMessage("Möchten Sie diese Bestellung wirklich löschen?")
+            .setOptionType(JOptionPane.YES_NO_OPTION)
+            .setMessageType(JOptionPane.WARNING_MESSAGE)
+            .displayWithOptions();
 
             if (confirm == JOptionPane.YES_OPTION) {
                 if (OrderManager.getInstance().deleteOrder(orderId)) {
                     invalidateOrdersCache();
                     loadOrders(true);
                     updateOrderCount();
-                    JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg",
-                            JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+                    new MessageDialog()
+                            .setTitle("Erfolg")
+                            .setMessage("Bestellung erfolgreich gelöscht.")
+                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                            .display();
                 } else {
-                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler",
-                            JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                    new MessageDialog()
+                            .setTitle("Fehler")
+                            .setMessage("Löschen fehlgeschlagen.")
+                            .setMessageType(JOptionPane.ERROR_MESSAGE)
+                            .display();
                 }
             }
         });
@@ -283,8 +296,11 @@ public class OrderGUI extends JFrame {
             invalidateOrdersCache();
             loadOrders(true);
             updateOrderCount();
-            JOptionPane.showMessageDialog(this, "Bestellungsliste wurde aktualisiert.", "Aktualisiert",
-                    JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Aktualisiert")
+                    .setMessage("Bestellungsliste wurde aktualisiert.")
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
         });
 
         // search logic using TableRowSorter
@@ -441,9 +457,11 @@ public class OrderGUI extends JFrame {
         edit.addActionListener(e -> {
             Vector<Object> rowData = getSelectedOrderData();
             if (rowData == null) {
-                JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Bestellung zum Bearbeiten aus.",
-                        "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Keine Auswahl")
+                        .setMessage("Bitte wählen Sie eine Bestellung zum Bearbeiten aus.")
+                        .setMessageType(JOptionPane.WARNING_MESSAGE)
+                        .display();
                 return;
             }
             Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
@@ -467,19 +485,28 @@ public class OrderGUI extends JFrame {
             int modelRow = orderTable.convertRowIndexToModel(sel);
             String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
 
-            int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diese Bestellung wirklich löschen?",
-                    "Löschen",
-                    JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+            int confirm = new MessageDialog()
+                    .setTitle("Löschen")
+                    .setMessage("Möchten Sie diese Bestellung wirklich löschen?")
+                    .setOptionType(JOptionPane.YES_NO_OPTION)
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .displayWithOptions();
 
             if (confirm == JOptionPane.YES_OPTION) {
                 if (OrderManager.getInstance().deleteOrder(orderId)) {
                     ((DefaultTableModel) orderTable.getModel()).removeRow(modelRow);
                     updateOrderCount();
-                    JOptionPane.showMessageDialog(this, "Bestellung erfolgreich gelöscht.", "Erfolg",
-                            JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+                    new MessageDialog()
+                            .setTitle("Erfolg")
+                            .setMessage("Bestellung erfolgreich gelöscht.")
+                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                            .display();
                 } else {
-                    JOptionPane.showMessageDialog(this, "Löschen fehlgeschlagen.", "Fehler",
-                            JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                    new MessageDialog()
+                            .setTitle("Fehler")
+                            .setMessage("Löschen fehlgeschlagen.")
+                            .setMessageType(JOptionPane.ERROR_MESSAGE)
+                            .display();
                 }
             }
         });
@@ -492,9 +519,11 @@ public class OrderGUI extends JFrame {
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
                     Vector<Object> rowData = getSelectedOrderData();
                     if (rowData == null) {
-                        JOptionPane.showMessageDialog(OrderGUI.this,
-                                "Bitte wählen Sie eine Bestellung zum Anzeigen aus.", "Keine Auswahl",
-                                JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+                        new MessageDialog()
+                                .setTitle("Keine Auswahl")
+                                .setMessage("Bitte wählen Sie eine Bestellung zum Anzeigen aus.")
+                                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                                .display();
                         return;
                     }
                     String orderId = (String) rowData.getFirst();

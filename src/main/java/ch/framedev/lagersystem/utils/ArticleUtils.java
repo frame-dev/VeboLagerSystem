@@ -1,6 +1,8 @@
 package ch.framedev.lagersystem.utils;
 
 import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.classes.SeperateArticle;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.guis.ArticleListGUI;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
@@ -34,7 +36,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -64,12 +69,46 @@ public final class ArticleUtils {
             "seife"
     );
 
+    /** Splits on slash with optional surrounding whitespace, but not when the slash is preceded by a digit (e.g. price notation "12.60/Einzel"). */
+    private static final Pattern DETAILS_SPLIT_PATTERN = Pattern.compile(
+            "(?<!\\d)\\s*/\\s*"
+    );
+
+    /** Strips leading abbreviated label prefix, e.g. {@code "Gr. "}, {@code "Nr. "}. */
+    private static final Pattern PART_LABEL_PREFIX = Pattern.compile(
+            "^[A-Za-z\u00C0-\u024F]{1,5}\\.\\s+"
+    );
+
+    /** Strips trailing quantity/unit suffix, e.g. {@code " 100 Stk. Box"}, {@code " 50 ml"}. */
+    private static final Pattern PART_QUANTITY_SUFFIX = Pattern.compile(
+            "\\s+\\d+[\\d.,]*\\s*.*$"
+    );
+
+    /** Strips leading open-parentheses/brackets, e.g. {@code "(Rot"} → {@code "Rot"}. */
+    private static final Pattern PART_LEADING_PUNCT = Pattern.compile(
+            "^[\\s()\\[\\]]+"
+    );
+
+    /** Strips trailing close-parentheses/brackets and lone prepositions, e.g. {@code "Gelb)"} → {@code "Gelb"}, {@code "Pack \u00e0"} → {@code "Pack"}. */
+    private static final Pattern PART_TRAILING_PUNCT = Pattern.compile(
+            "[\\s()\\[\\]\\u00e0]+$"
+    );
+
+    /** Compiled pattern for extracting leading numeric order tokens like {@code "1.2"}. */
+    private static final Pattern CATEGORY_ORDER_PATTERN = Pattern.compile(
+            "^\\s*(\\d+(?:\\.\\d+)*)"
+    );
+
+    /** Compiled pattern for parsing a category range such as {@code "100-199"} or {@code "100 - 199"}. */
+    private static final Pattern RANGE_PATTERN = Pattern.compile(
+            "^\\s*(\\d+)\\s*(?:-\\s*(\\d+))?\\s*$"
+    );
+
     /**
      * Category names mapped to their corresponding article number ranges.
-     *
-     * <p>Kept public for compatibility with existing static imports/usages.
+     * Thread-safe; written under {@code CATEGORY_LOCK} but read freely from any thread.
      */
-    public static Map<String, CategoryRange> categories = new HashMap<>();
+    public static volatile Map<String, CategoryRange> categories = new ConcurrentHashMap<>();
 
     private ArticleUtils() {
     }
@@ -149,13 +188,12 @@ public final class ArticleUtils {
                 categories = loaded;
                 categoriesLoaded = true;
                 LOGGER.error("Error loading categories from {}", file.getAbsolutePath(), e);
-                JOptionPane.showMessageDialog(
-                        null,
-                        "Fehler beim Laden der Kategorien: " + e.getMessage(),
-                        "Fehler",
-                        JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall
-                );
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Fehler beim Laden der Kategorien: " + e.getMessage())
+                        .setDuration(5000)
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
             }
         }
     }
@@ -165,22 +203,15 @@ public final class ArticleUtils {
             return null;
         }
 
-        String[] parts = fromTo.split("-");
-        try {
-            int start;
-            int end;
-            if (parts.length == 2) {
-                start = Integer.parseInt(parts[0].trim());
-                end = Integer.parseInt(parts[1].trim());
-            } else {
-                start = Integer.parseInt(parts[0].trim());
-                end = start;
-            }
+        Matcher m = RANGE_PATTERN.matcher(fromTo);
+        if (!m.matches()) {
+            return null;
+        }
 
-            if (start > end) {
-                return null;
-            }
-            return new int[]{start, end};
+        try {
+            int start = Integer.parseInt(m.group(1));
+            int end = m.group(2) != null ? Integer.parseInt(m.group(2)) : start;
+            return start <= end ? new int[]{start, end} : null;
         } catch (NumberFormatException ex) {
             return null;
         }
@@ -193,7 +224,7 @@ public final class ArticleUtils {
 
         loadCategories();
         if (categories == null) {
-            categories = new HashMap<>();
+            categories = new ConcurrentHashMap<>();
         }
     }
 
@@ -219,13 +250,13 @@ public final class ArticleUtils {
      * Persists categories to categories.json.
      */
     private static void saveCategories() {
-        if (categories == null) {
+        if (categories == null || categories.isEmpty()) {
             return;
         }
 
         try {
             List<Map<String, String>> categoryList = categories.values().stream().map(range -> {
-                Map<String, String> map = new HashMap<>();
+                Map<String, String> map = new ConcurrentHashMap<>();
                 map.put("category", range.category);
                 map.put("fromTo", range.rangeStart == range.rangeEnd
                         ? String.valueOf(range.rangeStart)
@@ -244,14 +275,35 @@ public final class ArticleUtils {
             categoriesLoaded = true;
         } catch (Exception e) {
             LOGGER.error("Error saving categories", e);
-            JOptionPane.showMessageDialog(
-                    null,
-                    "Fehler beim Speichern der Kategorien: " + e.getMessage(),
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall
-            );
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Fehler beim Speichern der Kategorien: " + e.getMessage())
+                    .setDuration(5000)
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
         }
+    }
+
+    public static boolean canCalculateFillingPrice(Article article) {
+        if (article == null) {
+            return false;
+        }
+
+        String category = getCategoryForArticle(article.getArticleNumber());
+        String categoryLower = category == null ? "" : category.toLowerCase(Locale.ROOT);
+        boolean allowed = FILLING_ALLOWED_CATEGORY_KEYWORDS.stream().anyMatch(categoryLower::contains);
+
+        if (!allowed) {
+            return false;
+        }
+
+        String details = article.getDetails();
+        if (details == null || details.isBlank()) {
+            return false;
+        }
+
+        Matcher matcher = LITER_PATTERN.matcher(details);
+        return matcher.find();
     }
 
     /**
@@ -284,7 +336,7 @@ public final class ArticleUtils {
             return List.of();
         }
 
-        Matcher matcher = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)*)").matcher(categoryName);
+        Matcher matcher = CATEGORY_ORDER_PATTERN.matcher(categoryName);
         if (!matcher.find()) {
             return List.of();
         }
@@ -315,26 +367,20 @@ public final class ArticleUtils {
             return UNKNOWN_CATEGORY;
         }
 
-        try {
-            String numericPart = articleNumber.replaceAll("[^0-9]", "");
-            if (numericPart.isEmpty()) {
-                return UNKNOWN_CATEGORY;
-            }
-
-            int articleNum = Integer.parseInt(numericPart);
-            for (CategoryRange range : categories.values()) {
-                if (range == null) {
-                    continue;
-                }
-                if (articleNum >= range.rangeStart && articleNum <= range.rangeEnd) {
-                    return range.category;
-                }
-            }
-        } catch (NumberFormatException ignored) {
-            // ignore and return unknown
+        String numericPart = articleNumber.replaceAll("[^0-9]", "");
+        if (numericPart.isEmpty()) {
+            return UNKNOWN_CATEGORY;
         }
 
-        return UNKNOWN_CATEGORY;
+        try {
+            int articleNum = Integer.parseInt(numericPart);
+            Optional<CategoryRange> match = categories.values().stream()
+                    .filter(r -> r != null && articleNum >= r.rangeStart && articleNum <= r.rangeEnd)
+                    .findFirst();
+            return match.map(r -> r.category).orElse(UNKNOWN_CATEGORY);
+        } catch (NumberFormatException ignored) {
+            return UNKNOWN_CATEGORY;
+        }
     }
 
     /**
@@ -405,21 +451,23 @@ public final class ArticleUtils {
     }
 
     private static void showErrorDialog(String message) {
-        JOptionPane.showMessageDialog(
-                null,
-                message,
-                "Fehler",
-                JOptionPane.ERROR_MESSAGE,
-                Main.iconSmall
-        );
+        new MessageDialog()
+                .setTitle("Fehler")
+                .setMessage(message)
+                .setDuration(5000)
+                .setMessageType(JOptionPane.ERROR_MESSAGE)
+                .display();
     }
 
     public static void addSelectedArticlesToClientOrder(JFrame frame, JTable articleTable) {
         int[] selectedRows = articleTable.getSelectedRows();
         if (selectedRows.length == 0) {
-            JOptionPane.showMessageDialog(frame,
-                    "Bitte wählen Sie mindestens einen Artikel aus, um ihn zur Kundenbestellung hinzuzufügen.",
-                    "Keine Auswahl", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Keine Auswahl")
+                    .setMessage("Bitte wählen Sie mindestens einen Artikel aus, um ihn zur Kundenbestellung hinzuzufügen.")
+                    .setDuration(5000)
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
 
@@ -434,11 +482,12 @@ public final class ArticleUtils {
                 continue;
             }
 
-            String input = JOptionPane.showInputDialog(
-                    frame,
-                    "Menge für Artikel (" + artikelNr + ") " + article.getName() + " eingeben:",
-                    "1"
-            );
+            String input = new MessageDialog()
+                    .setTitle("Menge eingeben")
+                    .setMessage("Menge für Artikel (" + artikelNr + ") " + article.getName() + " eingeben:")
+                    .setInitialInputValue("1")
+                    .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                    .displayWithStringInput();
             if (input == null) {
                 continue;
             }
@@ -446,30 +495,43 @@ public final class ArticleUtils {
             try {
                 int menge = Integer.parseInt(input.trim());
                 if (menge <= 0) {
-                    JOptionPane.showMessageDialog(frame,
-                            "Bitte geben Sie eine Menge größer als 0 ein.",
-                            "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                    new MessageDialog()
+                            .setTitle("Ungültige Eingabe")
+                            .setMessage("Bitte geben Sie eine Menge größer als 0 ein.")
+                            .setDuration(5000)
+                            .setMessageType(JOptionPane.ERROR_MESSAGE)
+                            .display();
                     continue;
                 }
 
                 ArticleListGUI.addArticle(article, menge);
                 articlesToAdd.add(article);
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(frame,
-                        "Bitte geben Sie eine gültige Zahl für die Menge ein.",
-                        "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Ungültige Eingabe")
+                        .setMessage("Bitte geben Sie eine gültige Zahl für die Menge ein.")
+                        .setDuration(5000)
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
             }
         }
 
         if (articlesToAdd.isEmpty()) {
-            JOptionPane.showMessageDialog(frame,
-                    "Keine gültigen Artikel zum Hinzufügen gefunden.",
-                    "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Keine gültigen Artikel zum Hinzufügen gefunden.")
+                    .setDuration(5000)
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             return;
         }
 
-        JOptionPane.showMessageDialog(frame, "Artikel zur Kundenbestellung hinzugefügt.",
-                "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+        new MessageDialog()
+                .setTitle("Erfolg")
+                .setMessage("Artikel zur Kundenbestellung hinzugefügt.")
+                .setDuration(5000)
+                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                .display();
     }
 
     /**
@@ -494,5 +556,77 @@ public final class ArticleUtils {
         headerPanel.setOpaque(false);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
         return headerPanel;
+    }
+
+    public static List<String> getPartsFromDetails(String details) {
+        return getPartsFromDetails(details, false);
+    }
+
+    /**
+     * Splits details by any common separator and optionally cleans each part by removing
+     * leading abbreviated label prefixes (e.g. {@code "Gr. "}) and trailing quantity/unit
+     * suffixes (e.g. {@code " 100 Stk. Box"}), so that {@code "Gr. S, M, L, XL 100 Stk. Box"}
+     * yields {@code ["S", "M", "L", "XL"]}.
+     *
+     * @param details        the raw details string
+     * @param cleanTokens    if {@code true}, strip label prefixes and quantity suffixes from each part
+     */
+    public static List<String> getPartsFromDetails(String details, boolean cleanTokens) {
+        if (details == null || details.isBlank()) {
+            return List.of();
+        }
+
+        String[] parts = DETAILS_SPLIT_PATTERN.split(details);
+        List<String> trimmedParts = new ArrayList<>(parts.length);
+        for (String part : parts) {
+            String token = part.trim();
+            if (token.isBlank()) {
+                continue;
+            }
+            if (cleanTokens) {
+                token = PART_LABEL_PREFIX.matcher(token).replaceFirst("");
+                token = PART_QUANTITY_SUFFIX.matcher(token).replaceFirst("").trim();
+                token = PART_LEADING_PUNCT.matcher(token).replaceFirst("");
+                token = PART_TRAILING_PUNCT.matcher(token).replaceFirst("").trim();
+            }
+            if (!token.isBlank()) {
+                trimmedParts.add(token);
+            }
+        }
+
+        return trimmedParts.isEmpty() ? List.of() : trimmedParts;
+    }
+
+    public static boolean isArticleSeparated(String articleNumber) {
+        if (articleNumber == null || articleNumber.isBlank()) {
+            return false;
+        }
+
+        Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+        if (article == null) {
+            return false;
+        }
+        List<String> parts = getPartsFromDetails(article.getDetails(), true);
+        if (parts.size() <= 1) {
+            return false;
+        }
+        // Only treat as variants if every part is purely alphabetic (e.g. S/M/L/XL, Blau/Gelb/Grün)
+        // Parts containing digits (e.g. "50mm", "25m Rolle") are dimension specs, not variants.
+        return parts.stream().allMatch(p -> p.matches("[\\p{L}]+"));
+    }
+
+    public static List<SeperateArticle> newSeperatedArticles(String articleNumber) {
+        if (articleNumber == null || articleNumber.isBlank()) {
+            return List.of();
+        }
+        Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+        if (article == null) return List.of();
+        List<String> parts = getPartsFromDetails(article.getDetails(), true);
+        List<SeperateArticle> result = new ArrayList<>(parts.size());
+        for (String part : parts) {
+            if (part == null || part.isBlank()) continue;
+            result.add(new SeperateArticle(new Random().nextInt(1000000), articleNumber, part));
+        }
+        return result;
     }
 }

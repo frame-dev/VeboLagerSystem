@@ -74,6 +74,7 @@ public class DatabaseManager {
      * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
      */
     public static final String TABLE_ARTICLES = "articles";
+    public static final String TABLE_SEPERATE_ARTICLES = "seperate_articles";
     /**
      * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
      */
@@ -112,6 +113,7 @@ public class DatabaseManager {
      */
     public static final Set<String> ALLOWED_TABLES = Set.of(
             TABLE_ARTICLES,
+            TABLE_SEPERATE_ARTICLES,
             TABLE_VENDORS,
             TABLE_ORDERS,
             TABLE_CLIENTS,

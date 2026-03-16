@@ -1,6 +1,7 @@
 package ch.framedev.lagersystem.utils;
 
 import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.guis.SettingsGUI;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
@@ -463,23 +464,22 @@ public class JFrameUtils {
     public static void exportSelectedArticles(JFrame frame, JTable articleTable) {
         java.util.List<Article> selected = getSelectedArticles(articleTable);
         if (selected.isEmpty()) {
-            JOptionPane.showMessageDialog(frame,
-                    "Bitte wählen Sie mindestens einen Artikel aus.",
-                    "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Keine Auswahl")
+                    .setMessage("Bitte wählen Sie mindestens einen Artikel aus.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
 
         Object[] options = {"CSV", "PDF", "Abbrechen"};
-        int choice = JOptionPane.showOptionDialog(frame,
-                "Auswahl exportieren als:",
-                "Export",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                Main.iconSmall,
-                options,
-                options[0]);
+        int choice = new MessageDialog()
+                .setTitle("Export")
+                .setMessage("Auswahl exportieren als:")
+                .setOptions(options)
+                .setIcon(Main.iconSmall)
+                .setOptions(options)
+                .displayWithOptions();
         if (choice == 0) {
             exportArticlesToCsv(selected);
         } else if (choice == 1) {

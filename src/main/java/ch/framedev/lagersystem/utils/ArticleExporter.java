@@ -1,8 +1,8 @@
 package ch.framedev.lagersystem.utils;
 
 import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.guis.MainGUI;
-import ch.framedev.lagersystem.main.Main;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -280,22 +280,23 @@ public final class ArticleExporter {
             contentStream.close();
             doc.save(fileToSave);
 
-            JOptionPane.showMessageDialog(parent,
-                    UnicodeSymbols.CHECKMARK + " PDF erfolgreich exportiert!\n\n" +
+            new MessageDialog()
+                    .setTitle("Export erfolgreich")
+                    .setMessage(UnicodeSymbols.CHECKMARK + " PDF erfolgreich exportiert!\n\n" +
                             "Datei: " + fileToSave.getName() + "\n" +
                             "Pfad: " + fileToSave.getParent() + "\n" +
                             "Artikel: " + numRows + "\n" +
-                            "Seiten: " + currentPage,
-                    "Export erfolgreich",
-                    JOptionPane.INFORMATION_MESSAGE);
+                            "Seiten: " + currentPage)
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(parent,
-                    UnicodeSymbols.ERROR + " Fehler beim PDF-Export:\n\n" + ex.getMessage() +
-                            "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    icon);
+            new MessageDialog()
+                    .setTitle("Fehler beim PDF-Export")
+                    .setMessage(UnicodeSymbols.ERROR + " Fehler beim PDF-Export:\n\n" + ex.getMessage() +
+                            "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             LOGGER.error(ex.getMessage(), ex);
         }
     }
@@ -737,18 +738,21 @@ public final class ArticleExporter {
 
             contentStream.close();
             doc.save(fileToSave);
-
-            JOptionPane.showMessageDialog(MainGUI.articleGUI,
-                    "PDF erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
-                    "Export",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Export erfolgreich")
+                    .setMessage(UnicodeSymbols.CHECKMARK + " PDF erfolgreich exportiert!\n\n" +
+                            "Datei: " + fileToSave.getName() + "\n" +
+                            "Pfad: " + fileToSave.getParent() + "\n" +
+                            "Artikel: " + articles.size())
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(MainGUI.articleGUI,
-                    "Fehler beim PDF-Export: " + ex.getMessage(),
-                    "Export",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Fehler beim PDF-Export")
+                    .setMessage(UnicodeSymbols.ERROR + " Fehler beim PDF-Export:\n\n" + ex.getMessage() +
+                            "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
         }
     }
 
@@ -826,17 +830,21 @@ public final class ArticleExporter {
                 writer.write(escapeCsv(article.getVendorName()));
                 writer.write(System.lineSeparator());
             }
-            JOptionPane.showMessageDialog(MainGUI.articleGUI,
-                    "CSV erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
-                    "Export",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Export erfolgreich")
+                    .setMessage(UnicodeSymbols.CHECKMARK + " CSV erfolgreich exportiert:\n\n" +
+                            "Datei: " + fileToSave.getName() + "\n" +
+                            "Pfad: " + fileToSave.getParent() + "\n" +
+                            "Artikel: " + articles.size())
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
         } catch (IOException ex) {
-            JOptionPane.showMessageDialog(MainGUI.articleGUI,
-                    "Fehler beim CSV-Export: " + ex.getMessage(),
-                    "Export",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Fehler beim CSV-Export")
+                    .setMessage(UnicodeSymbols.ERROR + " Fehler beim CSV-Export:\n\n" + ex.getMessage() +
+                            "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
         }
     }
 
@@ -866,10 +874,11 @@ public final class ArticleExporter {
     public static void exportLogsToPdf(List<String> logs, JFrame frame) {
         if(frame == null) throw new IllegalArgumentException("Frame cannot be null");
         if (logs == null || logs.isEmpty()) {
-            JOptionPane.showMessageDialog(frame,
-                    "Keine Logs zum Export vorhanden.",
-                    "PDF Export",
-                    JOptionPane.WARNING_MESSAGE);
+            new MessageDialog()
+                    .setTitle("PDF Export")
+                    .setMessage(UnicodeSymbols.WARNING + " Keine Logs zum Export vorhanden.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             LOGGER.warn("No Logs found to export!");
             return;
         }
@@ -931,15 +940,21 @@ public final class ArticleExporter {
             contentStream.close();
             doc.save(fileToSave);
 
-            JOptionPane.showMessageDialog(frame,
-                    "PDF erfolgreich exportiert:\n" + fileToSave.getAbsolutePath(),
-                    "PDF Export",
-                    JOptionPane.INFORMATION_MESSAGE);
+            new MessageDialog()
+                    .setTitle("PDF Export")
+                    .setMessage(UnicodeSymbols.CHECKMARK + " PDF erfolgreich exportiert:\n\n" +
+                            "Datei: " + fileToSave.getName() + "\n" +
+                            "Pfad: " + fileToSave.getParent() + "\n" +
+                            "Logs: " + logs.size())
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(frame,
-                    "Fehler beim PDF-Export: " + ex.getMessage(),
-                    "PDF Export",
-                    JOptionPane.ERROR_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Fehler beim PDF-Export")
+                    .setMessage(UnicodeSymbols.ERROR + " Fehler beim PDF-Export:\n\n" + ex.getMessage() +
+                            "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             LOGGER.error("Could not create PDF-Export {}", ex.getMessage(), ex);
         }
     }
@@ -970,13 +985,11 @@ public final class ArticleExporter {
         }
 
         if (selected.exists()) {
-            int overwrite = JOptionPane.showConfirmDialog(
-                    parent,
-                    "Die Datei existiert bereits. Überschreiben?\n\n" + selected.getName(),
-                    "Bestätigen",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE
-            );
+            int overwrite = new MessageDialog()
+                    .setTitle("Bestätigen")
+                    .setMessage(UnicodeSymbols.WARNING + " Die Datei existiert bereits. Überschreiben?\n\n" + selected.getName())
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .displayWithOptions();
             if (overwrite != JOptionPane.YES_OPTION) {
                 return null;
             }

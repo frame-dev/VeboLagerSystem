@@ -2,7 +2,6 @@ package ch.framedev.lagersystem.dialogs;
 
 import ch.framedev.lagersystem.guis.OrderGUI;
 import ch.framedev.lagersystem.guis.SettingsGUI;
-import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -262,17 +261,20 @@ public class VendorDialog {
                 Object v = minOrderField.getValue();
                 minOrder = (v instanceof Number) ? ((Number) v).doubleValue() : 0.0;
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(dialog,
-                        "Bitte einen gültigen Mindestbestellwert eingeben.",
-                        "Fehler",
-                        JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Ungültiger Wert")
+                        .setMessage("Bitte einen gültigen Mindestbestellwert eingeben.")
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
                 return;
             }
 
             if (name.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler",
-                        JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Name ist erforderlich.")
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
                 return;
             }
 

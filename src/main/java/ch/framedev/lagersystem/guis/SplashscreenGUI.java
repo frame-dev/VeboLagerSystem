@@ -21,6 +21,12 @@ import java.net.URL;
 @SuppressWarnings("ALL")
 public class SplashscreenGUI extends JFrame {
 
+    private static final int ANIMATION_FRAME_DELAY_MS = 16;
+    private static final double PHASE_SPEED = 6.0;
+    private static final int HEAVY_REPAINT_INTERVAL_FRAMES = 1;
+    private static final double BASE_FPS = 60.0;
+    private static final double MAX_DELTA_SECONDS = 0.05;
+
     // Palette (more premium: deeper blue + softer background + better contrast)
     private static final Color ACCENT_BLUE = new Color(23, 112, 238);
     private static final Color ACCENT_BLUE_DARK = new Color(16, 84, 190);
@@ -43,8 +49,11 @@ public class SplashscreenGUI extends JFrame {
     private final AnimatedLogoLabel logoLabel;
 
     private Timer animationTimer;
-    private double phase = 0.0;
-    private final Particle[] particles = new Particle[34];
+    private volatile double phase = 0.0;
+    private final Particle[] particles = new Particle[24];
+    private final JComponent[] repaintTargets;
+    private int frameCounter = 0;
+    private long lastFrameNanos = -1L;
 
     // Responsive padding + content references
     private final JPanel contentPanel;
@@ -132,6 +141,7 @@ public class SplashscreenGUI extends JFrame {
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.fill = GridBagConstraints.NONE;
         root.add(card, gbc);
+        repaintTargets = new JComponent[]{root, card};
 
         setContentPane(root);
 
@@ -158,7 +168,7 @@ public class SplashscreenGUI extends JFrame {
         updateResponsiveSizing();
 
         initParticles();
-        startAnimation(root, card);
+        startAnimation();
     }
 
     /**
@@ -234,7 +244,9 @@ public class SplashscreenGUI extends JFrame {
      */
     public void updateProgress(int percent, String message) {
         Runnable r = () -> {
-            progressBar.setValue(percent);
+            ensureAnimationRunning();
+            int clampedPercent = clamp(percent, 0, 100);
+            progressBar.setValue(clampedPercent);
             if (message != null && !message.isBlank()) statusLabel.setText(message);
         };
         if (SwingUtilities.isEventDispatchThread()) r.run();
@@ -245,7 +257,10 @@ public class SplashscreenGUI extends JFrame {
      * Shows the splash screen on the Swing Event Dispatch Thread (EDT).
      */
     public void display() {
-        SwingUtilities.invokeLater(() -> setVisible(true));
+        SwingUtilities.invokeLater(() -> {
+            setVisible(true);
+            ensureAnimationRunning();
+        });
     }
 
     /**
@@ -254,6 +269,7 @@ public class SplashscreenGUI extends JFrame {
      */
     public void close() {
         SwingUtilities.invokeLater(() -> {
+            stopAnimation();
             setVisible(false);
             dispose();
         });
@@ -292,7 +308,7 @@ public class SplashscreenGUI extends JFrame {
             Graphics2D g2 = (Graphics2D) g.create();
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
 
                 GradientPaint gradientTop = new GradientPaint(
                         0, 0, BACKGROUND_TOP,
@@ -385,7 +401,7 @@ public class SplashscreenGUI extends JFrame {
             Graphics2D g2 = (Graphics2D) g.create();
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+                g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_DEFAULT);
 
                 int x = SHADOW;
                 int y = SHADOW;
@@ -499,18 +515,51 @@ public class SplashscreenGUI extends JFrame {
      *
      * @param components additional components to repaint (e.g. root/card)
      */
-    private void startAnimation(JComponent... components) {
-        synchronized (this) {
-            animationTimer = new Timer(16, event -> {
-                phase += 0.072;
-                advanceParticles();
-
-                // repaint only what’s needed (statusLabel does not need 60fps repaints)
-                logoLabel.repaint();
-                progressBar.repaint();
-                for (JComponent component : components) component.repaint();
-            });
+    private void startAnimation() {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(this::startAnimation);
+            return;
         }
+
+        if (animationTimer != null && animationTimer.isRunning()) {
+            return;
+        }
+
+        lastFrameNanos = -1L;
+        frameCounter = 0;
+
+        animationTimer = new Timer(ANIMATION_FRAME_DELAY_MS, event -> {
+            if (!isDisplayable()) {
+                stopAnimation();
+                return;
+            }
+
+            long now = System.nanoTime();
+            if (lastFrameNanos < 0L) {
+                lastFrameNanos = now;
+            }
+            double deltaSeconds = (now - lastFrameNanos) / 1_000_000_000.0;
+            if (deltaSeconds > MAX_DELTA_SECONDS) {
+                deltaSeconds = MAX_DELTA_SECONDS;
+            }
+            lastFrameNanos = now;
+
+            phase += PHASE_SPEED * deltaSeconds;
+            advanceParticles(deltaSeconds * BASE_FPS);
+            frameCounter++;
+
+            // Repaint only animated layers/components.
+            logoLabel.repaint();
+            progressBar.repaint();
+            if (frameCounter % HEAVY_REPAINT_INTERVAL_FRAMES == 0) {
+                for (JComponent component : repaintTargets) {
+                    component.repaint();
+                }
+            }
+        });
+        animationTimer.setCoalesce(true);
+        animationTimer.setRepeats(true);
+        animationTimer.setInitialDelay(0);
         animationTimer.start();
     }
 
@@ -518,7 +567,29 @@ public class SplashscreenGUI extends JFrame {
      * Stops the animation timer if it is running.
      */
     private void stopAnimation() {
-        if (animationTimer != null) animationTimer.stop();
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(this::stopAnimation);
+            return;
+        }
+
+        if (animationTimer != null) {
+            animationTimer.stop();
+            animationTimer = null;
+        }
+        lastFrameNanos = -1L;
+    }
+
+    private void ensureAnimationRunning() {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(this::ensureAnimationRunning);
+            return;
+        }
+        if (!isDisplayable()) {
+            return;
+        }
+        if (animationTimer == null || !animationTimer.isRunning()) {
+            startAnimation();
+        }
     }
 
     /**
@@ -538,9 +609,9 @@ public class SplashscreenGUI extends JFrame {
         }
     }
 
-    private void advanceParticles() {
+    private void advanceParticles(double deltaScale) {
         for (Particle particle : particles) {
-            particle.advance(getWidth(), getHeight());
+            particle.advance(getWidth(), getHeight(), deltaScale);
         }
     }
 
@@ -719,9 +790,9 @@ public class SplashscreenGUI extends JFrame {
             );
         }
 
-        void advance(int width, int height) {
-            y -= speed;
-            x += drift * 0.12;
+        void advance(int width, int height, double deltaScale) {
+            y -= speed * deltaScale;
+            x += drift * 0.12 * deltaScale;
 
             if (y + radius < 0) {
                 int w = Math.max(width, 1);

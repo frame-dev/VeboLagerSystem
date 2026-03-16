@@ -2,7 +2,7 @@ package ch.framedev.lagersystem.utils;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
-import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.managers.OrderManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -68,11 +68,11 @@ public class OrderExport {
      */
     public static void createPDFExport(JFrame frame, Order order) {
         if (order == null) {
-            JOptionPane.showMessageDialog(frame,
-                    "Keine Bestellung zum Exportieren ausgewählt.",
-                    "Hinweis",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Keine Bestellung")
+                    .setMessage("Keine Bestellung zum Exportieren ausgewählt.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
 
@@ -93,12 +93,13 @@ public class OrderExport {
 
         // Confirm overwrite
         if (outputFile.exists()) {
-            int overwrite = JOptionPane.showConfirmDialog(frame,
-                    "Die Datei existiert bereits. Überschreiben?\n" + outputFile.getAbsolutePath(),
-                    "Bestätigen",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            int overwrite = new MessageDialog()
+                    .setTitle("Bestätigen")
+                    .setMessage("Die Datei existiert bereits. Überschreiben?\n" + outputFile.getAbsolutePath())
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .setOptions(new String[]{"Ja", "Nein"})
+                    .displayWithOptions();
+
             if (overwrite != JOptionPane.YES_OPTION) {
                 return;
             }
@@ -115,11 +116,11 @@ public class OrderExport {
         String status = order.getStatus() != null ? order.getStatus() : "In Bearbeitung";
 
         if (orderedArticles == null) {
-            JOptionPane.showMessageDialog(frame,
-                    "Diese Bestellung enthält keine Artikel.",
-                    "Hinweis",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Keine Artikel")
+                    .setMessage("Diese Bestellung enthält keine Artikel.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
 
@@ -128,11 +129,11 @@ public class OrderExport {
             Fonts fonts = loadFonts(doc);
             List<Article> articles = OrderManager.getInstance().getOrderArticles(order);
             if (articles == null || articles.isEmpty()) {
-                JOptionPane.showMessageDialog(frame,
-                        "Diese Bestellung enthält keine exportierbaren Artikel.",
-                        "Hinweis",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Keine exportierbaren Artikel")
+                        .setMessage("Diese Bestellung enthält keine exportierbaren Artikel.")
+                        .setMessageType(JOptionPane.WARNING_MESSAGE)
+                        .display();
                 return;
             }
 
@@ -219,19 +220,19 @@ public class OrderExport {
 
             doc.save(outputFile);
 
-            JOptionPane.showMessageDialog(frame,
-                    "PDF erfolgreich erstellt:\n" + outputFile.getAbsolutePath(),
-                    "Erfolg",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Erfolg")
+                    .setMessage("PDF erfolgreich erstellt:\n" + outputFile.getAbsolutePath())
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
 
         } catch (Exception ex) {
             LOGGER.error("Fehler beim Erstellen des PDF-Exports", ex);
-            JOptionPane.showMessageDialog(frame,
-                    "Fehler beim Erstellen des PDF-Dokuments:\n" + ex.getMessage(),
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Fehler beim Erstellen des PDF-Dokuments:\n" + ex.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
         }
     }
 

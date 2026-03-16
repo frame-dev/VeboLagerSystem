@@ -1,7 +1,6 @@
 package ch.framedev.lagersystem.dialogs;
 
 import ch.framedev.lagersystem.guis.SettingsGUI;
-import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
@@ -141,15 +140,21 @@ public class ClientDialog {
                 String dept = selectedDept.trim();
 
                 if (name.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler",
-                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                    new MessageDialog()
+                            .setTitle("Fehler")
+                            .setMessage("Name ist erforderlich.")
+                            .setMessageType(JOptionPane.ERROR_MESSAGE)
+                            .display();
                 return;
                 }
 
                 ClientManager clientManager = ClientManager.getInstance();
                 if (!clientManager.insertClient(name, dept)) {
-                JOptionPane.showMessageDialog(dialog, "Fehler beim Hinzufügen des Kunden zur Datenbank.", "Fehler",
-                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                    new MessageDialog()
+                            .setTitle("Fehler")
+                            .setMessage("Fehler beim Hinzufügen des Kunden zur Datenbank.")
+                            .setMessageType(JOptionPane.ERROR_MESSAGE)
+                            .display();
                 holder[0] = null;
                 return;
                 }
@@ -221,11 +226,11 @@ public class ClientDialog {
                 ae -> {
                     String name = nameField.getText().trim();
                     if (!originalName.isEmpty() && !name.equals(originalName)) {
-                        JOptionPane.showMessageDialog(dialog,
-                                "Der Kundenname kann aktuell nicht geändert werden.\nBitte erstellen Sie einen neuen Kunden oder lassen Sie den Namen unverändert.",
-                                "Hinweis",
-                                JOptionPane.WARNING_MESSAGE,
-                                Main.iconSmall);
+                        new MessageDialog()
+                                .setTitle("Hinweis")
+                                .setMessage("Der Kundenname kann aktuell nicht geändert werden.\nBitte erstellen Sie einen neuen Kunden oder lassen Sie den Namen unverändert.")
+                                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                                .display();
                         return;
                     }
                     String selectedDept = (String) departmentCombobox.getSelectedItem();
@@ -233,22 +238,31 @@ public class ClientDialog {
                     String dept = selectedDept.trim();
 
                     if (name.isEmpty()) {
-                        JOptionPane.showMessageDialog(dialog, "Name ist erforderlich.", "Fehler",
-                                JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                        new MessageDialog()
+                                .setTitle("Fehler")
+                                .setMessage("Name ist erforderlich.")
+                                .setMessageType(JOptionPane.ERROR_MESSAGE)
+                                .display();
                         return;
                     }
 
                     ClientManager clientManager = ClientManager.getInstance();
                     if (!clientManager.existsClient(name)) {
                         if (!clientManager.insertClient(name, dept)) {
-                            JOptionPane.showMessageDialog(dialog, "Fehler beim Hinzufügen des Kunden zur Datenbank.", "Fehler",
-                                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                            new MessageDialog()
+                                    .setTitle("Fehler")
+                                    .setMessage("Fehler beim Hinzufügen des Kunden zur Datenbank.")
+                                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                                    .display();
                             return;
                         }
                     } else {
                         if (!clientManager.updateClient(name, dept)) {
-                            JOptionPane.showMessageDialog(dialog, "Fehler beim Aktualisieren des Kunden in der Datenbank.", "Fehler",
-                                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                            new MessageDialog()
+                                    .setTitle("Fehler")
+                                    .setMessage("Fehler beim Aktualisieren des Kunden in der Datenbank.")
+                                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                                    .display();
                             return;
                         }
                     }

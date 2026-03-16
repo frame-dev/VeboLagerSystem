@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.managers.ThemeManager;
@@ -318,28 +319,31 @@ public class MainGUI extends JFrame {
 
     private void openConverterForSelection() {
         if (articleGUI == null || articleGUI.articleTable == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Bitte zuerst den Artikel-Tab öffnen und einen Artikel auswählen.",
-                    "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Keine Auswahl")
+                    .setMessage("Bitte zuerst den Artikel-Tab öffnen und einen Artikel auswählen.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
 
         List<Article> articles = getSelectedArticles(articleGUI.articleTable);
         if (articles.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Keine Artikel ausgewählt.",
-                    "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Keine Auswahl")
+                    .setMessage("Keine Artikel ausgewählt.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
 
         Article first = articles.getFirst();
         if (articles.size() > 1) {
-            JOptionPane.showMessageDialog(this,
-                    "Mehr als ein Artikel ausgewählt. Es wird der erste Artikel verwendet: " + first.getName(),
-                    "Hinweis",
-                    JOptionPane.INFORMATION_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Hinweis")
+                    .setMessage("Mehr als ein Artikel ausgewählt. Es wird der erste Artikel verwendet: " + first.getName())
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
         }
 
         ConverterGUI converterGUI = new ConverterGUI(first);
@@ -628,18 +632,18 @@ public class MainGUI extends JFrame {
                 return;
             }
             logger.warn("Help file not found or browse not supported");
-            javax.swing.JOptionPane.showMessageDialog(
-                    this,
-                    "Hilfe konnte nicht geöffnet werden (help.html nicht gefunden oder Browse nicht unterstützt).",
-                    "Hilfe",
-                    javax.swing.JOptionPane.WARNING_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Hilfe")
+                    .setMessage("Hilfe konnte nicht geöffnet werden (help.html nicht gefunden oder Browse nicht unterstützt).")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
         } catch (Exception e) {
             logger.error("Error opening help: {}", e.getMessage(), e);
-            javax.swing.JOptionPane.showMessageDialog(
-                    this,
-                    "Hilfe konnte nicht geöffnet werden: " + e.getMessage(),
-                    "Hilfe",
-                    javax.swing.JOptionPane.ERROR_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Hilfe")
+                    .setMessage("Hilfe konnte nicht geöffnet werden: " + e.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
         }
     }
 
@@ -658,11 +662,11 @@ public class MainGUI extends JFrame {
     private void generateQrCodesForArticles() {
         List<Article> articles = ArticleManager.getInstance().getAllArticles();
         if (articles == null || articles.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Keine Artikel vorhanden.",
-                    "QR-Codes generieren",
-                    JOptionPane.WARNING_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Keine Artikel")
+                    .setMessage("Keine Artikel vorhanden.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
         generateQrCodesForList(articles, "QR-Codes fuer alle Artikel generieren?");
@@ -695,20 +699,20 @@ public class MainGUI extends JFrame {
      */
     private void generateQrCodesForSelectedArticles() {
         if (articleGUI == null) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Bitte zuerst den Artikel-Tab oeffnen und eine Auswahl treffen.",
-                    "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Keine Auswahl")
+                    .setMessage("Bitte zuerst den Artikel-Tab oeffnen und eine Auswahl treffen.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
         List<Article> selectedArticles = getSelectedArticles(articleGUI.articleTable);
         if (selectedArticles.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Bitte waehlen Sie mindestens einen Artikel aus.",
-                    "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Keine Auswahl")
+                    .setMessage("Bitte waehlen Sie mindestens einen Artikel aus.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
         generateQrCodesForList(selectedArticles,
@@ -736,12 +740,12 @@ public class MainGUI extends JFrame {
         if (promptText == null)
             promptText = "";
         File outputDir = new File(Main.getAppDataDir(), "qr_codes");
-        int result = JOptionPane.showConfirmDialog(
-                this,
-                promptText + "\nSpeicherort: " + outputDir.getAbsolutePath(),
-                "QR-Codes generieren",
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.INFORMATION_MESSAGE);
+        int result = new MessageDialog()
+                .setTitle("QR-Codes generieren")
+                .setMessage(promptText + "\nSpeicherort: " + outputDir.getAbsolutePath())
+                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                .setOptionType(JOptionPane.OK_CANCEL_OPTION)
+                .displayWithOptions();
         if (result != JOptionPane.OK_OPTION) {
             return;
         }
@@ -767,25 +771,25 @@ public class MainGUI extends JFrame {
                 try {
                     List<File> files = get();
                     if (files == null || files.isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                MainGUI.this,
-                                "Es konnten keine QR-Codes erstellt werden.",
-                                "QR-Codes generieren",
-                                JOptionPane.WARNING_MESSAGE);
+                        new MessageDialog()
+                                .setTitle("QR-Codes generieren")
+                                .setMessage("Es konnten keine QR-Codes erstellt werden.")
+                                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                                .display();
                         return;
                     }
-                    JOptionPane.showMessageDialog(
-                            MainGUI.this,
-                            "QR-Codes wurden erstellt.\nAnzahl: " + files.size() + "\nOrdner: "
-                                    + outputDir.getAbsolutePath(),
-                            "QR-Codes generieren",
-                            JOptionPane.INFORMATION_MESSAGE);
+                    new MessageDialog()
+                            .setTitle("QR-Codes generieren")
+                            .setMessage("QR-Codes wurden erstellt.\nAnzahl: " + files.size() + "\nOrdner: "
+                                    + outputDir.getAbsolutePath())
+                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                            .display();
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(
-                            MainGUI.this,
-                            "Fehler beim Erstellen der QR-Codes: " + ex.getMessage(),
-                            "QR-Codes generieren",
-                            JOptionPane.ERROR_MESSAGE);
+                    new MessageDialog()
+                            .setTitle("QR-Codes generieren")
+                            .setMessage("Fehler beim Erstellen der QR-Codes: " + ex.getMessage())
+                            .setMessageType(JOptionPane.ERROR_MESSAGE)
+                            .display();
                 }
             }
         };

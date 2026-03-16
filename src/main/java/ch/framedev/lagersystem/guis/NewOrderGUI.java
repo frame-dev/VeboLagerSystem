@@ -2,6 +2,7 @@ package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
@@ -309,11 +310,17 @@ public class NewOrderGUI extends JFrame {
             if (file != null) {
                 try {
                     exportOrderToPDF(file);
-                    JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(),
-                            "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+                    new MessageDialog()
+                            .setTitle("PDF erstellt")
+                            .setMessage("PDF erstellt: " + file.getAbsolutePath())
+                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                            .display();
                 } catch (IOException ex) {
-                    JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(),
-                            "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                    new MessageDialog()
+                            .setTitle("Fehler")
+                            .setMessage("Fehler beim Erstellen des PDFs: " + ex.getMessage())
+                            .setMessageType(JOptionPane.ERROR_MESSAGE)
+                            .display();
                 }
             }
         });
@@ -471,8 +478,11 @@ public class NewOrderGUI extends JFrame {
     private void addSelectedInlineArticle() {
         Article selected = (Article) articleCombo.getSelectedItem();
         if (selected == null) {
-            JOptionPane.showMessageDialog(this, "Bitte einen Artikel auswählen.", "Hinweis",
-                    JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Hinweis")
+                    .setMessage("Bitte einen Artikel auswählen.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
 
@@ -847,11 +857,11 @@ public class NewOrderGUI extends JFrame {
         Map<Article, Integer> articlesWithQty = ArticleListGUI.getArticlesAndQuantity();
 
         if (articlesWithQty.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Keine Artikel in der Artikelliste. Bitte fügen Sie zuerst Artikel hinzu.",
-                    "Keine Artikel",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Keine Artikel")
+                    .setMessage("Keine Artikel in der Artikelliste. Bitte fügen Sie zuerst Artikel hinzu.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
 
@@ -868,11 +878,11 @@ public class NewOrderGUI extends JFrame {
         rebuildOrderTable();
         updateTotalPrice();
 
-        JOptionPane.showMessageDialog(this,
-                articlesWithQty.size() + " Artikel zur Bestellung hinzugefügt.",
-                "Erfolgreich",
-                JOptionPane.INFORMATION_MESSAGE,
-                Main.iconSmall);
+        new MessageDialog()
+                .setTitle("Erfolgreich")
+                .setMessage(articlesWithQty.size() + " Artikel zur Bestellung hinzugefügt.")
+                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                .display();
     }
 
     private void rebuildOrderTable() {
@@ -965,8 +975,11 @@ public class NewOrderGUI extends JFrame {
 
     private void onCreateOrder() {
         if (orderArticles.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Keine Artikel in der Bestellung.",
-                    "Fehler", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Keine Artikel in der Bestellung.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
 
@@ -983,11 +996,11 @@ public class NewOrderGUI extends JFrame {
                 : "";
 
         if (receiver.isEmpty() || sender.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Empfänger und Absender Namen sind erforderlich.",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Empfänger und Absender Namen sind erforderlich.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             return;
         }
 
@@ -1002,16 +1015,25 @@ public class NewOrderGUI extends JFrame {
         if (file != null) {
             try {
                 exportOrderToPDF(file);
-                JOptionPane.showMessageDialog(this, "PDF erstellt: " + file.getAbsolutePath(),
-                        "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Erfolg")
+                        .setMessage("PDF erstellt: " + file.getAbsolutePath())
+                        .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                        .display();
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, "Fehler beim Erstellen des PDFs: " + ex.getMessage(),
-                        "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Fehler beim Erstellen des PDFs: " + ex.getMessage())
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
             }
         }
 
-        JOptionPane.showMessageDialog(this, "Bestellung erstellt.",
-                "Erfolgreich", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+        new MessageDialog()
+                .setTitle("Erfolg")
+                .setMessage("Bestellung erstellt.")
+                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                .display();
 
         orderArticles.clear();
         rebuildOrderTable();

@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.classes.Vendor;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.*;
 import ch.framedev.lagersystem.utils.ArticleUtils;
@@ -929,11 +930,12 @@ public class SettingsGUI extends JFrame {
         reloadCategoriesButton.setToolTipText("Lädt categories.json neu ein (ohne Neustart)");
         reloadCategoriesButton.addActionListener(e -> {
             loadCategories();
-            JOptionPane.showMessageDialog(this,
-                    "Kategorien wurden neu geladen.",
-                    "Kategorien",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Kategorien")
+                    .setMessage("Kategorien wurden neu geladen.")
+                    .setDuration(5000)
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
         });
         categoryActions.add(categorySettingsFileButton);
         categoryActions.add(Box.createHorizontalStrut(8));
@@ -1005,11 +1007,12 @@ public class SettingsGUI extends JFrame {
             String toTxt = toRange.getText() == null ? "" : toRange.getText().trim();
 
             if (newCategory.isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "Bitte einen Kategorienamen eingeben.",
-                        "Hinweis",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                .setTitle("Hinweis")
+                .setMessage("Bitte einen Kategorienamen eingeben.")
+                .setDuration(5000)
+                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                .display();
                 categoryNameField.requestFocusInWindow();
                 return;
             }
@@ -1024,11 +1027,12 @@ public class SettingsGUI extends JFrame {
                     addNewCategory(newCategory, f, t);
                     loadCategoriesIntoList(categoryList);
                 } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(this,
-                            "Ungültiger Bereich (Von/Bis). Bitte ganze Zahlen eingeben und Von ≤ Bis.",
-                            "Fehler",
-                            JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
+                    new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Ungültiger Bereich (Von/Bis). Bitte ganze Zahlen eingeben und Von ≤ Bis.")
+                    .setDuration(5000)
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
                     return;
                 }
             } else {
@@ -1483,11 +1487,11 @@ public class SettingsGUI extends JFrame {
                 Main.settings.setProperty("look_and_feel", selectedLaf);
                 Main.settings.save();
             } else {
-                JOptionPane.showMessageDialog(this,
-                        "Bitte wählen Sie ein Look & Feel aus der Liste aus.",
-                        "Hinweis",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                .setTitle("Hinweis")
+                .setMessage("Bitte wählen Sie ein Look & Feel aus der Liste aus.")
+                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                .display();
             }
         });
         themeLookAndFeelInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -1705,21 +1709,23 @@ public class SettingsGUI extends JFrame {
                     Desktop.getDesktop().browse(new URI(raw));
                 }
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Fehler beim Öffnen der URL:\n" + ex.getMessage(),
-                        "Fehler",
-                        JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Fehler beim Öffnen der URL:\n" + ex.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             }
         });
         copyUrlButton.addActionListener(e -> {
             String raw = serverUrlField.getText() == null ? "" : serverUrlField.getText().trim();
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(raw), null);
-            JOptionPane.showMessageDialog(this,
-                    "URL wurde kopiert.",
-                    "Zwischenablage",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                .setTitle("Zwischenablage")
+                .setMessage("URL wurde kopiert.")
+                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                .setIcon(Main.iconSmall)
+                .setDuration(1250)
+                .display();
         });
         testUrlButton.addActionListener(e -> {
             validateUrl.run();
@@ -1834,10 +1840,12 @@ public class SettingsGUI extends JFrame {
         deleteSelectedTableButton.addActionListener(e -> {
             String selectedTable = (String) tableComboBox.getSelectedItem();
             if (selectedTable == null || selectedTable.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                "Bitte wählen Sie eine Tabelle aus.",
-                "Keine Tabelle ausgewählt",
-                JOptionPane.WARNING_MESSAGE);
+                new MessageDialog()
+                .setTitle("Keine Tabelle ausgewählt")
+                .setMessage("Bitte wählen Sie eine Tabelle aus der Dropdown-Liste aus, bevor Sie fortfahren.")
+                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                .setIcon(Main.iconSmall)
+                .display();
             return;
             }
             int confirm = JOptionPane.showConfirmDialog(this,
@@ -1850,18 +1858,21 @@ public class SettingsGUI extends JFrame {
                 JOptionPane.WARNING_MESSAGE);
             if (confirm == JOptionPane.YES_OPTION) {
             // Second confirmation for safety
-            String userInput = JOptionPane.showInputDialog(this,
-                String.format("<html>Bitte geben Sie den Tabellennamen '<b>%s</b>' ein,<br/>" +
-                    "um die Löschung zu bestätigen:</html>", selectedTable),
-                "Löschung bestätigen",
-                JOptionPane.WARNING_MESSAGE);
+            String userInput = new MessageDialog()
+            .setTitle("Löschung bestätigen")
+            .setMessage(String.format("<html>Bitte geben Sie den Tabellennamen '<b>%s</b>' ein,<br/>" +
+                    "um die Löschung zu bestätigen:</html>", selectedTable))
+            .setMessageType(JOptionPane.WARNING_MESSAGE)
+            .setIcon(Main.iconSmall)
+            .displayWithStringInput();
             if (userInput != null && userInput.trim().equals(selectedTable)) {
                 deleteTable(selectedTable);
             } else if (userInput != null) {
-                JOptionPane.showMessageDialog(this,
-                    "Der eingegebene Tabellenname stimmt nicht überein.\nLöschung abgebrochen.",
-                    "Abgebrochen",
-                    JOptionPane.INFORMATION_MESSAGE);
+                new MessageDialog()
+                    .setTitle("Abgebrochen")
+                    .setMessage("Der eingegebene Tabellenname stimmt nicht überein.\nLöschung abgebrochen.")
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
             }
             }
         });
@@ -1921,36 +1932,37 @@ public class SettingsGUI extends JFrame {
         JButton exportButton = createStyledButton(UnicodeSymbols.ARROW_DOWN + " Datenbank Exportieren", ThemeManager.getSecondaryColor());
         exportButton.setAlignmentX(Component.LEFT_ALIGNMENT);
         exportButton.addActionListener(e -> {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                "<html><b>Datenbank nach CSV exportieren?</b><br/><br/>" +
+            String message = "<html><b>Datenbank nach CSV exportieren?</b><br/><br/>" +
                     "Dies erstellt CSV-Dateien für:<br/>" +
                     "- Artikel (articles_export.csv)<br/>" +
                     "- Lieferanten (vendors_export.csv)<br/>" +
                     "- Kunden (clients_export.csv)<br/>" +
                     "- Bestellungen (orders_export.csv)<br/><br/>" +
-                    "Speicherort: " + Main.getAppDataDir().getAbsolutePath() + "</html>",
-                "Exportieren bestätigen",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                Main.iconSmall);
+                    "Speicherort: " + Main.getAppDataDir().getAbsolutePath() + "</html>";
+            int confirm = new MessageDialog()
+                .setTitle("Export bestätigen")
+                .setMessage(message)
+                .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                .setOptionType(JOptionPane.YES_NO_OPTION)
+                .displayWithOptions();
             if (confirm == JOptionPane.YES_OPTION) {
             try {
                 exportToCsv();
-                JOptionPane.showMessageDialog(this,
-                    "<html><b>OK Export erfolgreich!</b><br/><br/>" +
+                new MessageDialog()
+                    .setTitle("Export erfolgreich")
+                    .setMessage("<html><b>OK Export erfolgreich!</b><br/><br/>" +
                         "Alle Tabellen wurden erfolgreich exportiert.<br/>" +
                         "Speicherort: <br/>" +
-                        Main.getAppDataDir().getAbsolutePath() + "</html>",
-                    "Export erfolgreich",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+                        Main.getAppDataDir().getAbsolutePath() + "</html>")
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this,
-                    "<html><b>X Fehler beim Export!</b><br/><br/>" +
-                        ex.getMessage() + "</html>",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+                new MessageDialog()
+                    .setTitle("Fehler beim Export")
+                    .setMessage("<html><b>X Fehler beim Export!</b><br/><br/>" +
+                        ex.getMessage() + "</html>")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             }
             }
         });
@@ -2381,10 +2393,11 @@ public class SettingsGUI extends JFrame {
             Desktop.getDesktop().edit(file);
         } catch (IOException e) {
             logger.error("Fehler beim Öffnen der Kategorien-Datei: {}", e.getMessage());
-            JOptionPane.showMessageDialog(this,
-                    "Fehler beim Öffnen der Kategorien-Datei:\n" + e.getMessage(),
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Fehler beim Öffnen der Kategorien-Datei:\n" + e.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             Main.logUtils.addLog("Fehler beim Öffnen der Kategorien-Datei: " + e.getMessage());
         }
     }
@@ -2411,12 +2424,13 @@ public class SettingsGUI extends JFrame {
                     }
                 }
             }
-            JOptionPane.showMessageDialog(this,
-                    String.format(
+            new MessageDialog()
+                    .setTitle("Alte Protokolle gelöscht")
+                    .setMessage(String.format(
                             "Es wurden %d Protokolle aus der Datenbank und %d Protokolldateien gelöscht, die älter als 30 Tage sind.",
-                            deletedCount, fileDeletedCount),
-                    "Alte Protokolle gelöscht",
-                    JOptionPane.INFORMATION_MESSAGE);
+                            deletedCount, fileDeletedCount))
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
             logger.info(
                     "Es wurden {} Protokolle aus der Datenbank und {} Protokolldateien gelöscht, die älter als 30 Tage sind.",
                     deletedCount, fileDeletedCount);
@@ -2424,10 +2438,11 @@ public class SettingsGUI extends JFrame {
                     + " Protokolldateien gelöscht, die älter als 30 Tage sind.");
         } catch (IOException ex) {
             logger.error("Fehler beim Löschen alter Protokolle: {}", ex.getMessage());
-            JOptionPane.showMessageDialog(this,
-                    "Fehler beim Löschen alter Protokolle:\n" + ex.getMessage(),
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Fehler beim Löschen alter Protokolle:\n" + ex.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             Main.logUtils.addLog("Fehler beim Löschen alter Protokolle: " + ex.getMessage());
         }
     }
@@ -2453,17 +2468,19 @@ public class SettingsGUI extends JFrame {
                 }
             } catch (IOException e) {
                 logger.error("Fehler beim Löschen der Protokolle: {}", e.getMessage());
-                JOptionPane.showMessageDialog(this,
-                        "Fehler beim Löschen der Protokolle:\n" + e.getMessage(),
-                        "Fehler",
-                        JOptionPane.ERROR_MESSAGE);
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Fehler beim Löschen der Protokolle:\n" + e.getMessage())
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
                 Main.logUtils.addLog("Fehler beim Löschen der Protokolle: " + e.getMessage());
                 return;
             }
-            JOptionPane.showMessageDialog(this,
-                    "Alle Protokolle wurden erfolgreich gelöscht.",
-                    "Protokolle gelöscht",
-                    JOptionPane.INFORMATION_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Protokolle gelöscht")
+                    .setMessage("Alle Protokolle wurden erfolgreich gelöscht.")
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
         }
         ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager
                 .getInstance();
@@ -2482,10 +2499,11 @@ public class SettingsGUI extends JFrame {
             Desktop.getDesktop().open(logsDir);
         } catch (IOException e) {
             logger.error("Fehler beim Öffnen des Protokolle-Ordners: {}", e.getMessage());
-            JOptionPane.showMessageDialog(this,
-                    "Fehler beim Öffnen des Protokolle-Ordners:\n" + e.getMessage(),
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Fehler beim Öffnen des Protokolle-Ordners:\n" + e.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             Main.logUtils.addLog("Fehler beim Öffnen des Protokolle-Ordners: " + e.getMessage());
         }
     }
@@ -3121,24 +3139,23 @@ public class SettingsGUI extends JFrame {
                 applySettings(interval, enableWarnings, warningInterval, enableAutoCheck, darkMode);
                 ThemeManager.setCustomColors(selectedAccentColor, selectedHeaderColor, selectedButtonColor);
 
-                JOptionPane.showMessageDialog(this,
-                        "<html><b>Einstellungen gespeichert!</b><br/><br/>" +
-                                "Die neuen Einstellungen wurden erfolgreich übernommen.</html>",
-                        "Erfolg",
-                        JOptionPane.INFORMATION_MESSAGE,
-                        Main.iconSmall);
-
+                new MessageDialog()
+                        .setTitle("Einstellungen gespeichert")
+                        .setMessage("<html><b>Einstellungen gespeichert!</b><br/><br/>" +
+                                "Die neuen Einstellungen wurden erfolgreich übernommen.</html>")
+                        .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                        .display();
                 dispose();
             }
         } catch (Exception e) {
             System.err.println("[SettingsGUI] Fehler beim Speichern der Einstellungen: " + e.getMessage());
-            JOptionPane.showMessageDialog(this,
-                    "<html><b>Fehler beim Speichern!</b><br/><br/>" +
+            new MessageDialog()
+                    .setTitle("Fehler beim Speichern")
+                    .setMessage("<html><b>Fehler beim Speichern!</b><br/><br/>" +
                             "Die Einstellungen konnten nicht gespeichert werden:<br/>" +
-                            e.getMessage() + "</html>",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+                            e.getMessage() + "</html>")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             Main.logUtils.addLog("Fehler beim Speichern der Einstellungen: " + e.getMessage());
         }
     }
@@ -3211,17 +3228,21 @@ public class SettingsGUI extends JFrame {
         try (FileOutputStream out = new FileOutputStream(file)) {
             Properties props = collectSettingsProperties();
             props.store(out, "VEBO Lagersystem Einstellungen");
-            JOptionPane.showMessageDialog(this,
-                    "Einstellungen exportiert:\n" + file.getAbsolutePath(),
-                    "Export erfolgreich",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Export erfolgreich")
+                    .setMessage("<html><b>Einstellungen exportiert!</b><br/><br/>" +
+                            "Die Einstellungen wurden erfolgreich exportiert:<br/>" +
+                            file.getAbsolutePath() + "</html>")
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
         } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Fehler beim Export: " + ex.getMessage(),
-                    "Export fehlgeschlagen",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Export fehlgeschlagen")
+                    .setMessage("<html><b>Fehler beim Export!</b><br/><br/>" +
+                            "Die Einstellungen konnten nicht exportiert werden:<br/>" +
+                            ex.getMessage() + "</html>")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
         }
     }
 
@@ -3237,17 +3258,21 @@ public class SettingsGUI extends JFrame {
             Properties props = new Properties();
             props.load(in);
             applySettingsProperties(props);
-            JOptionPane.showMessageDialog(this,
-                    "Einstellungen importiert.\nBitte speichern, um sie zu uebernehmen.",
-                    "Import erfolgreich",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Import erfolgreich")
+                    .setMessage("<html><b>Einstellungen importiert!</b><br/><br/>" +
+                            "Die Einstellungen wurden erfolgreich importiert.<br/>" +
+                            "Bitte speichern, um sie zu übernehmen.</html>")
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
         } catch (IOException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Fehler beim Import: " + ex.getMessage(),
-                    "Import fehlgeschlagen",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Import fehlgeschlagen")
+                    .setMessage("<html><b>Fehler beim Import!</b><br/><br/>" +
+                            "Die Einstellungen konnten nicht importiert werden:<br/>" +
+                            ex.getMessage() + "</html>")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
         }
     }
 
@@ -3381,15 +3406,15 @@ public class SettingsGUI extends JFrame {
                 System.out.println("[SettingsGUI] Theme geändert zu: " + (darkMode ? "Dark Mode" : "Light Mode"));
 
                 // Show restart recommendation for full theme change
-                int restart = JOptionPane.showConfirmDialog(this,
-                        "<html>Das Theme wurde geändert.<br/><br/>" +
+                int restart = new MessageDialog()
+                        .setTitle("Neustart empfohlen")
+                        .setMessage("<html>Das Theme wurde geändert.<br/><br/>" +
                                 "Es wird empfohlen, das Programm neu zu starten,<br/>" +
                                 "damit das Theme vollständig angewendet wird.<br/><br/>" +
-                                "Möchten Sie jetzt neu starten?</html>",
-                        "Neustart empfohlen",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE,
-                        Main.iconSmall);
+                                "Möchten Sie jetzt neu starten?</html>")
+                        .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                        .setOptionType(JOptionPane.YES_NO_OPTION)
+                        .displayWithOptions();
 
                 if (restart == JOptionPane.YES_OPTION) {
                     System.exit(0);
@@ -3531,13 +3556,13 @@ public class SettingsGUI extends JFrame {
      */
     private void handleUpdateResult(String latestVersion, String channel) {
         if (latestVersion == null) {
-            JOptionPane.showMessageDialog(this,
-                    "<html><b>Keine Update-Informationen verfügbar</b><br/><br/>" +
+            new MessageDialog()
+                .setTitle("Update-Prüfung")
+                .setMessage("<html><b>Keine Update-Informationen verfügbar</b><br/><br/>" +
                             "Die Update-Informationen konnten nicht abgerufen werden.<br/>" +
-                            "Bitte überprüfen Sie Ihre Internetverbindung.</html>",
-                    "Update-Prüfung",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+                            "Bitte überprüfen Sie Ihre Internetverbindung.</html>")
+                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                .display();
             return;
         }
 
@@ -3565,18 +3590,17 @@ public class SettingsGUI extends JFrame {
         String downloadUrl = getDownloadUrl(channel);
 
         Object[] options = { "Download-Seite öffnen", "Später" };
-        int result = JOptionPane.showOptionDialog(this,
-                "<html><b>" + UnicodeSymbols.DOWNLOAD + " Update verfügbar!</b><br/><br/>" +
+        int result = new MessageDialog()
+                .setTitle("Update verfügbar")
+                .setMessage("<html><b>" + UnicodeSymbols.DOWNLOAD + " Update verfügbar!</b><br/><br/>" +
                         "Eine neue Version ist verfügbar:<br/><br/>" +
                         "Aktuelle Version: <b>" + currentVersion + "</b><br/>" +
                         "Neue Version: <b>" + latestVersion + channelDisplay + "</b><br/><br/>" +
-                        "Möchten Sie die Download-Seite öffnen?</html>",
-                "Update verfügbar",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.INFORMATION_MESSAGE,
-                Main.iconSmall,
-                options,
-                options[0]);
+                        "Möchten Sie die Download-Seite öffnen?</html>")
+                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                .setOptionType(JOptionPane.YES_NO_OPTION)
+                .setOptions(options)
+                .displayWithOptions();
 
         if (result == 0) { // Download-Seite öffnen
             openDownloadPage(downloadUrl);
@@ -3594,13 +3618,13 @@ public class SettingsGUI extends JFrame {
             default -> "";
         };
 
-        JOptionPane.showMessageDialog(this,
-                "<html><b>" + UnicodeSymbols.CHECKMARK + " Keine Updates verfügbar</b><br/><br/>" +
+        new MessageDialog()
+                .setTitle("Keine Updates verfügbar")
+                .setMessage("<html><b>" + UnicodeSymbols.CHECKMARK + " Keine Updates verfügbar</b><br/><br/>" +
                         "Sie verwenden bereits die neueste Version" + channelDisplay + ":<br/>" +
-                        "<b>Version " + currentVersion + "</b></html>",
-                "Update-Prüfung",
-                JOptionPane.INFORMATION_MESSAGE,
-                Main.iconSmall);
+                        "<b>Version " + currentVersion + "</b></html>")
+                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                .display();
     }
 
     /**
@@ -3609,13 +3633,13 @@ public class SettingsGUI extends JFrame {
     private void showUpdateError(String errorMessage) {
         if (errorMessage == null)
             throw new IllegalArgumentException("errorMessage must not be null");
-        JOptionPane.showMessageDialog(this,
-                "<html><b>" + UnicodeSymbols.WARNING + " Fehler bei Update-Prüfung</b><br/><br/>" +
+        new MessageDialog()
+                .setTitle("Fehler bei Update-Prüfung")
+                .setMessage("<html><b>" + UnicodeSymbols.WARNING + " Fehler bei Update-Prüfung</b><br/><br/>" +
                         "Die Update-Prüfung ist fehlgeschlagen:<br/>" +
-                        errorMessage + "</html>",
-                "Fehler",
-                JOptionPane.ERROR_MESSAGE,
-                Main.iconSmall);
+                        errorMessage + "</html>")
+                .setMessageType(JOptionPane.ERROR_MESSAGE)
+                .display();
         Main.logUtils.addLog("Fehler bei Update-Prüfung");
     }
 
@@ -3645,23 +3669,23 @@ public class SettingsGUI extends JFrame {
                 logger.info("Download-Seite geöffnet: {}", url);
             } else {
                 // Fallback: show URL in dialog
-                JOptionPane.showMessageDialog(this,
-                        "<html><b>Download-Link:</b><br/><br/>" +
-                                "<a href='" + url + "'>" + url + "</a><br/><br/>" +
-                                "Bitte kopieren Sie den Link und öffnen Sie ihn in Ihrem Browser.</html>",
-                        "Download-Link",
-                        JOptionPane.INFORMATION_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Browser nicht unterstützt")
+                        .setMessage("<html><b>Ihr System unterstützt das automatische Öffnen von Browsern nicht.</b><br/><br/>" +
+                                "Bitte kopieren Sie den folgenden Link und öffnen Sie ihn manuell in Ihrem Browser:<br/><br/>" +
+                                "<a href='" + url + "'>" + url + "</a></html>")
+                        .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                        .display();
             }
         } catch (Exception e) {
             logger.error("Fehler beim Öffnen der Download-Seite: {}", e.getMessage(), e);
-            JOptionPane.showMessageDialog(this,
-                    "<html><b>Fehler beim Öffnen des Browsers</b><br/><br/>" +
+            new MessageDialog()
+                    .setTitle("Fehler beim Öffnen des Browsers")
+                    .setMessage("<html><b>Fehler beim Öffnen des Browsers</b><br/><br/>" +
                             "Bitte öffnen Sie den folgenden Link manuell:<br/>" +
-                            url + "</html>",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+                            url + "</html>")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
         }
     }
 
@@ -3686,63 +3710,63 @@ public class SettingsGUI extends JFrame {
                 boolean success = dbManager.executeUpdate(dropTableSQL);
 
                 if (success) {
-                    JOptionPane.showMessageDialog(this,
-                            String.format("<html><b>OK Tabelle erfolgreich gelöscht</b><br/><br/>" +
+                    new MessageDialog()
+                            .setTitle("Tabelle gelöscht")
+                            .setMessage(String.format("<html><b>OK Tabelle erfolgreich gelöscht</b><br/><br/>" +
                                     "Die Tabelle '<b>%s</b>' wurde aus der Datenbank entfernt.<br/><br/>" +
                                     "<i>Hinweis: Die zugehörigen Daten sind permanent gelöscht.</i></html>",
-                                    tableName),
-                            "Erfolgreich",
-                            JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
+                                    tableName))
+                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                            .display();
 
                     System.out.printf("[SettingsGUI] Tabelle '%s' wurde erfolgreich gelöscht%n", tableName);
 
                     // Show restart recommendation
-                    int restart = JOptionPane.showConfirmDialog(this,
-                            "<html>Es wird empfohlen, das Programm neu zu starten,<br/>" +
+                    int restart = new MessageDialog()
+                            .setTitle("Neustart empfohlen")
+                            .setMessage("<html>Es wird empfohlen, das Programm neu zu starten,<br/>" +
                                     "um Inkonsistenzen zu vermeiden.<br/><br/>" +
-                                    "Möchten Sie jetzt neu starten?</html>",
-                            "Neustart empfohlen",
-                            JOptionPane.YES_NO_OPTION,
-                            JOptionPane.QUESTION_MESSAGE,
-                            Main.iconSmall);
+                                    "Möchten Sie jetzt neu starten?</html>")
+                            .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                            .setOptionType(JOptionPane.YES_NO_OPTION)
+                            .displayWithOptions();
 
                     if (restart == JOptionPane.YES_OPTION) {
                         System.exit(0);
                     }
                 } else {
-                    JOptionPane.showMessageDialog(this,
-                            String.format("<html><b>Fehler beim Löschen der Tabelle</b><br/><br/>" +
+                    new MessageDialog()
+                            .setTitle("Fehler beim Löschen der Tabelle")
+                            .setMessage(String.format("<html><b>Fehler beim Löschen der Tabelle</b><br/><br/>" +
                                     "Die Tabelle '<b>%s</b>' konnte nicht gelöscht werden.<br/>" +
                                     "Bitte überprüfen Sie die Logs für weitere Details.</html>",
-                                    tableName),
-                            "Fehler",
-                            JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
+                                    tableName))
+                            .setMessageType(JOptionPane.ERROR_MESSAGE)
+                            .display();
                     Main.logUtils.addLog(String.format(
                             "Fehler beim Löschen der Tabelle. Die Tabelle '%s' konnte nicht gelöscht werden.",
                             tableName));
                 }
             } else {
-                JOptionPane.showMessageDialog(this,
-                        "Fehler: Datenbankverbindung nicht verfügbar.",
-                        "Fehler",
-                        JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Fehler: Datenbankverbindung nicht verfügbar.")
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
             }
         } catch (Exception e) {
             System.err.printf("[SettingsGUI] Fehler beim Löschen der Tabelle '%s': %s%n",
                     tableName, e.getMessage());
             Main.logUtils.addLog(String.format("Fehler beim Löschen der Tabelle '%s': %s", tableName, e.getMessage()));
             logger.error("Fehler beim Löschen der Tabelle '{}'", tableName, e);
-            JOptionPane.showMessageDialog(this,
-                    String.format("<html><b>Fehler beim Löschen der Tabelle</b><br/><br/>" +
+            new MessageDialog()
+                    .setTitle("Fehler beim Löschen der Tabelle")
+                    .setMessage(String.format("<html><b>Fehler beim Löschen der Tabelle</b><br/><br/>" +
                             "Tabelle: %s<br/>" +
                             "Fehler: %s</html>",
-                            tableName, e.getMessage()),
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+                            tableName, e.getMessage()))
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
         }
     }
 
@@ -3751,8 +3775,9 @@ public class SettingsGUI extends JFrame {
      */
     private void clearDatabase() {
         // First confirmation
-        int firstConfirm = JOptionPane.showConfirmDialog(this,
-                "<html><b>⚠ WARNUNG: Datenbank löschen</b><br/><br/>" +
+        int firstConfirm = new MessageDialog()
+                .setTitle("Datenbank löschen - Bestätigung 1/2")
+                .setMessage("<html><b>⚠ WARNUNG: Datenbank löschen</b><br/><br/>" +
                         "Möchten Sie wirklich <b>ALLE DATEN</b> aus der Datenbank löschen?<br/><br/>" +
                         "Dies umfasst:<br/>" +
                         "- Alle Artikel<br/>" +
@@ -3765,29 +3790,29 @@ public class SettingsGUI extends JFrame {
                         "- Alle Benutzer</br>" +
                         "- Alle Notizen<br/>" +
                         "- Alle Warnungen<br/><br/>" +
-                        "<b>Diese Aktion kann NICHT rückgängig gemacht werden!</b></html>",
-                "Datenbank löschen - Bestätigung 1/2",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE,
-                Main.iconSmall);
+                        "<b>Diese Aktion kann NICHT rückgängig gemacht werden!</b></html>")
+                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                .setOptionType(JOptionPane.YES_NO_OPTION)
+                .displayWithOptions();
 
         if (firstConfirm != JOptionPane.YES_OPTION) {
             return;
         }
 
         // Second confirmation (extra safety)
-        String confirmText = JOptionPane.showInputDialog(this,
-                "<html><b>Zweite Bestätigung erforderlich</b><br/><br/>" +
-                        "Bitte geben Sie <b>LÖSCHEN</b> ein, um fortzufahren:</html>",
-                "Datenbank löschen - Bestätigung 2/2",
-                JOptionPane.WARNING_MESSAGE);
+        String confirmText = new MessageDialog()
+                .setTitle("Datenbank löschen - Bestätigung 2/2")
+                .setMessage("<html><b>Zweite Bestätigung erforderlich</b><br/><br/>" +
+                        "Bitte geben Sie <b>LÖSCHEN</b> ein, um fortzufahren:</html>")
+                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                .displayWithStringInput();
 
         if (confirmText == null || !confirmText.trim().equalsIgnoreCase("LÖSCHEN")) {
-            JOptionPane.showMessageDialog(this,
-                    "Vorgang abgebrochen. Die Datenbank wurde nicht gelöscht.",
-                    "Abgebrochen",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Abgebrochen")
+                    .setMessage("Vorgang abgebrochen. Die Datenbank wurde nicht gelöscht.")
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
             return;
         }
 
@@ -3810,44 +3835,46 @@ public class SettingsGUI extends JFrame {
                     System.out.println(
                             "[SettingsGUI] imported_items.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
 
-                JOptionPane.showMessageDialog(this,
-                        "<html><b>OK Datenbank erfolgreich gelöscht</b><br/><br/>" +
+                new MessageDialog()
+                        .setTitle("Erfolgreich")
+                        .setMessage("<html><b>OK Datenbank erfolgreich gelöscht</b><br/><br/>" +
                                 "Alle Daten wurden aus der Datenbank entfernt.<br/><br/>" +
-                                "Das Programm sollte nun neu gestartet werden.</html>",
-                        "Erfolgreich",
-                        JOptionPane.INFORMATION_MESSAGE,
-                        Main.iconSmall);
+                                "Das Programm sollte nun neu gestartet werden.</html>")
+                        .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                        .display();
 
                 System.out.println("[SettingsGUI] Datenbank wurde erfolgreich bereinigt");
 
                 // Ask if user wants to restart
-                int restart = JOptionPane.showConfirmDialog(this,
-                        "Möchten Sie das Programm jetzt neu starten?",
-                        "Neustart empfohlen",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.INFORMATION_MESSAGE,
-                        Main.iconSmall);
+                int restart = new MessageDialog()
+                        .setTitle("Neustart empfohlen")
+                        .setMessage("<html>Es wird empfohlen, das Programm neu zu starten,<br/>" +
+                                "um Inkonsistenzen zu vermeiden.<br/><br/>" +
+                                "Möchten Sie jetzt neu starten?</html>")
+                        .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                        .setOptionType(JOptionPane.YES_NO_OPTION)
+                        .displayWithOptions();
 
                 if (restart == JOptionPane.YES_OPTION) {
                     System.exit(0);
                 }
             } else {
-                JOptionPane.showMessageDialog(this,
-                        "Fehler: Datenbankverbindung nicht verfügbar.",
-                        "Fehler",
-                        JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Fehler: Datenbankverbindung nicht verfügbar.")
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
                 Main.logUtils.addLog("Fehler: Datenbankverbindung nicht verfügbar.");
             }
         } catch (Exception e) {
             System.err.println("[SettingsGUI] Fehler beim Löschen der Datenbank: " + e.getMessage());
             logger.error("Fehler beim Löschen der Datenbank", e);
-            JOptionPane.showMessageDialog(this,
-                    "<html><b>Fehler beim Löschen der Datenbank</b><br/><br/>" +
-                            "Fehler: " + e.getMessage() + "</html>",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("<html><b>Fehler beim Löschen der Datenbank</b><br/><br/>" +
+                            "Fehler: " + e.getMessage() + "</html>")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             Main.logUtils.addLog("Fehler beim Löschen der Datenbank: " + e.getMessage());
         }
     }
@@ -4000,11 +4027,11 @@ public class SettingsGUI extends JFrame {
         try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
             String headerLine = reader.readLine(); // Skip header
             if (headerLine == null) {
-                JOptionPane.showMessageDialog(null,
-                        "Die CSV-Datei ist leer.",
-                        "Fehler",
-                        JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Die CSV-Datei ist leer.")
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
                 return;
             }
 
@@ -4041,23 +4068,23 @@ public class SettingsGUI extends JFrame {
                 }
             }
 
-            JOptionPane.showMessageDialog(null,
-                    String.format("<html><b>Artikel-Import abgeschlossen</b><br/><br/>" +
+            new MessageDialog()
+                    .setTitle("Import Ergebnis")
+                    .setMessage(String.format("<html><b>Artikel-Import abgeschlossen</b><br/><br/>" +
                             UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
                             (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
-                            "</html>", imported, errors),
-                    "Import Ergebnis",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+                            "</html>", imported, errors))
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
 
             System.out.printf("[SettingsGUI] Artikel-Import: %d erfolgreich, %d Fehler%n", imported, errors);
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null,
-                    "Fehler beim Importieren: " + e.getMessage(),
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Fehler beim Importieren: " + e.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             System.err.println("[SettingsGUI] Fehler beim Importieren der Artikel: " + e.getMessage());
             Main.logUtils.addLog(String.format("Fehler beim Importieren der Artikel: %s", e.getMessage()));
         }
@@ -4083,11 +4110,11 @@ public class SettingsGUI extends JFrame {
         try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
             String headerLine = reader.readLine(); // Skip header
             if (headerLine == null) {
-                JOptionPane.showMessageDialog(null,
-                        "Die CSV-Datei ist leer.",
-                        "Fehler",
-                        JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Die CSV-Datei ist leer.")
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
                 return;
             }
 
@@ -4133,25 +4160,26 @@ public class SettingsGUI extends JFrame {
                 }
             }
 
-            JOptionPane.showMessageDialog(null,
+            new MessageDialog()
+                    .setMessage(
                     String.format("<html><b>Lieferanten-Import abgeschlossen</b><br/><br/>" +
                             UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
                             (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
-                            "</html>", imported, errors),
-                    "Import Ergebnis",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+                            "</html>", imported, errors))
+                    .setTitle("Import Ergebnis")
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
 
             System.out.printf("[SettingsGUI] Lieferanten-Import: %d erfolgreich, %d Fehler%n", imported, errors);
             String logMessage = String.format("Lieferanten-Import: %d erfolgreich, %d Fehler", imported, errors);
             Main.logUtils.addLog(logMessage);
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null,
-                    "Fehler beim Importieren: " + e.getMessage(),
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Fehler beim Importieren: " + e.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             System.err.println("[SettingsGUI] Fehler beim Importieren der Lieferanten: " + e.getMessage());
             Main.logUtils.addLog("Fehler beim Importieren der Lieferanten: " + e.getMessage());
         }
@@ -4164,11 +4192,11 @@ public class SettingsGUI extends JFrame {
         try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
             String headerLine = reader.readLine(); // Skip header
             if (headerLine == null) {
-                JOptionPane.showMessageDialog(null,
-                        "Die CSV-Datei ist leer.",
-                        "Fehler",
-                        JOptionPane.ERROR_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Die CSV-Datei ist leer.")
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
                 Main.logUtils.addLog("Die CSV-Datei ist leer.");
                 return;
             }
@@ -4206,38 +4234,38 @@ public class SettingsGUI extends JFrame {
                 }
             }
 
-            JOptionPane.showMessageDialog(null,
-                    String.format("<html><b>Kunden-Import abgeschlossen</b><br/><br/>" +
+            new MessageDialog()
+                    .setTitle("Import Ergebnis")
+                    .setMessage(String.format("<html><b>Kunden-Import abgeschlossen</b><br/><br/>" +
                             UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
                             (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
-                            "</html>", imported, errors),
-                    "Import Ergebnis",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Main.iconSmall);
+                            "</html>", imported, errors))
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
 
             System.out.printf("[SettingsGUI] Kunden-Import: %d erfolgreich, %d Fehler%n", imported, errors);
             String logMessage = String.format("Kunden-Import: %d erfolgreich, %d Fehler", imported, errors);
             Main.logUtils.addLog(logMessage);
 
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null,
-                    "Fehler beim Importieren: " + e.getMessage(),
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Fehler beim Importieren: " + e.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             System.err.println("[SettingsGUI] Fehler beim Importieren der Kunden: " + e.getMessage());
             Main.logUtils.addLog("Fehler beim Importieren der Kunden: " + e.getMessage());
         }
     }
 
     private static void importOrdersFromCsv() {
-        JOptionPane.showMessageDialog(null,
-                "<html><b>Bestellungs-Import nicht verfügbar</b><br/><br/>" +
+        new MessageDialog()
+                .setTitle("Nicht verfügbar")
+                .setMessage("<html><b>Bestellungs-Import nicht verfügbar</b><br/><br/>" +
                         "Der Import von Bestellungen ist aus Sicherheitsgründen deaktiviert.<br/>" +
-                        "Bestellungen sollten nur über die normale Bestellfunktion erstellt werden.</html>",
-                "Nicht verfügbar",
-                JOptionPane.INFORMATION_MESSAGE,
-                Main.iconSmall);
+                        "Bestellungen sollten nur über die normale Bestellfunktion erstellt werden.</html>")
+                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                .display();
         System.out.println(
                 "[SettingsGUI] Bestellungs-Import wurde übersprungen (nicht implementiert aus Sicherheitsgründen)");
     }

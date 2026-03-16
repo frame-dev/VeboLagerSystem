@@ -161,14 +161,16 @@ public class ArticleGUI extends JFrame {
                         (Double) row[6],
                         (String) row[7]);
                 if (!articleManager.insertArticle(article)) {
-                    JOptionPane.showMessageDialog(this,
+                    MessageDialog messageDialog = new MessageDialog(
                             "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.",
-                            "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                            "Fehler", 5000);
+                    messageDialog.display();
                 } else {
                     loadArticles();
-                    JOptionPane.showMessageDialog(this,
+                    MessageDialog messageDialog = new MessageDialog(
                             "Artikel erfolgreich hinzugefügt.",
-                            "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+                            "Erfolg", 5000);
+                    messageDialog.display();
                 }
             }
         });
@@ -179,9 +181,9 @@ public class ArticleGUI extends JFrame {
         editArticleButton.addActionListener(e -> {
             int selectedRow = articleTable.getSelectedRow();
             if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(this,
-                        "Bitte wählen Sie einen Artikel zum Bearbeiten aus.",
-                        "Keine Auswahl", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+                MessageDialog messageDialog = new MessageDialog("Bitte wählen Sie einen Artikel zum Bearbeiten aus.",
+                        "Keine Auswahl", 5000);
+                messageDialog.display();
                 return;
             }
 
@@ -222,13 +224,15 @@ public class ArticleGUI extends JFrame {
 
                 if (articleManager.updateArticle(article)) {
                     loadArticles();
-                    JOptionPane.showMessageDialog(this,
+                    MessageDialog messageDialog = new MessageDialog(
                             "Artikel erfolgreich aktualisiert.",
-                            "Erfolg", JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+                            "Erfolg", 5000);
+                    messageDialog.display();
                 } else {
-                    JOptionPane.showMessageDialog(this,
+                    MessageDialog messageDialog = new MessageDialog(
                             "Fehler beim Aktualisieren des Artikels.",
-                            "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                            "Fehler", 5000);
+                    messageDialog.display();
                 }
             }
         });
@@ -788,7 +792,8 @@ public class ArticleGUI extends JFrame {
     }
 
     private void showInlineEditError(String message, String articleNumber, int modelRow) {
-        JOptionPane.showMessageDialog(this, message, "Ungültige Eingabe", JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+        MessageDialog messageDialog = new MessageDialog(message, "Ungültige Eingabe", 5000);
+        messageDialog.display();
         reloadRowFromDb(articleNumber, modelRow);
     }
 
@@ -845,15 +850,16 @@ public class ArticleGUI extends JFrame {
     private void deleteSelectedArticle() {
         int selectedRow = articleTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel zum Löschen aus.", "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            MessageDialog messageDialog = new MessageDialog("Bitte wählen Sie einen Artikel zum Löschen aus.",
+                    "Keine Auswahl", 5000);
+            messageDialog.display();
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Möchten Sie diesen Artikel wirklich löschen?",
-                "Artikel löschen", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,
-                Main.iconSmall);
+        int confirm = new MessageDialog("Möchten Sie diesen Artikel wirklich löschen?",
+                "Artikel löschen")
+                .setOptionType(JOptionPane.YES_NO_OPTION)
+                .displayWithOptions();
         if (confirm != JOptionPane.YES_OPTION)
             return;
 
@@ -867,31 +873,27 @@ public class ArticleGUI extends JFrame {
             // Only remove from the table if DB deletion succeeded
             model.removeRow(modelRow);
             updateCountLabel();
-            JOptionPane.showMessageDialog(this, "Artikel erfolgreich gelöscht.", "Erfolg",
-                    JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+            MessageDialog messageDialog = new MessageDialog("Artikel erfolgreich gelöscht.", "Erfolg", 5000);
+            messageDialog.display();
         } else {
-            JOptionPane.showMessageDialog(this, "Fehler beim Löschen des Artikels aus der Datenbank.", "Fehler",
-                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+            MessageDialog messageDialog = new MessageDialog("Fehler beim Löschen des Artikels aus der Datenbank.",
+                    "Fehler", 5000);
+            messageDialog.display();
         }
     }
 
     private void deleteSelectedArticles() {
         int[] selectedRows = articleTable.getSelectedRows();
         if (selectedRows == null || selectedRows.length == 0) {
-            JOptionPane.showMessageDialog(this,
-                    "Bitte wählen Sie mindestens einen Artikel aus.",
-                    "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            MessageDialog messageDialog = new MessageDialog("Bitte wählen Sie mindestens einen Artikel aus.",
+                    "Keine Auswahl", 5000);
+            messageDialog.display();
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Moechten Sie " + selectedRows.length + " Artikel wirklich loeschen?",
-                "Artikel loeschen",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE,
-                Main.iconSmall);
+        int confirm = new MessageDialog("Möchten Sie " + selectedRows.length + " Artikel wirklich löschen?",
+                "Artikel löschen")
+                .setOptionType(JOptionPane.YES_NO_OPTION).displayWithOptions();
         if (confirm != JOptionPane.YES_OPTION) {
             return;
         }
@@ -918,28 +920,24 @@ public class ArticleGUI extends JFrame {
     private void adjustStockForSelectedArticles() {
         List<Article> selected = getSelectedArticles(articleTable);
         if (selected.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Bitte wählen Sie mindestens einen Artikel aus.",
-                    "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog("Bitte wählen Sie mindestens einen Artikel aus.",
+                    "Keine Auswahl", 5000)
+                    .display();
             return;
         }
 
-        String input = JOptionPane.showInputDialog(this,
-                "Bestandsaenderung eingeben (z.B. 5 oder -3):",
-                "Bestand anpassen",
-                JOptionPane.QUESTION_MESSAGE);
+        String input = new MessageDialog()
+        .setTitle("Bestand anpassen")
+        .setMessage("Bestandsänderung eingeben (z.B. 5 oder -3):")
+        .displayWithStringInput();
         if (input == null) {
             return;
         }
         Integer delta = parseInteger(input.trim());
         if (delta == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Bitte eine gueltige Ganzzahl eingeben.",
-                    "Ungueltige Eingabe",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog("Bitte eine gueltige Ganzzahl eingeben.",
+                    "Ungueltige Eingabe", 5000)
+                    .display();
             return;
         }
 
@@ -954,12 +952,11 @@ public class ArticleGUI extends JFrame {
             }
         }
         if (hasNegative) {
-            int confirm = JOptionPane.showConfirmDialog(this,
-                    "Einige Artikel wuerden negativ werden.\nBestand fuer diese Artikel auf 0 setzen?",
-                    "Bestand anpassen",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            int confirm = new MessageDialog()
+            .setTitle("Bestand anpassen")
+            .setMessage("Einige Artikel wuerden negativ werden.\nBestand fuer diese Artikel auf 0 setzen?")
+            .setOptionType(JOptionPane.YES_NO_OPTION)
+            .displayWithOptions();
             if (confirm != JOptionPane.YES_OPTION) {
                 return;
             }
@@ -1000,22 +997,19 @@ public class ArticleGUI extends JFrame {
     private void generateQrCodesForSelectedArticles() {
         List<Article> selectedArticles = getSelectedArticles(articleTable);
         if (selectedArticles.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Bitte wählen Sie mindestens einen Artikel aus.",
-                    "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog("Bitte wählen Sie mindestens einen Artikel aus.",
+                    "Keine Auswahl", 5000)
+                    .display();
             return;
         }
 
         File outputDir = new File(Main.getAppDataDir(), "qr_codes");
-        int result = JOptionPane.showConfirmDialog(
-                this,
-                "QR-Codes fuer " + selectedArticles.size() + " ausgewählte Artikel generieren?\nSpeicherort: "
-                        + outputDir.getAbsolutePath(),
-                "QR-Codes generieren",
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.INFORMATION_MESSAGE);
+        int result = new MessageDialog()
+                .setTitle("QR-Codes generieren")
+                .setMessage("QR-Codes fuer " + selectedArticles.size() + " ausgewählte Artikel generieren?\nSpeicherort: "
+                        + outputDir.getAbsolutePath())
+                .setOptionType(JOptionPane.OK_CANCEL_OPTION)
+                .displayWithOptions();
         if (result != JOptionPane.OK_OPTION) {
             return;
         }
@@ -1041,28 +1035,19 @@ public class ArticleGUI extends JFrame {
                 try {
                     List<File> files = get();
                     if (files == null || files.isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                ArticleGUI.this,
-                                "Es konnten keine QR-Codes erstellt werden.",
-                                "QR-Codes generieren",
-                                JOptionPane.WARNING_MESSAGE,
-                                Main.iconSmall);
+                        new MessageDialog("Es konnten keine QR-Codes erstellt werden.",
+                                "QR-Codes generieren", 5000)
+                                .display();
                         return;
                     }
-                    JOptionPane.showMessageDialog(
-                            ArticleGUI.this,
-                            "QR-Codes wurden erstellt.\nAnzahl: " + files.size() + "\nOrdner: "
-                                    + outputDir.getAbsolutePath(),
-                            "QR-Codes generieren",
-                            JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
+                    new MessageDialog("QR-Codes wurden erstellt.\nAnzahl: " + files.size() + "\nOrdner: "
+                            + outputDir.getAbsolutePath(),
+                            "QR-Codes generieren", 5000)
+                            .display();
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(
-                            ArticleGUI.this,
-                            "Fehler beim Erstellen der QR-Codes: " + ex.getMessage(),
-                            "QR-Codes generieren",
-                            JOptionPane.ERROR_MESSAGE,
-                            Main.iconSmall);
+                    new MessageDialog("Fehler beim Erstellen der QR-Codes: " + ex.getMessage(),
+                            "QR-Codes generieren", 5000)
+                            .display();
                 }
             }
         };
@@ -1144,15 +1129,15 @@ public class ArticleGUI extends JFrame {
 
                     Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
                     if (article == null) {
-                        JOptionPane.showMessageDialog(ArticleGUI.this, "Artikel konnte nicht gefunden werden.",
-                                "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                        new MessageDialog("Artikel konnte nicht gefunden werden.", "Fehler", 5000)
+                                .display();
                         return;
                     }
 
-                    String input = JOptionPane.showInputDialog(ArticleGUI.this,
-                            "Geben Sie die Menge für \"" + article.getName() + "\" ein:",
-                            "Zur Bestellung hinzufügen",
-                            JOptionPane.PLAIN_MESSAGE);
+                    String input = new MessageDialog()
+                            .setTitle("Zur Kundenbestellung hinzufügen")
+                            .setMessage("Geben Sie die Menge für \"" + article.getName() + "\" ein:")
+                            .displayWithStringInput();
 
                     if (input == null)
                         return; // User cancelled
@@ -1160,18 +1145,17 @@ public class ArticleGUI extends JFrame {
                     try {
                         int quantity = Integer.parseInt(input.trim());
                         if (quantity <= 0) {
-                            JOptionPane.showMessageDialog(ArticleGUI.this, "Menge muss größer als 0 sein.",
-                                    "Ungültige Eingabe", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                            new MessageDialog("Menge muss größer als 0 sein.", "Ungültige Eingabe", 5000)
+                                    .display();
                             return;
                         }
 
                         if (article.getStockQuantity() < quantity) {
-                            int confirm = JOptionPane.showConfirmDialog(ArticleGUI.this,
-                                    "Der Lagerbestand ist niedriger als die gewünschte Menge.\nMöchten Sie trotzdem fortfahren?",
-                                    "Niedriger Lagerbestand",
-                                    JOptionPane.YES_NO_OPTION,
-                                    JOptionPane.WARNING_MESSAGE,
-                                    Main.iconSmall);
+                            int confirm = new MessageDialog()
+                            .setTitle("Niedriger Lagerbestand")
+                            .setMessage("Der Lagerbestand ist niedriger als die gewünschte Menge.\nMöchten Sie trotzdem fortfahren?")
+                            .setOptionType(JOptionPane.YES_NO_OPTION)
+                            .displayWithOptions();
                             if (confirm != JOptionPane.YES_OPTION) {
                                 return;
                             }
@@ -1192,8 +1176,10 @@ public class ArticleGUI extends JFrame {
                         }
 
                     } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(ArticleGUI.this, "Ungültige Menge: " + input, "Fehler",
-                                JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                        new MessageDialog()
+                                .setTitle("Ungültige Eingabe")
+                                .setMessage("Bitte geben Sie eine gültige Zahl für die Menge ein.")
+                                .display();
                     }
                 }
             }

@@ -105,11 +105,11 @@ public final class ArticleQrPreviewDialog {
             throw new IllegalArgumentException("Parent component must not be null.");
         }
         if (selectedArticles == null || selectedArticles.isEmpty()) {
-            JOptionPane.showMessageDialog(parent,
-                    "Bitte wählen Sie mindestens einen Artikel aus.",
-                    "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                .setTitle("Keine Auswahl")
+                .setMessage("Bitte wählen Sie mindestens einen Artikel aus.")
+                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                .displayWithOptions();
             return;
         }
 
@@ -252,11 +252,11 @@ public final class ArticleQrPreviewDialog {
 
         exportPdfButton.addActionListener(e -> {
             if (previewItems.isEmpty()) {
-                JOptionPane.showMessageDialog(parent,
-                        "Keine QR-Codes zum Export vorhanden.",
-                        "QR-Codes exportieren",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Keine QR-Codes zum Export")
+                        .setMessage("Keine QR-Codes zum Export vorhanden.")
+                        .setMessageType(JOptionPane.WARNING_MESSAGE)
+                        .display();
                 return;
             }
 
@@ -274,14 +274,11 @@ public final class ArticleQrPreviewDialog {
                 fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
             }
             if (fileToSave.exists()) {
-                int overwrite = JOptionPane.showConfirmDialog(
-                        parent,
-                        "Die Datei existiert bereits. Überschreiben?",
-                        "Datei überschreiben",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall
-                );
+                int overwrite = new MessageDialog()
+                    .setTitle("Datei überschreiben")
+                    .setMessage("Die Datei existiert bereits. Überschreiben?")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .displayWithOptions();
                 if (overwrite != JOptionPane.YES_OPTION) {
                     return;
                 }
@@ -316,20 +313,20 @@ public final class ArticleQrPreviewDialog {
                     dialog.setCursor(Cursor.getDefaultCursor());
 
                     if (error != null) {
-                        JOptionPane.showMessageDialog(parent,
-                                "Fehler beim PDF-Export: " + error.getMessage(),
-                                "QR-Codes exportieren",
-                                JOptionPane.ERROR_MESSAGE,
-                                Main.iconSmall);
+                        new MessageDialog()
+                                .setTitle("Fehler beim PDF-Export")
+                                .setMessage("Fehler beim PDF-Export: " + error.getMessage())
+                                .setMessageType(JOptionPane.ERROR_MESSAGE)
+                                .display();
+
                         infoLabel.setText(UnicodeSymbols.CLOSE + " Fehler beim Export");
                         return;
                     }
-
-                    JOptionPane.showMessageDialog(parent,
-                            "PDF erfolgreich exportiert:\n" + finalFileToSave.getAbsolutePath(),
-                            "QR-Codes exportieren",
-                            JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
+                    new MessageDialog()
+                            .setTitle("PDF erfolgreich exportiert")
+                            .setMessage("PDF erfolgreich exportiert:\n" + finalFileToSave.getAbsolutePath())
+                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                            .display();
                     infoLabel.setText(UnicodeSymbols.CHECKMARK + " PDF exportiert: " + finalFileToSave.getName());
                 }
             }.execute();

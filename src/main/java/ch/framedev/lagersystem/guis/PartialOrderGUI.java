@@ -2,7 +2,7 @@ package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
-import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
@@ -141,13 +141,11 @@ public class PartialOrderGUI extends JFrame {
         order.setStatus("Abgeschlossen");
         OrderManager.getInstance().updateOrder(order);
 
-        JOptionPane.showMessageDialog(
-                this,
-                "Bestellung erfolgreich vervollständigt.",
-                "Fertig",
-                JOptionPane.INFORMATION_MESSAGE,
-                Main.iconSmall
-        );
+        new MessageDialog()
+                .setTitle("Bestellung abgeschlossen")
+                .setMessage("Bestellung erfolgreich vervollständigt.")
+                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                .display();
 
         dispose();
     }

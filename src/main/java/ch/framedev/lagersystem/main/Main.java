@@ -12,6 +12,8 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -24,6 +26,7 @@ import org.apache.logging.log4j.Logger;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.User;
+import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.guis.ArticleListGUI;
 import ch.framedev.lagersystem.guis.MainGUI;
 import ch.framedev.lagersystem.guis.SettingsGUI;
@@ -38,6 +41,7 @@ import ch.framedev.lagersystem.managers.UpdateManager;
 import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.managers.VendorManager;
 import ch.framedev.lagersystem.managers.ThemeManager.LookAndFeelOption;
+import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
@@ -73,7 +77,7 @@ public class Main {
      * Flag to ensure that update checks are only performed once per application
      * run, preventing redundant checks and potential performance issues.
      */
-    private static volatile boolean updatesChecked;
+    private static final AtomicBoolean updatesChecked = new AtomicBoolean(false);
 
     /**
      * Database manager instance, responsible for all database interactions.
@@ -187,15 +191,18 @@ public class Main {
         // Setup for initialization steps with progress updates
         updateProgress(progressListener, 3, "Starte Initialisierung...");
         updateProgress(progressListener, 4, "Überprüfen ob mit Internet verbunden...");
-        updateProgress(progressListener, 5, "Initialisiere Datenbank...");
+        updateProgress(progressListener, 5, "Prüfe Datenverzeichnis...");
+        ensureAppDataDirectory();
+        updateProgress(progressListener, 6, "Datenverzeichnis bereit...");
+        updateProgress(progressListener, 7, "Initialisiere Datenbank...");
         initializeDatabase();
         updateProgress(progressListener, 8, "Datenbank initialisiert...");
         updateProgress(progressListener, 10, "Lade Einstellungen...");
         loadSettings();
         updateProgress(progressListener, 15, "Einstellungen geladen...");
-        updateProgress(progressListener, 17, "Prüfe auf Updates...");
-        checkForUpdatesOnce();
-        updateProgress(progressListener, 19, "Update-Prüfung abgeschlossen...");
+        updateProgress(progressListener, 17, "Prüfe auf Updates (asynchron)...");
+        startUpdateCheckAsync();
+        updateProgress(progressListener, 19, "Update-Prüfung gestartet...");
         updateProgress(progressListener, 20, "Lade Icons...");
         loadApplicationIcons();
         updateProgress(progressListener, 25, "Icons geladen...");
@@ -203,54 +210,72 @@ public class Main {
         initializeTheme();
         applyLookAndFeelFromSettings();
         updateProgress(progressListener, 35, "Theme gesetzt...");
-        updateProgress(progressListener, 44, "Prüfe Datenverzeichnis...");
-        ensureAppDataDirectory();
-        updateProgress(progressListener, 50, "Datenverzeichnis bereit...");
-        // Need bug fixes
-        String firstTimeSetting = settings.getProperty("first-time");
-        if (firstTimeSetting == null || firstTimeSetting.equalsIgnoreCase("false")) {
-            settings.setProperty("first-time", "true");
-            updateProgress(progressListener, 54, "Erster Start...");
-            int result = showConfirmDialogOnEdt(
-                    "Willkommen zum VEBO Lagersystem!\nMöchten Sie die anfänglichen Daten jetzt importieren?",
-                    "Erster Start",
-                    iconSmall);
-            if (result == JOptionPane.YES_OPTION) {
-                updateProgress(progressListener, 62, "QR-Code Abfrage...");
-                int resultQr = showConfirmDialogOnEdt(
-                        "QR-Codes Erstellen?",
-                        "QR-Codes",
-                        null);
-                if (resultQr == JOptionPane.YES_OPTION) {
-                    updateProgress(progressListener, 68, "Erstelle QR-Codes...");
-                    logger.info("QR-Codes werden erstellt...");
-                    List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
-                    for (File qrCodeFile : qrCodeFiles) {
-                        logger.info("QR-Code erstellt: {}", qrCodeFile.getAbsolutePath());
-                    }
-                    logger.info("QR-Codes erstellt.");
-                }
-                updateProgress(progressListener, 63, "QR-Code Abfrage abgeschlossen.");
-                settings.setProperty("load-from-files", "true");
-            } else {
-                settings.setProperty("load-from-files", "false");
-            }
-            settings.save();
-            if (Boolean.parseBoolean(settings.getProperty("load-from-files"))) {
-                updateProgress(progressListener, 72, "Importiere Startdaten...");
-                // Import initial data
-                importInitialData(progressListener);
-                updateProgress(progressListener, 80, "Startdaten importiert...");
-                // Initialize default user
-                updateProgress(progressListener, 88, "Erstelle Standard-Benutzer...");
-                initializeDefaultUser();
-                updateProgress(progressListener, 90, "Standard-Benutzer erstellt...");
-                logger.info("Initial data import completed.");
-            } else {
-                logger.info("Initial data import skipped as per settings.");
-            }
-        }
+        handleFirstStartIfNeeded(progressListener);
         updateProgress(progressListener, 96, "Abschluss der Initialisierung...");
+        System.out.println(ArticleUtils.getPartsFromDetails(ArticleManager.getInstance().getArticleByNumber("1213").getDetails(), true));
+    }
+
+    private static void handleFirstStartIfNeeded(ProgressListener progressListener) {
+        String firstTimeSetting = settings.getProperty("first-time");
+        if (firstTimeSetting != null && firstTimeSetting.equalsIgnoreCase("true")) {
+            return;
+        }
+
+        settings.setProperty("first-time", "true");
+        updateProgress(progressListener, 54, "Erster Start...");
+
+        boolean loadFromFiles = askForInitialDataImport(progressListener);
+        settings.setProperty("load-from-files", String.valueOf(loadFromFiles));
+        settings.save();
+
+        if (!loadFromFiles) {
+            logger.info("Initial data import skipped as per settings.");
+            return;
+        }
+
+        updateProgress(progressListener, 72, "Importiere Startdaten...");
+        importInitialData(progressListener);
+        updateProgress(progressListener, 80, "Startdaten importiert...");
+        updateProgress(progressListener, 88, "Erstelle Standard-Benutzer...");
+        initializeDefaultUser();
+        updateProgress(progressListener, 90, "Standard-Benutzer erstellt...");
+        logger.info("Initial data import completed.");
+    }
+
+    private static boolean askForInitialDataImport(ProgressListener progressListener) {
+        int result = showConfirmDialogOnEdt(
+                "Willkommen zum VEBO Lagersystem!\nMöchten Sie die anfänglichen Daten jetzt importieren?",
+                "Erster Start",
+                iconSmall);
+
+        if (result != JOptionPane.YES_OPTION) {
+            return false;
+        }
+
+        updateProgress(progressListener, 62, "QR-Code Abfrage...");
+        int resultQr = showConfirmDialogOnEdt(
+                "QR-Codes Erstellen?",
+                "QR-Codes",
+                null);
+        if (resultQr == JOptionPane.YES_OPTION) {
+            updateProgress(progressListener, 68, "Erstelle QR-Codes...");
+            logger.info("QR-Codes werden erstellt...");
+            List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
+            for (File qrCodeFile : qrCodeFiles) {
+                logger.info("QR-Code erstellt: {}", qrCodeFile.getAbsolutePath());
+            }
+            logger.info("QR-Codes erstellt.");
+        }
+        updateProgress(progressListener, 63, "QR-Code Abfrage abgeschlossen.");
+        return true;
+    }
+
+    private static void startUpdateCheckAsync() {
+        CompletableFuture.runAsync(Main::checkForUpdatesOnce)
+                .exceptionally(e -> {
+                    logger.warn("Asynchrone Update-Prüfung fehlgeschlagen: {}", e.getMessage(), e);
+                    return null;
+                });
     }
 
     /**
@@ -454,7 +479,13 @@ public class Main {
      */
     private static void processVendorImport(VendorManager vendorManager, Map<String, Object> itemData,
             ImportResult result, java.util.Set<String> importedItems) {
-        String vendorName = (String) itemData.get("name");
+        String vendorName = getString(itemData, "name");
+
+        if (vendorName.isBlank()) {
+            result.incrementSkipped();
+            logUtils.addLog("Lieferant ohne Namen beim Import übersprungen");
+            return;
+        }
 
         if (importedItems.contains(vendorName)) {
             result.incrementSkipped();
@@ -465,12 +496,19 @@ public class Main {
         String email = getString(itemData, "email");
         String address = getString(itemData, "address");
 
-        String[] columns = { "contactPerson", "phoneNumber", "email", "address" };
-        Object[] dataValues = {
-                contactPerson, phoneNumber, email, address
-        };
+        boolean success;
+        if (vendorManager.existsVendor(vendorName)) {
+            String[] columns = { "contactPerson", "phoneNumber", "email", "address" };
+            Object[] dataValues = {
+                    contactPerson, phoneNumber, email, address
+            };
+            success = vendorManager.updateVendor(vendorName, columns, dataValues);
+        } else {
+            Vendor vendor = new Vendor(vendorName, contactPerson, phoneNumber, email, address, new ArrayList<>(), 0.0);
+            success = vendorManager.insertVendor(vendor);
+        }
 
-        if (vendorManager.updateVendor(vendorName, columns, dataValues)) {
+        if (success) {
             result.incrementImported();
             importedItems.add(vendorName);
             ImportUtils.addToList(vendorName);
@@ -827,13 +865,16 @@ public class Main {
      * Apply table font settings from configuration
      */
     private static void applyTableFontSettings() {
-        String tableFontSizeStr = settings.getProperty("table_font_size");
+        int fontSize = getPositiveIntSetting("table_font_size", SettingsGUI.TABLE_FONT_SIZE);
+        SettingsGUI.TABLE_FONT_SIZE = fontSize;
 
-        if (tableFontSizeStr == null || tableFontSizeStr.isEmpty()) {
-            settings.setProperty("table_font_size", String.valueOf(SettingsGUI.TABLE_FONT_SIZE));
+        // Persist normalized value so invalid/empty entries don't reappear on restart.
+        String normalized = String.valueOf(fontSize);
+        String current = settings.getProperty("table_font_size");
+        if (!normalized.equals(current)) {
+            settings.setProperty("table_font_size", normalized);
+            settings.save();
         }
-
-        SettingsGUI.TABLE_FONT_SIZE = Integer.parseInt(settings.getProperty("table_font_size"));
     }
 
     /**
@@ -1071,12 +1112,15 @@ public class Main {
         if (progressListener != null) {
             progressListener.onProgress(percent, message);
         }
-        sleepQuietly();
+        // Keep progress pacing sleep, but never block the EDT so splash animations stay fluid.
+        if (!SwingUtilities.isEventDispatchThread()) {
+            sleepQuietly();
+        }
     }
 
     private static void sleepQuietly() {
         try {
-            Thread.sleep((long) 100);
+            Thread.sleep((long) 200);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -1102,7 +1146,10 @@ public class Main {
             @Override
             protected Void doInBackground() {
                 try {
-                    initializeApplication((percent, message) -> publish(new ProgressUpdate(percent, message)));
+                    initializeApplication((percent, message) -> {
+                        logSplashProgress(percent, message);
+                        publish(new ProgressUpdate(percent, message));
+                    });
                 } catch (Exception e) {
                     initException = e;
                 }
@@ -1114,8 +1161,9 @@ public class Main {
                 if (chunks.isEmpty()) {
                     return;
                 }
-                ProgressUpdate last = chunks.getLast();
-                splashscreen.updateProgress(last.percent(), last.message());
+                for (ProgressUpdate update : chunks) {
+                    splashscreen.updateProgress(update.percent(), update.message());
+                }
             }
 
             @Override
@@ -1136,6 +1184,7 @@ public class Main {
 
                 splashscreen.updateProgress(100, "Starte Hauptfenster...");
                 splashscreen.close();
+                ImportUtils.loadSeparatedArticles();
 
                 // Launch GUI
                 launchGUI();
@@ -1145,10 +1194,9 @@ public class Main {
     }
 
     private static void checkForUpdatesOnce() {
-        if (updatesChecked) {
+        if (!updatesChecked.compareAndSet(false, true)) {
             return;
         }
-        updatesChecked = true;
         checkForUpdates();
     }
 
@@ -1167,8 +1215,16 @@ public class Main {
                     JOptionPane.INFORMATION_MESSAGE,
                     icon));
         } catch (InterruptedException | InvocationTargetException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             throw new RuntimeException("Dialog konnte nicht angezeigt werden", e);
         }
         return result[0];
+    }
+
+    private static void logSplashProgress(int percent, String message) {
+        String safeMessage = message == null ? "" : message;
+        System.out.println("[Splash] " + percent + "% - " + safeMessage);
     }
 }

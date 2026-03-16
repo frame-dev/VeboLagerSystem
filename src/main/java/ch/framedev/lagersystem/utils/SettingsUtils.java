@@ -1,5 +1,6 @@
 package ch.framedev.lagersystem.utils;
 
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 
@@ -43,10 +44,11 @@ public class SettingsUtils {
         File settingsDir = Main.getAppDataDir();
 
         if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
-            JOptionPane.showMessageDialog(frame,
-                    "Öffnen des Einstellungen-Ordners wird von diesem System nicht unterstützt.",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Nicht unterstützt")
+                    .setMessage("Öffnen des Einstellungen-Ordners wird von diesem System nicht unterstützt.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             Main.logUtils.addLog("Fehler beim Öffnen des Einstellungen-Ordners: Desktop OPEN nicht unterstützt");
             return;
         }
@@ -54,10 +56,11 @@ public class SettingsUtils {
         try {
             Desktop.getDesktop().open(settingsDir);
         } catch (IOException e) {
-            JOptionPane.showMessageDialog(frame,
-                    "Fehler beim Öffnen des Einstellungen-Ordners:\n" + e.getMessage(),
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Fehler beim Öffnen des Einstellungen-Ordners:\n" + e.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             Main.logUtils.addLog("Fehler beim Öffnen des Einstellungen-Ordners: " + e.getMessage());
         }
     }

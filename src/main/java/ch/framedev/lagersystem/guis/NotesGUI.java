@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.managers.LogManager;
 import ch.framedev.lagersystem.managers.NotesManager;
 import ch.framedev.lagersystem.classes.Note;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -327,8 +328,11 @@ public class NotesGUI extends JFrame {
     private void openUpdateDialog() {
         String selectedTitle = notesList.getSelectedValue();
         if (selectedTitle == null) {
-            JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Notiz zum Bearbeiten aus.",
-                    "Keine Notiz ausgewählt", JOptionPane.WARNING_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Keine Notiz ausgewählt")
+                    .setMessage("Bitte wählen Sie eine Notiz zum Bearbeiten aus.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
 
@@ -344,8 +348,11 @@ public class NotesGUI extends JFrame {
         saveButton.addActionListener(ev -> {
             String newContent = contentArea.getText().trim();
             if (newContent.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Titel und Inhalt dürfen nicht leer sein.",
-                        "Fehler", JOptionPane.ERROR_MESSAGE);
+                new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Titel und Inhalt dürfen nicht leer sein.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
                 return;
             }
             boolean success = notesManager.updateNote(note.getTitle(), newContent);
@@ -355,8 +362,11 @@ public class NotesGUI extends JFrame {
                 dialog.dispose();
                 setupList();
             } else {
-                JOptionPane.showMessageDialog(dialog, "Notiz mit diesem Titel existiert bereits.",
-                        "Fehler", JOptionPane.ERROR_MESSAGE);
+                new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Notiz mit diesem Titel existiert bereits.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             }
         });
         JPanel body = getDialogBodyPanel(dialog);
@@ -384,13 +394,19 @@ public class NotesGUI extends JFrame {
     private void deleteNote() {
         String selectedTitle = notesList.getSelectedValue();
         if (selectedTitle == null) {
-            JOptionPane.showMessageDialog(this, "Bitte wählen Sie eine Notiz zum Löschen aus.",
-                    "Keine Notiz ausgewählt", JOptionPane.WARNING_MESSAGE);
+            new MessageDialog()
+                    .setTitle("Keine Notiz ausgewählt")
+                    .setMessage("Bitte wählen Sie eine Notiz zum Löschen aus.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Möchten Sie die Notiz \"" + selectedTitle + "\" wirklich löschen?",
-                "Notiz löschen", JOptionPane.YES_NO_OPTION);
+        int confirm = new MessageDialog()
+                .setTitle("Notiz löschen")
+                .setMessage("Möchten Sie die Notiz \" + selectedTitle + \" wirklich löschen?")
+                .setOptionType(JOptionPane.YES_NO_OPTION)
+                .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                .displayWithOptions();
         if (confirm == JOptionPane.YES_OPTION) {
             boolean success = notesManager.deleteNote(selectedTitle);
             if (success) {
@@ -399,8 +415,11 @@ public class NotesGUI extends JFrame {
                 LogManager.getInstance().createLog(LogManager.LogLevel.INFO,
                         "Notiz '" + selectedTitle + "' geloescht.");
             } else {
-                JOptionPane.showMessageDialog(this, "Fehler beim Löschen der Notiz.",
-                        "Fehler", JOptionPane.ERROR_MESSAGE);
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Fehler beim Löschen der Notiz.")
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
             }
         }
     }
@@ -466,8 +485,11 @@ public class NotesGUI extends JFrame {
             String title = titleField.getText().trim();
             String content = contentArea.getText().trim();
             if (title.isEmpty() || content.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Titel und Inhalt dürfen nicht leer sein.",
-                        "Fehler", JOptionPane.ERROR_MESSAGE);
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Titel und Inhalt dürfen nicht leer sein.")
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
                 return;
             }
             boolean success = notesManager.addNote(title, content);
@@ -476,8 +498,11 @@ public class NotesGUI extends JFrame {
                 setupList();
                 LogManager.getInstance().createLog(LogManager.LogLevel.INFO, "Notiz '" + title + "' erstellt.");
             } else {
-                JOptionPane.showMessageDialog(dialog, "Notiz mit diesem Titel existiert bereits.",
-                        "Fehler", JOptionPane.ERROR_MESSAGE);
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Notiz mit diesem Titel existiert bereits.")
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
             }
         });
 

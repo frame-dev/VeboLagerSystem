@@ -2,7 +2,6 @@ package ch.framedev.lagersystem.dialogs;
 
 import ch.framedev.lagersystem.guis.ArticleGUI;
 import ch.framedev.lagersystem.guis.SettingsGUI;
-import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
@@ -750,11 +749,11 @@ public class ArticleDialog {
             verkaufspreis = ((Number) fields.verkaufField().getValue()).doubleValue();
             einkaufspreis = ((Number) fields.einkaufField().getValue()).doubleValue();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(dialog,
-                    "Bitte gültige Preise eingeben.",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                .setTitle("Fehler")
+                .setMessage("Bitte gültige Preise eingeben.")
+                .setMessageType(JOptionPane.ERROR_MESSAGE)
+                .display();
             return;
         }
 
@@ -764,7 +763,11 @@ public class ArticleDialog {
     }
 
     private static void showValidationError(JDialog dialog, String message, JTextField fieldToFocus) {
-        JOptionPane.showMessageDialog(dialog, message, "Fehler", JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+        new MessageDialog()
+            .setTitle("Fehler")
+            .setMessage(message)
+            .setMessageType(JOptionPane.ERROR_MESSAGE)
+            .display();
         fieldToFocus.requestFocusInWindow();
         fieldToFocus.selectAll();
     }

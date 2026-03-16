@@ -2,7 +2,7 @@ package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
-import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
@@ -25,9 +25,10 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.createThemeButton;
 
 /**
  * Modern edit order GUI with improved visual design and user experience.
- * Features: Split panel layout, gradient header, styled components, and article caching.
+ * Features: Split panel layout, gradient header, styled components, and article
+ * caching.
  */
-@SuppressWarnings({"SwitchStatementWithTooFewBranches", "DuplicatedCode"})
+@SuppressWarnings({ "SwitchStatementWithTooFewBranches", "DuplicatedCode" })
 public class EditOrderGUI extends JFrame {
 
     private static final int PAD = 12;
@@ -47,7 +48,9 @@ public class EditOrderGUI extends JFrame {
     private final Map<String, Article> articleCache = new HashMap<>();
 
     /**
-     * Initializes the EditOrderGUI with the given order, setting up the layout, components, and event handlers for editing the order details and articles.
+     * Initializes the EditOrderGUI with the given order, setting up the layout,
+     * components, and event handlers for editing the order details and articles.
+     * 
      * @param order the Order object containing the details to be edited in the GUI.
      */
     public EditOrderGUI(Order order) {
@@ -73,14 +76,14 @@ public class EditOrderGUI extends JFrame {
         headerCard.setLayout(new BorderLayout());
         headerCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(14, 18, 14, 18)
-        ));
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)));
 
         JLabel titleLabel = new JLabel(UnicodeSymbols.EDIT + " Bestellung Bearbeiten");
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Empfänger/Absender, Abteilung und Artikelmengen anpassen");
+        JLabel subtitleLabel = new JLabel(
+                UnicodeSymbols.INFO + " Empfänger/Absender, Abteilung und Artikelmengen anpassen");
         subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
@@ -100,8 +103,7 @@ public class EditOrderGUI extends JFrame {
         toolbarCard.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
         toolbarCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)
-        ));
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 
         JButton saveButtonTop = createThemeButton(UnicodeSymbols.FLOPPY + " Speichern", ThemeManager.getSuccessColor());
         saveButtonTop.setToolTipText("Änderungen speichern");
@@ -198,7 +200,7 @@ public class EditOrderGUI extends JFrame {
         rightCard.add(tableTitle, BorderLayout.NORTH);
 
         // Articles Table with modern styling
-        String[] columnNames = {"Artikel", "Menge", "Einzelpreis"};
+        String[] columnNames = { "Artikel", "Menge", "Einzelpreis" };
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -252,8 +254,7 @@ public class EditOrderGUI extends JFrame {
         getRootPane().registerKeyboardAction(
                 e -> dispose(),
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
-                JComponent.WHEN_IN_FOCUSED_WINDOW
-        );
+                JComponent.WHEN_IN_FOCUSED_WINDOW);
     }
 
     @Override
@@ -263,7 +264,8 @@ public class EditOrderGUI extends JFrame {
     }
 
     private void applyTableTheme(JTable table) {
-        if(table == null) throw new NullPointerException("table must not be null");
+        if (table == null)
+            throw new NullPointerException("table must not be null");
         table.setRowHeight(28);
         table.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
         table.setShowGrid(true);
@@ -290,14 +292,15 @@ public class EditOrderGUI extends JFrame {
         DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected,
-                                                           boolean hasFocus, int row, int column) {
+                    boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
 
                 if (isSelected) {
                     c.setBackground(ThemeManager.getSelectionBackgroundColor());
                     c.setForeground(ThemeManager.getSelectionForegroundColor());
                 } else {
-                    c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+                    c.setBackground(
+                            row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
                     c.setForeground(ThemeManager.getTextPrimaryColor());
                 }
 
@@ -316,8 +319,7 @@ public class EditOrderGUI extends JFrame {
         JTextField editorField = new JTextField();
         editorField.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getInputFocusBorderColor(), 1),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)
-        ));
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
         editorField.setBackground(ThemeManager.getInputBackgroundColor());
         editorField.setForeground(ThemeManager.getTextPrimaryColor());
         editorField.setCaretColor(ThemeManager.getTextPrimaryColor());
@@ -329,10 +331,14 @@ public class EditOrderGUI extends JFrame {
     }
 
     private void addStyledFormRow(JPanel panel, GridBagConstraints gbc, String labelText, JComponent field) {
-        if(panel == null) throw new NullPointerException("panel must not be null");
-        if(gbc == null) throw new NullPointerException("gbc must not be null");
-        if(labelText == null) throw new NullPointerException("labelText must not be null");
-        if(field == null) throw new NullPointerException("field must not be null");
+        if (panel == null)
+            throw new NullPointerException("panel must not be null");
+        if (gbc == null)
+            throw new NullPointerException("gbc must not be null");
+        if (labelText == null)
+            throw new NullPointerException("labelText must not be null");
+        if (field == null)
+            throw new NullPointerException("field must not be null");
         JLabel label = new JLabel(labelText);
         label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         label.setForeground(ThemeManager.getTextPrimaryColor());
@@ -392,25 +398,29 @@ public class EditOrderGUI extends JFrame {
         boolean success = orderManager.updateOrder(order);
 
         if (!success) {
-            JOptionPane.showMessageDialog(this,
-                    "<html><b>Fehler beim Aktualisieren!</b><br/>Die Bestellung konnte nicht gespeichert werden.</html>",
-                    "Fehler",
-                    JOptionPane.ERROR_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage(
+                            "<html><b>Fehler beim Aktualisieren!</b><br/>Die Bestellung konnte nicht gespeichert werden.</html>")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
             return;
         }
 
-        JOptionPane.showMessageDialog(this,
-                "<html><b>OK Erfolgreich gespeichert!</b><br/>Die Bestellung wurde aktualisiert.</html>",
-                "Erfolg",
-                JOptionPane.INFORMATION_MESSAGE,
-                Main.iconSmall);
+        new MessageDialog()
+                .setTitle("Erfolg")
+                .setMessage(
+                        "<html><b>OK Erfolgreich gespeichert!</b><br/>Die Bestellung wurde aktualisiert.</html>")
+                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                .display();
         dispose();
     }
 
     /**
      * Extracts article numbers and quantities from the table model.
-     * @return a map of article numbers to their corresponding quantities based on the current table data.
+     * 
+     * @return a map of article numbers to their corresponding quantities based on
+     *         the current table data.
      */
     public Map<String, Integer> getTableData() {
         Map<String, Integer> data = new HashMap<>();
@@ -460,16 +470,20 @@ public class EditOrderGUI extends JFrame {
     }
 
     /**
-     * Displays the EditOrderGUI window on the Event Dispatch Thread to ensure thread safety and proper GUI rendering.
+     * Displays the EditOrderGUI window on the Event Dispatch Thread to ensure
+     * thread safety and proper GUI rendering.
      */
     public void display() {
         SwingUtilities.invokeLater(() -> setVisible(true));
     }
 
     /**
-     * Utility method to safely handle null strings by converting them to empty strings, preventing potential NullPointerExceptions when setting text fields.
+     * Utility method to safely handle null strings by converting them to empty
+     * strings, preventing potential NullPointerExceptions when setting text fields.
+     * 
      * @param s the input string that may be null
-     * @return the original string if it's not null, or an empty string if the input is null
+     * @return the original string if it's not null, or an empty string if the input
+     *         is null
      */
     private static String safe(String s) {
         return s == null ? "" : s;

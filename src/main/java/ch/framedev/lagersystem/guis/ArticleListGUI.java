@@ -1,6 +1,7 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 
@@ -15,7 +16,15 @@ import java.util.*;
 import java.util.function.Supplier;
 
 /**
- * The ArticleListGUI class provides a graphical user interface for displaying and managing a list of articles along with their quantities. It allows users to view article details, search/filter the list, edit quantities, remove articles, and clear the entire list. The GUI is designed with a modern look using rounded panels and styled buttons, and it integrates with the ThemeManager for dynamic theming. The class also includes static methods to set and retrieve the articles and their quantities, making it easy to integrate with other parts of the application.
+ * The ArticleListGUI class provides a graphical user interface for displaying
+ * and managing a list of articles along with their quantities. It allows users
+ * to view article details, search/filter the list, edit quantities, remove
+ * articles, and clear the entire list. The GUI is designed with a modern look
+ * using rounded panels and styled buttons, and it integrates with the
+ * ThemeManager for dynamic theming. The class also includes static methods to
+ * set and retrieve the articles and their quantities, making it easy to
+ * integrate with other parts of the application.
+ * 
  * @author framedev
  */
 public class ArticleListGUI extends JFrame {
@@ -44,7 +53,8 @@ public class ArticleListGUI extends JFrame {
             // Fallback (not used for renderer, but helpful for debugging)
             try {
                 String name = article.getName();
-                if (name != null && name.length() > 34) name = name.substring(0, 31) + "...";
+                if (name != null && name.length() > 34)
+                    name = name.substring(0, 31) + "...";
                 return String.format("%s | Nr: %s | Qty: %d", name, article.getArticleNumber(), quantity);
             } catch (Exception ex) {
                 return article + " | Qty: " + quantity;
@@ -53,7 +63,12 @@ public class ArticleListGUI extends JFrame {
     }
 
     /**
-     * Constructs the ArticleListGUI window, initializes the UI components, and sets up event listeners. The window displays a list of articles with their quantities, allows searching/filtering, and provides actions to edit quantities, remove articles, or clear the list. It also integrates with the ThemeManager for dynamic theming and applies a modern design with rounded panels and styled buttons.
+     * Constructs the ArticleListGUI window, initializes the UI components, and sets
+     * up event listeners. The window displays a list of articles with their
+     * quantities, allows searching/filtering, and provides actions to edit
+     * quantities, remove articles, or clear the list. It also integrates with the
+     * ThemeManager for dynamic theming and applies a modern design with rounded
+     * panels and styled buttons.
      */
     public ArticleListGUI() {
         ThemeManager.getInstance().registerWindow(this);
@@ -73,7 +88,8 @@ public class ArticleListGUI extends JFrame {
         wireSearch();
 
         // Icon
-        if (Main.iconSmall != null) setIconImage(Main.iconSmall.getImage());
+        if (Main.iconSmall != null)
+            setIconImage(Main.iconSmall.getImage());
 
         refreshArticleList();
         setVisible(true);
@@ -94,7 +110,8 @@ public class ArticleListGUI extends JFrame {
         articleJList.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) showSelectedDetails();
+                if (e.getClickCount() == 2)
+                    showSelectedDetails();
             }
         });
     }
@@ -115,8 +132,7 @@ public class ArticleListGUI extends JFrame {
         header.setLayout(new BorderLayout(16, 0));
         header.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(18, 20, 18, 20)
-        ));
+                BorderFactory.createEmptyBorder(18, 20, 18, 20)));
 
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         left.setOpaque(false);
@@ -157,9 +173,7 @@ public class ArticleListGUI extends JFrame {
                 BorderFactory.createEmptyBorder(16, 0, 0, 0),
                 BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(16, 16, 16, 16)
-                )
-        ));
+                        BorderFactory.createEmptyBorder(16, 16, 16, 16))));
 
         // Search bar
         JPanel searchRow = new JPanel(new BorderLayout(10, 0));
@@ -250,8 +264,15 @@ public class ArticleListGUI extends JFrame {
         setSearchBorder(false);
 
         searchField.addFocusListener(new FocusAdapter() {
-            @Override public void focusGained(FocusEvent e) { setSearchBorder(true); }
-            @Override public void focusLost(FocusEvent e) { setSearchBorder(false); }
+            @Override
+            public void focusGained(FocusEvent e) {
+                setSearchBorder(true);
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                setSearchBorder(false);
+            }
         });
     }
 
@@ -259,8 +280,7 @@ public class ArticleListGUI extends JFrame {
         Color border = focused ? ThemeManager.getInputFocusBorderColor() : ThemeManager.getInputBorderColor();
         searchField.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(border, 2),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
     }
 
     private JButton createIconButton(Color bg) {
@@ -280,7 +300,8 @@ public class ArticleListGUI extends JFrame {
     }
 
     private JButton createStyledButton(String text, Color bg) {
-        if(text == null) throw new IllegalArgumentException("text must not be null");
+        if (text == null)
+            throw new IllegalArgumentException("text must not be null");
         JButton b = new JButton(text);
         b.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         b.setBackground(bg);
@@ -292,8 +313,7 @@ public class ArticleListGUI extends JFrame {
 
         b.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(bg.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 16, 10, 16)
-        ));
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)));
 
         b.addMouseListener(new HoverMouseAdapter(b, bg));
         return b;
@@ -312,10 +332,25 @@ public class ArticleListGUI extends JFrame {
             this.pressed = ThemeManager.getButtonPressedColor(original);
         }
 
-        @Override public void mouseEntered(MouseEvent e) { button.setBackground(hover); }
-        @Override public void mouseExited(MouseEvent e) { button.setBackground(original); }
-        @Override public void mousePressed(MouseEvent e) { button.setBackground(pressed); }
-        @Override public void mouseReleased(MouseEvent e) { button.setBackground(button.contains(e.getPoint()) ? hover : original); }
+        @Override
+        public void mouseEntered(MouseEvent e) {
+            button.setBackground(hover);
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+            button.setBackground(original);
+        }
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            button.setBackground(pressed);
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent e) {
+            button.setBackground(button.contains(e.getPoint()) ? hover : original);
+        }
     }
 
     // ---------- Wiring / shortcuts ----------
@@ -323,15 +358,30 @@ public class ArticleListGUI extends JFrame {
     private void wireSearch() {
         // Debounced search
         searchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { searchDebounce.restart(); }
-            @Override public void removeUpdate(DocumentEvent e) { searchDebounce.restart(); }
-            @Override public void changedUpdate(DocumentEvent e) { searchDebounce.restart(); }
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                searchDebounce.restart();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                searchDebounce.restart();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                searchDebounce.restart();
+            }
         });
 
         // ESC clears search when field focused
-        searchField.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "clearSearch");
+        searchField.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                "clearSearch");
         searchField.getActionMap().put("clearSearch", new AbstractAction() {
-            @Override public void actionPerformed(ActionEvent e) { clearSearch(); }
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                clearSearch();
+            }
         });
     }
 
@@ -343,7 +393,8 @@ public class ArticleListGUI extends JFrame {
         // Ctrl+F => focus search
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK), "focusSearch");
         am.put("focusSearch", new AbstractAction() {
-            @Override public void actionPerformed(ActionEvent e) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
                 searchField.requestFocusInWindow();
                 searchField.selectAll();
             }
@@ -352,7 +403,8 @@ public class ArticleListGUI extends JFrame {
         // Enter => edit qty (if list focused)
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "editQty");
         am.put("editQty", new AbstractAction() {
-            @Override public void actionPerformed(ActionEvent e) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
                 if (articleJList.isFocusOwner() || articleJList.getSelectedIndex() != -1) {
                     handleEditQuantity(e);
                 }
@@ -362,13 +414,19 @@ public class ArticleListGUI extends JFrame {
         // Delete => remove
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "remove");
         am.put("remove", new AbstractAction() {
-            @Override public void actionPerformed(ActionEvent e) { handleRemoveArticle(e); }
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleRemoveArticle(e);
+            }
         });
 
         // Ctrl+L => clear all
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_L, InputEvent.CTRL_DOWN_MASK), "clearAll");
         am.put("clearAll", new AbstractAction() {
-            @Override public void actionPerformed(ActionEvent e) { handleClearAll(e); }
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                handleClearAll(e);
+            }
         });
     }
 
@@ -382,8 +440,9 @@ public class ArticleListGUI extends JFrame {
     private void handleEditQuantity(ActionEvent e) {
         int sel = articleJList.getSelectedIndex();
         if (sel == -1) {
-            JOptionPane.showMessageDialog(this, "Bitte wählen Sie einen Artikel aus.", "Keine Auswahl",
-                    JOptionPane.WARNING_MESSAGE, Main.iconSmall);
+            new MessageDialog().setTitle("Keine Auswahl")
+                    .setMessage("Bitte wählen Sie einen Artikel aus, um die Menge zu ändern.")
+                    .display();
             return;
         }
 
@@ -393,26 +452,32 @@ public class ArticleListGUI extends JFrame {
                 "Neue Menge für \"" + safe(selected.article::getName) + "\":",
                 selected.quantity);
 
-        if (input == null) return;
+        if (input == null)
+            return;
 
         try {
             int newQty = Integer.parseInt(input.trim());
             if (newQty <= 0) {
-                JOptionPane.showMessageDialog(this, "Menge muss größer als 0 sein.", "Ungültige Eingabe",
-                        JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Ungültige Eingabe")
+                        .setMessage("Menge muss größer als 0 sein.")
+                        .display();
                 return;
             }
             articlesAndQuantity.put(selected.article, newQty);
             refreshArticleListPreservingQuery();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Ungültige Zahl: " + input, "Fehler",
-                    JOptionPane.ERROR_MESSAGE, Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Ungültige Eingabe")
+                    .setMessage("Ungültige Zahl: " + input)
+                    .display();
         }
     }
 
     private void handleRemoveArticle(ActionEvent e) {
         int sel = articleJList.getSelectedIndex();
-        if (sel == -1) return;
+        if (sel == -1)
+            return;
 
         ArticleDisplay selected = listModel.getElementAt(sel);
         articlesAndQuantity.remove(selected.article);
@@ -420,11 +485,14 @@ public class ArticleListGUI extends JFrame {
     }
 
     private void handleClearAll(ActionEvent e) {
-        if (articlesAndQuantity.isEmpty()) return;
+        if (articlesAndQuantity.isEmpty())
+            return;
 
-        int res = JOptionPane.showConfirmDialog(this,
-                "Alle Artikel entfernen?", "Bestätigen",
-                JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, Main.iconSmall);
+        int res = new MessageDialog()
+        .setTitle("Bestätigen")
+        .setMessage("Alle Artikel entfernen?")
+        .setOptionType(JOptionPane.YES_NO_OPTION)
+        .displayWithOptions();
 
         if (res == JOptionPane.YES_OPTION) {
             articlesAndQuantity.clear();
@@ -434,7 +502,8 @@ public class ArticleListGUI extends JFrame {
 
     private void showSelectedDetails() {
         int idx = articleJList.getSelectedIndex();
-        if (idx == -1) return;
+        if (idx == -1)
+            return;
 
         ArticleDisplay ad = listModel.getElementAt(idx);
 
@@ -456,11 +525,12 @@ public class ArticleListGUI extends JFrame {
                 safeInt(ad.article::getMinStockLevel),
                 ad.quantity,
                 safeDouble(ad.article::getSellPrice),
-                safeDouble(ad.article::getPurchasePrice)
-        );
+                safeDouble(ad.article::getPurchasePrice));
 
-        JOptionPane.showMessageDialog(this, details, "Artikel Details",
-                JOptionPane.INFORMATION_MESSAGE, Main.iconSmall);
+        new MessageDialog()
+                .setTitle("Artikel Details")
+                .setMessage(details)
+                .display();
     }
 
     // ---------- Data / filtering ----------
@@ -471,7 +541,10 @@ public class ArticleListGUI extends JFrame {
     }
 
     /**
-     * Rebuild the display cache and refresh the JList. This should be called whenever the underlying articlesAndQuantity map changes in a way that might affect the display (e.g., article name changes, new article added, etc.). It preserves the current search query and selection state as much as possible.
+     * Rebuild the display cache and refresh the JList. This should be called
+     * whenever the underlying articlesAndQuantity map changes in a way that might
+     * affect the display (e.g., article name changes, new article added, etc.). It
+     * preserves the current search query and selection state as much as possible.
      */
     public void refreshArticleList() {
         rebuildDisplayCache();
@@ -562,7 +635,8 @@ public class ArticleListGUI extends JFrame {
     }
 
     private ArticleDisplay createDisplay(Article article, int quantity) {
-        if(article == null) throw new IllegalArgumentException("article must not be null");
+        if (article == null)
+            throw new IllegalArgumentException("article must not be null");
         String name = safe(article::getName);
         String number = safe(article::getArticleNumber);
         String details = safe(article::getDetails);
@@ -583,15 +657,30 @@ public class ArticleListGUI extends JFrame {
     }
 
     private int safeInt(IntSupplierEx supplier) {
-        try { return supplier.getAsInt(); } catch (Exception e) { return 0; }
+        try {
+            return supplier.getAsInt();
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private double safeDouble(DoubleSupplierEx supplier) {
-        try { return supplier.getAsDouble(); } catch (Exception e) { return 0.0; }
+        try {
+            return supplier.getAsDouble();
+        } catch (Exception e) {
+            return 0.0;
+        }
     }
 
-    @FunctionalInterface private interface IntSupplierEx { int getAsInt(); }
-    @FunctionalInterface private interface DoubleSupplierEx { double getAsDouble(); }
+    @FunctionalInterface
+    private interface IntSupplierEx {
+        int getAsInt();
+    }
+
+    @FunctionalInterface
+    private interface DoubleSupplierEx {
+        double getAsDouble();
+    }
 
     // ---------- Theme / lifecycle ----------
 
@@ -609,7 +698,8 @@ public class ArticleListGUI extends JFrame {
             // Rebuild UI to apply new colors cleanly
             initializeComponents();
 
-            // Re-apply list colors (renderer uses ThemeManager dynamically, but base colors matter)
+            // Re-apply list colors (renderer uses ThemeManager dynamically, but base colors
+            // matter)
             articleJList.setBackground(ThemeManager.getCardBackgroundColor());
             articleJList.setForeground(ThemeManager.getTextPrimaryColor());
             articleJList.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
@@ -623,27 +713,39 @@ public class ArticleListGUI extends JFrame {
     }
 
     /**
-     * Brings the window to the front if it's already visible, or makes it visible if it's not. This is useful for reusing the same instance of ArticleListGUI without creating multiple windows. If the window is already open, it will be focused and brought to the front; if it's not open, it will be shown.
+     * Brings the window to the front if it's already visible, or makes it visible
+     * if it's not. This is useful for reusing the same instance of ArticleListGUI
+     * without creating multiple windows. If the window is already open, it will be
+     * focused and brought to the front; if it's not open, it will be shown.
      */
     public void display() {
         SwingUtilities.invokeLater(() -> {
-            if (!isVisible()) setVisible(true);
-            else toFront();
+            if (!isVisible())
+                setVisible(true);
+            else
+                toFront();
         });
     }
 
     // ---------- Static API ----------
 
     /**
-     * Set the articles and their quantities to display in the list. This replaces any existing data.
-     * @param articleMap Map of Article to quantity. If null, it will be treated as an empty map.
+     * Set the articles and their quantities to display in the list. This replaces
+     * any existing data.
+     * 
+     * @param articleMap Map of Article to quantity. If null, it will be treated as
+     *                   an empty map.
      */
     public static void setArticles(Map<Article, Integer> articleMap) {
         articlesAndQuantity = (articleMap == null) ? new HashMap<>() : articleMap;
     }
 
     /**
-     * Get the current map of articles and their quantities. Modifying this map will affect the list directly, so be cautious when using it. If you want to modify the list, it's safer to use addArticle/removeArticle methods or create a copy of the map before making changes.
+     * Get the current map of articles and their quantities. Modifying this map will
+     * affect the list directly, so be cautious when using it. If you want to modify
+     * the list, it's safer to use addArticle/removeArticle methods or create a copy
+     * of the map before making changes.
+     * 
      * @return The current map of Article to quantity. Never null, but may be empty.
      */
     public static Map<Article, Integer> getArticles() {
@@ -651,7 +753,12 @@ public class ArticleListGUI extends JFrame {
     }
 
     /**
-     * Get the current map of articles and their quantities. This is the same as getArticles() but named to clarify that it includes quantities. Modifying this map will affect the list directly, so be cautious when using it. If you want to modify the list, it's safer to use addArticle/removeArticle methods or create a copy of the map before making changes.
+     * Get the current map of articles and their quantities. This is the same as
+     * getArticles() but named to clarify that it includes quantities. Modifying
+     * this map will affect the list directly, so be cautious when using it. If you
+     * want to modify the list, it's safer to use addArticle/removeArticle methods
+     * or create a copy of the map before making changes.
+     * 
      * @return The current map of Article to quantity. Never null, but may be empty.
      */
     public static Map<Article, Integer> getArticlesAndQuantity() {
@@ -659,22 +766,32 @@ public class ArticleListGUI extends JFrame {
     }
 
     /**
-     * Add an article with a specified quantity to the list. If the article already exists, its quantity will be updated. Quantity must be greater than 0; if not, it defaults to 1.
-     * @param article The Article to add or update. If null, the method does nothing.
-     * @param quantity The quantity for the article. Must be greater than 0; if not, it defaults to 1.
+     * Add an article with a specified quantity to the list. If the article already
+     * exists, its quantity will be updated. Quantity must be greater than 0; if
+     * not, it defaults to 1.
+     * 
+     * @param article  The Article to add or update. If null, the method does
+     *                 nothing.
+     * @param quantity The quantity for the article. Must be greater than 0; if not,
+     *                 it defaults to 1.
      */
     public static void addArticle(Article article, int quantity) {
-        if (article == null) return;
-        if (quantity <= 0) quantity = 1;
+        if (article == null)
+            return;
+        if (quantity <= 0)
+            quantity = 1;
         articlesAndQuantity.put(article, quantity);
     }
 
     /**
-     * Remove an article from the list. If the article does not exist, the method does nothing.
+     * Remove an article from the list. If the article does not exist, the method
+     * does nothing.
+     * 
      * @param article The Article to remove. If null, the method does nothing.
      */
     public static void removeArticle(Article article) {
-        if (article == null) return;
+        if (article == null)
+            return;
         articlesAndQuantity.remove(article);
     }
 
@@ -683,7 +800,7 @@ public class ArticleListGUI extends JFrame {
     private static class ArticleCellRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index,
-                                                      boolean isSelected, boolean cellHasFocus) {
+                boolean isSelected, boolean cellHasFocus) {
             if (!(value instanceof ArticleDisplay ad)) {
                 return super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
             }
@@ -704,11 +821,13 @@ public class ArticleListGUI extends JFrame {
 
             JLabel nameLabel = new JLabel(name);
             nameLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-            nameLabel.setForeground(isSelected ? ThemeManager.getTextOnPrimaryColor() : ThemeManager.getTextPrimaryColor());
+            nameLabel.setForeground(
+                    isSelected ? ThemeManager.getTextOnPrimaryColor() : ThemeManager.getTextPrimaryColor());
 
             JLabel meta = new JLabel(String.format("📦 Nr: %s   ·   Stock: %d", number, stock));
             meta.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-            meta.setForeground(isSelected ? ThemeManager.getTextOnPrimaryColor() : ThemeManager.getTextSecondaryColor());
+            meta.setForeground(
+                    isSelected ? ThemeManager.getTextOnPrimaryColor() : ThemeManager.getTextSecondaryColor());
 
             info.add(nameLabel);
             info.add(Box.createVerticalStrut(5));
@@ -727,9 +846,9 @@ public class ArticleListGUI extends JFrame {
             qty.setBackground(badgeBg);
             qty.setForeground(badgeFg);
             qty.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(isSelected ? ThemeManager.getAccentColor() : ThemeManager.getBorderColor(), 1),
-                    BorderFactory.createEmptyBorder(6, 14, 6, 14)
-            ));
+                    BorderFactory.createLineBorder(
+                            isSelected ? ThemeManager.getAccentColor() : ThemeManager.getBorderColor(), 1),
+                    BorderFactory.createEmptyBorder(6, 14, 6, 14)));
 
             JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
             right.setOpaque(false);
@@ -743,8 +862,7 @@ public class ArticleListGUI extends JFrame {
             JPanel panel = new JPanel(new BorderLayout(12, 0));
             panel.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor().brighter()),
-                    BorderFactory.createEmptyBorder(12, 14, 12, 14)
-            ));
+                    BorderFactory.createEmptyBorder(12, 14, 12, 14)));
             panel.setOpaque(true);
 
             Color bg = isSelected
@@ -764,7 +882,11 @@ public class ArticleListGUI extends JFrame {
         }
 
         private static int safeIntStatic(IntSupplierEx s) {
-            try { return s.getAsInt(); } catch (Exception e) { return 0; }
+            try {
+                return s.getAsInt();
+            } catch (Exception e) {
+                return 0;
+            }
         }
     }
 

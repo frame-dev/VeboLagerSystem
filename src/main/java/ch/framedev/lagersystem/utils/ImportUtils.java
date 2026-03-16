@@ -2,7 +2,11 @@ package ch.framedev.lagersystem.utils;
 
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.simplejavautils.SimpleJavaUtils;
+import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.classes.SeperateArticle;
+import ch.framedev.lagersystem.managers.ArticleManager;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -29,6 +33,7 @@ public class ImportUtils {
     private final File VENDOR_FILE;
     private final File DEPARTMENT_FILE;
     private final File CLIENTS_FILE;
+    private final static File SEPERATED_ARTICLES_FILE = new File(Main.getAppDataDir(), "seperated_articles.json");
     private static volatile ImportUtils instance;
 
     /**
@@ -108,6 +113,12 @@ public class ImportUtils {
         } else {
             LOGGER.info("Clients file loaded: {}", CLIENTS_FILE.getAbsolutePath());
             Main.logUtils.addLog(CLIENTS_FILE.getAbsolutePath() + " loaded successfully");
+        }
+
+        if(!SEPERATED_ARTICLES_FILE.exists()) {
+            if(!SEPERATED_ARTICLES_FILE.getParentFile().exists()) {
+                SEPERATED_ARTICLES_FILE.getParentFile().mkdirs();
+            }
         }
     }
 
@@ -442,6 +453,25 @@ public class ImportUtils {
         } catch (IOException e) {
             Main.logUtils.addLog("Failed to write own_use_list.txt");
             LOGGER.error("Failed to write data to own_use_list.txt", e);
+        }
+    }
+
+    public static void loadSeparatedArticles() {
+        List<SeperateArticle> jsonStrings = new ArrayList<>();
+        for(Article article : ArticleManager.getInstance().getAllArticles()) {
+            if(ArticleUtils.isArticleSeparated(article.getArticleNumber())) {
+                jsonStrings.addAll(ArticleUtils.newSeperatedArticles(article.getArticleNumber()));
+            }
+        }
+        JsonElement jsonElement = new JsonArray();
+        for(SeperateArticle seperateArticle : jsonStrings) {
+            jsonElement.getAsJsonArray().add(new Gson().toJsonTree(seperateArticle));
+        }
+        try (FileWriter writer = new FileWriter(SEPERATED_ARTICLES_FILE)) {
+            new GsonBuilder().setPrettyPrinting().create().toJson(jsonElement, writer);
+        } catch (IOException e) {
+            Main.logUtils.addLog("Failed to write separated articles to file");
+            LOGGER.error("Failed to write separated articles to file", e);
         }
     }
 }

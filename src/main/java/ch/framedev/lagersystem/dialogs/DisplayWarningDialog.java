@@ -25,6 +25,10 @@ import java.util.List;
  */
 public class DisplayWarningDialog {
 
+    private static final Dimension WARNING_DIALOG_MIN_SIZE = new Dimension(620, 420);
+    private static final Dimension WARNINGS_DIALOG_SIZE = new Dimension(980, 650);
+    private static final Dimension WARNINGS_EMPTY_DIALOG_SIZE = new Dimension(920, 620);
+
     /**
      * Private constructor to prevent instantiation, as this class is intended to be used statically.
      */
@@ -42,11 +46,11 @@ public class DisplayWarningDialog {
 
         ThemeManager.applyUIDefaults();
         if (warning == null) {
-            JOptionPane.showMessageDialog(frame,
-                    "Keine Warnung zum Anzeigen vorhanden.",
-                    "Warnung",
-                    JOptionPane.WARNING_MESSAGE,
-                    Main.iconSmall);
+            new MessageDialog()
+                    .setTitle("Keine Warnung")
+                    .setMessage("Keine Warnung zum Anzeigen vorhanden.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
             return;
         }
 
@@ -141,11 +145,12 @@ public class DisplayWarningDialog {
                     warning.setResolved(true);
                     warning.setDisplayed(true);
                     WarningManager.getInstance().resolveWarning(warning.getTitle());
-                    JOptionPane.showMessageDialog(dialog,
-                            "Die Warnung wurde als gelöst markiert.",
-                            "Erfolg",
-                            JOptionPane.INFORMATION_MESSAGE,
-                            Main.iconSmall);
+                    new MessageDialog()
+                            .setTitle("Erfolg")
+                            .setMessage("Die Warnung wurde als gelöst markiert.")
+                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                            .setDuration(5000)
+                            .display();
                     dialog.dispose();
                 });
                 buttonBar.add(resolveBtn);
@@ -169,7 +174,7 @@ public class DisplayWarningDialog {
             warning.setDisplayed(true);
 
             dialog.pack();
-            dialog.setMinimumSize(new Dimension(620, 420));
+            dialog.setMinimumSize(WARNING_DIALOG_MIN_SIZE);
             dialog.setLocationRelativeTo(frame);
             dialog.setVisible(true);
         });
@@ -234,7 +239,7 @@ public class DisplayWarningDialog {
             dialog.getRootPane().setDefaultButton(closeBtn);
             installEscToClose(dialog);
 
-            dialog.setSize(920, 620);
+            dialog.setSize(WARNINGS_EMPTY_DIALOG_SIZE);
             dialog.setLocationRelativeTo(frame);
             dialog.setVisible(true);
             return;
@@ -318,10 +323,23 @@ public class DisplayWarningDialog {
 
         chrome.add(scrollPane, BorderLayout.CENTER);
 
+        int resolvedCount = (int) warnings.stream().filter(Warning::isResolved).count();
+        int openCount = warnings.size() - resolvedCount;
+
         // Footer actions
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
+        JPanel footer = new JPanel(new BorderLayout(10, 0));
         footer.setOpaque(false);
         footer.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
+
+        JPanel footerStatus = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 12));
+        footerStatus.setOpaque(false);
+        footerStatus.add(createSummaryChip(UnicodeSymbols.WARNING + " Offen: " + openCount,
+            ThemeManager.getWarningColor(), ThemeManager.withAlpha(ThemeManager.getWarningColor(), 30)));
+        footerStatus.add(createSummaryChip(UnicodeSymbols.CHECKMARK + " Gelöst: " + resolvedCount,
+            ThemeManager.getSuccessColor(), ThemeManager.withAlpha(ThemeManager.getSuccessColor(), 28)));
+
+        JPanel footerButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
+        footerButtons.setOpaque(false);
 
         JButton viewDetailsBtn = new JButton(UnicodeSymbols.INFO + " Details");
         viewDetailsBtn.setToolTipText("Zeigt die Details der ausgewählten Warnung an");
@@ -346,11 +364,11 @@ public class DisplayWarningDialog {
         viewDetailsBtn.addActionListener(e -> {
             int viewRow = table.getSelectedRow();
             if (viewRow == -1) {
-                JOptionPane.showMessageDialog(dialog,
-                        "Bitte wählen Sie eine Warnung aus.",
-                        "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Keine Auswahl")
+                        .setMessage("Bitte wählen Sie eine Warnung aus.")
+                        .setMessageType(JOptionPane.WARNING_MESSAGE)
+                        .display();
                 return;
             }
             int modelRow = table.convertRowIndexToModel(viewRow);
@@ -385,43 +403,45 @@ public class DisplayWarningDialog {
             Warning selected = warnings.get(modelRow);
 
             if (selected.isResolved()) {
-                JOptionPane.showMessageDialog(dialog,
-                        "Diese Warnung wurde bereits gelöst.",
-                        "Bereits gelöst",
-                        JOptionPane.INFORMATION_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Bereits gelöst")
+                        .setMessage("Diese Warnung wurde bereits gelöst.")
+                        .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                        .setDuration(5000)
+                        .display();
                 return;
             }
 
             if (warningManager.resolveWarning(selected.getTitle())) {
                 selected.setResolved(true);
                 tableModel.setValueAt(UnicodeSymbols.CHECKMARK + " Gelöst", modelRow, 0);
-                JOptionPane.showMessageDialog(dialog,
-                        "Warnung wurde als gelöst markiert.",
-                        "Erfolg",
-                        JOptionPane.INFORMATION_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Erfolg")
+                        .setMessage("Warnung wurde als gelöst markiert.")
+                        .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                        .setDuration(5000)
+                        .display();
             }
         });
 
         deleteBtn.addActionListener(e -> {
             int viewRow = table.getSelectedRow();
             if (viewRow == -1) {
-                JOptionPane.showMessageDialog(dialog,
-                        "Bitte wählen Sie eine Warnung aus.",
-                        "Keine Auswahl",
-                        JOptionPane.WARNING_MESSAGE,
-                        Main.iconSmall);
+                new MessageDialog()
+                        .setTitle("Keine Auswahl")
+                        .setMessage("Bitte wählen Sie eine Warnung aus.")
+                        .setMessageType(JOptionPane.WARNING_MESSAGE)
+                        .display();
                 return;
             }
             int modelRow = table.convertRowIndexToModel(viewRow);
 
-            int confirm = JOptionPane.showConfirmDialog(dialog,
-                    "Möchten Sie diese Warnung wirklich löschen?",
-                    "Löschen bestätigen",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    Main.iconSmall);
+            int confirm = new MessageDialog()
+                .setTitle("Löschen bestätigen")
+                .setMessage("Möchten Sie diese Warnung wirklich löschen?")
+                .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                .setOptionType(JOptionPane.YES_NO_OPTION)
+                .displayWithOptions();
             if (confirm != JOptionPane.YES_OPTION) return;
 
             Warning selected = warnings.get(modelRow);
@@ -440,11 +460,14 @@ public class DisplayWarningDialog {
 
         closeBtn.addActionListener(e -> dialog.dispose());
 
-        footer.add(viewDetailsBtn);
-        footer.add(resolveBtn);
-        footer.add(deleteBtn);
-        footer.add(refreshBtn);
-        footer.add(closeBtn);
+        footerButtons.add(viewDetailsBtn);
+        footerButtons.add(resolveBtn);
+        footerButtons.add(deleteBtn);
+        footerButtons.add(refreshBtn);
+        footerButtons.add(closeBtn);
+
+        footer.add(footerStatus, BorderLayout.WEST);
+        footer.add(footerButtons, BorderLayout.EAST);
 
         chrome.add(footer, BorderLayout.SOUTH);
 
@@ -452,7 +475,7 @@ public class DisplayWarningDialog {
         dialog.getRootPane().setDefaultButton(viewDetailsBtn);
         installEscToClose(dialog);
 
-        dialog.setSize(980, 650);
+        dialog.setSize(WARNINGS_DIALOG_SIZE);
         dialog.setLocationRelativeTo(frame);
         dialog.setVisible(true);
         });
@@ -481,8 +504,11 @@ public class DisplayWarningDialog {
         table.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setShowGrid(true);
+        table.setShowVerticalLines(false);
+        table.setRowMargin(0);
         table.setGridColor(ThemeManager.getTableGridColor());
         table.setIntercellSpacing(new Dimension(1, 1));
+        table.setFillsViewportHeight(true);
         table.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
         table.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
         table.setBackground(ThemeManager.getCardBackgroundColor());
@@ -551,8 +577,14 @@ public class DisplayWarningDialog {
 
         header.add(textStack, BorderLayout.WEST);
 
+        JPanel meta = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        meta.setOpaque(false);
+        meta.add(createHeaderBadge(UnicodeSymbols.INFO + " Fokusmodus"));
+        meta.add(createHeaderBadge(UnicodeSymbols.CALENDAR + " Heute"));
+
         JButton closeBtn = createHeaderCloseButton(dialog);
-        header.add(closeBtn, BorderLayout.EAST);
+        meta.add(closeBtn);
+        header.add(meta, BorderLayout.EAST);
 
         return header;
     }
@@ -588,6 +620,7 @@ public class DisplayWarningDialog {
         close.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         close.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         close.setPreferredSize(new Dimension(42, 42));
+        close.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
         close.addMouseListener(new MouseAdapter() {
             @Override
@@ -603,7 +636,7 @@ public class DisplayWarningDialog {
                 close.setForeground(ThemeManager.withAlpha(Color.WHITE, 220));
                 close.setBackground(ThemeManager.withAlpha(Color.WHITE, 0));
                 close.setContentAreaFilled(false);
-                close.setBorder(null);
+                close.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
             }
         });
 
@@ -642,6 +675,7 @@ public class DisplayWarningDialog {
         button.setOpaque(true);
         button.setContentAreaFilled(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setMargin(new Insets(8, 14, 8, 14));
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(base.darker(), 1, true),
                 BorderFactory.createEmptyBorder(10, 18, 10, 18)
@@ -712,5 +746,31 @@ public class DisplayWarningDialog {
     }
 
     private record WarningPalette(Color headerA, Color headerB, Color accent, String icon) {
+    }
+
+    private static JComponent createHeaderBadge(String text) {
+        JLabel badge = new JLabel(text);
+        badge.setFont(SettingsGUI.getFontByName(Font.BOLD, 11));
+        badge.setForeground(ThemeManager.withAlpha(Color.WHITE, 220));
+        badge.setOpaque(true);
+        badge.setBackground(ThemeManager.withAlpha(Color.WHITE, 24));
+        badge.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.withAlpha(Color.WHITE, 70), 1, true),
+                BorderFactory.createEmptyBorder(5, 9, 5, 9)
+        ));
+        return badge;
+    }
+
+    private static JComponent createSummaryChip(String text, Color fg, Color bg) {
+        JLabel chip = new JLabel(text);
+        chip.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        chip.setForeground(fg);
+        chip.setOpaque(true);
+        chip.setBackground(bg);
+        chip.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.withAlpha(fg, 120), 1, true),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
+        return chip;
     }
 }
