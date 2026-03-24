@@ -1,8 +1,6 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
-import ch.framedev.lagersystem.classes.Order;
-import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.*;
@@ -18,24 +16,14 @@ import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.plaf.basic.BasicComboBoxUI;
-import javax.swing.plaf.basic.BasicComboPopup;
-import javax.swing.plaf.basic.BasicScrollBarUI;
-import javax.swing.plaf.basic.ComboPopup;
 import javax.swing.text.NumberFormatter;
 import java.text.NumberFormat;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.datatransfer.StringSelection;
-import java.io.*;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.List;
-import static ch.framedev.lagersystem.main.Main.databaseManager;
 import static ch.framedev.lagersystem.utils.ArticleUtils.categories;
 import static ch.framedev.lagersystem.utils.ArticleUtils.loadCategories;
 
@@ -57,7 +45,6 @@ import static ch.framedev.lagersystem.utils.ArticleUtils.loadCategories;
  * nach dem Speichern
  * in der Anwendung angewendet.
  */
-@SuppressWarnings("deprecation")
 public class SettingsGUI extends JFrame {
     /**
      * Logger für UI- und Einstellungsaktionen innerhalb dieser GUI.
@@ -611,113 +598,12 @@ public class SettingsGUI extends JFrame {
     }
 
     private void applySettingsVisualPolish(Container root) {
-        if (root == null) {
-            return;
-        }
-        styleContainerRecursively(root);
-    }
-
-    private void styleContainerRecursively(Container container) {
-        for (Component component : container.getComponents()) {
-            if (component instanceof JComponent jc) {
-                if (jc.getClientProperty("searchText") != null) {
-                    styleSettingsSectionCard(jc);
-                }
-                if (jc instanceof JScrollPane scrollPane) {
-                    styleScrollPane(scrollPane);
-                }
-                if (jc instanceof JSeparator separator) {
-                    separator.setForeground(ThemeManager.getBorderColor());
-                }
-                if (jc instanceof JTextArea area && !area.isEditable()) {
-                    area.setLineWrap(true);
-                    area.setWrapStyleWord(true);
-                    area.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                            BorderFactory.createEmptyBorder(10, 12, 10, 12)));
-                }
-            }
-            if (component instanceof Container child) {
-                styleContainerRecursively(child);
-            }
-        }
-    }
-
-    private void styleSettingsSectionCard(JComponent sectionCard) {
-        if (sectionCard == null) {
-            return;
-        }
-        sectionCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(3, 0, 0, 0, ThemeManager.getAccentColor()),
-                BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(getSoftGlassHighlight(), 1, true),
-                    BorderFactory.createLineBorder(getSoftGlassBorder(), 1, true))),
-                BorderFactory.createEmptyBorder(22, 26, 20, 26)));
-        sectionCard.setBackground(getSoftGlassSurface(ThemeManager.getCardBackgroundColor()));
-    }
-
-    private void styleScrollPane(JScrollPane scrollPane) {
-        if (scrollPane == null) {
-            return;
-        }
-        scrollPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(0, 0, 0, 0)));
-        scrollPane.getViewport().setBackground(ThemeManager.getBackgroundColor());
-        if (scrollPane.getVerticalScrollBar() != null) {
-            scrollPane.getVerticalScrollBar().setUnitIncrement(14);
-            scrollPane.getVerticalScrollBar().setUI(createModernScrollBarUI());
-        }
-        if (scrollPane.getHorizontalScrollBar() != null) {
-            scrollPane.getHorizontalScrollBar().setUI(createModernScrollBarUI());
-        }
-    }
-
-    private BasicScrollBarUI createModernScrollBarUI() {
-        Color track = ThemeManager.getInputBackgroundColor();
-        Color thumb = adjustColor(ThemeManager.getBorderColor(), -0.08f);
-        Color thumbHover = adjustColor(ThemeManager.getAccentColor(), -0.12f);
-
-        return new BasicScrollBarUI() {
-            @Override
-            protected void configureScrollBarColors() {
-                this.trackColor = track;
-                this.thumbColor = thumb;
-            }
-
-            @Override
-            protected JButton createDecreaseButton(int orientation) {
-                return createZeroButton();
-            }
-
-            @Override
-            protected JButton createIncreaseButton(int orientation) {
-                return createZeroButton();
-            }
-
-            private JButton createZeroButton() {
-                JButton button = new JButton();
-                button.setPreferredSize(new Dimension(0, 0));
-                button.setMinimumSize(new Dimension(0, 0));
-                button.setMaximumSize(new Dimension(0, 0));
-                return button;
-            }
-
-            @Override
-            protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
-                if (!scrollbar.isEnabled() || thumbBounds.width <= 0 || thumbBounds.height <= 0) {
-                    return;
-                }
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(isThumbRollover() ? thumbHover : thumb);
-                int arc = 10;
-                g2.fillRoundRect(thumbBounds.x + 2, thumbBounds.y + 2,
-                        thumbBounds.width - 4, thumbBounds.height - 4, arc, arc);
-                g2.dispose();
-            }
-        };
+        SettingsStylingService.applySettingsVisualPolish(
+                root,
+                ThemeManager.getAccentColor(),
+                getSoftGlassHighlight(),
+                getSoftGlassBorder(),
+                getSoftGlassSurface(ThemeManager.getCardBackgroundColor()));
     }
 
     private JPanel createBottomButtonPanel() {
@@ -1907,7 +1793,7 @@ public class SettingsGUI extends JFrame {
         importExportCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         importExportCard.add(Box.createVerticalStrut(15));
-        JLabel importLabel = createStyledLabel("Import:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor());
+        JLabel importLabel = SettingsUtils.createStyledLabel(logger, fontComboBox, "Import:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor());
         importLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         importExportCard.add(importLabel);
         importExportCard.add(Box.createVerticalStrut(5));
@@ -1921,7 +1807,7 @@ public class SettingsGUI extends JFrame {
         importExportCard.add(importButton);
         importExportCard.add(Box.createVerticalStrut(20));
 
-        JLabel exportLabel = createStyledLabel("Export:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor());
+        JLabel exportLabel = SettingsUtils.createStyledLabel(logger, fontComboBox, "Export:", 14, Font.BOLD, ThemeManager.getTextPrimaryColor());
         exportLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         importExportCard.add(exportLabel);
         importExportCard.add(Box.createVerticalStrut(5));
@@ -1947,15 +1833,27 @@ public class SettingsGUI extends JFrame {
                 .displayWithOptions();
             if (confirm == JOptionPane.YES_OPTION) {
             try {
-                exportToCsv();
-                new MessageDialog()
-                    .setTitle("Export erfolgreich")
-                    .setMessage("<html><b>OK Export erfolgreich!</b><br/><br/>" +
-                        "Alle Tabellen wurden erfolgreich exportiert.<br/>" +
-                        "Speicherort: <br/>" +
-                        Main.getAppDataDir().getAbsolutePath() + "</html>")
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
+                SettingsDataTransferService.ExportSummary summary = exportToCsv();
+                if (summary.hasFailures()) {
+                    new MessageDialog()
+                        .setTitle("Export teilweise erfolgreich")
+                        .setMessage("<html><b>Export teilweise erfolgreich</b><br/><br/>" +
+                            "Erfolgreich exportiert: " + summary.getSuccessCount() + " von " + summary.getTotalTables() + " Tabellen.<br/>" +
+                            "Bitte prüfen Sie die Protokolle für Details.<br/><br/>" +
+                            "Speicherort:<br/>" +
+                            Main.getAppDataDir().getAbsolutePath() + "</html>")
+                        .setMessageType(JOptionPane.WARNING_MESSAGE)
+                        .display();
+                } else {
+                    new MessageDialog()
+                        .setTitle("Export erfolgreich")
+                        .setMessage("<html><b>OK Export erfolgreich!</b><br/><br/>" +
+                            "Alle Tabellen wurden erfolgreich exportiert.<br/>" +
+                            "Speicherort: <br/>" +
+                            Main.getAppDataDir().getAbsolutePath() + "</html>")
+                        .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                        .display();
+                }
             } catch (Exception ex) {
                 new MessageDialog()
                     .setTitle("Fehler beim Export")
@@ -2124,9 +2022,9 @@ public class SettingsGUI extends JFrame {
                 "Wer hat das System entwickelt?",
                 ThemeManager.getCardBackgroundColor(),
                 new Insets(16, 22, 16, 22));
-        JLabel devName = createStyledLabel(UnicodeSymbols.USER + " Darryl Huber", 14, Font.BOLD,
+        JLabel devName = SettingsUtils.createStyledLabel(logger, fontComboBox, UnicodeSymbols.USER + " Darryl Huber", 14, Font.BOLD,
                 ThemeManager.getTextPrimaryColor());
-        JLabel devOrg = createStyledLabel(UnicodeSymbols.BUILDING + " Organisation: VEBO Oensingen", 13, Font.PLAIN,
+        JLabel devOrg = SettingsUtils.createStyledLabel(logger, fontComboBox, UnicodeSymbols.BUILDING + " Organisation: VEBO Oensingen", 13, Font.PLAIN,
                 ThemeManager.getTextSecondaryColor());
         devName.setAlignmentX(Component.LEFT_ALIGNMENT);
         devOrg.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -2139,18 +2037,24 @@ public class SettingsGUI extends JFrame {
                 "Technische Details zur Laufzeitumgebung",
                 ThemeManager.getInputBackgroundColor(),
                 new Insets(16, 22, 16, 22));
-        JLabel sysJava = createStyledLabel(
+        JLabel sysJava = SettingsUtils.createStyledLabel(
+                logger,
+                fontComboBox,
                 UnicodeSymbols.LAPTOP + " Java Version: " + System.getProperty("java.version"),
                 12,
                 Font.PLAIN,
                 ThemeManager.getTextSecondaryColor());
-        JLabel sysOs = createStyledLabel(
+        JLabel sysOs = SettingsUtils.createStyledLabel(
+                logger,
+                fontComboBox,
                 UnicodeSymbols.MONITOR + " Betriebssystem: " + System.getProperty("os.name") + " "
                         + System.getProperty("os.version"),
                 12,
                 Font.PLAIN,
                 ThemeManager.getTextSecondaryColor());
-        JLabel sysDir = createStyledLabel(
+        JLabel sysDir = SettingsUtils.createStyledLabel(
+                logger,
+                fontComboBox,
                 UnicodeSymbols.FOLDER + " Datenverzeichnis: " + Main.getAppDataDir().getAbsolutePath(),
                 12,
                 Font.PLAIN,
@@ -2212,12 +2116,14 @@ public class SettingsGUI extends JFrame {
                 "Rechtliche Hinweise zur Software",
                 ThemeManager.getInputBackgroundColor(),
                 new Insets(14, 20, 14, 20));
-        JLabel copyrightLabel = createStyledLabel(
+        JLabel copyrightLabel = SettingsUtils.createStyledLabel(
+                logger,
+                fontComboBox,
                 "© 2026 VEBO Oensingen. Alle Rechte vorbehalten.",
                 11,
                 Font.PLAIN,
                 ThemeManager.getTextSecondaryColor());
-        JLabel licenseLabel = createStyledLabel(
+        JLabel licenseLabel = SettingsUtils.createStyledLabel(logger, fontComboBox,
                 "Diese Software wird bereitgestellt \"wie sie ist\", ohne jegliche Garantie.",
                 11,
                 Font.ITALIC,
@@ -2302,57 +2208,11 @@ public class SettingsGUI extends JFrame {
     }
 
     private void styleSecondaryActionButton(JButton button) {
-        if (button == null) {
-            return;
-        }
-        button.setFont(getFontByName(Font.PLAIN, 12));
-        button.setForeground(ThemeManager.getTextPrimaryColor());
-        button.setBackground(ThemeManager.getSurfaceColor());
-        button.setFocusPainted(false);
-        button.setOpaque(true);
-        button.setContentAreaFilled(true);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
-        button.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                button.setBackground(adjustColor(ThemeManager.getSurfaceColor(), -0.08f));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                button.setBackground(ThemeManager.getSurfaceColor());
-            }
-        });
+        SettingsStylingService.styleSecondaryActionButton(button);
     }
 
     private void styleInputField(JTextField field) {
-        if (field == null)
-            return;
-        field.setFont(getFontByName(Font.PLAIN, 13));
-        field.setBackground(ThemeManager.getInputBackgroundColor());
-        field.setForeground(ThemeManager.getTextPrimaryColor());
-        field.setCaretColor(ThemeManager.getTextPrimaryColor());
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getPrimaryColor(), 2, true),
-                        BorderFactory.createEmptyBorder(7, 9, 7, 9)));
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                        BorderFactory.createEmptyBorder(8, 10, 8, 10)));
-            }
-        });
+        SettingsStylingService.styleInputField(field);
     }
 
     private void addNewCategory(String newCategory, int from, int to) {
@@ -2381,135 +2241,23 @@ public class SettingsGUI extends JFrame {
     }
 
     private void openCategorySettingsFile() {
-        File file = new File(Main.getAppDataDir(), "categories.json");
-        try {
-            if (!file.exists()) {
-                if (!file.createNewFile())
-                    throw new IOException("Datei konnte nicht erstellt werden.");
-                try (FileWriter writer = new FileWriter(file)) {
-                    writer.write("{}");
-                }
-            }
-            Desktop.getDesktop().edit(file);
-        } catch (IOException e) {
-            logger.error("Fehler beim Öffnen der Kategorien-Datei: {}", e.getMessage());
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Öffnen der Kategorien-Datei:\n" + e.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            Main.logUtils.addLog("Fehler beim Öffnen der Kategorien-Datei: " + e.getMessage());
-        }
+        SettingsMaintenanceService.openCategorySettingsFile(logger);
     }
 
     private void deleteOldLogs() {
-        ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager
-                .getInstance();
-        int deletedCount = logManager.deleteOldLogs(30);
-        File logsFolder = new File(Main.getAppDataDir(), "logs");
-        int fileDeletedCount = 0;
-        try {
-            File[] logFiles = logsFolder.listFiles();
-            if (logFiles != null) {
-                LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
-                for (File logFile : logFiles) {
-                    if (logFile.isFile()) {
-                        BasicFileAttributes attrs = Files.readAttributes(logFile.toPath(), BasicFileAttributes.class);
-                        LocalDateTime fileTime = LocalDateTime.ofInstant(attrs.creationTime().toInstant(),
-                                ZoneId.systemDefault());
-                        if (fileTime.isBefore(cutoffDate)) {
-                            Files.delete(logFile.toPath());
-                            fileDeletedCount++;
-                        }
-                    }
-                }
-            }
-            new MessageDialog()
-                    .setTitle("Alte Protokolle gelöscht")
-                    .setMessage(String.format(
-                            "Es wurden %d Protokolle aus der Datenbank und %d Protokolldateien gelöscht, die älter als 30 Tage sind.",
-                            deletedCount, fileDeletedCount))
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
-            logger.info(
-                    "Es wurden {} Protokolle aus der Datenbank und {} Protokolldateien gelöscht, die älter als 30 Tage sind.",
-                    deletedCount, fileDeletedCount);
-            Main.logUtils.addLog("Es wurden " + deletedCount + " Protokolle aus der Datenbank und " + fileDeletedCount
-                    + " Protokolldateien gelöscht, die älter als 30 Tage sind.");
-        } catch (IOException ex) {
-            logger.error("Fehler beim Löschen alter Protokolle: {}", ex.getMessage());
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Löschen alter Protokolle:\n" + ex.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            Main.logUtils.addLog("Fehler beim Löschen alter Protokolle: " + ex.getMessage());
-        }
+        SettingsMaintenanceService.deleteOldLogs(logger);
     }
 
     private void deleteAllLogs() {
-        File logsFolder = new File(Main.getAppDataDir(), "logs");
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "<html><b>Alle Protokolle wirklich löschen?</b><br/><br/>" +
-                        "Diese Aktion löscht alle Protokolldateien im Protokolle-Ordner.<br/>" +
-                        "Möchten Sie fortfahren?</html>",
-                "Protokolle löschen bestätigen",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                File[] logFiles = logsFolder.listFiles();
-                if (logFiles != null) {
-                    for (File logFile : logFiles) {
-                        if (logFile.isFile()) {
-                            Files.delete(logFile.toPath());
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                logger.error("Fehler beim Löschen der Protokolle: {}", e.getMessage());
-                new MessageDialog()
-                        .setTitle("Fehler")
-                        .setMessage("Fehler beim Löschen der Protokolle:\n" + e.getMessage())
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
-                Main.logUtils.addLog("Fehler beim Löschen der Protokolle: " + e.getMessage());
-                return;
-            }
-            new MessageDialog()
-                    .setTitle("Protokolle gelöscht")
-                    .setMessage("Alle Protokolle wurden erfolgreich gelöscht.")
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
-        }
-        ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager
-                .getInstance();
-        if (logManager.clearAllLogs()) {
-            logger.info("Alle Protokolle wurden erfolgreich aus der Datenbank gelöscht.");
-            Main.logUtils.addLog("Alle Protokolle wurden erfolgreich aus der Datenbank gelöscht.");
-        } else {
-            logger.error("Fehler beim Löschen der Protokolle aus der Datenbank.");
-            Main.logUtils.addLog("Fehler beim Löschen der Protokolle aus der Datenbank.");
-        }
+        SettingsMaintenanceService.deleteAllLogs(logger, this);
     }
 
     private void openLogsFolder() {
-        File logsDir = new File(Main.getAppDataDir(), "logs");
-        try {
-            Desktop.getDesktop().open(logsDir);
-        } catch (IOException e) {
-            logger.error("Fehler beim Öffnen des Protokolle-Ordners: {}", e.getMessage());
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Öffnen des Protokolle-Ordners:\n" + e.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            Main.logUtils.addLog("Fehler beim Öffnen des Protokolle-Ordners: " + e.getMessage());
-        }
+        SettingsMaintenanceService.openLogsFolder(logger);
     }
 
     private void openSettingsFolder() {
-        SettingsUtils.openSettingsFolder(this);
+        SettingsMaintenanceService.openSettingsFolder(this);
     }
 
     /**
@@ -2693,7 +2441,7 @@ public class SettingsGUI extends JFrame {
             label.setText("Standard");
         } else {
             button.setBackground(color);
-            label.setText(toHex(color));
+            label.setText(SettingsProfileService.colorToSetting(color));
         }
     }
 
@@ -2859,73 +2607,14 @@ public class SettingsGUI extends JFrame {
      * Styles a checkbox with a modern appearance and enhanced click area
      */
     private void styleCheckbox(JCheckBox checkbox) {
-        if (checkbox == null)
-            throw new IllegalArgumentException("checkbox must not be null");
-        checkbox.setFont(getFontByName(Font.PLAIN, 14));
-        checkbox.setForeground(ThemeManager.getTextPrimaryColor());
-        checkbox.setOpaque(false);
-        checkbox.setFocusPainted(false);
-        checkbox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        checkbox.setAlignmentX(Component.LEFT_ALIGNMENT);
-        checkbox.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        checkbox.setBorder(BorderFactory.createEmptyBorder(8, 2, 8, 0));
-
-        // Add hover effect for better UX
-        checkbox.addMouseListener(new MouseAdapter() {
-            private final Color originalForeground = checkbox.getForeground();
-            private final Color hoverForeground = adjustColor(ThemeManager.getPrimaryColor(), -0.08f);
-
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                checkbox.setForeground(hoverForeground);
-                checkbox.setBorder(BorderFactory.createEmptyBorder(8, 6, 8, 0));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                checkbox.setForeground(originalForeground);
-                checkbox.setBorder(BorderFactory.createEmptyBorder(8, 2, 8, 0));
-            }
-        });
+        SettingsStylingService.styleCheckbox(checkbox);
     }
 
     /**
      * Styles a spinner with modern, rounded appearance and focus effects
      */
     private void styleSpinner(JSpinner spinner) {
-        if (spinner == null)
-            throw new IllegalArgumentException("spinner must not be null");
-        JComponent editor = spinner.getEditor();
-        if (editor instanceof JSpinner.DefaultEditor) {
-            JTextField textField = ((JSpinner.DefaultEditor) editor).getTextField();
-            textField.setFont(getFontByName(Font.PLAIN, 14));
-            textField.setBackground(ThemeManager.getInputBackgroundColor());
-            textField.setForeground(ThemeManager.getTextPrimaryColor());
-            textField.setCaretColor(ThemeManager.getTextPrimaryColor());
-            textField.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                    BorderFactory.createEmptyBorder(10, 14, 10, 14)));
-
-            // Add focus listener for better UX
-            textField.addFocusListener(new FocusAdapter() {
-                @Override
-                public void focusGained(FocusEvent e) {
-                    textField.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(ThemeManager.getPrimaryColor(), 2, true),
-                            BorderFactory.createEmptyBorder(9, 13, 9, 13)));
-                }
-
-                @Override
-                public void focusLost(FocusEvent e) {
-                    textField.setBorder(BorderFactory.createCompoundBorder(
-                            BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                            BorderFactory.createEmptyBorder(10, 14, 10, 14)));
-                }
-            });
-        }
-
-        spinner.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true));
-        spinner.setBackground(ThemeManager.getInputBackgroundColor());
+        SettingsStylingService.styleSpinner(spinner);
     }
 
     /**
@@ -3057,15 +2746,8 @@ public class SettingsGUI extends JFrame {
      */
     private void loadSettings() {
         try {
-            if (Main.settings != null) {
-                Properties props = new Properties();
-                for (Variable variable : Variable.values()) {
-                    String key = variable.getValue();
-                    String value = Main.settings.getProperty(key);
-                    if (value != null) {
-                        props.setProperty(key, value);
-                    }
-                }
+            Properties props = SettingsRuntimeService.readSettingsSnapshot();
+            if (props != null) {
                 applySettingsProperties(props);
                 tableFontSlider.setValue((Integer) fontSizeTableSpinner.getValue());
                 tabFontSlider.setValue((Integer) fontSizeTabSpinner.getValue());
@@ -3084,58 +2766,16 @@ public class SettingsGUI extends JFrame {
     private void saveSettings() {
         try {
             if (Main.settings != null) {
-                // Save stock check interval
                 int interval = (Integer) stockCheckIntervalSpinner.getValue();
-                Main.settings.setProperty("stock_check_interval", String.valueOf(interval));
-
-                // Save warning display setting
                 boolean enableWarnings = enableWarningDisplayCheckbox.isSelected();
-                Main.settings.setProperty("enable_hourly_warnings", String.valueOf(enableWarnings));
-
-                // Save warning display interval
                 int warningInterval = (Integer) warningDisplayIntervalSpinner.getValue();
-                Main.settings.setProperty("warning_display_interval", String.valueOf(warningInterval));
-
-                // Save auto stock check setting
                 boolean enableAutoCheck = enableAutoStockCheckCheckbox.isSelected();
-                Main.settings.setProperty("enable_auto_stock_check", String.valueOf(enableAutoCheck));
-
-                // Save server URL
-                String serverUrl = serverUrlField.getText().trim();
-                Main.settings.setProperty("server_url", serverUrl);
-
-                // Save QR-Code settings
-                boolean enableAutomaticImport = automaticImportCheckBox.isSelected();
-                Main.settings.setProperty("enable_automatic_import_qrcode", String.valueOf(enableAutomaticImport));
-
-                // Save QR-Code import interval
-                int qrCodeImportInterval = (Integer) qrCodeImportIntervalSpinner.getValue();
-                Main.settings.setProperty("qrcode_import_interval", String.valueOf(qrCodeImportInterval));
-
-                // Save dark mode setting
                 boolean darkMode = darkModeCheckbox.isSelected();
-                Main.settings.setProperty("dark_mode", String.valueOf(darkMode));
 
-                Main.settings.setProperty("theme_accent_color", colorToSetting(selectedAccentColor));
-                Main.settings.setProperty("theme_header_color", colorToSetting(selectedHeaderColor));
-                Main.settings.setProperty("theme_button_color", colorToSetting(selectedButtonColor));
-
-                // Save font size setting
-                int fontSize = (Integer) fontSizeTableSpinner.getValue();
-                Main.settings.setProperty("table_font_size", String.valueOf(fontSize));
-                int fontSizeTab = (Integer) fontSizeTabSpinner.getValue();
-                Main.settings.setProperty("table_font_size_tab", String.valueOf(fontSizeTab));
-                String fontStyle = (String) fontComboBox.getSelectedItem();
-                if (fontStyle == null || fontStyle.trim().isEmpty()) {
-                    fontStyle = DEFAULT_FONT_STYLE;
-                }
-                Main.settings.setProperty("font_style", fontStyle);
-
-                Main.settings.save();
+                SettingsRuntimeService.persistSettings(collectSettingsProperties());
 
                 System.out.println("[SettingsGUI] Einstellungen gespeichert");
 
-                // Apply settings immediately
                 applySettings(interval, enableWarnings, warningInterval, enableAutoCheck, darkMode);
                 ThemeManager.setCustomColors(selectedAccentColor, selectedHeaderColor, selectedButtonColor);
 
@@ -3217,63 +2857,11 @@ public class SettingsGUI extends JFrame {
     }
 
     private void exportSettingsProfile() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Einstellungen exportieren");
-        fileChooser.setSelectedFile(new File("vebo_settings.properties"));
-        int choice = fileChooser.showSaveDialog(this);
-        if (choice != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-        File file = fileChooser.getSelectedFile();
-        try (FileOutputStream out = new FileOutputStream(file)) {
-            Properties props = collectSettingsProperties();
-            props.store(out, "VEBO Lagersystem Einstellungen");
-            new MessageDialog()
-                    .setTitle("Export erfolgreich")
-                    .setMessage("<html><b>Einstellungen exportiert!</b><br/><br/>" +
-                            "Die Einstellungen wurden erfolgreich exportiert:<br/>" +
-                            file.getAbsolutePath() + "</html>")
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
-        } catch (IOException ex) {
-            new MessageDialog()
-                    .setTitle("Export fehlgeschlagen")
-                    .setMessage("<html><b>Fehler beim Export!</b><br/><br/>" +
-                            "Die Einstellungen konnten nicht exportiert werden:<br/>" +
-                            ex.getMessage() + "</html>")
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-        }
+        SettingsProfileService.exportSettingsProfile(this, this::collectSettingsProperties);
     }
 
     private void importSettingsProfile() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Einstellungen importieren");
-        int choice = fileChooser.showOpenDialog(this);
-        if (choice != JFileChooser.APPROVE_OPTION) {
-            return;
-        }
-        File file = fileChooser.getSelectedFile();
-        try (FileInputStream in = new FileInputStream(file)) {
-            Properties props = new Properties();
-            props.load(in);
-            applySettingsProperties(props);
-            new MessageDialog()
-                    .setTitle("Import erfolgreich")
-                    .setMessage("<html><b>Einstellungen importiert!</b><br/><br/>" +
-                            "Die Einstellungen wurden erfolgreich importiert.<br/>" +
-                            "Bitte speichern, um sie zu übernehmen.</html>")
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
-        } catch (IOException ex) {
-            new MessageDialog()
-                    .setTitle("Import fehlgeschlagen")
-                    .setMessage("<html><b>Fehler beim Import!</b><br/><br/>" +
-                            "Die Einstellungen konnten nicht importiert werden:<br/>" +
-                            ex.getMessage() + "</html>")
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-        }
+        SettingsProfileService.importSettingsProfile(this, this::applySettingsProperties);
     }
 
     private Properties collectSettingsProperties() {
@@ -3290,9 +2878,9 @@ public class SettingsGUI extends JFrame {
         props.setProperty("table_font_size_tab", String.valueOf(fontSizeTabSpinner.getValue()));
         Object fontStyle = fontComboBox.getSelectedItem();
         props.setProperty("font_style", fontStyle == null ? DEFAULT_FONT_STYLE : fontStyle.toString());
-        props.setProperty("theme_accent_color", colorToSetting(selectedAccentColor));
-        props.setProperty("theme_header_color", colorToSetting(selectedHeaderColor));
-        props.setProperty("theme_button_color", colorToSetting(selectedButtonColor));
+        props.setProperty("theme_accent_color", SettingsProfileService.colorToSetting(selectedAccentColor));
+        props.setProperty("theme_header_color", SettingsProfileService.colorToSetting(selectedHeaderColor));
+        props.setProperty("theme_button_color", SettingsProfileService.colorToSetting(selectedButtonColor));
         return props;
     }
 
@@ -3300,69 +2888,30 @@ public class SettingsGUI extends JFrame {
         if (props == null)
             throw new IllegalArgumentException("props must not be null");
         stockCheckIntervalSpinner
-                .setValue(parseIntProperty(props, "stock_check_interval", DEFAULT_STOCK_CHECK_INTERVAL));
+                .setValue(SettingsProfileService.parseIntProperty(props, "stock_check_interval", DEFAULT_STOCK_CHECK_INTERVAL));
         enableWarningDisplayCheckbox.setSelected(Boolean
                 .parseBoolean(props.getProperty("enable_hourly_warnings", String.valueOf(DEFAULT_ENABLE_WARNINGS))));
         warningDisplayIntervalSpinner
-                .setValue(parseIntProperty(props, "warning_display_interval", DEFAULT_WARNING_INTERVAL));
+                .setValue(SettingsProfileService.parseIntProperty(props, "warning_display_interval", DEFAULT_WARNING_INTERVAL));
         enableAutoStockCheckCheckbox.setSelected(Boolean.parseBoolean(
                 props.getProperty("enable_auto_stock_check", String.valueOf(DEFAULT_ENABLE_AUTO_STOCK_CHECK))));
         serverUrlField.setText(props.getProperty("server_url", DEFAULT_SERVER_URL));
         automaticImportCheckBox.setSelected(Boolean.parseBoolean(
                 props.getProperty("enable_automatic_import_qrcode", String.valueOf(DEFAULT_ENABLE_QR_IMPORT))));
         qrCodeImportIntervalSpinner
-                .setValue(parseIntProperty(props, "qrcode_import_interval", DEFAULT_QR_IMPORT_INTERVAL));
+                .setValue(SettingsProfileService.parseIntProperty(props, "qrcode_import_interval", DEFAULT_QR_IMPORT_INTERVAL));
         boolean darkMode = Boolean.parseBoolean(props.getProperty("dark_mode", String.valueOf(DEFAULT_DARK_MODE)));
         darkModeCheckbox.setSelected(darkMode);
         themeComboBox.setSelectedItem(darkMode ? "Dark" : "Light");
         themeComboBox.setEnabled(!darkMode);
-        fontSizeTableSpinner.setValue(parseIntProperty(props, "table_font_size", DEFAULT_TABLE_FONT_SIZE));
-        fontSizeTabSpinner.setValue(parseIntProperty(props, "table_font_size_tab", DEFAULT_TAB_FONT_SIZE));
+        fontSizeTableSpinner.setValue(SettingsProfileService.parseIntProperty(props, "table_font_size", DEFAULT_TABLE_FONT_SIZE));
+        fontSizeTabSpinner.setValue(SettingsProfileService.parseIntProperty(props, "table_font_size_tab", DEFAULT_TAB_FONT_SIZE));
         fontComboBox.setSelectedItem(props.getProperty("font_style", DEFAULT_FONT_STYLE));
-        selectedAccentColor = parseColor(props.getProperty("theme_accent_color"));
-        selectedHeaderColor = parseColor(props.getProperty("theme_header_color"));
-        selectedButtonColor = parseColor(props.getProperty("theme_button_color"));
+        selectedAccentColor = SettingsProfileService.parseColor(props.getProperty("theme_accent_color"));
+        selectedHeaderColor = SettingsProfileService.parseColor(props.getProperty("theme_header_color"));
+        selectedButtonColor = SettingsProfileService.parseColor(props.getProperty("theme_button_color"));
         updateColorControls();
         updatePreview();
-    }
-
-    private int parseIntProperty(Properties props, String key, int fallback) {
-        if (props == null)
-            throw new IllegalArgumentException("props must not be null");
-        if (key == null)
-            throw new IllegalArgumentException("key must not be null");
-        try {
-            return Integer.parseInt(props.getProperty(key, String.valueOf(fallback)));
-        } catch (NumberFormatException ex) {
-            return fallback;
-        }
-    }
-
-    private String colorToSetting(Color color) {
-        return color == null ? "" : toHex(color);
-    }
-
-    private Color parseColor(String value) {
-        if (value == null || value.trim().isEmpty()) {
-            return null;
-        }
-        String hex = value.trim();
-        if (hex.startsWith("#")) {
-            hex = hex.substring(1);
-        }
-        if (hex.length() != 6) {
-            return null;
-        }
-        try {
-            int rgb = Integer.parseInt(hex, 16);
-            return new Color(rgb);
-        } catch (NumberFormatException ex) {
-            return null;
-        }
-    }
-
-    private String toHex(Color color) {
-        return String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());
     }
 
     @SuppressWarnings("MagicConstant")
@@ -3398,74 +2947,15 @@ public class SettingsGUI extends JFrame {
      */
     private void applySettings(int interval, boolean enableWarnings, int warningInterval, boolean enableAutoCheck,
             boolean darkMode) {
-        try {
-            // Apply theme changes
-            boolean currentDarkMode = ThemeManager.isDarkMode();
-            if (currentDarkMode != darkMode) {
-                ThemeManager.setDarkMode(darkMode);
-                System.out.println("[SettingsGUI] Theme geändert zu: " + (darkMode ? "Dark Mode" : "Light Mode"));
-
-                // Show restart recommendation for full theme change
-                int restart = new MessageDialog()
-                        .setTitle("Neustart empfohlen")
-                        .setMessage("<html>Das Theme wurde geändert.<br/><br/>" +
-                                "Es wird empfohlen, das Programm neu zu starten,<br/>" +
-                                "damit das Theme vollständig angewendet wird.<br/><br/>" +
-                                "Möchten Sie jetzt neu starten?</html>")
-                        .setMessageType(JOptionPane.QUESTION_MESSAGE)
-                        .setOptionType(JOptionPane.YES_NO_OPTION)
-                        .displayWithOptions();
-
-                if (restart == JOptionPane.YES_OPTION) {
-                    System.exit(0);
-                    return;
-                }
-            }
-
-            SchedulerManager scheduler = SchedulerManager.getInstance();
-
-            // Shutdown existing scheduler
-            scheduler.shutdown();
-
-            // Wait a moment for clean shutdown
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            // Restart scheduler with new settings
-            if (enableAutoCheck) {
-                scheduler.startScheduledStockCheck(interval, java.util.concurrent.TimeUnit.MINUTES);
-                System.out.println("[SettingsGUI] Automatische Lagerbestandsprüfung neu gestartet (Intervall: "
-                        + interval + " Min.)");
-            } else {
-                System.out.println("[SettingsGUI] Automatische Lagerbestandsprüfung deaktiviert");
-            }
-
-            if (enableWarnings) {
-                scheduler.startWarningDisplay(warningInterval, java.util.concurrent.TimeUnit.HOURS);
-                System.out.println("[SettingsGUI] Automatische Warnanzeige aktiviert (Intervall: " + warningInterval
-                        + " Stunde(n))");
-            } else {
-                System.out.println("[SettingsGUI] Automatische Warnanzeige deaktiviert");
-            }
-
-            if (automaticImportCheckBox.isSelected()) {
-                scheduler.startAutoImportQrCodes(
-                        (Integer) qrCodeImportIntervalSpinner.getValue(),
-                        java.util.concurrent.TimeUnit.MINUTES);
-                System.out.println("[SettingsGUI] Automatischer QR-Code Import aktiviert (Intervall: "
-                        + qrCodeImportIntervalSpinner.getValue() + " Min.)");
-            } else {
-                System.out.println("[SettingsGUI] Automatischer QR-Code Import deaktiviert");
-            }
-
-        } catch (Exception e) {
-            System.err.println("[SettingsGUI] Fehler beim Anwenden der Einstellungen: " + e.getMessage());
-            logger.error("Fehler beim Anwenden der Einstellungen", e);
-            Main.logUtils.addLog("Fehler beim Anwenden der Einstellungen: " + e.getMessage());
-        }
+        SettingsRuntimeService.applyRuntimeSettings(
+                logger,
+                interval,
+                enableWarnings,
+                warningInterval,
+                enableAutoCheck,
+                darkMode,
+                automaticImportCheckBox.isSelected(),
+                (Integer) qrCodeImportIntervalSpinner.getValue());
     }
 
     /**
@@ -3474,219 +2964,7 @@ public class SettingsGUI extends JFrame {
      * Shows a dialog with update information and download link if available
      */
     private void checkForUpdates(String channel) {
-        try {
-            UpdateManager updateManager = UpdateManager.getInstance();
-
-            // Convert string to ReleaseChannel enum
-            UpdateManager.ReleaseChannel releaseChannel = switch (channel.toLowerCase()) {
-                case "beta" -> UpdateManager.ReleaseChannel.BETA;
-                case "alpha" -> UpdateManager.ReleaseChannel.ALPHA;
-                case "testing" -> UpdateManager.ReleaseChannel.TESTING;
-                default -> UpdateManager.ReleaseChannel.STABLE;
-            };
-
-            String channelDisplay = switch (channel.toLowerCase()) {
-                case "beta" -> "Beta";
-                case "alpha" -> "Alpha";
-                case "testing" -> "Testing";
-                default -> "Stable";
-            };
-
-            // Create MODAL progress dialog
-            JDialog progressDialog = new JDialog(this, "Nach Updates suchen...", true);
-            progressDialog.setLayout(new BorderLayout());
-            progressDialog.setSize(400, 150);
-            progressDialog.setLocationRelativeTo(this);
-            progressDialog.setUndecorated(true);
-            progressDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-            progressDialog.setResizable(false);
-
-            JPanel progressPanel = new JPanel(new BorderLayout(10, 10));
-            progressPanel.setBackground(ThemeManager.getCardBackgroundColor());
-            progressPanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 2),
-                    BorderFactory.createEmptyBorder(20, 20, 20, 20)));
-
-            JLabel progressLabel = new JLabel(
-                    "<html><center>Prüfe auf " + channelDisplay + "-Updates...<br/>Bitte warten...</center></html>");
-            progressLabel.setFont(getFontByName(Font.PLAIN, 14));
-            progressLabel.setForeground(ThemeManager.getTextPrimaryColor());
-            progressLabel.setHorizontalAlignment(SwingConstants.CENTER);
-
-            progressPanel.add(progressLabel, BorderLayout.CENTER);
-            progressDialog.add(progressPanel);
-
-            // Check for updates in background
-            SwingWorker<String, Void> worker = new SwingWorker<>() {
-                @Override
-                protected String doInBackground() {
-                    return updateManager.getLatestVersion(releaseChannel);
-                }
-
-                @Override
-                protected void done() {
-                    try {
-                        String latestVersion = get();
-                        handleUpdateResult(latestVersion, channel);
-                    } catch (Exception e) {
-                        logger.error("Fehler beim Prüfen auf Updates: {}", e.getMessage(), e);
-                        showUpdateError(e.getMessage());
-                    } finally {
-                        // Always close the progress dialog
-                        progressDialog.setVisible(false);
-                        progressDialog.dispose();
-                    }
-                }
-            };
-
-            // Start worker
-            worker.execute();
-            // Show modal dialog - this will block until disposed
-            progressDialog.setVisible(true);
-
-        } catch (Exception e) {
-            logger.error("Fehler beim Starten der Update-Prüfung: {}", e.getMessage(), e);
-            showUpdateError(e.getMessage());
-            Main.logUtils.addLog("Fehler beim Starten der Update-Prüfung: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Handles the update check result and displays appropriate dialog
-     */
-    private void handleUpdateResult(String latestVersion, String channel) {
-        if (latestVersion == null) {
-            new MessageDialog()
-                .setTitle("Update-Prüfung")
-                .setMessage("<html><b>Keine Update-Informationen verfügbar</b><br/><br/>" +
-                            "Die Update-Informationen konnten nicht abgerufen werden.<br/>" +
-                            "Bitte überprüfen Sie Ihre Internetverbindung.</html>")
-                .setMessageType(JOptionPane.WARNING_MESSAGE)
-                .display();
-            return;
-        }
-
-        String currentVersion = Main.VERSION;
-        UpdateManager updateManager = UpdateManager.getInstance();
-
-        if (updateManager.isUpdateAvailable(currentVersion)) {
-            showUpdateAvailableDialog(latestVersion, currentVersion, channel);
-        } else {
-            showNoUpdateDialog(currentVersion, channel);
-        }
-    }
-
-    /**
-     * Shows dialog when an update is available
-     */
-    private void showUpdateAvailableDialog(String latestVersion, String currentVersion, String channel) {
-        String channelDisplay = switch (channel.toLowerCase()) {
-            case "beta" -> " (Beta)";
-            case "alpha" -> " (Alpha)";
-            case "testing" -> " (Testing)";
-            default -> "";
-        };
-
-        String downloadUrl = getDownloadUrl(channel);
-
-        Object[] options = { "Download-Seite öffnen", "Später" };
-        int result = new MessageDialog()
-                .setTitle("Update verfügbar")
-                .setMessage("<html><b>" + UnicodeSymbols.DOWNLOAD + " Update verfügbar!</b><br/><br/>" +
-                        "Eine neue Version ist verfügbar:<br/><br/>" +
-                        "Aktuelle Version: <b>" + currentVersion + "</b><br/>" +
-                        "Neue Version: <b>" + latestVersion + channelDisplay + "</b><br/><br/>" +
-                        "Möchten Sie die Download-Seite öffnen?</html>")
-                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                .setOptionType(JOptionPane.YES_NO_OPTION)
-                .setOptions(options)
-                .displayWithOptions();
-
-        if (result == 0) { // Download-Seite öffnen
-            openDownloadPage(downloadUrl);
-        }
-    }
-
-    /**
-     * Shows dialog when no update is available
-     */
-    private void showNoUpdateDialog(String currentVersion, String channel) {
-        String channelDisplay = switch (channel.toLowerCase()) {
-            case "beta" -> " (Beta)";
-            case "alpha" -> " (Alpha)";
-            case "testing" -> " (Testing)";
-            default -> "";
-        };
-
-        new MessageDialog()
-                .setTitle("Keine Updates verfügbar")
-                .setMessage("<html><b>" + UnicodeSymbols.CHECKMARK + " Keine Updates verfügbar</b><br/><br/>" +
-                        "Sie verwenden bereits die neueste Version" + channelDisplay + ":<br/>" +
-                        "<b>Version " + currentVersion + "</b></html>")
-                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                .display();
-    }
-
-    /**
-     * Shows error dialog when update check fails
-     */
-    private void showUpdateError(String errorMessage) {
-        if (errorMessage == null)
-            throw new IllegalArgumentException("errorMessage must not be null");
-        new MessageDialog()
-                .setTitle("Fehler bei Update-Prüfung")
-                .setMessage("<html><b>" + UnicodeSymbols.WARNING + " Fehler bei Update-Prüfung</b><br/><br/>" +
-                        "Die Update-Prüfung ist fehlgeschlagen:<br/>" +
-                        errorMessage + "</html>")
-                .setMessageType(JOptionPane.ERROR_MESSAGE)
-                .display();
-        Main.logUtils.addLog("Fehler bei Update-Prüfung");
-    }
-
-    /**
-     * Gets the download URL based on the release channel
-     */
-    private String getDownloadUrl(String channel) {
-        if (channel == null)
-            throw new IllegalArgumentException("channel must not be null");
-        return switch (channel.toLowerCase()) {
-            case "beta" -> "https://github.com/frame-dev/VeboLagerSystem/releases?q=beta";
-            case "alpha" -> "https://github.com/frame-dev/VeboLagerSystem/releases?q=alpha";
-            case "testing" -> "https://github.com/frame-dev/VeboLagerSystem/releases?q=testing";
-            default -> "https://github.com/frame-dev/VeboLagerSystem/releases/latest";
-        };
-    }
-
-    /**
-     * Opens the download page in the default browser
-     */
-    private void openDownloadPage(String url) {
-        if (url == null)
-            throw new IllegalArgumentException("url must not be null");
-        try {
-            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-                Desktop.getDesktop().browse(new java.net.URI(url));
-                logger.info("Download-Seite geöffnet: {}", url);
-            } else {
-                // Fallback: show URL in dialog
-                new MessageDialog()
-                        .setTitle("Browser nicht unterstützt")
-                        .setMessage("<html><b>Ihr System unterstützt das automatische Öffnen von Browsern nicht.</b><br/><br/>" +
-                                "Bitte kopieren Sie den folgenden Link und öffnen Sie ihn manuell in Ihrem Browser:<br/><br/>" +
-                                "<a href='" + url + "'>" + url + "</a></html>")
-                        .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                        .display();
-            }
-        } catch (Exception e) {
-            logger.error("Fehler beim Öffnen der Download-Seite: {}", e.getMessage(), e);
-            new MessageDialog()
-                    .setTitle("Fehler beim Öffnen des Browsers")
-                    .setMessage("<html><b>Fehler beim Öffnen des Browsers</b><br/><br/>" +
-                            "Bitte öffnen Sie den folgenden Link manuell:<br/>" +
-                            url + "</html>")
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-        }
+        SettingsUpdateService.checkForUpdates(this, logger, channel);
     }
 
     public void display() {
@@ -3697,186 +2975,14 @@ public class SettingsGUI extends JFrame {
      * Deletes a specific table from the database
      */
     private void deleteTable(String tableName) {
-        if (tableName == null || tableName.trim().isEmpty()) {
-            return;
-        }
-
-        try {
-            DatabaseManager dbManager = databaseManager;
-
-            if (dbManager != null) {
-                // Execute DROP TABLE command
-                String dropTableSQL = "DROP TABLE IF EXISTS " + tableName + ";";
-                boolean success = dbManager.executeUpdate(dropTableSQL);
-
-                if (success) {
-                    new MessageDialog()
-                            .setTitle("Tabelle gelöscht")
-                            .setMessage(String.format("<html><b>OK Tabelle erfolgreich gelöscht</b><br/><br/>" +
-                                    "Die Tabelle '<b>%s</b>' wurde aus der Datenbank entfernt.<br/><br/>" +
-                                    "<i>Hinweis: Die zugehörigen Daten sind permanent gelöscht.</i></html>",
-                                    tableName))
-                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                            .display();
-
-                    System.out.printf("[SettingsGUI] Tabelle '%s' wurde erfolgreich gelöscht%n", tableName);
-
-                    // Show restart recommendation
-                    int restart = new MessageDialog()
-                            .setTitle("Neustart empfohlen")
-                            .setMessage("<html>Es wird empfohlen, das Programm neu zu starten,<br/>" +
-                                    "um Inkonsistenzen zu vermeiden.<br/><br/>" +
-                                    "Möchten Sie jetzt neu starten?</html>")
-                            .setMessageType(JOptionPane.QUESTION_MESSAGE)
-                            .setOptionType(JOptionPane.YES_NO_OPTION)
-                            .displayWithOptions();
-
-                    if (restart == JOptionPane.YES_OPTION) {
-                        System.exit(0);
-                    }
-                } else {
-                    new MessageDialog()
-                            .setTitle("Fehler beim Löschen der Tabelle")
-                            .setMessage(String.format("<html><b>Fehler beim Löschen der Tabelle</b><br/><br/>" +
-                                    "Die Tabelle '<b>%s</b>' konnte nicht gelöscht werden.<br/>" +
-                                    "Bitte überprüfen Sie die Logs für weitere Details.</html>",
-                                    tableName))
-                            .setMessageType(JOptionPane.ERROR_MESSAGE)
-                            .display();
-                    Main.logUtils.addLog(String.format(
-                            "Fehler beim Löschen der Tabelle. Die Tabelle '%s' konnte nicht gelöscht werden.",
-                            tableName));
-                }
-            } else {
-                new MessageDialog()
-                        .setTitle("Fehler")
-                        .setMessage("Fehler: Datenbankverbindung nicht verfügbar.")
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
-            }
-        } catch (Exception e) {
-            System.err.printf("[SettingsGUI] Fehler beim Löschen der Tabelle '%s': %s%n",
-                    tableName, e.getMessage());
-            Main.logUtils.addLog(String.format("Fehler beim Löschen der Tabelle '%s': %s", tableName, e.getMessage()));
-            logger.error("Fehler beim Löschen der Tabelle '{}'", tableName, e);
-            new MessageDialog()
-                    .setTitle("Fehler beim Löschen der Tabelle")
-                    .setMessage(String.format("<html><b>Fehler beim Löschen der Tabelle</b><br/><br/>" +
-                            "Tabelle: %s<br/>" +
-                            "Fehler: %s</html>",
-                            tableName, e.getMessage()))
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-        }
+        SettingsMaintenanceService.deleteTable(this, logger, tableName);
     }
 
     /**
      * Clears the database after user confirmation
      */
     private void clearDatabase() {
-        // First confirmation
-        int firstConfirm = new MessageDialog()
-                .setTitle("Datenbank löschen - Bestätigung 1/2")
-                .setMessage("<html><b>⚠ WARNUNG: Datenbank löschen</b><br/><br/>" +
-                        "Möchten Sie wirklich <b>ALLE DATEN</b> aus der Datenbank löschen?<br/><br/>" +
-                        "Dies umfasst:<br/>" +
-                        "- Alle Artikel<br/>" +
-                        "- Alle Lieferanten<br/>" +
-                        "- Alle Bestellungen<br/>" +
-                        "- Alle Kunden<br/>" +
-                        "- Alle Abteilungen<br/>" +
-                        "- Alle Benutzer<br/>" +
-                        "- Alle Logs<br/>" +
-                        "- Alle Benutzer</br>" +
-                        "- Alle Notizen<br/>" +
-                        "- Alle Warnungen<br/><br/>" +
-                        "<b>Diese Aktion kann NICHT rückgängig gemacht werden!</b></html>")
-                .setMessageType(JOptionPane.WARNING_MESSAGE)
-                .setOptionType(JOptionPane.YES_NO_OPTION)
-                .displayWithOptions();
-
-        if (firstConfirm != JOptionPane.YES_OPTION) {
-            return;
-        }
-
-        // Second confirmation (extra safety)
-        String confirmText = new MessageDialog()
-                .setTitle("Datenbank löschen - Bestätigung 2/2")
-                .setMessage("<html><b>Zweite Bestätigung erforderlich</b><br/><br/>" +
-                        "Bitte geben Sie <b>LÖSCHEN</b> ein, um fortzufahren:</html>")
-                .setMessageType(JOptionPane.WARNING_MESSAGE)
-                .displayWithStringInput();
-
-        if (confirmText == null || !confirmText.trim().equalsIgnoreCase("LÖSCHEN")) {
-            new MessageDialog()
-                    .setTitle("Abgebrochen")
-                    .setMessage("Vorgang abgebrochen. Die Datenbank wurde nicht gelöscht.")
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
-            return;
-        }
-
-        // Perform database clearing
-        try {
-            DatabaseManager dbManager = databaseManager;
-
-            if (dbManager != null) {
-                dbManager.clearDatabase();
-                File file = new File(Main.getAppDataDir(), "own_use_list.txt");
-                if (!file.delete())
-                    System.out.println(
-                            "[SettingsGUI] own_use_list.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
-                File importQrcodesFile = new File(Main.getAppDataDir(), "imported_qrcodes.txt");
-                if (!importQrcodesFile.delete())
-                    System.out.println(
-                            "[SettingsGUI] imported_qrcodes.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
-                File importedItemsFile = new File(Main.getAppDataDir(), "imported_items.txt");
-                if (!importedItemsFile.delete())
-                    System.out.println(
-                            "[SettingsGUI] imported_items.txt konnte nicht gelöscht werden (Datei existiert möglicherweise nicht)");
-
-                new MessageDialog()
-                        .setTitle("Erfolgreich")
-                        .setMessage("<html><b>OK Datenbank erfolgreich gelöscht</b><br/><br/>" +
-                                "Alle Daten wurden aus der Datenbank entfernt.<br/><br/>" +
-                                "Das Programm sollte nun neu gestartet werden.</html>")
-                        .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                        .display();
-
-                System.out.println("[SettingsGUI] Datenbank wurde erfolgreich bereinigt");
-
-                // Ask if user wants to restart
-                int restart = new MessageDialog()
-                        .setTitle("Neustart empfohlen")
-                        .setMessage("<html>Es wird empfohlen, das Programm neu zu starten,<br/>" +
-                                "um Inkonsistenzen zu vermeiden.<br/><br/>" +
-                                "Möchten Sie jetzt neu starten?</html>")
-                        .setMessageType(JOptionPane.QUESTION_MESSAGE)
-                        .setOptionType(JOptionPane.YES_NO_OPTION)
-                        .displayWithOptions();
-
-                if (restart == JOptionPane.YES_OPTION) {
-                    System.exit(0);
-                }
-            } else {
-                new MessageDialog()
-                        .setTitle("Fehler")
-                        .setMessage("Fehler: Datenbankverbindung nicht verfügbar.")
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
-                Main.logUtils.addLog("Fehler: Datenbankverbindung nicht verfügbar.");
-            }
-        } catch (Exception e) {
-            System.err.println("[SettingsGUI] Fehler beim Löschen der Datenbank: " + e.getMessage());
-            logger.error("Fehler beim Löschen der Datenbank", e);
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("<html><b>Fehler beim Löschen der Datenbank</b><br/><br/>" +
-                            "Fehler: " + e.getMessage() + "</html>")
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            Main.logUtils.addLog("Fehler beim Löschen der Datenbank: " + e.getMessage());
-        }
+        SettingsMaintenanceService.clearDatabase(this, logger);
     }
 
     /**
@@ -3942,23 +3048,6 @@ public class SettingsGUI extends JFrame {
     }
 
     /**
-     * Creates a styled label with specified font and color
-     */
-    @SuppressWarnings("MagicConstant")
-    private JLabel createStyledLabel(String text, int fontSize, int fontStyle, Color color) {
-        JLabel label = new JLabel(text);
-        String selectedItem = (String) fontComboBox.getSelectedItem();
-        if (selectedItem == null) {
-            logger.error("Font-ComboBox hat kein ausgewähltes Element, Standardwert wird verwendet");
-            selectedItem = DEFAULT_FONT_STYLE;
-        }
-        label.setFont(new Font(selectedItem, fontStyle, fontSize));
-        label.setForeground(color);
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return label;
-    }
-
-    /**
      * Creates an info label with HTML content
      */
     private JLabel createInfoLabel(String htmlContent) {
@@ -3974,549 +3063,19 @@ public class SettingsGUI extends JFrame {
     }
 
     private static void importFromCsv() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("CSV-Datei zum Importieren auswählen");
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("CSV-Dateien", "csv"));
-        fileChooser.setMultiSelectionEnabled(false);
-        fileChooser.setCurrentDirectory(Main.getAppDataDir());
-
-        int result = fileChooser.showOpenDialog(null);
-        if (result != JFileChooser.APPROVE_OPTION) {
-            System.out.println("[SettingsGUI] Import abgebrochen");
-            return;
-        }
-
-        File selectedFile = fileChooser.getSelectedFile();
-        String fileName = selectedFile.getName().toLowerCase();
-
-        // Determine file type based on filename
-        if (fileName.contains("article")) {
-            importArticlesFromCsv(selectedFile);
-        } else if (fileName.contains("vendor") || fileName.contains("supplier")) {
-            importVendorsFromCsv(selectedFile);
-        } else if (fileName.contains("client") || fileName.contains("customer")) {
-            importClientsFromCsv(selectedFile);
-        } else if (fileName.contains("order")) {
-            importOrdersFromCsv();
-        } else {
-            // Ask user what type of data this is
-            String[] options = { "Artikel", "Lieferanten", "Kunden", "Bestellungen", "Abbrechen" };
-            int choice = JOptionPane.showOptionDialog(null,
-                    "Welche Art von Daten möchten Sie importieren?",
-                    "Datentyp auswählen",
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    Main.iconSmall,
-                    options,
-                    options[0]);
-
-            switch (choice) {
-                case 0 -> importArticlesFromCsv(selectedFile);
-                case 1 -> importVendorsFromCsv(selectedFile);
-                case 2 -> importClientsFromCsv(selectedFile);
-                case 3 -> importOrdersFromCsv();
-                default -> System.out.println("[SettingsGUI] Import abgebrochen");
-            }
-        }
-    }
-
-    private static void importArticlesFromCsv(File csvFile) {
-        int imported = 0;
-        int errors = 0;
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
-            String headerLine = reader.readLine(); // Skip header
-            if (headerLine == null) {
-                new MessageDialog()
-                        .setTitle("Fehler")
-                        .setMessage("Die CSV-Datei ist leer.")
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
-                return;
-            }
-
-            ArticleManager articleManager = ArticleManager.getInstance();
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                try {
-                    String[] parts = parseCsvLine(line);
-                    if (parts.length < 8) {
-                        errors++;
-                        continue;
-                    }
-
-                    String articleNumber = parts[0];
-                    Article article = getArticle(parts, articleNumber);
-
-                    if (articleManager.existsArticle(articleNumber)) {
-                        if (articleManager.updateArticle(article)) {
-                            imported++;
-                        } else {
-                            errors++;
-                        }
-                    } else {
-                        if (articleManager.insertArticle(article)) {
-                            imported++;
-                        } else {
-                            errors++;
-                        }
-                    }
-                } catch (Exception e) {
-                    errors++;
-                    System.err.println("[SettingsGUI] Fehler beim Importieren einer Zeile: " + e.getMessage());
-                }
-            }
-
-            new MessageDialog()
-                    .setTitle("Import Ergebnis")
-                    .setMessage(String.format("<html><b>Artikel-Import abgeschlossen</b><br/><br/>" +
-                            UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
-                            (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
-                            "</html>", imported, errors))
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
-
-            System.out.printf("[SettingsGUI] Artikel-Import: %d erfolgreich, %d Fehler%n", imported, errors);
-
-        } catch (Exception e) {
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Importieren: " + e.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            System.err.println("[SettingsGUI] Fehler beim Importieren der Artikel: " + e.getMessage());
-            Main.logUtils.addLog(String.format("Fehler beim Importieren der Artikel: %s", e.getMessage()));
-        }
-    }
-
-    private static Article getArticle(String[] parts, String articleNumber) {
-        String name = parts[1];
-        String details = parts[2];
-        int stockQuantity = Integer.parseInt(parts[3]);
-        int minStockLevel = Integer.parseInt(parts[4]);
-        double sellPrice = Double.parseDouble(parts[5]);
-        double purchasePrice = Double.parseDouble(parts[6]);
-        String vendorName = parts[7];
-
-        return new Article(articleNumber, name, details,
-                stockQuantity, minStockLevel, sellPrice, purchasePrice, vendorName);
-    }
-
-    private static void importVendorsFromCsv(File csvFile) {
-        int imported = 0;
-        int errors = 0;
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
-            String headerLine = reader.readLine(); // Skip header
-            if (headerLine == null) {
-                new MessageDialog()
-                        .setTitle("Fehler")
-                        .setMessage("Die CSV-Datei ist leer.")
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
-                return;
-            }
-
-            VendorManager vendorManager = VendorManager.getInstance();
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                try {
-                    String[] parts = parseCsvLine(line);
-                    if (parts.length < 5) {
-                        errors++;
-                        continue;
-                    }
-
-                    String name = parts[0];
-                    String contactPerson = parts[1];
-                    String phoneNumber = parts[2];
-                    String email = parts[3];
-                    String address = parts[4];
-                    double minOrderValue = Double.parseDouble(parts[5]);
-
-                    Vendor vendor = new Vendor(name, contactPerson, phoneNumber, email, address, new ArrayList<>(),
-                            minOrderValue);
-
-                    if (vendorManager.existsVendor(name)) {
-                        String[] columns = { "contactPerson", "phoneNumber", "email", "address" };
-                        Object[] values = { contactPerson, phoneNumber, email, address };
-                        if (vendorManager.updateVendor(name, columns, values)) {
-                            imported++;
-                        } else {
-                            errors++;
-                        }
-                    } else {
-                        if (vendorManager.insertVendor(vendor)) {
-                            imported++;
-                        } else {
-                            errors++;
-                        }
-                    }
-                } catch (Exception e) {
-                    errors++;
-                    System.err.println("[SettingsGUI] Fehler beim Importieren einer Zeile: " + e.getMessage());
-                }
-            }
-
-            new MessageDialog()
-                    .setMessage(
-                    String.format("<html><b>Lieferanten-Import abgeschlossen</b><br/><br/>" +
-                            UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
-                            (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
-                            "</html>", imported, errors))
-                    .setTitle("Import Ergebnis")
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
-
-            System.out.printf("[SettingsGUI] Lieferanten-Import: %d erfolgreich, %d Fehler%n", imported, errors);
-            String logMessage = String.format("Lieferanten-Import: %d erfolgreich, %d Fehler", imported, errors);
-            Main.logUtils.addLog(logMessage);
-
-        } catch (Exception e) {
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Importieren: " + e.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            System.err.println("[SettingsGUI] Fehler beim Importieren der Lieferanten: " + e.getMessage());
-            Main.logUtils.addLog("Fehler beim Importieren der Lieferanten: " + e.getMessage());
-        }
-    }
-
-    private static void importClientsFromCsv(File csvFile) {
-        int imported = 0;
-        int errors = 0;
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
-            String headerLine = reader.readLine(); // Skip header
-            if (headerLine == null) {
-                new MessageDialog()
-                        .setTitle("Fehler")
-                        .setMessage("Die CSV-Datei ist leer.")
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
-                Main.logUtils.addLog("Die CSV-Datei ist leer.");
-                return;
-            }
-
-            ClientManager clientManager = ClientManager.getInstance();
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                try {
-                    String[] parts = parseCsvLine(line);
-                    if (parts.length < 2) {
-                        errors++;
-                        continue;
-                    }
-
-                    String name = parts[0];
-                    String department = parts[1];
-
-                    if (clientManager.existsClient(name)) {
-                        if (clientManager.updateClient(name, department)) {
-                            imported++;
-                        } else {
-                            errors++;
-                        }
-                    } else {
-                        if (clientManager.insertClient(name, department)) {
-                            imported++;
-                        } else {
-                            errors++;
-                        }
-                    }
-                } catch (Exception e) {
-                    errors++;
-                    System.err.println("[SettingsGUI] Fehler beim Importieren einer Zeile: " + e.getMessage());
-                }
-            }
-
-            new MessageDialog()
-                    .setTitle("Import Ergebnis")
-                    .setMessage(String.format("<html><b>Kunden-Import abgeschlossen</b><br/><br/>" +
-                            UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
-                            (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
-                            "</html>", imported, errors))
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
-
-            System.out.printf("[SettingsGUI] Kunden-Import: %d erfolgreich, %d Fehler%n", imported, errors);
-            String logMessage = String.format("Kunden-Import: %d erfolgreich, %d Fehler", imported, errors);
-            Main.logUtils.addLog(logMessage);
-
-        } catch (Exception e) {
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Importieren: " + e.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            System.err.println("[SettingsGUI] Fehler beim Importieren der Kunden: " + e.getMessage());
-            Main.logUtils.addLog("Fehler beim Importieren der Kunden: " + e.getMessage());
-        }
-    }
-
-    private static void importOrdersFromCsv() {
-        new MessageDialog()
-                .setTitle("Nicht verfügbar")
-                .setMessage("<html><b>Bestellungs-Import nicht verfügbar</b><br/><br/>" +
-                        "Der Import von Bestellungen ist aus Sicherheitsgründen deaktiviert.<br/>" +
-                        "Bestellungen sollten nur über die normale Bestellfunktion erstellt werden.</html>")
-                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                .display();
-        System.out.println(
-                "[SettingsGUI] Bestellungs-Import wurde übersprungen (nicht implementiert aus Sicherheitsgründen)");
-    }
-
-    /**
-     * Parses a CSV line, handling quoted fields with commas
-     */
-    private static String[] parseCsvLine(String line) {
-        List<String> result = new ArrayList<>();
-        boolean inQuotes = false;
-        StringBuilder current = new StringBuilder();
-        for (int i = 0; i < line.length(); i++) {
-            char c = line.charAt(i);
-            if (c == '"') {
-                inQuotes = !inQuotes;
-            } else if (c == ',' && !inQuotes) {
-                result.add(current.toString());
-                current = new StringBuilder();
-            } else {
-                current.append(c);
-            }
-        }
-        result.add(current.toString());
-        return result.toArray(new String[0]);
+        SettingsDataTransferService.importFromCsv();
     }
 
     /**
      * Exports all database tables to CSV files in the application data directory.
      * Creates separate CSV files for articles, vendors, clients, and orders.
      */
-    private static void exportToCsv() {
-        int successCount = 0;
-        int totalTables = 4;
-
-        // Export Articles
-        List<Article> articles = ArticleManager.getInstance().getAllArticles();
-        File csvFile = new File(Main.getAppDataDir(), "articles_export.csv");
-        try (PrintWriter writer = new PrintWriter(new FileWriter(csvFile))) {
-            writer.println(
-                    "Artikelnummer,Name,Details,Lagerbestand,Mindestlagerbestand,Verkaufspreis,Einkaufspreis,Lieferant");
-
-            for (Article article : articles) {
-                writer.format(Locale.ROOT,
-                        "\"%s\",\"%s\",\"%s\",%d,%d,%.2f,%.2f,\"%s\"%n",
-                        escapeCSV(article.getArticleNumber()),
-                        escapeCSV(article.getName()),
-                        escapeCSV(article.getDetails()),
-                        article.getStockQuantity(),
-                        article.getMinStockLevel(),
-                        article.getSellPrice(),
-                        article.getPurchasePrice(),
-                        escapeCSV(article.getVendorName()));
-            }
-            System.out.println("[SettingsGUI] Artikel erfolgreich nach " + csvFile.getAbsolutePath() + " exportiert ("
-                    + articles.size() + " Einträge)");
-            successCount++;
-        } catch (Exception e) {
-            String errorMsg = "Fehler beim Exportieren der Artikel: " + e.getMessage();
-            System.err.println("[SettingsGUI] " + errorMsg);
-            LogManager.getLogger(SettingsGUI.class).error(errorMsg, e);
-            Main.logUtils.addLog(errorMsg);
-        }
-
-        // Export Vendors
-        List<Vendor> vendors = VendorManager.getInstance().getVendors();
-        File vendorCsvFile = new File(Main.getAppDataDir(), "vendors_export.csv");
-        try (PrintWriter writer = new PrintWriter(new FileWriter(vendorCsvFile))) {
-            writer.println("Name,Kontaktperson,Telefon,E-Mail,Adresse,MinBestellwert");
-            for (Vendor vendor : vendors) {
-                writer.printf("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"%n",
-                        escapeCSV(vendor.getName()),
-                        escapeCSV(vendor.getContactPerson()),
-                        escapeCSV(vendor.getPhoneNumber()),
-                        escapeCSV(vendor.getEmail()),
-                        escapeCSV(vendor.getAddress()),
-                        escapeCSV(String.valueOf(vendor.getMinOrderValue())));
-            }
-            System.out.println("[SettingsGUI] Lieferanten erfolgreich nach " + vendorCsvFile.getAbsolutePath()
-                    + " exportiert (" + vendors.size() + " Einträge)");
-            successCount++;
-        } catch (Exception ex) {
-            String errorMsg = "Fehler beim Exportieren der Lieferanten: " + ex.getMessage();
-            System.err.println("[SettingsGUI] " + errorMsg);
-            LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
-            Main.logUtils.addLog(errorMsg);
-        }
-
-        // Export Clients
-        List<Map<String, String>> clients = ClientManager.getInstance().getAllClients();
-        File clientCsvFile = new File(Main.getAppDataDir(), "clients_export.csv");
-        try (PrintWriter writer = new PrintWriter(new FileWriter(clientCsvFile))) {
-            writer.println("Name,Abteilung");
-            for (Map<String, String> clientMap : clients) {
-                String name = clientMap.getOrDefault("firstLastName", "");
-                String department = clientMap.getOrDefault("department", "");
-                writer.printf("\"%s\",\"%s\"%n", escapeCSV(name), escapeCSV(department));
-            }
-            System.out.println("[SettingsGUI] Kunden erfolgreich nach " + clientCsvFile.getAbsolutePath()
-                    + " exportiert (" + clients.size() + " Einträge)");
-            successCount++;
-        } catch (Exception ex) {
-            String errorMsg = "Fehler beim Exportieren der Kunden: " + ex.getMessage();
-            System.err.println("[SettingsGUI] " + errorMsg);
-            LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
-            Main.logUtils.addLog(errorMsg);
-        }
-
-        // Export Orders
-        List<Order> orders = OrderManager.getInstance().getOrders();
-        File orderCsvFile = new File(Main.getAppDataDir(), "orders_export.csv");
-        try (PrintWriter writer = new PrintWriter(new FileWriter(orderCsvFile))) {
-            writer.println(
-                    "Bestell-ID,Empfängername,EmpfängerKontoNummer,SenderName,SenderKontoNummer,Artikel,Bestelldatum,Status,Abteilung");
-            for (Order order : orders) {
-                // Format ordered articles as "ArticleNum1:Qty1;ArticleNum2:Qty2;..."
-                String articlesStr = order.getOrderedArticles().entrySet().stream()
-                        .map(e -> e.getKey() + ":" + e.getValue())
-                        .collect(java.util.stream.Collectors.joining(";"));
-
-                writer.printf("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"%n",
-                        escapeCSV(order.getOrderId()),
-                        escapeCSV(order.getReceiverName()),
-                        escapeCSV(order.getReceiverKontoNumber()),
-                        escapeCSV(order.getSenderName()),
-                        escapeCSV(order.getSenderKontoNumber()),
-                        escapeCSV(articlesStr),
-                        escapeCSV(order.getOrderDate()),
-                        escapeCSV(order.getStatus()),
-                        escapeCSV(order.getDepartment()));
-            }
-            System.out.println("[SettingsGUI] Bestellungen erfolgreich nach " + orderCsvFile.getAbsolutePath()
-                    + " exportiert (" + orders.size() + " Einträge)");
-            successCount++;
-        } catch (Exception ex) {
-            String errorMsg = "Fehler beim Exportieren der Bestellungen: " + ex.getMessage();
-            System.err.println("[SettingsGUI] " + errorMsg);
-            LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
-            Main.logUtils.addLog(errorMsg);
-        }
-
-        // Show summary
-        System.out.println("[SettingsGUI] CSV-Export abgeschlossen: " + successCount + "/" + totalTables
-                + " Tabellen erfolgreich exportiert");
-        System.out.println("[SettingsGUI] Dateien gespeichert in: " + Main.getAppDataDir().getAbsolutePath());
-    }
-
-    /**
-     * Helper method to escape special characters in CSV values (quotes, commas,
-     * newlines)
-     */
-    private static String escapeCSV(String value) {
-        if (value == null) {
-            return "";
-        }
-        // Escape quotes by doubling them and remove any existing outer quotes
-        return value.replace("\"", "\"\"");
+    private static SettingsDataTransferService.ExportSummary exportToCsv() {
+        return SettingsDataTransferService.exportToCsv();
     }
 
     private void styleComboBox(JComboBox<String> combo) {
-        if (combo == null)
-            throw new IllegalArgumentException("combo must not be null");
-        Color bg = ThemeManager.getInputBackgroundColor();
-        Color fg = ThemeManager.getTextPrimaryColor();
-        Color border = ThemeManager.getInputBorderColor();
-        Color selBg = ThemeManager.getSelectionBackgroundColor();
-        Color selFg = ThemeManager.getSelectionForegroundColor();
-
-        combo.setOpaque(true);
-        combo.setBackground(bg);
-        combo.setForeground(fg);
-        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        combo.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(border, 1),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
-
-        // IMPORTANT: force popup list colors via renderer AND list defaults
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(
-                    JList<?> list, Object value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-                JLabel c = (JLabel) super.getListCellRendererComponent(
-                        list, value, index, isSelected, cellHasFocus);
-                list.setBackground(bg);
-                list.setForeground(fg);
-                list.setSelectionBackground(selBg);
-                list.setSelectionForeground(selFg);
-                c.setOpaque(true);
-                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-                if (isSelected) {
-                    c.setBackground(selBg);
-                    c.setForeground(selFg);
-                } else {
-                    c.setBackground(bg);
-                    c.setForeground(fg);
-                }
-                c.setToolTipText(value != null ? value.toString() : null);
-                return c;
-            }
-        });
-
-        // Theme arrow button + popup border using a small UI override (most reliable)
-        combo.setUI(new BasicComboBoxUI() {
-            @Override
-            protected JButton createArrowButton() {
-                JButton b = new JButton("▾");
-                b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
-                b.setFocusPainted(false);
-                b.setContentAreaFilled(true);
-                b.setOpaque(true);
-                b.setBackground(bg);
-                b.setForeground(fg);
-                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                b.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        b.setBackground(ThemeManager.getSurfaceColor());
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        b.setBackground(bg);
-                    }
-                });
-                return b;
-            }
-
-            @Override
-            protected ComboPopup createPopup() {
-                ComboPopup popup = super.createPopup();
-                if (popup instanceof BasicComboPopup basic) {
-                    basic.setBorder(BorderFactory.createLineBorder(border, 1));
-                    basic.getList().setBackground(bg);
-                    basic.getList().setForeground(fg);
-                    basic.getList().setSelectionBackground(selBg);
-                    basic.getList().setSelectionForeground(selFg);
-                }
-                return popup;
-            }
-        });
-
-        // If editable: theme the editor field
-        if (combo.isEditable()) {
-            Component editorComp = combo.getEditor().getEditorComponent();
-            if (editorComp instanceof JTextField tf) {
-                tf.setBackground(bg);
-                tf.setForeground(fg);
-                tf.setCaretColor(fg);
-                tf.setBorder(null);
-            }
-        }
+        SettingsStylingService.styleComboBox(combo);
     }
 
     private static List<String> getAllFonts() {

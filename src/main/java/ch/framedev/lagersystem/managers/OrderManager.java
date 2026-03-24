@@ -1,5 +1,8 @@
 package ch.framedev.lagersystem.managers;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -20,6 +23,7 @@ import ch.framedev.lagersystem.main.Main;
 public class OrderManager {
 
     private static final Logger logger = LogManager.getLogger(OrderManager.class);
+    private static final Gson GSON = new Gson();
 
     private static volatile OrderManager instance = null;
     private final DatabaseManager databaseManager;
@@ -51,6 +55,7 @@ public class OrderManager {
         String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_ORDERS + " (" +
                 "orderId TEXT UNIQUE," +
                 "orderedArticles TEXT," +
+                "articleFillings TEXT," +
                 "receiverName TEXT," +
                 "receiverKontoNumber TEXT," +
                 "orderDate TEXT," +
@@ -60,6 +65,22 @@ public class OrderManager {
                 "status TEXT" +
                 ");";
         databaseManager.executeUpdate(sql);
+        ensureArticleFillingsColumn();
+    }
+
+    private void ensureArticleFillingsColumn() {
+        String sql = "PRAGMA table_info(" + DatabaseManager.TABLE_ORDERS + ");";
+        try (var resultSet = databaseManager.executeQuery(sql)) {
+            while (resultSet != null && resultSet.next()) {
+                if ("articleFillings".equalsIgnoreCase(resultSet.getString("name"))) {
+                    return;
+                }
+            }
+        } catch (Exception ignored) {
+            // Fall through and try to add the column.
+        }
+        databaseManager.executeUpdate("ALTER TABLE " + DatabaseManager.TABLE_ORDERS
+                + " ADD COLUMN articleFillings TEXT;");
     }
 
     private static String normalizeId(String orderId) {
@@ -105,6 +126,32 @@ public class OrderManager {
         return orderedArticles;
     }
 
+    private static String serializeArticleFillings(Map<String, String> articleFillings) {
+        if (articleFillings == null || articleFillings.isEmpty()) return "";
+        Map<String, String> sanitized = new HashMap<>();
+        for (Map.Entry<String, String> entry : articleFillings.entrySet()) {
+            if (entry.getKey() == null || entry.getKey().isBlank()) continue;
+            String filling = entry.getValue();
+            if (filling == null || filling.isBlank()) continue;
+            sanitized.put(entry.getKey().trim(), filling.trim());
+        }
+        return sanitized.isEmpty() ? "" : GSON.toJson(sanitized);
+    }
+
+    private static Map<String, String> parseArticleFillings(String articleFillingsStr) {
+        if (articleFillingsStr == null || articleFillingsStr.isBlank()) {
+            return new HashMap<>();
+        }
+        try {
+            java.lang.reflect.Type mapType = new TypeToken<Map<String, String>>() {
+            }.getType();
+            Map<String, String> parsed = GSON.fromJson(articleFillingsStr, mapType);
+            return parsed == null ? new HashMap<>() : new HashMap<>(parsed);
+        } catch (Exception ignored) {
+            return new HashMap<>();
+        }
+    }
+
     private void invalidateAllOrdersCache() {
         allOrdersCache = null;
         allOrdersCacheTime = 0L;
@@ -136,13 +183,15 @@ public class OrderManager {
         }
 
         String articlesStr = serializeOrderedArticles(order.getOrderedArticles());
+        String fillingsStr = serializeArticleFillings(order.getArticleFillings());
 
-        String sql = "INSERT INTO " + DatabaseManager.TABLE_ORDERS + " (orderId, orderedArticles, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber, department, status) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        String sql = "INSERT INTO " + DatabaseManager.TABLE_ORDERS + " (orderId, orderedArticles, articleFillings, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber, department, status) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
                 id,
                 articlesStr,
+                fillingsStr,
                 order.getReceiverName(),
                 order.getReceiverKontoNumber(),
                 order.getOrderDate(),
@@ -175,13 +224,15 @@ public class OrderManager {
         }
 
         String articlesStr = serializeOrderedArticles(order.getOrderedArticles());
+        String fillingsStr = serializeArticleFillings(order.getArticleFillings());
 
         String sql = "UPDATE " + DatabaseManager.TABLE_ORDERS +
-                " SET orderedArticles = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?, status = ? " +
+                " SET orderedArticles = ?, articleFillings = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?, status = ? " +
                 "WHERE orderId = ?;";
 
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
                 articlesStr,
+                fillingsStr,
                 order.getReceiverName(),
                 order.getReceiverKontoNumber(),
                 order.getOrderDate(),
@@ -239,9 +290,11 @@ public class OrderManager {
             if (resultSet.next()) {
                 String orderedArticlesStr = resultSet.getString("orderedArticles");
                 Map<String, Integer> orderedArticles = parseOrderedArticles(orderedArticlesStr);
+                Map<String, String> articleFillings = parseArticleFillings(resultSet.getString("articleFillings"));
                 Order o = new Order(
                         resultSet.getString("orderId"),
                         new java.util.HashMap<>(orderedArticles),
+                        articleFillings,
                         resultSet.getString("receiverName"),
                         resultSet.getString("receiverKontoNumber"),
                         resultSet.getString("orderDate"),
@@ -273,9 +326,11 @@ public class OrderManager {
             while (resultSet.next()) {
                 String orderedArticlesStr = resultSet.getString("orderedArticles");
                 Map<String, Integer> orderedArticles = parseOrderedArticles(orderedArticlesStr);
+                Map<String, String> articleFillings = parseArticleFillings(resultSet.getString("articleFillings"));
                 Order o = new Order(
                         resultSet.getString("orderId"),
                         orderedArticles,
+                        articleFillings,
                         resultSet.getString("receiverName"),
                         resultSet.getString("receiverKontoNumber"),
                         resultSet.getString("orderDate"),

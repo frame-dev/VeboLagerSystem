@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -374,10 +375,11 @@ public class EditOrderGUI extends JFrame {
 
         for (Article article : articles) {
             int quantity = orderedArticles.getOrDefault(article.getArticleNumber(), 0);
+            String articleLabel = ArticleUtils.formatArticleWithFilling(article, order.getArticleFilling(article.getArticleNumber()));
             Object[] rowData = {
-                    article.getName() + " (" + article.getArticleNumber() + ")",
+                    articleLabel + " (" + article.getArticleNumber() + ")",
                     quantity,
-                    String.format("%.2f CHF", article.getSellPrice())
+                    String.format("%.2f CHF", ArticleUtils.resolveEffectiveSellPrice(article, order.getArticleFilling(article.getArticleNumber())))
             };
             tableModel.addRow(rowData);
         }

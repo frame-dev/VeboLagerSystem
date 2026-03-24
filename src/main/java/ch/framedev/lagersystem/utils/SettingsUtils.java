@@ -5,6 +5,9 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 
 import javax.swing.*;
+
+import org.apache.logging.log4j.Logger;
+
 import java.awt.*;
 import java.util.List;
 import java.io.File;
@@ -194,6 +197,23 @@ public class SettingsUtils {
     private static boolean isMac() {
         String osName = System.getProperty("os.name", "");
         return osName.toLowerCase(Locale.ROOT).contains("mac");
+    }
+
+    /**
+     * Creates a styled label with specified font and color
+     */
+    @SuppressWarnings("MagicConstant")
+    public static JLabel createStyledLabel(Logger logger, JComboBox<?> fontComboBox, String text, int fontSize, int fontStyle, Color color) {
+        JLabel label = new JLabel(text);
+        String selectedItem = (String) fontComboBox.getSelectedItem();
+        if (selectedItem == null) {
+            logger.error("Font-ComboBox hat kein ausgewähltes Element, Standardwert wird verwendet");
+            selectedItem = DEFAULT_FONT_STYLE;
+        }
+        label.setFont(new Font(selectedItem, fontStyle, fontSize));
+        label.setForeground(color);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return label;
     }
 
     /**

@@ -15,6 +15,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.Color;
 import java.awt.Component;
 import java.io.File;
 import java.io.IOException;
@@ -40,6 +41,12 @@ public final class ArticleExporter {
     private static final DateTimeFormatter DISPLAY_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
     private static final DateTimeFormatter DISPLAY_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final String PDF_EXTENSION = "pdf";
+    private static final Color PDF_PRIMARY = new Color(30, 58, 95);
+    private static final Color PDF_PRIMARY_SOFT = new Color(62, 84, 98);
+    private static final Color PDF_ROW_ALT = new Color(247, 250, 253);
+    private static final Color PDF_LINE = new Color(220, 225, 230);
+    private static final Color PDF_TEXT = new Color(0, 0, 0);
+    private static final Color PDF_TEXT_MUTED = new Color(102, 102, 102);
 
     private ArticleExporter() {
     }
@@ -65,219 +72,97 @@ public final class ArticleExporter {
      * @param icon             An Icon to be used in error messages if the export process fails. This can be null if no icon is desired.
      */
     public static void exportTableAsPdf(Component parent, JTable table, int[] baseColumnWidths, Icon icon) {
-        if(parent == null) {
-            return;
-        }
-        if (table == null) {
-            return;
-        }
-        if (baseColumnWidths == null) {
-            baseColumnWidths = new int[0];
-        }
+        if(parent == null) return;
+        if (table == null) return;
+        if (baseColumnWidths == null) baseColumnWidths = new int[0];
 
-        File fileToSave = chooseSaveFile(parent,
-            "Artikel_Export_" + nowFileTimestamp() + "." + PDF_EXTENSION
-        );
-        if (fileToSave == null) {
-            return;
-        }
+        File fileToSave = chooseSaveFile(parent, "Artikel_Export_" + nowFileTimestamp() + "." + PDF_EXTENSION);
+        if (fileToSave == null) return;
 
         try (PDDocument doc = new PDDocument()) {
             PDFont[] fonts = loadPdfFonts(doc);
             PDFont boldFont = fonts[0];
             PDFont regularFont = fonts[1];
+            boolean useWinAnsiFallback = (boldFont instanceof PDType1Font) || (regularFont instanceof PDType1Font);
 
-            final boolean useWinAnsiFallback = (boldFont instanceof PDType1Font) || (regularFont instanceof PDType1Font);
-
-            // Page setup - Use A4 landscape for all columns to fit
-            PDRectangle pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()); // Landscape
-            float margin = 30;
+            PDRectangle pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
+            float margin = 30f;
             float pageWidth = pageSize.getWidth();
             float pageHeight = pageSize.getHeight();
             float tableWidth = pageWidth - 2 * margin;
 
-            // Table configuration
             int numCols = table.getColumnCount();
             int numRows = table.getRowCount();
             float rowHeight = 16f;
-            float headerHeight = 20f;
+            float tableHeaderHeight = 20f;
             float fontSize = 7f;
             float headerFontSize = 8f;
             float cellPadding = 3f;
+            float[] columnWidths = calculateColumnWidths(numCols, baseColumnWidths, tableWidth);
 
-            // Calculate column widths proportionally
-            float[] columnWidths = new float[numCols];
-            float totalWidth = 0;
-            for (int i = 0; i < numCols; i++) {
-                columnWidths[i] = i < baseColumnWidths.length ? baseColumnWidths[i] : 100;
-                totalWidth += columnWidths[i];
-            }
-            for (int i = 0; i < numCols; i++) {
-                columnWidths[i] = (columnWidths[i] / totalWidth) * tableWidth;
-            }
-
-            PDPage page = new PDPage(pageSize);
-            doc.addPage(page);
-            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
-
-            float yPosition = pageHeight - margin;
             int currentPage = 1;
+            int rowIndex = 0;
             boolean alternate = false;
 
-            java.util.function.BiConsumer<PDPageContentStream, Float> drawHeader = (cs, yPos) -> {
-                try {
-                    cs.setNonStrokingColor(30f / 255f, 58f / 255f, 95f / 255f);
-                    cs.addRect(margin, yPos - 45, tableWidth, 45);
-                    cs.fill();
+            while (rowIndex < numRows) {
+                PDPage page = new PDPage(pageSize);
+                doc.addPage(page);
 
-                    cs.beginText();
-                    cs.setNonStrokingColor(1f, 1f, 1f);
-                    cs.setFont(boldFont, 16);
-                    cs.newLineAtOffset(margin + 10, yPos - 28);
-                    cs.showText("VEBO Lagersystem - Artikelliste");
-                    cs.endText();
+                try (PDPageContentStream contentStream = new PDPageContentStream(doc, page)) {
+                    float yPosition = pageHeight - margin;
+                    yPosition = drawTableExportHeader(contentStream, table, boldFont, regularFont,
+                            pageWidth, margin, tableWidth, yPosition, tableHeaderHeight,
+                            headerFontSize, cellPadding, columnWidths, numCols, useWinAnsiFallback);
 
-                    cs.beginText();
-                    cs.setFont(regularFont, 8);
-                    cs.newLineAtOffset(pageWidth - margin - 120, yPos - 28);
-                    cs.showText("Export: " + nowDisplayTimestamp());
-                    cs.endText();
-
-                    float tableHeaderY = yPos - 55;
-                    cs.setNonStrokingColor(62f / 255f, 84f / 255f, 98f / 255f);
-                    cs.addRect(margin, tableHeaderY - headerHeight, tableWidth, headerHeight);
-                    cs.fill();
-
-                    cs.beginText();
-                    cs.setNonStrokingColor(1f, 1f, 1f);
-                    cs.setFont(boldFont, headerFontSize);
-
-                    float xPos = margin;
-                    for (int col = 0; col < numCols; col++) {
-                        String header = table.getColumnName(col);
-                        if (useWinAnsiFallback) {
-                            header = sanitizeForWinAnsi(header);
+                    while (rowIndex < numRows && yPosition - rowHeight >= margin + 30) {
+                        if (alternate) {
+                            setFillColor(contentStream, PDF_ROW_ALT);
+                            contentStream.addRect(margin, yPosition - rowHeight, tableWidth, rowHeight);
+                            contentStream.fill();
                         }
-                        float textWidth = boldFont.getStringWidth(header) / 1000f * headerFontSize;
-                        if (textWidth > columnWidths[col] - 2 * cellPadding) {
-                            while (textWidth > columnWidths[col] - 2 * cellPadding && header.length() > 2) {
-                                header = header.substring(0, header.length() - 1);
-                                textWidth = boldFont.getStringWidth(header + "..") / 1000f * headerFontSize;
+
+                        setStrokeColor(contentStream, PDF_LINE);
+                        contentStream.setLineWidth(0.3f);
+                        contentStream.moveTo(margin, yPosition);
+                        contentStream.lineTo(margin + tableWidth, yPosition);
+                        contentStream.stroke();
+
+                        float xPos = margin;
+                        for (int col = 0; col < numCols; col++) {
+                            String cellText = formatCellValue(table.getValueAt(rowIndex, col));
+                            if (useWinAnsiFallback) {
+                                cellText = sanitizeForWinAnsi(cellText);
                             }
-                            header = header + "..";
+                            cellText = fitText(cellText, regularFont, fontSize, columnWidths[col] - 2 * cellPadding);
+
+                            float textY = yPosition - rowHeight + cellPadding + 2;
+                            if (isNumericValue(table.getValueAt(rowIndex, col))) {
+                                drawRightAlignedText(contentStream, regularFont, fontSize, PDF_TEXT,
+                                        xPos + columnWidths[col] - cellPadding, textY, cellText);
+                            } else {
+                                drawText(contentStream, regularFont, fontSize, PDF_TEXT,
+                                        xPos + cellPadding, textY, cellText);
+                            }
+                            xPos += columnWidths[col];
                         }
 
-                        cs.newLineAtOffset(xPos + cellPadding, tableHeaderY - headerHeight + cellPadding + 3);
-                        cs.showText(header);
-                        cs.newLineAtOffset(-(xPos + cellPadding), -(tableHeaderY - headerHeight + cellPadding + 3));
-                        xPos += columnWidths[col];
-                    }
-                    cs.endText();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            };
-
-            java.util.function.BiConsumer<PDPageContentStream, Integer> drawFooter = (cs, pageNum) -> {
-                try {
-                    cs.beginText();
-                    cs.setNonStrokingColor(0.4f, 0.4f, 0.4f);
-                    cs.setFont(regularFont, 7);
-                    cs.newLineAtOffset(margin, 15);
-                    cs.showText("VEBO Lagersystem © 2026 | " + numRows + " Artikel");
-                    cs.endText();
-
-                    cs.beginText();
-                    cs.newLineAtOffset(pageWidth - margin - 50, 15);
-                    cs.showText("Seite " + pageNum);
-                    cs.endText();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            };
-
-            drawHeader.accept(contentStream, yPosition);
-            yPosition -= (55 + headerHeight + 5);
-
-            for (int row = 0; row < numRows; row++) {
-                if (yPosition - rowHeight < margin + 30) {
-                    drawFooter.accept(contentStream, currentPage);
-                    contentStream.close();
-
-                    currentPage++;
-                    page = new PDPage(pageSize);
-                    doc.addPage(page);
-                    contentStream = new PDPageContentStream(doc, page);
-                    yPosition = pageHeight - margin;
-
-                    drawHeader.accept(contentStream, yPosition);
-                    yPosition -= (55 + headerHeight + 5);
-                }
-
-                if (alternate) {
-                    contentStream.setNonStrokingColor(247f / 255f, 250f / 255f, 253f / 255f);
-                    contentStream.addRect(margin, yPosition - rowHeight, tableWidth, rowHeight);
-                    contentStream.fill();
-                }
-
-                contentStream.setStrokingColor(220f / 255f, 225f / 255f, 230f / 255f);
-                contentStream.setLineWidth(0.3f);
-                contentStream.moveTo(margin, yPosition);
-                contentStream.lineTo(margin + tableWidth, yPosition);
-                contentStream.stroke();
-
-                contentStream.beginText();
-                contentStream.setNonStrokingColor(0f, 0f, 0f);
-                contentStream.setFont(regularFont, fontSize);
-
-                float xPos = margin;
-                for (int col = 0; col < numCols; col++) {
-                    Object value = table.getValueAt(row, col);
-                    String text = "";
-
-                    if (value != null) {
-                        if (value instanceof Double) {
-                                text = String.format(Locale.ROOT, "%.2f", (Double) value);
-                        } else if (value instanceof Integer) {
-                                text = String.format(Locale.ROOT, "%d", (Integer) value);
-                        } else {
-                            text = value.toString();
-                        }
+                        yPosition -= rowHeight;
+                        alternate = !alternate;
+                        rowIndex++;
                     }
 
-                    if (useWinAnsiFallback) {
-                        text = sanitizeForWinAnsi(text);
-                    }
+                    setStrokeColor(contentStream, PDF_LINE);
+                    contentStream.setLineWidth(0.5f);
+                    contentStream.moveTo(margin, yPosition);
+                    contentStream.lineTo(margin + tableWidth, yPosition);
+                    contentStream.stroke();
 
-                    float textWidth = regularFont.getStringWidth(text) / 1000f * fontSize;
-                    if (textWidth > columnWidths[col] - 2 * cellPadding) {
-                        while (textWidth > columnWidths[col] - 2 * cellPadding && text.length() > 2) {
-                            text = text.substring(0, text.length() - 1);
-                            textWidth = regularFont.getStringWidth(text + "..") / 1000f * fontSize;
-                        }
-                        text = text + "..";
-                    }
-
-                    contentStream.newLineAtOffset(xPos + cellPadding, yPosition - rowHeight + cellPadding + 2);
-                    contentStream.showText(text);
-                    contentStream.newLineAtOffset(-(xPos + cellPadding), -(yPosition - rowHeight + cellPadding + 2));
-                    xPos += columnWidths[col];
+                    drawTableExportFooter(contentStream, regularFont, pageWidth, margin, numRows, currentPage);
                 }
-                contentStream.endText();
 
-                yPosition -= rowHeight;
-                alternate = !alternate;
+                currentPage++;
             }
 
-            contentStream.setStrokingColor(220f / 255f, 225f / 255f, 230f / 255f);
-            contentStream.setLineWidth(0.5f);
-            contentStream.moveTo(margin, yPosition);
-            contentStream.lineTo(margin + tableWidth, yPosition);
-            contentStream.stroke();
-
-            drawFooter.accept(contentStream, currentPage);
-
-            contentStream.close();
             doc.save(fileToSave);
 
             new MessageDialog()
@@ -299,6 +184,131 @@ public final class ArticleExporter {
                     .display();
             LOGGER.error(ex.getMessage(), ex);
         }
+    }
+
+    private static float[] calculateColumnWidths(int numCols, int[] baseColumnWidths, float tableWidth) {
+        float[] columnWidths = new float[numCols];
+        float totalWidth = 0f;
+        for (int i = 0; i < numCols; i++) {
+            columnWidths[i] = i < baseColumnWidths.length ? Math.max(20, baseColumnWidths[i]) : 100;
+            totalWidth += columnWidths[i];
+        }
+        if (totalWidth <= 0f) {
+            float equal = tableWidth / Math.max(1, numCols);
+            for (int i = 0; i < numCols; i++) columnWidths[i] = equal;
+            return columnWidths;
+        }
+        for (int i = 0; i < numCols; i++) {
+            columnWidths[i] = (columnWidths[i] / totalWidth) * tableWidth;
+        }
+        return columnWidths;
+    }
+
+    private static float drawTableExportHeader(PDPageContentStream cs, JTable table, PDFont boldFont, PDFont regularFont,
+                                               float pageWidth, float margin, float tableWidth, float yPos,
+                                               float tableHeaderHeight, float headerFontSize, float cellPadding,
+                                               float[] columnWidths, int numCols, boolean useWinAnsiFallback) throws IOException {
+        setFillColor(cs, PDF_PRIMARY);
+        cs.addRect(margin, yPos - 45, tableWidth, 45);
+        cs.fill();
+
+        drawText(cs, boldFont, 16, Color.WHITE, margin + 10, yPos - 28, "VEBO Lagersystem - Artikelliste");
+        drawText(cs, regularFont, 8, Color.WHITE, pageWidth - margin - 125, yPos - 28, "Export: " + nowDisplayTimestamp());
+
+        float tableHeaderY = yPos - 55;
+        setFillColor(cs, PDF_PRIMARY_SOFT);
+        cs.addRect(margin, tableHeaderY - tableHeaderHeight, tableWidth, tableHeaderHeight);
+        cs.fill();
+
+        float xPos = margin;
+        for (int col = 0; col < numCols; col++) {
+            String header = table.getColumnName(col);
+            if (useWinAnsiFallback) {
+                header = sanitizeForWinAnsi(header);
+            }
+            header = fitText(header, boldFont, headerFontSize, columnWidths[col] - 2 * cellPadding);
+            drawText(cs, boldFont, headerFontSize, Color.WHITE,
+                    xPos + cellPadding, tableHeaderY - tableHeaderHeight + cellPadding + 3, header);
+            xPos += columnWidths[col];
+        }
+
+        return yPos - (55 + tableHeaderHeight + 5);
+    }
+
+    private static void drawTableExportFooter(PDPageContentStream cs, PDFont regularFont, float pageWidth,
+                                              float margin, int numRows, int pageNum) throws IOException {
+        drawText(cs, regularFont, 7, PDF_TEXT_MUTED, margin, 15,
+                "VEBO Lagersystem © 2026 | " + numRows + " Artikel");
+        drawRightAlignedText(cs, regularFont, 7, PDF_TEXT_MUTED, pageWidth - margin, 15,
+                "Seite " + pageNum);
+    }
+
+    private static void drawText(PDPageContentStream cs, PDFont font, float fontSize, Color color,
+                                 float x, float y, String text) throws IOException {
+        cs.beginText();
+        setFillColor(cs, color);
+        cs.setFont(font, fontSize);
+        cs.newLineAtOffset(x, y);
+        cs.showText(text == null ? "" : text);
+        cs.endText();
+    }
+
+    private static void drawRightAlignedText(PDPageContentStream cs, PDFont font, float fontSize, Color color,
+                                             float rightX, float y, String text) throws IOException {
+        String value = text == null ? "" : text;
+        float textWidth = font.getStringWidth(value) / 1000f * fontSize;
+        drawText(cs, font, fontSize, color, rightX - textWidth, y, value);
+    }
+
+    private static String fitText(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
+        String value = text == null ? "" : text;
+        if (maxWidth <= 0f) {
+            return "";
+        }
+        float textWidth = font.getStringWidth(value) / 1000f * fontSize;
+        if (textWidth <= maxWidth) {
+            return value;
+        }
+        String shortened = value;
+        while (shortened.length() > 2) {
+            shortened = shortened.substring(0, shortened.length() - 1);
+            float shortenedWidth = font.getStringWidth(shortened + "..") / 1000f * fontSize;
+            if (shortenedWidth <= maxWidth) {
+                return shortened + "..";
+            }
+        }
+        return "..";
+    }
+
+    private static String formatCellValue(Object value) {
+        if (value == null) {
+            return "";
+        }
+        if (value instanceof Double d) {
+            return String.format(Locale.ROOT, "%.2f", d);
+        }
+        if (value instanceof Float f) {
+            return String.format(Locale.ROOT, "%.2f", f);
+        }
+        if (value instanceof Integer i) {
+            return String.format(Locale.ROOT, "%d", i);
+        }
+        if (value instanceof Long l) {
+            return String.format(Locale.ROOT, "%d", l);
+        }
+        return String.valueOf(value);
+    }
+
+    private static boolean isNumericValue(Object value) {
+        return value instanceof Number;
+    }
+
+    private static void setFillColor(PDPageContentStream cs, Color color) throws IOException {
+        cs.setNonStrokingColor(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f);
+    }
+
+    private static void setStrokeColor(PDPageContentStream cs, Color color) throws IOException {
+        cs.setStrokingColor(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f);
     }
 
     /**
@@ -410,12 +420,15 @@ public final class ArticleExporter {
      * @throws IOException If an error occurs during PDF generation or saving the file
      */
     @SuppressWarnings("deprecation")
-    public static void exportOrderToPDF(File file, JComboBox<String> senderNameCombobox, JTextField senderKontoField, JComboBox<String> receiverNameCombobox, JTextField receiverKontoField, JComboBox<String> departmentList, Map<Article, Integer> orderArticles) throws IOException {
+    public static void exportOrderToPDF(File file, JComboBox<String> receiverNameCombobox, JTextField receiverKontoField,
+                                        JComboBox<String> senderNameCombobox, JTextField senderKontoField,
+                                        JComboBox<String> departmentList, Map<Article, Integer> orderArticles,
+                                        Map<String, String> orderArticleFillings) throws IOException {
         if(file == null) throw new IllegalArgumentException("File cannot be null");
-        if(senderNameCombobox == null) throw new IllegalArgumentException("Sender name combobox cannot be null");
-        if(senderKontoField == null) throw new IllegalArgumentException("Sender konto field cannot be null");
         if(receiverNameCombobox == null) throw new IllegalArgumentException("Receiver name combobox cannot be null");
         if(receiverKontoField == null) throw new IllegalArgumentException("Receiver konto field cannot be null");
+        if(senderNameCombobox == null) throw new IllegalArgumentException("Sender name combobox cannot be null");
+        if(senderKontoField == null) throw new IllegalArgumentException("Sender konto field cannot be null");
         if(departmentList == null) throw new IllegalArgumentException("Department list cannot be null");
         if(orderArticles == null) throw new IllegalArgumentException("Order articles cannot be null");
         if(orderArticles.isEmpty()) throw new IllegalArgumentException("Order articles cannot be empty");
@@ -585,8 +598,14 @@ public final class ArticleExporter {
                 boolean alternateRow = false;
                 for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
                     Article a = e.getKey();
+                    if (a == null) {
+                        continue;
+                    }
                     int qty = e.getValue();
-                    double unit = safePrice(a);
+                    String filling = (orderArticleFillings == null || a.getArticleNumber() == null)
+                            ? ""
+                            : ArticleUtils.normalizeFilling(orderArticleFillings.get(a.getArticleNumber()));
+                    double unit = safePrice(a, filling);
                     double line = unit * qty;
                     total += line;
 
@@ -601,7 +620,7 @@ public final class ArticleExporter {
                     cs.setFont(regularFont, 9);
                     cs.newLineAtOffset(margin + 5, yPosition - 10);
 
-                    String articleName = a.getName();
+                    String articleName = ArticleUtils.formatArticleWithFilling(a, filling);
                     if (articleName.length() > 35) articleName = articleName.substring(0, 32) + "...";
                     String articleLabel = articleName + " (" + a.getArticleNumber() + ")";
 
@@ -660,12 +679,12 @@ public final class ArticleExporter {
      * @param a The article for which to retrieve the selling price
      * @return The selling price of the article, or 0.0 if it cannot be retrieved due to an exception
      */
-    private static double safePrice(Article a) {
+    private static double safePrice(Article a, String filling) {
         if(a == null) throw new IllegalArgumentException("Article cannot be null");
         try {
-            return a.getSellPrice();
+            return ArticleUtils.resolveEffectiveSellPrice(a, filling);
         } catch (NoSuchMethodError | AbstractMethodError | RuntimeException ex) {
-            return 0.0;
+            return a.getSellPrice();
         }
     }
 

@@ -7,6 +7,7 @@ import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.OrderExport;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -764,14 +765,17 @@ public class OrderGUI extends JFrame {
             if (quantity == 0) {
                 quantity = order.getOrderedArticles().getOrDefault(a.getName(), 0);
             }
-            double lineTotal = quantity * a.getSellPrice();
+            String filling = order.getArticleFilling(a.getArticleNumber());
+            double unitPrice = ArticleUtils.resolveEffectiveSellPrice(a, filling);
+            double lineTotal = quantity * unitPrice;
             totalPrice += lineTotal;
+            String articleName = ArticleUtils.formatArticleWithFilling(a, filling);
 
             articlesHtml.append("<tr>")
                     .append("<td>").append(a.getArticleNumber()).append("</td>")
-                    .append("<td>").append(a.getName()).append("</td>")
+                    .append("<td>").append(articleName).append("</td>")
                     .append("<td align='right'>").append(quantity).append("</td>")
-                    .append("<td align='right'>").append(String.format("%.2f", a.getSellPrice())).append(" CHF</td>")
+                    .append("<td align='right'>").append(String.format("%.2f", unitPrice)).append(" CHF</td>")
                     .append("<td align='right'><b>").append(String.format("%.2f", lineTotal)).append(" CHF</b></td>")
                     .append("</tr>");
         }

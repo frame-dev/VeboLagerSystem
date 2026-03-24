@@ -621,8 +621,8 @@
   },
   {
     "number": "2217",
-    "name": "Hygienebesen 40 mit Stiel (Rot/Blau/Gelb)",
-    "details": "Stk.",
+    "name": "Hygienebesen 40 mit Stiel",
+    "details": "Stk. (Rot/Blau/Gelb)",
     "stockQuantity": 14,
     "minStockLevel": 3,
     "sellPrice": 42.0,
@@ -632,7 +632,7 @@
   {
     "number": "2218",
     "name": "Hygiene Kehrgarnitur (Schüfeli & Bäseli)",
-    "details": "Stk. (Rot / Blau / Gelb)",
+    "details": "Stk. (Rot/Blau/Gelb)",
     "stockQuantity": 13,
     "minStockLevel": 3,
     "sellPrice": 6.0,
@@ -711,8 +711,8 @@
   },
   {
     "number": "2303",
-    "name": "Putzschwamm Rot, Gelb, Blau, Grün",
-    "details": "weisser Pad 10 Stk.",
+    "name": "Putzschwamm",
+    "details": "weisser Pad 10 Stk. (Rot/Gelb/Blau/Grün)",
     "stockQuantity": 491,
     "minStockLevel": 5,
     "sellPrice": 4.0,
@@ -741,8 +741,8 @@
   },
   {
     "number": "2306",
-    "name": "Mikrofaser Tücher Rot, Gelb, Blau, Grün",
-    "details": "Stk.",
+    "name": "Mikrofaser Tücher",
+    "details": "Stk. (Rot/Blau/Gelb/Grün)",
     "stockQuantity": 430,
     "minStockLevel": 6,
     "sellPrice": 1.7,

@@ -1134,6 +1134,24 @@ public class ArticleGUI extends JFrame {
                         return;
                     }
 
+                    String picked = null;
+
+                    if(ArticleManager.getInstance().hasSeperateArticles(article.getArticleNumber())) {
+                        List<String> variants = ArticleManager.getInstance().getAllDetailsForArticleNumber(article.getArticleNumber());
+                        String message = "Wählen Sie die Variante für \"" + article.getName() + "\":";
+                        String[] options = variants.toArray(new String[0]);
+                        int choice = new MessageDialog()
+                                .setTitle("Variante auswählen")
+                                .setMessage(message)
+                                .setOptionType(JOptionPane.DEFAULT_OPTION)
+                                .setOptions(options)
+                                .displayWithOptions();
+                        if (choice < 0 || choice >= options.length) {
+                            return; // User cancelled or closed the dialog
+                        }
+                        picked = options[choice];
+                    }
+
                     String input = new MessageDialog()
                             .setTitle("Zur Kundenbestellung hinzufügen")
                             .setMessage("Geben Sie die Menge für \"" + article.getName() + "\" ein:")
@@ -1161,7 +1179,7 @@ public class ArticleGUI extends JFrame {
                             }
                         }
 
-                        ArticleListGUI.addArticle(article, quantity);
+                        ArticleListGUI.addArticle(article, quantity, picked, null);
 
                         if (articleListGUI == null) {
                             articleListGUI = new ArticleListGUI();

@@ -387,10 +387,8 @@ public class ArticleDialog {
 
         gbc.insets = new Insets(4, 8, 8, 8);
         gbc.gridy = row++;
-        JPanel stockPanel = createStockSpinnersPanel(existingLager, existingMindest);
-        contentCard.add(stockPanel, gbc);
-        JSpinner lagerSpinner = (JSpinner) ((JPanel) stockPanel.getComponent(0)).getComponent(1);
-        JSpinner mindestSpinner = (JSpinner) ((JPanel) stockPanel.getComponent(1)).getComponent(1);
+        StockSpinnersResult stockResult = createStockSpinnersPanel(existingLager, existingMindest);
+        contentCard.add(stockResult.panel(), gbc);
 
         // Price fields
         gbc.insets = new Insets(10, 8, 6, 8);
@@ -401,26 +399,8 @@ public class ArticleDialog {
 
         gbc.insets = new Insets(4, 8, 8, 8);
         gbc.gridy = row++;
-        JPanel pricePanel = createPriceFieldsPanel(existingVerkauf, existingEinkauf);
-        contentCard.add(pricePanel, gbc);
-        JPanel verkaufPanel = (JPanel) pricePanel.getComponent(0);
-        JPanel einkaufPanel = (JPanel) pricePanel.getComponent(1);
-
-        JFormattedTextField verkaufField = findFormattedField(verkaufPanel);
-        JFormattedTextField einkaufField = findFormattedField(einkaufPanel);
-
-        if (verkaufField == null) {
-            verkaufField = new JFormattedTextField(createPriceFormatter());
-            verkaufField.setColumns(10);
-            verkaufPanel.add(verkaufField, BorderLayout.CENTER);
-        }
-        verkaufField.setValue(existingVerkauf);
-        if (einkaufField == null) {
-            einkaufField = new JFormattedTextField(createPriceFormatter());
-            einkaufField.setColumns(10);
-            einkaufPanel.add(einkaufField, BorderLayout.CENTER);
-        }
-        einkaufField.setValue(existingEinkauf);
+        PriceFieldsResult priceResult = createPriceFieldsPanel(existingVerkauf, existingEinkauf);
+        contentCard.add(priceResult.panel(), gbc);
 
         // Supplier field
         gbc.insets = new Insets(8, 8, 8, 8);
@@ -434,7 +414,8 @@ public class ArticleDialog {
         contentCard.add(lieferantField, gbc);
 
         return new ArticleFormFields(contentCard, nummerField, nameField, detailsField,
-                lagerSpinner, mindestSpinner, verkaufField, einkaufField, lieferantField);
+                stockResult.lagerSpinner(), stockResult.mindestSpinner(),
+                priceResult.verkaufField(), priceResult.einkaufField(), lieferantField);
     }
 
     /**
@@ -524,20 +505,26 @@ public class ArticleDialog {
         return field;
     }
 
-    private static JPanel createStockSpinnersPanel(int lagerbestand, int mindestbestand) {
+    private record StockSpinnersResult(JPanel panel, JSpinner lagerSpinner, JSpinner mindestSpinner) {}
+
+    private static StockSpinnersResult createStockSpinnersPanel(int lagerbestand, int mindestbestand) {
         JPanel stockPanel = new JPanel(new GridLayout(1, 2, 16, 0));
         stockPanel.setOpaque(false);
 
-        stockPanel.add(createLabeledSpinnerPanel("Aktuell", lagerbestand));
-        stockPanel.add(createLabeledSpinnerPanel("Mindestbestand", mindestbestand));
+        SpinnerPanelResult lagerResult = createLabeledSpinnerPanel("Aktuell", lagerbestand);
+        SpinnerPanelResult mindestResult = createLabeledSpinnerPanel("Mindestbestand", mindestbestand);
+        stockPanel.add(lagerResult.panel());
+        stockPanel.add(mindestResult.panel());
 
-        return stockPanel;
+        return new StockSpinnersResult(stockPanel, lagerResult.spinner(), mindestResult.spinner());
     }
+
+    private record SpinnerPanelResult(JPanel panel, JSpinner spinner) {}
 
     /**
      * Creates a panel with label and spinner
      */
-    private static JPanel createLabeledSpinnerPanel(String labelText, int initialValue) {
+    private static SpinnerPanelResult createLabeledSpinnerPanel(String labelText, int initialValue) {
         if (labelText == null) {
             throw new IllegalArgumentException("Label text cannot be null");
         }
@@ -551,7 +538,7 @@ public class ArticleDialog {
         styleDialogSpinner(spinner);
         panel.add(spinner, BorderLayout.CENTER);
 
-        return panel;
+        return new SpinnerPanelResult(panel, spinner);
     }
 
     /**
@@ -598,40 +585,20 @@ public class ArticleDialog {
         }
     }
 
-    /**
-     * Helper to recursively find a JFormattedTextField in a container (for price field extraction)
-     */
-    private static JFormattedTextField findFormattedField(Container root) {
-        if (root == null) return null;
-        for (Component c : root.getComponents()) {
-            switch (c) {
-                case null -> {
-                    continue;
-                }
-                case JFormattedTextField f -> {
-                    return f;
-                }
-                case Container child -> {
-                    JFormattedTextField nested = findFormattedField(child);
-                    if (nested != null) return nested;
-                }
-                default -> {
-                }
-            }
-        }
-        return null;
-    }
+    private record PriceFieldsResult(JPanel panel, JFormattedTextField verkaufField, JFormattedTextField einkaufField) {}
+    private record PriceFieldPanelResult(JPanel panel, JFormattedTextField field) {}
 
-    private static JPanel createPriceFieldsPanel(double verkaufspreis, double einkaufspreis) {
+    private static PriceFieldsResult createPriceFieldsPanel(double verkaufspreis, double einkaufspreis) {
         JPanel pricePanel = new JPanel(new GridLayout(1, 2, 16, 0));
         pricePanel.setOpaque(false);
 
-        NumberFormatter priceFormatter = createPriceFormatter();
+        // Each field gets its own formatter instance to avoid shared state
+        PriceFieldPanelResult verkaufResult = createLabeledPriceField("Verkaufspreis (CHF)", createPriceFormatter(), verkaufspreis);
+        PriceFieldPanelResult einkaufResult = createLabeledPriceField("Einkaufspreis (CHF)", createPriceFormatter(), einkaufspreis);
+        pricePanel.add(verkaufResult.panel());
+        pricePanel.add(einkaufResult.panel());
 
-        pricePanel.add(createLabeledPriceField("Verkaufspreis (CHF)", priceFormatter, verkaufspreis));
-        pricePanel.add(createLabeledPriceField("Einkaufspreis (CHF)", priceFormatter, einkaufspreis));
-
-        return pricePanel;
+        return new PriceFieldsResult(pricePanel, verkaufResult.field(), einkaufResult.field());
     }
 
     /**
@@ -653,7 +620,7 @@ public class ArticleDialog {
     /**
      * Creates a panel with label and price field with blue focus effect
      */
-    private static JPanel createLabeledPriceField(String labelText, NumberFormatter formatter, double initialValue) {
+    private static PriceFieldPanelResult createLabeledPriceField(String labelText, NumberFormatter formatter, double initialValue) {
         JPanel panel = new JPanel(new BorderLayout(0, 4));
         panel.setOpaque(false);
         panel.add(createDialogLabel(labelText), BorderLayout.NORTH);
@@ -694,7 +661,7 @@ public class ArticleDialog {
 
         panel.add(field, BorderLayout.CENTER);
 
-        return panel;
+        return new PriceFieldPanelResult(panel, field);
     }
 
     private static DialogButtons createDialogButtons(

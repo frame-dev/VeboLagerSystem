@@ -21,28 +21,50 @@ import java.net.URL;
 @SuppressWarnings("ALL")
 public class SplashscreenGUI extends JFrame {
 
+    public enum QualityPreset {
+        HIGH(18, 2, 1),
+        BALANCED(14, 3, 1),
+        LOW(10, 4, 2);
+
+        private final int particleCount;
+        private final int baseHeavyRepaintInterval;
+        private final int baseParticleUpdateInterval;
+
+        QualityPreset(int particleCount, int baseHeavyRepaintInterval, int baseParticleUpdateInterval) {
+            this.particleCount = particleCount;
+            this.baseHeavyRepaintInterval = baseHeavyRepaintInterval;
+            this.baseParticleUpdateInterval = baseParticleUpdateInterval;
+        }
+    }
+
+    private static volatile QualityPreset defaultQualityPreset = QualityPreset.BALANCED;
+
     private static final int ANIMATION_FRAME_DELAY_MS = 16;
-    private static final double PHASE_SPEED = 6.0;
-    private static final int HEAVY_REPAINT_INTERVAL_FRAMES = 1;
+    private static final double PHASE_SPEED = 5.2;
+    private static final int DEFAULT_HEAVY_REPAINT_INTERVAL_FRAMES = 2;
     private static final double BASE_FPS = 60.0;
     private static final double MAX_DELTA_SECONDS = 0.05;
+    private static final double PROGRESS_LERP_RATE = 0.22;
+    private static final int MAX_PARTICLES = 18;
 
-    // Palette (more premium: deeper blue + softer background + better contrast)
-    private static final Color ACCENT_BLUE = new Color(23, 112, 238);
-    private static final Color ACCENT_BLUE_DARK = new Color(16, 84, 190);
-    private static final Color ACCENT_CYAN = new Color(64, 191, 255);
+    // Palette (theme-aware light + dark variants)
+    private static final Color LIGHT_ACCENT_BLUE = new Color(23, 112, 238);
+    private static final Color DARK_ACCENT_BLUE = new Color(95, 165, 255);
 
-    private static final Color BACKGROUND_TOP = new Color(192, 224, 255);
-    private static final Color BACKGROUND_MID = new Color(226, 242, 255);
-    private static final Color BACKGROUND_BOTTOM = new Color(250, 252, 255);
+    private static final Color LIGHT_BACKGROUND_TOP = new Color(192, 224, 255);
+    private static final Color LIGHT_BACKGROUND_MID = new Color(226, 242, 255);
+    private static final Color LIGHT_BACKGROUND_BOTTOM = new Color(250, 252, 255);
+    private static final Color DARK_BACKGROUND_TOP = new Color(18, 24, 38);
+    private static final Color DARK_BACKGROUND_MID = new Color(24, 34, 52);
+    private static final Color DARK_BACKGROUND_BOTTOM = new Color(12, 18, 30);
 
-    private static final Color GLOW_BLUE = new Color(74, 168, 255);
+    private static final Color LIGHT_GLOW_BLUE = new Color(74, 168, 255);
+    private static final Color DARK_GLOW_BLUE = new Color(84, 154, 250);
 
-    private static final Color TEXT_PRIMARY = new Color(18, 36, 58);
-    private static final Color TEXT_SECONDARY = new Color(86, 110, 138);
-
-    private static final Color CARD_TINT_TOP = new Color(255, 255, 255, 168);
-    private static final Color CARD_TINT_BOTTOM = new Color(74, 168, 255, 22);
+    private static final Color LIGHT_CARD_TINT_TOP = new Color(255, 255, 255, 168);
+    private static final Color DARK_CARD_TINT_TOP = new Color(26, 34, 52, 198);
+    private static final Color LIGHT_CARD_TINT_BOTTOM = new Color(74, 168, 255, 22);
+    private static final Color DARK_CARD_TINT_BOTTOM = new Color(84, 154, 250, 36);
 
     private final AnimatedProgressBar progressBar;
     private final JLabel statusLabel;
@@ -50,15 +72,72 @@ public class SplashscreenGUI extends JFrame {
 
     private Timer animationTimer;
     private volatile double phase = 0.0;
-    private final Particle[] particles = new Particle[24];
+    private final Particle[] particles = new Particle[MAX_PARTICLES];
     private final JComponent[] repaintTargets;
     private int frameCounter = 0;
     private long lastFrameNanos = -1L;
+    private boolean lastKnownDarkMode;
+    private volatile int targetProgress = 0;
+    private double animatedProgress = 0.0;
+    private int heavyRepaintIntervalFrames = DEFAULT_HEAVY_REPAINT_INTERVAL_FRAMES;
+    private int particleUpdateIntervalFrames = 1;
+    private int activeParticleCount = QualityPreset.BALANCED.particleCount;
+    private QualityPreset qualityPreset;
+
+    // Cached theme colors reduce allocations inside paint loops.
+    private Color cachedAccentBlue;
+    private Color cachedAccentBlueDark;
+    private Color cachedAccentCyan;
+    private Color cachedBackgroundTop;
+    private Color cachedBackgroundMid;
+    private Color cachedBackgroundBottom;
+    private Color cachedGlowBlue;
+    private Color cachedTextPrimary;
+    private Color cachedTextSecondary;
+    private Color cachedCardTintTop;
+    private Color cachedCardTintBottom;
+    private Color cachedProgressTrack;
+    private Color cachedProgressTrackShadeTop;
+    private Color cachedProgressTrackShadeBottom;
+    private Color cachedProgressText;
+    private Color cachedStreak1Color;
 
     // Responsive padding + content references
     private final JPanel contentPanel;
     private final JLabel titleLabel;
     private final JLabel subtitleLabel;
+
+    private static boolean isDarkTheme() {
+        return ThemeManager.isDarkMode();
+    }
+
+    private static Color pick(Color light, Color dark) {
+        return isDarkTheme() ? dark : light;
+    }
+
+    private Color accentBlue() {
+        Color accent = ThemeManager.getAccentColor();
+        return accent != null ? accent : pick(LIGHT_ACCENT_BLUE, DARK_ACCENT_BLUE);
+    }
+
+    private Color accentBlueDark() {
+        Color base = accentBlue();
+        return ThemeManager.adjustColor(base, isDarkTheme() ? -26 : -30);
+    }
+
+    private Color accentCyan() {
+        Color base = accentBlue();
+        return ThemeManager.adjustColor(base, isDarkTheme() ? 32 : 52);
+    }
+
+    private Color backgroundTop() { return cachedBackgroundTop; }
+    private Color backgroundMid() { return cachedBackgroundMid; }
+    private Color backgroundBottom() { return cachedBackgroundBottom; }
+    private Color glowBlue() { return cachedGlowBlue; }
+    private Color textPrimary() { return cachedTextPrimary; }
+    private Color textSecondary() { return cachedTextSecondary; }
+    private Color cardTintTop() { return cachedCardTintTop; }
+    private Color cardTintBottom() { return cachedCardTintBottom; }
 
     /**
      * Creates and initializes the splash screen window.
@@ -67,7 +146,13 @@ public class SplashscreenGUI extends JFrame {
      * and starts the animation timer.
      */
     public SplashscreenGUI() {
+        this(defaultQualityPreset);
+    }
+
+    public SplashscreenGUI(QualityPreset preset) {
+        qualityPreset = preset == null ? defaultQualityPreset : preset;
         ThemeManager.getInstance().registerWindow(this);
+        lastKnownDarkMode = isDarkTheme();
         setTitle("Lagersystem - Splashscreen");
         setSize(920, 620);
         setMinimumSize(new Dimension(760, 500));
@@ -101,14 +186,14 @@ public class SplashscreenGUI extends JFrame {
         titleLabel = new JLabel("Vebo Lagersystem");
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 48));
-        titleLabel.setForeground(ACCENT_BLUE);
+        titleLabel.setForeground(accentBlue());
         contentPanel.add(titleLabel);
 
         // Subtitle
         subtitleLabel = new JLabel("Inventory Management");
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         subtitleLabel.setFont(new Font("SansSerif", Font.PLAIN, 19));
-        subtitleLabel.setForeground(TEXT_SECONDARY);
+        subtitleLabel.setForeground(textSecondary());
         contentPanel.add(subtitleLabel);
 
         contentPanel.add(Box.createVerticalStrut(26));
@@ -117,7 +202,7 @@ public class SplashscreenGUI extends JFrame {
         statusLabel = new JLabel("Initialisiere Programm...");
         statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 17));
-        statusLabel.setForeground(TEXT_PRIMARY);
+        statusLabel.setForeground(textPrimary());
         contentPanel.add(statusLabel);
 
         contentPanel.add(Box.createVerticalStrut(14));
@@ -126,7 +211,7 @@ public class SplashscreenGUI extends JFrame {
         progressBar = new AnimatedProgressBar(0, 100);
         progressBar.setValue(0);
         progressBar.setStringPainted(true);
-        progressBar.setForeground(ACCENT_BLUE);
+        progressBar.setForeground(accentBlue());
         progressBar.setPreferredSize(new Dimension(420, 22));
         progressBar.setMaximumSize(new Dimension(560, 26));
         progressBar.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -165,10 +250,76 @@ public class SplashscreenGUI extends JFrame {
                 updateResponsiveSizing();
             }
         });
+        applyQualityPresetInternal();
+        applyThemeColors();
         updateResponsiveSizing();
 
         initParticles();
         startAnimation();
+    }
+
+    public static void setDefaultQualityPreset(QualityPreset preset) {
+        defaultQualityPreset = preset == null ? QualityPreset.BALANCED : preset;
+    }
+
+    public static QualityPreset getDefaultQualityPreset() {
+        return defaultQualityPreset;
+    }
+
+    public QualityPreset getQualityPreset() {
+        return qualityPreset;
+    }
+
+    public void setQualityPreset(QualityPreset preset) {
+        QualityPreset next = preset == null ? defaultQualityPreset : preset;
+        Runnable r = () -> {
+            qualityPreset = next;
+            applyQualityPresetInternal();
+            retintParticles();
+            repaint();
+        };
+        if (SwingUtilities.isEventDispatchThread()) {
+            r.run();
+        } else {
+            SwingUtilities.invokeLater(r);
+        }
+    }
+
+    private void applyQualityPresetInternal() {
+        QualityPreset effective = qualityPreset == null ? defaultQualityPreset : qualityPreset;
+        activeParticleCount = clamp(effective.particleCount, 4, particles.length);
+        heavyRepaintIntervalFrames = effective.baseHeavyRepaintInterval;
+        particleUpdateIntervalFrames = effective.baseParticleUpdateInterval;
+    }
+
+    private void applyThemeColors() {
+        refreshThemeCache();
+        titleLabel.setForeground(cachedAccentBlue);
+        subtitleLabel.setForeground(cachedTextSecondary);
+        statusLabel.setForeground(cachedTextPrimary);
+        progressBar.setForeground(cachedAccentBlue);
+        retintParticles();
+        repaint();
+    }
+
+    private void refreshThemeCache() {
+        boolean dark = isDarkTheme();
+        cachedAccentBlue = accentBlue();
+        cachedAccentBlueDark = accentBlueDark();
+        cachedAccentCyan = accentCyan();
+        cachedBackgroundTop = pick(LIGHT_BACKGROUND_TOP, DARK_BACKGROUND_TOP);
+        cachedBackgroundMid = pick(LIGHT_BACKGROUND_MID, DARK_BACKGROUND_MID);
+        cachedBackgroundBottom = pick(LIGHT_BACKGROUND_BOTTOM, DARK_BACKGROUND_BOTTOM);
+        cachedGlowBlue = pick(LIGHT_GLOW_BLUE, DARK_GLOW_BLUE);
+        cachedTextPrimary = ThemeManager.getTextPrimaryColor();
+        cachedTextSecondary = ThemeManager.getTextSecondaryColor();
+        cachedCardTintTop = pick(LIGHT_CARD_TINT_TOP, DARK_CARD_TINT_TOP);
+        cachedCardTintBottom = pick(LIGHT_CARD_TINT_BOTTOM, DARK_CARD_TINT_BOTTOM);
+        cachedProgressTrack = dark ? new Color(44, 54, 72, 210) : new Color(255, 255, 255, 185);
+        cachedProgressTrackShadeTop = dark ? new Color(255, 255, 255, 28) : new Color(255, 255, 255, 140);
+        cachedProgressTrackShadeBottom = dark ? new Color(0, 0, 0, 66) : new Color(0, 0, 0, 18);
+        cachedProgressText = dark ? new Color(236, 244, 255, 242) : new Color(255, 255, 255, 235);
+        cachedStreak1Color = dark ? new Color(255, 255, 255, 30) : new Color(255, 255, 255, 66);
     }
 
     /**
@@ -220,6 +371,20 @@ public class SplashscreenGUI extends JFrame {
         progressBar.setPreferredSize(new Dimension(pbW, pbH));
         progressBar.setMaximumSize(new Dimension(pbW, pbH));
 
+        long area = (long) w * h;
+        int baseHeavy = qualityPreset == null ? defaultQualityPreset.baseHeavyRepaintInterval : qualityPreset.baseHeavyRepaintInterval;
+        int baseParticle = qualityPreset == null ? defaultQualityPreset.baseParticleUpdateInterval : qualityPreset.baseParticleUpdateInterval;
+        if (area > 1_000_000L) {
+            heavyRepaintIntervalFrames = Math.max(baseHeavy, baseHeavy + 2);
+            particleUpdateIntervalFrames = Math.max(baseParticle, baseParticle + 1);
+        } else if (area > 600_000L) {
+            heavyRepaintIntervalFrames = Math.max(baseHeavy, baseHeavy + 1);
+            particleUpdateIntervalFrames = Math.max(baseParticle, baseParticle + 1);
+        } else {
+            heavyRepaintIntervalFrames = baseHeavy;
+            particleUpdateIntervalFrames = baseParticle;
+        }
+
         revalidate();
         repaint();
     }
@@ -246,7 +411,7 @@ public class SplashscreenGUI extends JFrame {
         Runnable r = () -> {
             ensureAnimationRunning();
             int clampedPercent = clamp(percent, 0, 100);
-            progressBar.setValue(clampedPercent);
+            targetProgress = clampedPercent;
             if (message != null && !message.isBlank()) statusLabel.setText(message);
         };
         if (SwingUtilities.isEventDispatchThread()) r.run();
@@ -311,12 +476,12 @@ public class SplashscreenGUI extends JFrame {
                 g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
 
                 GradientPaint gradientTop = new GradientPaint(
-                        0, 0, BACKGROUND_TOP,
-                        0, getHeight() * 0.65f, BACKGROUND_MID
+                        0, 0, backgroundTop(),
+                        0, getHeight() * 0.65f, backgroundMid()
                 );
                 GradientPaint gradientBottom = new GradientPaint(
-                        0, getHeight() * 0.35f, BACKGROUND_MID,
-                        0, getHeight(), BACKGROUND_BOTTOM
+                        0, getHeight() * 0.35f, backgroundMid(),
+                        0, getHeight(), backgroundBottom()
                 );
 
                 g2.setPaint(gradientTop);
@@ -329,10 +494,12 @@ public class SplashscreenGUI extends JFrame {
                 int driftY = (int) (Math.cos(ph * 0.85) * 5);
 
                 // Big soft blobs for depth (premium, less "flat")
-                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 58));
+                Color glow = glowBlue();
+                Color cyan = cachedAccentCyan;
+                g2.setColor(new Color(glow.getRed(), glow.getGreen(), glow.getBlue(), 58));
                 g2.fillOval(-240 + drift, -260 + driftY, 660, 660);
 
-                g2.setColor(new Color(ACCENT_CYAN.getRed(), ACCENT_CYAN.getGreen(), ACCENT_CYAN.getBlue(), 34));
+                g2.setColor(new Color(cyan.getRed(), cyan.getGreen(), cyan.getBlue(), 34));
                 g2.fillOval(getWidth() - 520 - drift, getHeight() - 440 + driftY, 740, 740);
 
                 // White haze highlights
@@ -361,14 +528,15 @@ public class SplashscreenGUI extends JFrame {
             // Soft "aurora" band (two-pass for richer gradient)
             GradientPaint aurora = new GradientPaint(
                     cx - w * 0.55f, 0, new Color(255, 255, 255, 0),
-                    cx + w * 0.55f, h, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 42)
+                    cx + w * 0.55f, h, withAlpha(glowBlue(), 42)
             );
             g2.setPaint(aurora);
             g2.fillRect(0, 0, w, h);
 
+            Color cyan = cachedAccentCyan;
             GradientPaint aurora2 = new GradientPaint(
-                    cx - w * 0.35f, 0, new Color(ACCENT_CYAN.getRed(), ACCENT_CYAN.getGreen(), ACCENT_CYAN.getBlue(), 0),
-                    cx + w * 0.35f, h, new Color(ACCENT_CYAN.getRed(), ACCENT_CYAN.getGreen(), ACCENT_CYAN.getBlue(), 26)
+                    cx - w * 0.35f, 0, withAlpha(cyan, 0),
+                    cx + w * 0.35f, h, withAlpha(cyan, 26)
             );
             g2.setPaint(aurora2);
             g2.fillRect(0, 0, w, h);
@@ -429,13 +597,13 @@ public class SplashscreenGUI extends JFrame {
                 g2.setClip(glass);
 
                 // Base frosted glass
-                g2.setColor(CARD_TINT_TOP);
+                g2.setColor(cardTintTop());
                 g2.fill(glass);
 
                 // Inner gradient tint (top brighter, bottom slightly blue)
                 GradientPaint inner = new GradientPaint(
-                        x, y, new Color(255, 255, 255, 128),
-                        x, y + h, CARD_TINT_BOTTOM
+                        x, y, isDarkTheme() ? new Color(255, 255, 255, 34) : new Color(255, 255, 255, 128),
+                        x, y + h, cardTintBottom()
                 );
                 g2.setPaint(inner);
                 g2.fill(glass);
@@ -467,7 +635,7 @@ public class SplashscreenGUI extends JFrame {
                 g2.drawRoundRect(x, y, w - 1, h - 1, arc, arc);
 
                 // Inner glow border
-                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 70));
+                g2.setColor(withAlpha(glowBlue(), 70));
                 g2.drawRoundRect(x + 2, y + 2, w - 5, h - 5, Math.max(arc - 2, 10), Math.max(arc - 2, 10));
 
             } finally {
@@ -511,9 +679,7 @@ public class SplashscreenGUI extends JFrame {
     // ---------------------------------------------------------------------------------------------
 
     /**
-     * Starts the animation timer and repaints the given components regularly.
-     *
-     * @param components additional components to repaint (e.g. root/card)
+    * Starts the animation timer and repaints animated components regularly.
      */
     private void startAnimation() {
         if (!SwingUtilities.isEventDispatchThread()) {
@@ -533,6 +699,9 @@ public class SplashscreenGUI extends JFrame {
                 stopAnimation();
                 return;
             }
+            if (!isShowing()) {
+                return;
+            }
 
             long now = System.nanoTime();
             if (lastFrameNanos < 0L) {
@@ -545,13 +714,21 @@ public class SplashscreenGUI extends JFrame {
             lastFrameNanos = now;
 
             phase += PHASE_SPEED * deltaSeconds;
-            advanceParticles(deltaSeconds * BASE_FPS);
+            if (frameCounter % particleUpdateIntervalFrames == 0) {
+                advanceParticles(deltaSeconds * BASE_FPS);
+            }
+            animateProgress();
             frameCounter++;
+            boolean dark = isDarkTheme();
+            if (dark != lastKnownDarkMode) {
+                lastKnownDarkMode = dark;
+                applyThemeColors();
+            }
 
             // Repaint only animated layers/components.
             logoLabel.repaint();
             progressBar.repaint();
-            if (frameCounter % HEAVY_REPAINT_INTERVAL_FRAMES == 0) {
+            if (frameCounter % heavyRepaintIntervalFrames == 0) {
                 for (JComponent component : repaintTargets) {
                     component.repaint();
                 }
@@ -604,20 +781,53 @@ public class SplashscreenGUI extends JFrame {
     private void initParticles() {
         int w = Math.max(getWidth(), 1);
         int h = Math.max(getHeight(), 1);
-        for (int i = 0; i < particles.length; i++) {
+        for (int i = 0; i < activeParticleCount; i++) {
             particles[i] = Particle.random(w, h);
+        }
+        for (int i = activeParticleCount; i < particles.length; i++) {
+            particles[i] = null;
+        }
+    }
+
+    private void retintParticles() {
+        boolean dark = isDarkTheme();
+        for (int i = 0; i < activeParticleCount; i++) {
+            Particle particle = particles[i];
+            if (particle != null) {
+                particle.recolor(dark);
+            }
+        }
+    }
+
+    private void animateProgress() {
+        int target = targetProgress;
+        animatedProgress += (target - animatedProgress) * PROGRESS_LERP_RATE;
+
+        if (Math.abs(target - animatedProgress) < 0.06) {
+            animatedProgress = target;
+        }
+
+        int displayValue = clamp((int) Math.round(animatedProgress), 0, 100);
+        if (progressBar.getValue() != displayValue) {
+            progressBar.setValue(displayValue);
         }
     }
 
     private void advanceParticles(double deltaScale) {
-        for (Particle particle : particles) {
-            particle.advance(getWidth(), getHeight(), deltaScale);
+        for (int i = 0; i < activeParticleCount; i++) {
+            Particle particle = particles[i];
+            if (particle != null) {
+                particle.advance(getWidth(), getHeight(), deltaScale);
+            }
         }
     }
 
     private void paintParticles(Graphics2D g2) {
-        for (Particle particle : particles) {
-            particle.paint(g2);
+        for (int i = 0; i < activeParticleCount; i++) {
+            Particle particle = particles[i];
+            if (particle != null) {
+                particle.paint(g2);
+            }
         }
     }
 
@@ -641,10 +851,10 @@ public class SplashscreenGUI extends JFrame {
                 int cy = getHeight() / 2;
                 int r = Math.max(getWidth(), getHeight());
 
-                g2.setColor(new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 30));
+                g2.setColor(withAlpha(glowBlue(), 30));
                 g2.fillOval(cx - r / 2, cy - r / 2, r, r);
 
-                g2.setColor(new Color(ACCENT_CYAN.getRed(), ACCENT_CYAN.getGreen(), ACCENT_CYAN.getBlue(), 18));
+                g2.setColor(withAlpha(cachedAccentCyan, 18));
                 g2.fillOval(cx - r / 3, cy - r / 3, (r * 2) / 3, (r * 2) / 3);
 
                 g2.setColor(new Color(255, 255, 255, 62));
@@ -684,12 +894,14 @@ public class SplashscreenGUI extends JFrame {
                 int arc = Math.min(16, h);
 
                 // Track (with subtle depth)
-                g2.setColor(new Color(255, 255, 255, 185));
+                g2.setColor(cachedProgressTrack);
                 g2.fillRoundRect(x, y, w, h, arc, arc);
 
                 GradientPaint trackShade = new GradientPaint(
-                        x, y, new Color(255, 255, 255, 140),
-                        x, y + h, new Color(0, 0, 0, 18)
+                        x, y,
+                    cachedProgressTrackShadeTop,
+                        x, y + h,
+                    cachedProgressTrackShadeBottom
                 );
                 g2.setPaint(trackShade);
                 g2.fillRoundRect(x, y, w, h, arc, arc);
@@ -700,8 +912,8 @@ public class SplashscreenGUI extends JFrame {
                 if (fillW > 0) {
                     // base fill gradient
                     GradientPaint fillGrad = new GradientPaint(
-                            x, y, ACCENT_BLUE,
-                            x + fillW, y + h, ACCENT_BLUE_DARK
+                            x, y, cachedAccentBlue,
+                            x + fillW, y + h, cachedAccentBlueDark
                     );
                     g2.setPaint(fillGrad);
                     g2.fillRoundRect(x, y, fillW, h, arc, arc);
@@ -736,7 +948,7 @@ public class SplashscreenGUI extends JFrame {
                     g2.setColor(new Color(0, 0, 0, 55));
                     g2.drawString(s, tx + 1, ty + 1);
 
-                    g2.setColor(new Color(255, 255, 255, 235));
+                    g2.setColor(cachedProgressText);
                     g2.drawString(s, tx, ty);
                 }
             } finally {
@@ -756,7 +968,7 @@ public class SplashscreenGUI extends JFrame {
         private final double speed;
         private final double drift;
         private final int alpha;
-        private final Color color;
+        private Color color;
 
         private Particle(double x, double y, double radius, double speed, double drift, int alpha, Color color) {
             this.x = x;
@@ -773,8 +985,9 @@ public class SplashscreenGUI extends JFrame {
             double speed = 0.10 + Math.random() * 0.30;
             double drift = (Math.random() * 2.0) - 1.0;
             int alpha = 16 + (int) (Math.random() * 55);
-            int tint = 205 + (int) (Math.random() * 50);
-            Color color = new Color(tint, tint, 248);
+            boolean dark = isDarkTheme();
+            int tint = dark ? 110 + (int) (Math.random() * 80) : 205 + (int) (Math.random() * 50);
+            Color color = dark ? new Color(120, 160, Math.min(255, tint + 70)) : new Color(tint, tint, 248);
 
             int w = Math.max(width, 1);
             int h = Math.max(height, 1);
@@ -808,6 +1021,11 @@ public class SplashscreenGUI extends JFrame {
             g2.setColor(new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha));
             g2.fillOval((int) x, (int) y, (int) radius, (int) radius);
         }
+
+        void recolor(boolean dark) {
+            int tint = dark ? 110 + (int) (Math.random() * 80) : 205 + (int) (Math.random() * 50);
+            this.color = dark ? new Color(120, 160, Math.min(255, tint + 70)) : new Color(tint, tint, 248);
+        }
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -824,16 +1042,20 @@ public class SplashscreenGUI extends JFrame {
 
         GradientPaint streak1 = new GradientPaint(
                 x1 - w * 0.34f, 0, new Color(255, 255, 255, 0),
-                x1 + w * 0.34f, h, new Color(255, 255, 255, 66)
+                x1 + w * 0.34f, h, cachedStreak1Color
         );
         g2.setPaint(streak1);
         g2.fillRect(0, 0, w, h);
 
         GradientPaint streak2 = new GradientPaint(
-                x2 - w * 0.38f, 0, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 0),
-                x2 + w * 0.38f, h, new Color(GLOW_BLUE.getRed(), GLOW_BLUE.getGreen(), GLOW_BLUE.getBlue(), 46)
+                x2 - w * 0.38f, 0, withAlpha(glowBlue(), 0),
+                x2 + w * 0.38f, h, withAlpha(glowBlue(), 46)
         );
         g2.setPaint(streak2);
         g2.fillRect(0, 0, w, h);
+    }
+
+    private static Color withAlpha(Color base, int alpha) {
+        return new Color(base.getRed(), base.getGreen(), base.getBlue(), clamp(alpha, 0, 255));
     }
 }

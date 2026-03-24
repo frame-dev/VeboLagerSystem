@@ -3,6 +3,52 @@
 // Get data parameter from URL
 $data = isset($_GET['data']) ? htmlspecialchars($_GET['data']) : '';
 
+$picked = []; // Initialize as array to store filtered data
+
+if(isset($data) && $data != null) {
+    $parts = explode(";", $data);
+    $picked_details = null; // Initialize properly
+    
+    for($i = 0; $i < count($parts); $i++) {
+        if(str_starts_with($parts[$i], "details:")) {
+            $picked_details = substr($parts[$i], strlen("details:"));
+            break;
+        }
+    }
+    
+    // Filter and extract all sizes (S/M/L/XL) and colors (Gelb/Blau/Rot/Gruen) found in details
+    if($picked_details != null) {
+        $sizes = ['XL', 'S', 'M', 'L']; // Check XL first to avoid matching it as X or L
+        $foundSizes = [];
+        $colors = ['Gelb', 'Blau', 'Rot', 'Grün'];
+        $foundColors = [];
+        
+        foreach($sizes as $size) {
+            if(preg_match('/(?<!\pL)' . preg_quote($size, '/') . '(?!\pL)/u', $picked_details)) {
+                $foundSizes[] = $size;
+            }
+        }
+
+        foreach($colors as $color) {
+            if(preg_match('/(?<!\pL)' . preg_quote($color, '/') . '(?!\pL)/u', $picked_details)) {
+                $foundColors[] = $color;
+            }
+        }
+        
+        if(!empty($foundSizes)) {
+            $picked['sizes'] = $foundSizes;
+        }
+
+        if(!empty($foundColors)) {
+            $picked['colors'] = $foundColors;
+        }
+
+        if(!empty($foundSizes) || !empty($foundColors)) {
+            $picked['details'] = $picked_details;
+        }
+    }
+}
+
 // Define JSON file path
 $jsonFile = 'scans.json';
 
@@ -17,6 +63,8 @@ if (isset($_GET['quantity'])) {
     $quantity = htmlspecialchars($_GET['quantity']);
     $type = isset($_GET['type']) ? htmlspecialchars($_GET['type']) : 'sell';
     $ownUse = isset($_GET['ownUse']) ? 'Ja' : 'Nein';
+    $size = isset($_GET['size']) ? htmlspecialchars($_GET['size']) : null;
+    $color = isset($_GET['color']) ? htmlspecialchars($_GET['color']) : null;
 
     // Create new entry
     $newEntry = [
@@ -25,6 +73,8 @@ if (isset($_GET['quantity'])) {
         'quantity' => $quantity,
         'type' => $type,
         'ownUse' => $ownUse,
+        'size' => $size,
+        'color' => $color,
         'id' => strval(uniqid())
     ];
 
@@ -364,6 +414,35 @@ if (isset($_GET['quantity'])) {
             border-color: rgba(43, 99, 246, 0.45);
         }
 
+        select {
+            width: 100%;
+            border: 1px solid rgba(31, 42, 31, 0.2);
+            border-radius: 10px;
+            background: #fff;
+            padding: 11px 12px;
+            min-height: 46px;
+            font-size: 0.96rem;
+            color: var(--ink);
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235a6b86' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: 2px solid rgba(43, 99, 246, 0.2);
+            border-color: rgba(43, 99, 246, 0.45);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            select {
+                background-color: #121b16;
+                border-color: rgba(149, 174, 226, 0.24);
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239fb1d6' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            }
+        }
+
         .submit-btn {
             color: #fff;
             background: linear-gradient(135deg, var(--brand), #3c73ff);
@@ -547,6 +626,10 @@ if (isset($_GET['quantity'])) {
                 <div class="camera-buttons">
                     <button id="startCamera" class="camera-btn" onclick="startScanner()">Kamera starten</button>
                     <button id="stopCamera" class="camera-btn stop-btn" onclick="stopScanner()" style="display: none;">Kamera stoppen</button>
+                    <label for="imageUpload" class="camera-btn" style="cursor: pointer; margin: 0; padding: 12px 14px; display: flex; align-items: center; justify-content: center;">
+                        Bild hochladen
+                        <input type="file" id="imageUpload" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                    </label>
                 </div>
                 <div id="reader"></div>
                 <div id="scanResult" class="status">
@@ -559,6 +642,30 @@ if (isset($_GET['quantity'])) {
                 <h2>Mehr Daten erfassen</h2>
                 <form method="get" action="scan.php">
                     <input type="hidden" name="data" value="<?php echo $data; ?>">
+
+                    <?php if (!empty($picked['sizes'])): ?>
+                    <div class="field">
+                        <label for="size">Größe</label>
+                        <select id="size" name="size">
+                            <option value="">-- Keine Auswahl --</option>
+                            <?php foreach ($picked['sizes'] as $s): ?>
+                                <option value="<?php echo htmlspecialchars($s); ?>"><?php echo htmlspecialchars($s); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($picked['colors'])): ?>
+                    <div class="field">
+                        <label for="color">Farbe</label>
+                        <select id="color" name="color">
+                            <option value="">-- Keine Auswahl --</option>
+                            <?php foreach ($picked['colors'] as $c): ?>
+                                <option value="<?php echo htmlspecialchars($c); ?>"><?php echo htmlspecialchars($c); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
 
                     <label class="checkbox-label">
                         <input type="checkbox" name="ownUse">
@@ -600,6 +707,7 @@ if (isset($_GET['quantity'])) {
 
     <script>
         let html5QrcodeScanner = null;
+        let html5QrcodeInstance = null;
 
         function startScanner() {
             document.getElementById('startCamera').style.display = 'none';
@@ -631,6 +739,35 @@ if (isset($_GET['quantity'])) {
             }
         }
 
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Create a temporary container for the scanner
+            const tempDiv = document.createElement('div');
+            tempDiv.id = 'tempQrScanner_' + Date.now();
+            tempDiv.style.display = 'none';
+            document.body.appendChild(tempDiv);
+
+            // Create Html5Qrcode instance
+            const html5qrcode = new Html5Qrcode(tempDiv.id);
+
+            html5qrcode.scanFile(file, false)
+                .then(decodedText => {
+                    onScanSuccess(decodedText, null);
+                    html5qrcode.clear();
+                    document.body.removeChild(tempDiv);
+                    event.target.value = '';
+                })
+                .catch(err => {
+                    console.error('Error scanning image: ', err);
+                    alert('Fehler beim Scannen des Bildes. Bitte versuchen Sie ein anderes Bild.');
+                    html5qrcode.clear();
+                    document.body.removeChild(tempDiv);
+                    event.target.value = '';
+                });
+        }
+
         function onScanSuccess(decodedText, decodedResult) {
             // Try to extract 'data' parameter from scanned URL
             let dataValue = '';
@@ -647,6 +784,11 @@ if (isset($_GET['quantity'])) {
 
             document.getElementById('scanResult').style.display = 'block';
             document.getElementById('scannedValue').textContent = finalData;
+
+            // Stop scanner if active
+            if (html5QrcodeScanner) {
+                stopScanner();
+            }
 
             // Redirect to scan.php with the scanned data
             setTimeout(() => {

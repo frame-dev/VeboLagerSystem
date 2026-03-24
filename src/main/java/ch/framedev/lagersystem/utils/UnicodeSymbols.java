@@ -35,11 +35,14 @@ import javax.swing.UIManager;
 @SuppressWarnings({"UnnecessaryUnicodeEscape", "unused"})
 public final class UnicodeSymbols {
 
+    private static final Font DEFAULT_UI_FONT = new Font("Dialog", Font.PLAIN, 12);
+    private static final Font[] EMPTY_FONTS = new Font[0];
+
     private UnicodeSymbols() {
         // utility class
     }
 
-    private static class FontSupport {
+    private static final class FontSupport {
         private static final String OS_NAME = getOSName();
         private static final boolean WINDOWS = OS_NAME.contains("win");
         private static final boolean MAC = OS_NAME.contains("mac");
@@ -48,16 +51,31 @@ public final class UnicodeSymbols {
         private static volatile Font[] FONTS;
         private static final Object FONTS_LOCK = new Object();
         private static final Map<String, Boolean> CACHE = new ConcurrentHashMap<>();
+
+        private FontSupport() {
+        }
     }
 
     private static String getOSName() {
         return System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
     }
 
+    private static boolean isHeadlessEnvironment() {
+        return GraphicsEnvironment.isHeadless();
+    }
+
+    private static String normalizeFallback(String fallback) {
+        return fallback == null ? "" : fallback;
+    }
+
+    private static boolean isAvailableFont(String name) {
+        Font font = new Font(name, Font.PLAIN, 12);
+        return font.getFamily(Locale.ROOT).equalsIgnoreCase(name);
+    }
 
     private static Font initUiFont() {
         try {
-            if (GraphicsEnvironment.isHeadless()) {
+            if (isHeadlessEnvironment()) {
                 return null;
             }
             Font uiFont = UIManager.getFont("Label.font");
@@ -67,13 +85,13 @@ public final class UnicodeSymbols {
         } catch (Exception ignored) {
             // Fall back to a logical font.
         }
-        return new Font("Dialog", Font.PLAIN, 12);
+        return DEFAULT_UI_FONT;
     }
 
     private static Font[] initEmojiFonts() {
         try {
-            if (GraphicsEnvironment.isHeadless()) {
-                return new Font[0];
+            if (isHeadlessEnvironment()) {
+                return EMPTY_FONTS;
             }
             List<Font> fonts = new ArrayList<>();
             String[] candidates;
@@ -87,14 +105,13 @@ public final class UnicodeSymbols {
             }
 
             for (String name : candidates) {
-                Font font = new Font(name, Font.PLAIN, 12);
-                if (font.getFamily(Locale.ROOT).equalsIgnoreCase(name)) {
-                    fonts.add(font);
+                if (isAvailableFont(name)) {
+                    fonts.add(new Font(name, Font.PLAIN, 12));
                 }
             }
-            return fonts.toArray(new Font[0]);
+            return fonts.isEmpty() ? EMPTY_FONTS : fonts.toArray(EMPTY_FONTS);
         } catch (Exception ignored) {
-            return new Font[0];
+            return EMPTY_FONTS;
         }
     }
 
@@ -109,13 +126,13 @@ public final class UnicodeSymbols {
                 return fonts;
             }
             try {
-                if (GraphicsEnvironment.isHeadless()) {
-                    fonts = new Font[0];
+                if (isHeadlessEnvironment()) {
+                    fonts = EMPTY_FONTS;
                 } else {
                     fonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
                 }
             } catch (Exception ignored) {
-                fonts = new Font[0];
+                fonts = EMPTY_FONTS;
             }
             FontSupport.FONTS = fonts;
             return fonts;
@@ -127,20 +144,17 @@ public final class UnicodeSymbols {
             return true;
         }
 
-        // First check UI font
         Font uiFont = FontSupport.UI_FONT;
         if (uiFont != null && uiFont.canDisplayUpTo(text) == -1) {
             return true;
         }
 
-        // Check emoji fonts
         for (Font font : FontSupport.EMOJI_FONTS) {
             if (font.canDisplayUpTo(text) == -1) {
                 return true;
             }
         }
 
-        // Check all available fonts
         for (Font font : getAllFonts()) {
             if (font.canDisplayUpTo(text) == -1) {
                 return true;
@@ -605,53 +619,53 @@ public final class UnicodeSymbols {
 
     // ===================== Table/Column Helper =====================
     /** Column header for "Artikelnummer" (Article Number). */
-    public static final String COL_ARTIKELNUMMER = ARTIKELNUMMER + " Artikelnummer";
+    public static final String COL_ARTIKELNUMMER = columnLabel(ARTIKELNUMMER, "Artikelnummer");
     /** Column header for "Name". */
-    public static final String COL_NAME = NAME + " Name";
+    public static final String COL_NAME = columnLabel(NAME, "Name");
     /** Column header for "Kategorie" (Category). */
-    public static final String COL_KATEGORIE = CATEGORY + " Kategorie";
+    public static final String COL_KATEGORIE = columnLabel(CATEGORY, "Kategorie");
     /** Column header for "Details". */
-    public static final String COL_DETAILS = DETAILS + " Details";
+    public static final String COL_DETAILS = columnLabel(DETAILS, "Details");
     /** Column header for "Lagerbestand" (Stock Quantity). */
-    public static final String COL_LAGERBESTAND = STOCK_QUANTITY + " Lagerbestand";
+    public static final String COL_LAGERBESTAND = columnLabel(STOCK_QUANTITY, "Lagerbestand");
     /** Column header for "Mindestbestand" (Minimum Stock). */
-    public static final String COL_MINDESTBESTAND = MIN_STOCK + " Mindestbestand";
+    public static final String COL_MINDESTBESTAND = columnLabel(MIN_STOCK, "Mindestbestand");
     /** Column header for "Verkaufspreis" (Sell Price). */
-    public static final String COL_VERKAUFSPREIS = SELL_PRICE + " Verkaufspreis";
+    public static final String COL_VERKAUFSPREIS = columnLabel(SELL_PRICE, "Verkaufspreis");
     /** Column header for "Einkaufspreis" (Purchase Price). */
-    public static final String COL_EINKAUFSPREIS = PURCHASE_PRICE + " Einkaufspreis";
+    public static final String COL_EINKAUFSPREIS = columnLabel(PURCHASE_PRICE, "Einkaufspreis");
     /** Column header for "Lieferant" (Supplier). */
-    public static final String COL_LIEFERANT = SUPPLIER + " Lieferant";
+    public static final String COL_LIEFERANT = columnLabel(SUPPLIER, "Lieferant");
     /** Column header for "Bestell Menge" (Order Quantity). */
-    public static final String COL_BESTELL_MENGE = ORDER_QUANTITY + " Bestell Menge";
+    public static final String COL_BESTELL_MENGE = columnLabel(ORDER_QUANTITY, "Bestell Menge");
     /** Column header for "Lager Menge" (Stock Quantity). */
-    public static final String COL_LAGER_MENGE = STOCK_QUANTITY + " Lager Menge";
+    public static final String COL_LAGER_MENGE = columnLabel(STOCK_QUANTITY, "Lager Menge");
     /** Column header for "Hinzugefügt" (Added). */
-    public static final String COL_HINZUGEFUEGT = ADDED + " Hinzugefuegt";
+    public static final String COL_HINZUGEFUEGT = columnLabel(ADDED, "Hinzugefuegt");
     /** Column header for "Status". */
-    public static final String COL_STATUS = STATUS + " Status";
+    public static final String COL_STATUS = columnLabel(STATUS, "Status");
     /** Column header for "Typ" (Type). */
-    public static final String COL_TYP = TAG + " Typ";
+    public static final String COL_TYP = columnLabel(TAG, "Typ");
     /** Column header for "Titel" (Title). */
-    public static final String COL_TITEL = TITLE + " Titel";
+    public static final String COL_TITEL = columnLabel(TITLE, "Titel");
     /** Column header for "Nachricht" (Message). */
-    public static final String COL_NACHRICHT = MESSAGE + " Nachricht";
+    public static final String COL_NACHRICHT = columnLabel(MESSAGE, "Nachricht");
     /** Column header for "Datum" (Date). */
-    public static final String COL_DATUM = CALENDAR + " Datum";
+    public static final String COL_DATUM = columnLabel(CALENDAR, "Datum");
     /** Column header for "Abteilung" (Department). */
-    public static final String COL_ABTEILUNG = DEPARTMENT + " Abteilung";
+    public static final String COL_ABTEILUNG = columnLabel(DEPARTMENT, "Abteilung");
     /** Column header for "Kontakt" (Contact). */
-    public static final String COL_KONTAKT = CONTACT + " Kontakt";
+    public static final String COL_KONTAKT = columnLabel(CONTACT, "Kontakt");
     /** Column header for "Telefon" (Phone). */
-    public static final String COL_TELEFON = PHONE + " Telefon";
+    public static final String COL_TELEFON = columnLabel(PHONE, "Telefon");
     /** Column header for "Email". */
-    public static final String COL_EMAIL = EMAIL + " Email";
+    public static final String COL_EMAIL = columnLabel(EMAIL, "Email");
     /** Column header for "Adresse" (Address). */
-    public static final String COL_ADRESSE = ADDRESS + " Adresse";
+    public static final String COL_ADRESSE = columnLabel(ADDRESS, "Adresse");
     /** Column header for "Gelieferte Artikel" (Delivered Articles). */
-    public static final String COL_GELIEFERTE_ARTIKEL = DELIVERED_ARTICLES + " Gelieferte Artikel";
+    public static final String COL_GELIEFERTE_ARTIKEL = columnLabel(DELIVERED_ARTICLES, "Gelieferte Artikel");
     /** Column header for "Mindestbestellwert" (Minimum Order Value). */
-    public static final String COL_MINDESTBESTELLWERT = MIN_ORDER_VALUE + " Mindestbestellwert";
+    public static final String COL_MINDESTBESTELLWERT = columnLabel(MIN_ORDER_VALUE, "Mindestbestellwert");
 
     // ===================== Utility =====================
     /**
@@ -664,18 +678,13 @@ public final class UnicodeSymbols {
      * @return emoji if supported, otherwise fallback text
      */
     public static String getSymbol(String emoji, String fallback) {
-        String safeFallback = fallback == null ? "" : fallback;
+        String safeFallback = normalizeFallback(fallback);
 
         if (emoji == null || emoji.isEmpty()) {
             return safeFallback;
         }
 
-        // Cache result per symbol to avoid repeated font scans.
-        Boolean cached = FontSupport.CACHE.get(emoji);
-        if (cached == null) {
-            cached = canDisplayAll(emoji);
-            FontSupport.CACHE.put(emoji, cached);
-        }
+        boolean cached = FontSupport.CACHE.computeIfAbsent(emoji, UnicodeSymbols::canDisplayAll);
         return cached ? emoji : safeFallback;
     }
 
@@ -690,7 +699,7 @@ public final class UnicodeSymbols {
      * @return symbol if supported by font, otherwise fallback text
      */
     public static String safeSymbol(String symbol, String fallback, Font font) {
-        String safeFallback = fallback == null ? "" : fallback;
+        String safeFallback = normalizeFallback(fallback);
 
         if (symbol == null || symbol.isEmpty()) {
             return safeFallback;
@@ -713,6 +722,10 @@ public final class UnicodeSymbols {
      */
     public static String getSafeSymbol(String emoji, String fallback) {
         return getSymbol(emoji, fallback);
+    }
+
+    private static String columnLabel(String icon, String label) {
+        return normalizeFallback(icon) + " " + normalizeFallback(label);
     }
 
 }

@@ -44,7 +44,9 @@ public final class ArticleQrCodeDialog {
     private static final int COL_QUANTITY = 2;
     private static final int COL_TYPE = 3;
     private static final int COL_OWN_USE = 4;
-    private static final int COL_ID = 5;
+    private static final int COL_SIZE = 5;
+    private static final int COL_COLOR = 6;
+    private static final int COL_ID = 7;
 
     private ArticleQrCodeDialog() {
     }
@@ -153,7 +155,7 @@ public final class ArticleQrCodeDialog {
         infoPanel.add(infoLabel);
         mainPanel.add(infoPanel, BorderLayout.NORTH);
 
-        String[] columnNames = {UnicodeSymbols.CLOCK + " Timestamp", UnicodeSymbols.PACKAGE + " Artikel", UnicodeSymbols.CHART + " Menge", UnicodeSymbols.TAG + " Typ", UnicodeSymbols.PERSON + " Eigenverbrauch", UnicodeSymbols.ID + " ID"};
+        String[] columnNames = {UnicodeSymbols.CLOCK + " Timestamp", UnicodeSymbols.PACKAGE + " Artikel", UnicodeSymbols.CHART + " Menge", UnicodeSymbols.TAG + " Typ", UnicodeSymbols.PERSON + " Eigenverbrauch", UnicodeSymbols.SORT + " Größe", UnicodeSymbols.COLOR_PALETTE + " Farbe", UnicodeSymbols.ID + " ID"};
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -199,6 +201,8 @@ public final class ArticleQrCodeDialog {
         qrTable.getColumnModel().getColumn(COL_QUANTITY).setPreferredWidth(90);
         qrTable.getColumnModel().getColumn(COL_TYPE).setPreferredWidth(110);
         qrTable.getColumnModel().getColumn(COL_OWN_USE).setPreferredWidth(140);
+        qrTable.getColumnModel().getColumn(COL_SIZE).setPreferredWidth(100);
+        qrTable.getColumnModel().getColumn(COL_COLOR).setPreferredWidth(100);
         qrTable.getColumnModel().getColumn(COL_ID).setPreferredWidth(220);
 
         JTableHeader header = qrTable.getTableHeader();
@@ -307,7 +311,8 @@ public final class ArticleQrCodeDialog {
 
                 Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
                 if (article != null) {
-                    ArticleListGUI.addArticle(article, menge);
+                    String picked = tableModel.getValueAt(row, COL_SIZE).toString();
+                    ArticleListGUI.addArticle(article, menge, picked, null);
                     added++;
                 }
             }
@@ -992,6 +997,7 @@ public final class ArticleQrCodeDialog {
                 continue;
             }
             Object[] rowData = createRowData(dataMap);
+            System.out.println(Arrays.toString(rowData));
             String rowId = rowData[COL_ID].toString();
             if (!importedIds.contains(rowId)) {
                 tableModel.addRow(rowData);
@@ -1003,12 +1009,14 @@ public final class ArticleQrCodeDialog {
     }
 
     private static Object[] createRowData(Map<String, Object> dataMap) {
-        Object[] rowData = new Object[6];
+        Object[] rowData = new Object[8];
         rowData[COL_TIMESTAMP] = dataMap.getOrDefault("timestamp", "N/A");
         rowData[COL_DATA] = dataMap.getOrDefault("data", "N/A");
         rowData[COL_QUANTITY] = dataMap.getOrDefault("quantity", "N/A");
         rowData[COL_TYPE] = dataMap.getOrDefault("type", "N/A");
         rowData[COL_OWN_USE] = dataMap.getOrDefault("ownUse", "N/A");
+        rowData[COL_SIZE] = dataMap.getOrDefault("size", "N/A");
+        rowData[COL_COLOR] = dataMap.getOrDefault("color", "N/A");
         rowData[COL_ID] = dataMap.getOrDefault("id", "N/A");
         return rowData;
     }

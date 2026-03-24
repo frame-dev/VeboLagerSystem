@@ -795,4 +795,21 @@ public class ArticleManager {
             databaseManager.closeQuery(resultSet);
         }
     }
+
+    public boolean hasSeperateArticles(String articleNumber) {
+        if (articleNumber == null) throw new IllegalArgumentException("Article number cannot be null");
+        String sql = "SELECT 1 FROM " + DatabaseManager.TABLE_SEPERATE_ARTICLES + " WHERE articleNumber = ? LIMIT 1;";
+        ResultSet resultSet = null;
+        try {
+            resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber});
+            if (resultSet == null) return false;
+            return resultSet.next();
+        } catch (SQLException e) {
+            logger.error("Error while checking if article with number '{}' has seperate articles", articleNumber, e);
+            Main.logUtils.addLog("Error while checking if article with number '" + articleNumber + "' has seperate articles");
+            return false;
+        } finally {
+            databaseManager.closeQuery(resultSet);
+        }
+    }
 }

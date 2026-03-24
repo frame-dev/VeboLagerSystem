@@ -302,6 +302,7 @@ public class LogsGUI extends JFrame {
 
     @Override
     public void dispose() {
+        autoRefreshTimer.stop();
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }

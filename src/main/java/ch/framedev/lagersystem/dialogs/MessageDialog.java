@@ -45,10 +45,12 @@ public class MessageDialog {
 
     private static final int DEFAULT_DURATION_MS = 0;
     private static final String DEFAULT_TITLE = "Hinweis";
-    private static final Dimension MIN_DIALOG_SIZE = new Dimension(460, 230);
-    private static final int LOGO_SIZE = 36;
+    private static final Dimension MIN_DIALOG_SIZE = new Dimension(420, 160);
+    private static final int LOGO_SIZE = 30;
     private static final int MESSAGE_WIDTH_PX = 380;
     private static final int CORNER_RADIUS = 14;
+    private static final int HEADER_HEIGHT = 64;
+    private static final Dimension ACTION_BUTTON_MIN_SIZE = new Dimension(108, 36);
 
     private String message;
     private String title;
@@ -212,25 +214,22 @@ public class MessageDialog {
             JPanel root = createRoundedRoot();
 
             JPanel header = createHeaderPanel(this.title);
-            root.add(header, BorderLayout.NORTH);
             makeDraggable(jDialog, header);
-
-            root.add(createDivider(), BorderLayout.NORTH);
-            root.add(header, BorderLayout.NORTH);
+            root.add(createTopSection(header), BorderLayout.NORTH);
 
             JPanel content = new JPanel();
             content.setOpaque(false);
             content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-            content.setBorder(BorderFactory.createEmptyBorder(16, 20, 8, 20));
+            content.setBorder(BorderFactory.createEmptyBorder(14, 18, 12, 18));
 
-            JPanel body = new JPanel(new BorderLayout(12, 0));
+            JPanel body = new JPanel(new BorderLayout(10, 0));
             body.setOpaque(false);
 
             Icon effectiveIcon = icon != null ? icon : getDefaultMessageIcon(messageType);
             if (effectiveIcon != null) {
                 JLabel iconLabel = new JLabel(effectiveIcon);
                 iconLabel.setOpaque(false);
-                iconLabel.setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 0));
+                iconLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
                 iconLabel.setVerticalAlignment(JLabel.TOP);
                 body.add(iconLabel, BorderLayout.WEST);
             }
@@ -406,6 +405,14 @@ public class MessageDialog {
         return divider;
     }
 
+    private static JPanel createTopSection(JPanel header) {
+        JPanel topSection = new JPanel(new BorderLayout(0, 0));
+        topSection.setOpaque(false);
+        topSection.add(header, BorderLayout.CENTER);
+        topSection.add(createDivider(), BorderLayout.SOUTH);
+        return topSection;
+    }
+
     private static void applyRoundedShape(Window window) {
         try {
             window.setShape(new RoundRectangle2D.Double(
@@ -422,25 +429,18 @@ public class MessageDialog {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                // Rounded top only — clip to top-rounded shape so the gradient fills it cleanly
-                g2.setClip(new RoundRectangle2D.Double(
-                        0, 0, getWidth(), getHeight() + CORNER_RADIUS * 2,
-                        CORNER_RADIUS * 2, CORNER_RADIUS * 2));
                 GradientPaint gp = new GradientPaint(
                         0, 0, ThemeManager.getHeaderBackgroundColor(),
                         getWidth(), 0, ThemeManager.getHeaderGradientColor()
                 );
                 g2.setPaint(gp);
-                g2.fillRect(0, 0, getWidth(), getHeight() + CORNER_RADIUS * 2);
-                // Subtle bottom separator inside header
-                g2.setClip(null);
-                g2.setColor(new Color(0, 0, 0, 30));
-                g2.drawLine(0, getHeight() - 1, getWidth(), getHeight() - 1);
+                g2.fillRect(0, 0, getWidth(), getHeight());
                 g2.dispose();
             }
         };
         header.setOpaque(false);
-        header.setBorder(BorderFactory.createEmptyBorder(13, 16, 13, 16));
+        header.setPreferredSize(new Dimension(0, HEADER_HEIGHT));
+        header.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
         header.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
 
         JLabel logoLabel = new JLabel(loadLogoIcon(LOGO_SIZE));
@@ -448,9 +448,10 @@ public class MessageDialog {
         header.add(logoLabel, BorderLayout.WEST);
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 15));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         titleLabel.setForeground(ThemeManager.getTextOnPrimaryColor());
         titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 0));
+        titleLabel.setVerticalAlignment(JLabel.CENTER);
         header.add(titleLabel, BorderLayout.CENTER);
 
         return header;
@@ -496,16 +497,18 @@ public class MessageDialog {
         Color hover = ThemeManager.getButtonHoverColor(base);
         Color pressed = ThemeManager.getButtonPressedColor(base);
 
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
         button.setForeground(fg);
         button.setBackground(base);
         button.setFocusPainted(false);
         button.setBorderPainted(true);
         button.setOpaque(true);
         button.setContentAreaFilled(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setMinimumSize(ACTION_BUTTON_MIN_SIZE);
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(base.darker(), 1, true),
-                BorderFactory.createEmptyBorder(8, 14, 8, 14)
+            BorderFactory.createEmptyBorder(8, 16, 8, 16)
         ));
 
         button.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -557,22 +560,22 @@ public class MessageDialog {
             JPanel root = createRoundedRoot();
 
             JPanel header = createHeaderPanel(title);
-            root.add(header, BorderLayout.NORTH);
             makeDraggable(dialog, header);
+            root.add(createTopSection(header), BorderLayout.NORTH);
 
             JPanel content = new JPanel();
             content.setOpaque(false);
             content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-            content.setBorder(BorderFactory.createEmptyBorder(16, 20, 8, 20));
+            content.setBorder(BorderFactory.createEmptyBorder(14, 18, 12, 18));
 
-            JPanel body = new JPanel(new BorderLayout(12, 0));
+            JPanel body = new JPanel(new BorderLayout(10, 0));
             body.setOpaque(false);
 
             Icon effectiveIcon = icon != null ? icon : getDefaultMessageIcon(messageType);
             if (effectiveIcon != null) {
                 JLabel iconLabel = new JLabel(effectiveIcon);
                 iconLabel.setOpaque(false);
-                iconLabel.setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 0));
+                iconLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
                 iconLabel.setVerticalAlignment(JLabel.TOP);
                 body.add(iconLabel, BorderLayout.WEST);
             }

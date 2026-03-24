@@ -153,7 +153,7 @@ public class Main {
      */
     private static void printStartupInfo() {
         printSeparatorLine();
-        System.out.println("Starte VEBO Lager System...");
+        System.out.println("Starte VEBO Lagersystem...");
         System.out.println("Version: " + VERSION);
         printDashedLine();
         printSystemInfo();
@@ -189,26 +189,26 @@ public class Main {
     private static void initializeApplication(ProgressListener progressListener) {
         // Setup for initialization steps with progress updates
         updateProgress(progressListener, 3, "Starte Initialisierung...");
-        updateProgress(progressListener, 4, "Überprüfen ob mit Internet verbunden...");
-        updateProgress(progressListener, 5, "Prüfe Datenverzeichnis...");
+        updateProgress(progressListener, 4, "Prüfe Datenverzeichnis...");
         ensureAppDataDirectory();
-        updateProgress(progressListener, 6, "Datenverzeichnis bereit...");
-        updateProgress(progressListener, 7, "Initialisiere Datenbank...");
-        initializeDatabase();
-        updateProgress(progressListener, 8, "Datenbank initialisiert...");
-        updateProgress(progressListener, 10, "Lade Einstellungen...");
+        updateProgress(progressListener, 5, "Datenverzeichnis bereit...");
+        updateProgress(progressListener, 6, "Lade Einstellungen...");
         loadSettings();
-        updateProgress(progressListener, 15, "Einstellungen geladen...");
+        updateProgress(progressListener, 7, "Einstellungen geladen...");
+        updateProgress(progressListener, 8, "Initialisiere Theme...");
+        initializeTheme();
+        updateProgress(progressListener, 9, "Theme gesetzt...");
+        updateProgress(progressListener, 10, "Überprüfen ob mit Internet verbunden...");
+        updateProgress(progressListener, 11, "Initialisiere Datenbank...");
+        initializeDatabase();
+        applyLookAndFeelFromSettings();
+        updateProgress(progressListener, 12, "Datenbank initialisiert...");
         updateProgress(progressListener, 17, "Prüfe auf Updates (asynchron)...");
         startUpdateCheckAsync();
         updateProgress(progressListener, 19, "Update-Prüfung gestartet...");
         updateProgress(progressListener, 20, "Lade Icons...");
         loadApplicationIcons();
         updateProgress(progressListener, 25, "Icons geladen...");
-        updateProgress(progressListener, 34, "Initialisiere Theme...");
-        initializeTheme();
-        applyLookAndFeelFromSettings();
-        updateProgress(progressListener, 35, "Theme gesetzt...");
         handleFirstStartIfNeeded(progressListener);
         updateProgress(progressListener, 96, "Abschluss der Initialisierung...");
     }
@@ -1118,7 +1118,7 @@ public class Main {
 
     private static void sleepQuietly() {
         try {
-            Thread.sleep((long) 200);
+            Thread.sleep((long) 100);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

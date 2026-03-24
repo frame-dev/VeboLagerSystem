@@ -11,6 +11,7 @@ import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.utils.ArticleExporter;
+import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
@@ -59,6 +60,7 @@ public class NewOrderGUI extends JFrame {
     private final DefaultTableModel orderTableModel;
     // track Article -> qty so prices are available
     private final Map<Article, Integer> orderArticles = new LinkedHashMap<>();
+    private final Map<String, String> orderArticleFillings = new LinkedHashMap<>();
     private final JLabel totalPriceLabel;
 
     private final JComboBox<String> receiverNameCombobox;
@@ -488,20 +490,49 @@ public class NewOrderGUI extends JFrame {
 
         int qty = (Integer) articleQtySpinner.getValue();
         if (qty <= 0) qty = 1;
+        addOrMergeOrderArticle(selected, qty, null);
+        rebuildOrderTable();
+        updateTotalPrice();
+    }
 
-        // Merge quantity if same article already exists (by article number)
-        for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
-            if (sameArticle(e.getKey(), selected)) {
-                orderArticles.put(e.getKey(), e.getValue() + qty);
-                rebuildOrderTable();
-                updateTotalPrice();
+    private void addOrMergeOrderArticle(Article article, int qty, String filling) {
+        if (article == null || qty <= 0) {
+            return;
+        }
+
+        String normalizedFilling = ArticleUtils.normalizeFilling(filling);
+        for (Map.Entry<Article, Integer> entry : orderArticles.entrySet()) {
+            if (sameArticle(entry.getKey(), article)) {
+                orderArticles.put(entry.getKey(), entry.getValue() + qty);
+                if (!normalizedFilling.isBlank()) {
+                    updateOrderArticleFilling(article, normalizedFilling);
+                }
                 return;
             }
         }
 
-        orderArticles.put(selected, qty);
-        rebuildOrderTable();
-        updateTotalPrice();
+        orderArticles.put(article, qty);
+        updateOrderArticleFilling(article, normalizedFilling);
+    }
+
+    private void updateOrderArticleFilling(Article article, String filling) {
+        if (article == null || article.getArticleNumber() == null) {
+            return;
+        }
+
+        String normalized = ArticleUtils.normalizeFilling(filling);
+        if (normalized.isBlank()) {
+            orderArticleFillings.remove(article.getArticleNumber());
+        } else {
+            orderArticleFillings.put(article.getArticleNumber(), normalized);
+        }
+    }
+
+    private String getOrderArticleFilling(Article article) {
+        if (article == null || article.getArticleNumber() == null) {
+            return "";
+        }
+        return ArticleUtils.normalizeFilling(orderArticleFillings.get(article.getArticleNumber()));
     }
 
     private boolean sameArticle(Article a, Article b) {
@@ -855,6 +886,7 @@ public class NewOrderGUI extends JFrame {
 
     private void addArticlesFromList() {
         Map<Article, Integer> articlesWithQty = ArticleListGUI.getArticlesAndQuantity();
+        Map<Article, String> articleWithFilling = ArticleListGUI.getArticlesWithFilling();
 
         if (articlesWithQty.isEmpty()) {
             new MessageDialog()
@@ -869,9 +901,8 @@ public class NewOrderGUI extends JFrame {
             Article a = entry.getKey();
             if(a == null) continue;
             Integer qty = entry.getValue();
-
             if (qty != null && qty > 0) {
-                orderArticles.put(a, qty);
+                addOrMergeOrderArticle(a, qty, articleWithFilling.get(a));
             }
         }
 
@@ -894,10 +925,10 @@ public class NewOrderGUI extends JFrame {
             Article a = e.getKey();
             if(a == null) continue;
             int qty = e.getValue();
-            double unit = safePrice(a);
+            double unit = safePrice(a, getOrderArticleFilling(a));
             double line = unit * qty;
             orderTableModel.addRow(new Object[]{
-                    a.getName(),
+                    ArticleUtils.formatArticleWithFilling(a, getOrderArticleFilling(a)),
                     qty,
                     String.format("%.2f CHF", unit),
                     String.format("%.2f CHF", line)
@@ -905,19 +936,19 @@ public class NewOrderGUI extends JFrame {
         }
     }
 
-    private double safePrice(Article a) {
+    private double safePrice(Article a, String filling) {
         try {
             if(a == null) return 0.0;
-            return a.getSellPrice();
+            return ArticleUtils.resolveEffectiveSellPrice(a, filling);
         } catch (NoSuchMethodError | AbstractMethodError | RuntimeException ex) {
-            return 0.0;
+            return a == null ? 0.0 : a.getSellPrice();
         }
     }
 
     private void updateTotalPrice() {
         double total = 0.0;
         for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
-            total += safePrice(e.getKey()) * e.getValue();
+            total += safePrice(e.getKey(), getOrderArticleFilling(e.getKey())) * e.getValue();
         }
         totalPriceLabel.setText(String.format("Totalpreis: %.2f CHF", total));
         updateSummaryBar();
@@ -1005,11 +1036,20 @@ public class NewOrderGUI extends JFrame {
         }
 
         Map<String, Integer> payload = new LinkedHashMap<>();
+        Map<String, String> fillingsPayload = new LinkedHashMap<>();
         for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
-            payload.put(e.getKey().getArticleNumber(), e.getValue());
+            Article article = e.getKey();
+            if (article == null || article.getArticleNumber() == null) {
+                continue;
+            }
+            payload.put(article.getArticleNumber(), e.getValue());
+            String filling = getOrderArticleFilling(article);
+            if (!filling.isBlank()) {
+                fillingsPayload.put(article.getArticleNumber(), filling);
+            }
         }
 
-        createOrder(payload, receiver, rKonto, sender, sKonto, department);
+        createOrder(payload, fillingsPayload, receiver, rKonto, sender, sKonto, department);
 
         File file = chooseSaveFile();
         if (file != null) {
@@ -1036,6 +1076,7 @@ public class NewOrderGUI extends JFrame {
                 .display();
 
         orderArticles.clear();
+        orderArticleFillings.clear();
         rebuildOrderTable();
         updateTotalPrice();
     }
@@ -1054,7 +1095,8 @@ public class NewOrderGUI extends JFrame {
                 senderNameCombobox,
                 senderKontoField,
                 departmentList,
-                orderArticles);
+                orderArticles,
+                orderArticleFillings);
     }
 
     private JMenuBar createJMenu() {
@@ -1201,13 +1243,15 @@ public class NewOrderGUI extends JFrame {
                 "</div></html>";
     }
 
-    private void createOrder(Map<String, Integer> orderArticles, String receiverName, String receiverKontoNumber,
+    private void createOrder(Map<String, Integer> orderArticles, Map<String, String> orderArticleFillings,
+                             String receiverName, String receiverKontoNumber,
                              String senderName, String senderKontoNumber, String department) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
         String date = dateFormat.format(new Date());
         Order order = new Order(
                 "ORD" + System.currentTimeMillis(),
                 orderArticles,
+                orderArticleFillings,
                 receiverName,
                 receiverKontoNumber,
                 date,

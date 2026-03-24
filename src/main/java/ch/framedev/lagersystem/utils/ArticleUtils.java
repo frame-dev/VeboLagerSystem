@@ -31,6 +31,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -56,57 +57,74 @@ public final class ArticleUtils {
     private static volatile boolean categoriesLoaded;
 
     /**
-     * Regex to extract litre values from strings such as "10 lt.", "0.75 l", "1 liter".
+     * Regex to extract litre values from strings such as "10 lt.", "0.75 l", "1
+     * liter".
      */
     private static final Pattern LITER_PATTERN = Pattern.compile(
             "(\\d+(?:[.,]\\d+)?)\\s*(?:lt\\.|lt\\b|l\\.|l\\b|liter\\b)",
-            Pattern.CASE_INSENSITIVE
-    );
+            Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern FILLING_INPUT_PATTERN = Pattern.compile(
+            "^(\\d+(?:[.,]\\d+)?)\\s*(ml|l|g|kg)$",
+            Pattern.CASE_INSENSITIVE);
 
     private static final Set<String> FILLING_ALLOWED_CATEGORY_KEYWORDS = Set.of(
             "reinigungsmittel",
             "geschirrreiniger",
-            "seife"
-    );
+            "seife");
 
-    /** Splits on slash with optional surrounding whitespace, but not when the slash is preceded by a digit (e.g. price notation "12.60/Einzel"). */
+    /**
+     * Splits on slash with optional surrounding whitespace, but not when the slash
+     * is preceded by a digit (e.g. price notation "12.60/Einzel").
+     */
     private static final Pattern DETAILS_SPLIT_PATTERN = Pattern.compile(
-            "(?<!\\d)\\s*/\\s*"
-    );
+            "(?<!\\d)\\s*/\\s*");
 
-    /** Strips leading abbreviated label prefix, e.g. {@code "Gr. "}, {@code "Nr. "}. */
+    /**
+     * Strips leading abbreviated label prefix, e.g. {@code "Gr. "}, {@code "Nr. "}.
+     */
     private static final Pattern PART_LABEL_PREFIX = Pattern.compile(
-            "^[A-Za-z\u00C0-\u024F]{1,5}\\.\\s+"
-    );
+            "^[A-Za-z\u00C0-\u024F]{1,5}\\.\\s+");
 
-    /** Strips trailing quantity/unit suffix, e.g. {@code " 100 Stk. Box"}, {@code " 50 ml"}. */
+    /**
+     * Strips trailing quantity/unit suffix, e.g. {@code " 100 Stk. Box"},
+     * {@code " 50 ml"}.
+     */
     private static final Pattern PART_QUANTITY_SUFFIX = Pattern.compile(
-            "\\s+\\d+[\\d.,]*\\s*.*$"
-    );
+            "\\s+\\d+[\\d.,]*\\s*.*$");
 
-    /** Strips leading open-parentheses/brackets, e.g. {@code "(Rot"} → {@code "Rot"}. */
+    /**
+     * Strips leading open-parentheses/brackets, e.g. {@code "(Rot"} →
+     * {@code "Rot"}.
+     */
     private static final Pattern PART_LEADING_PUNCT = Pattern.compile(
-            "^[\\s()\\[\\]]+"
-    );
+            "^[\\s()\\[\\]]+");
 
-    /** Strips trailing close-parentheses/brackets and lone prepositions, e.g. {@code "Gelb)"} → {@code "Gelb"}, {@code "Pack \u00e0"} → {@code "Pack"}. */
+    /**
+     * Strips trailing close-parentheses/brackets and lone prepositions, e.g.
+     * {@code "Gelb)"} → {@code "Gelb"}, {@code "Pack \u00e0"} → {@code "Pack"}.
+     */
     private static final Pattern PART_TRAILING_PUNCT = Pattern.compile(
-            "[\\s()\\[\\]\\u00e0]+$"
-    );
+            "[\\s()\\[\\]\\u00e0]+$");
 
-    /** Compiled pattern for extracting leading numeric order tokens like {@code "1.2"}. */
+    /**
+     * Compiled pattern for extracting leading numeric order tokens like
+     * {@code "1.2"}.
+     */
     private static final Pattern CATEGORY_ORDER_PATTERN = Pattern.compile(
-            "^\\s*(\\d+(?:\\.\\d+)*)"
-    );
+            "^\\s*(\\d+(?:\\.\\d+)*)");
 
-    /** Compiled pattern for parsing a category range such as {@code "100-199"} or {@code "100 - 199"}. */
+    /**
+     * Compiled pattern for parsing a category range such as {@code "100-199"} or
+     * {@code "100 - 199"}.
+     */
     private static final Pattern RANGE_PATTERN = Pattern.compile(
-            "^\\s*(\\d+)\\s*(?:-\\s*(\\d+))?\\s*$"
-    );
+            "^\\s*(\\d+)\\s*(?:-\\s*(\\d+))?\\s*$");
 
     /**
      * Category names mapped to their corresponding article number ranges.
-     * Thread-safe; written under {@code CATEGORY_LOCK} but read freely from any thread.
+     * Thread-safe; written under {@code CATEGORY_LOCK} but read freely from any
+     * thread.
      */
     public static volatile Map<String, CategoryRange> categories = new ConcurrentHashMap<>();
 
@@ -136,6 +154,149 @@ public final class ArticleUtils {
         MILLILITER
     }
 
+    public record FillingData(double amount, String unit) {
+        public String normalizedUnit() {
+            return unit == null ? "" : unit.trim().toLowerCase(Locale.ROOT);
+        }
+
+        public VolumeUnit toVolumeUnit() {
+            return switch (normalizedUnit()) {
+                case "l" -> VolumeUnit.LITER;
+                case "ml" -> VolumeUnit.MILLILITER;
+                default -> null;
+            };
+        }
+
+        public String toDisplayString() {
+            return formatFillingAmount(amount) + " " + normalizedUnit();
+        }
+    }
+
+    public static String normalizeFilling(String fillingValue) {
+        if (fillingValue == null) {
+            return "";
+        }
+
+        String candidate = sanitizeFillingCandidate(fillingValue);
+        if (candidate.isEmpty()) {
+            return "";
+        }
+
+        Matcher matcher = FILLING_INPUT_PATTERN.matcher(candidate);
+        if (matcher.matches()) {
+            try {
+                double amount = Double.parseDouble(matcher.group(1).replace(',', '.'));
+                if (amount <= 0) {
+                    return "";
+                }
+                return new FillingData(amount, matcher.group(2)).toDisplayString();
+            } catch (NumberFormatException ignored) {
+                return "";
+            }
+        }
+
+        String normalizedUnit = candidate.toLowerCase(Locale.ROOT);
+        return switch (normalizedUnit) {
+            case "ml", "l", "g", "kg" -> normalizedUnit;
+            default -> candidate;
+        };
+    }
+
+    public static boolean isFillingValid(String fillingValue) {
+        if (fillingValue == null) {
+            return true;
+        }
+
+        String normalized = normalizeFilling(fillingValue);
+        if (normalized.isBlank()) {
+            return true;
+        }
+
+        return FILLING_INPUT_PATTERN.matcher(normalized).matches()
+                || normalized.equals("ml")
+                || normalized.equals("l")
+                || normalized.equals("g")
+                || normalized.equals("kg");
+    }
+
+    public static FillingData parseFilling(String fillingValue) {
+        String normalized = normalizeFilling(fillingValue);
+        if (normalized.isBlank()) {
+            return null;
+        }
+
+        Matcher matcher = FILLING_INPUT_PATTERN.matcher(normalized);
+        if (!matcher.matches()) {
+            return null;
+        }
+
+        try {
+            double amount = Double.parseDouble(matcher.group(1).replace(',', '.'));
+            if (amount <= 0) {
+                return null;
+            }
+            return new FillingData(amount, matcher.group(2));
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    public static double resolveEffectiveSellPrice(Article article, String fillingValue) {
+        if (article == null) {
+            return 0.0;
+        }
+
+        FillingData filling = parseFilling(fillingValue);
+        if (filling == null) {
+            return article.getSellPrice();
+        }
+
+        VolumeUnit volumeUnit = filling.toVolumeUnit();
+        if (volumeUnit == null) {
+            return article.getSellPrice();
+        }
+
+        return calculatePriceForFilling(article, filling.amount(), volumeUnit);
+    }
+
+    public static String formatArticleWithFilling(Article article, String fillingValue) {
+        if (article == null) {
+            return "";
+        }
+
+        String articleName = article.getName() == null ? "" : article.getName();
+        String normalized = normalizeFilling(fillingValue);
+        if (normalized.isBlank()) {
+            return articleName;
+        }
+        return articleName + " [" + normalized + "]";
+    }
+
+    private static String sanitizeFillingCandidate(String fillingValue) {
+        String candidate = fillingValue.trim();
+        if (candidate.isEmpty()) {
+            return "";
+        }
+
+        int colonIndex = candidate.indexOf(':');
+        if (colonIndex >= 0 && colonIndex < candidate.length() - 1) {
+            candidate = candidate.substring(colonIndex + 1).trim();
+        }
+
+        return candidate
+                .replace('[', ' ')
+                .replace(']', ' ')
+                .replace('(', ' ')
+                .replace(')', ' ')
+                .trim()
+                .replaceAll("\\s+", " ");
+    }
+
+    private static String formatFillingAmount(double amount) {
+        BigDecimal decimal = BigDecimal.valueOf(amount).stripTrailingZeros();
+        return decimal.toPlainString().replace('.', ',');
+    }
+
     /**
      * Loads categories from categories.json and caches them in-memory.
      */
@@ -156,7 +317,7 @@ public final class ArticleUtils {
             }.getType();
 
             try (InputStream is = new FileInputStream(file);
-                 InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+                    InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
 
                 List<Map<String, String>> categoryList = gson.fromJson(reader, listType);
                 if (categoryList != null) {
@@ -211,7 +372,7 @@ public final class ArticleUtils {
         try {
             int start = Integer.parseInt(m.group(1));
             int end = m.group(2) != null ? Integer.parseInt(m.group(2)) : start;
-            return start <= end ? new int[]{start, end} : null;
+            return start <= end ? new int[] { start, end } : null;
         } catch (NumberFormatException ex) {
             return null;
         }
@@ -262,10 +423,9 @@ public final class ArticleUtils {
                         ? String.valueOf(range.rangeStart)
                         : range.rangeStart + " - " + range.rangeEnd);
                 return map;
-                }).sorted((left, right) -> compareCategoryNames(
+            }).sorted((left, right) -> compareCategoryNames(
                     left.getOrDefault("category", ""),
-                    right.getOrDefault("category", "")
-                )).toList();
+                    right.getOrDefault("category", ""))).toList();
 
             Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
             String json = gson.toJson(categoryList);
@@ -329,7 +489,8 @@ public final class ArticleUtils {
     }
 
     /**
-     * Extracts leading numeric order tokens from categories such as "1.2 Something".
+     * Extracts leading numeric order tokens from categories such as "1.2
+     * Something".
      */
     private static List<Integer> extractCategoryOrder(String categoryName) {
         if (categoryName == null || categoryName.isBlank()) {
@@ -386,7 +547,8 @@ public final class ArticleUtils {
     /**
      * Calculates filling price from base values.
      */
-    public static double calculatePriceForFilling(double sellPrice, double liter, double fillingAmount, VolumeUnit unit) {
+    public static double calculatePriceForFilling(double sellPrice, double liter, double fillingAmount,
+            VolumeUnit unit) {
         if (liter <= 0) {
             throw new IllegalArgumentException("Liter value must be > 0, but was: " + liter);
         }
@@ -423,10 +585,11 @@ public final class ArticleUtils {
         boolean allowed = FILLING_ALLOWED_CATEGORY_KEYWORDS.stream().anyMatch(categoryLower::contains);
 
         if (!allowed) {
-            showErrorDialog("Artikelkategorie '" + category + "' ist nicht für die Preisberechnung geeignet. Artikel: " + article.getName());
+            showErrorDialog("Artikelkategorie '" + category + "' ist nicht für die Preisberechnung geeignet. Artikel: "
+                    + article.getName());
             throw new IllegalArgumentException(
-                    "Article category must be Reinigungsmittel, Geschirrreiniger or Seife for filling price calculation. Article category: " + category
-            );
+                    "Article category must be Reinigungsmittel, Geschirrreiniger or Seife for filling price calculation. Article category: "
+                            + category);
         }
 
         if (details == null || details.isBlank()) {
@@ -464,7 +627,8 @@ public final class ArticleUtils {
         if (selectedRows.length == 0) {
             new MessageDialog()
                     .setTitle("Keine Auswahl")
-                    .setMessage("Bitte wählen Sie mindestens einen Artikel aus, um ihn zur Kundenbestellung hinzuzufügen.")
+                    .setMessage(
+                            "Bitte wählen Sie mindestens einen Artikel aus, um ihn zur Kundenbestellung hinzuzufügen.")
                     .setDuration(5000)
                     .setMessageType(JOptionPane.WARNING_MESSAGE)
                     .display();
@@ -479,6 +643,26 @@ public final class ArticleUtils {
             String artikelNr = (String) model.getValueAt(modelRow, 0);
             Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
             if (article == null) {
+                continue;
+            }
+
+            String picked = null;
+
+            if (ArticleManager.getInstance().hasSeperateArticles(article.getArticleNumber())) {
+                List<String> variants = ArticleManager.getInstance()
+                        .getAllDetailsForArticleNumber(article.getArticleNumber());
+                String message = "Wählen Sie die Variante für \"" + article.getName() + "\":";
+                String[] options = variants.toArray(new String[0]);
+                int choice = new MessageDialog()
+                        .setTitle("Variante auswählen")
+                        .setMessage(message)
+                        .setOptionType(JOptionPane.DEFAULT_OPTION)
+                        .setOptions(options)
+                        .displayWithOptions();
+                if (choice < 0 || choice >= options.length) {
+                    return; // User cancelled or closed the dialog
+                }
+                picked = options[choice];
                 continue;
             }
 
@@ -504,7 +688,7 @@ public final class ArticleUtils {
                     continue;
                 }
 
-                ArticleListGUI.addArticle(article, menge);
+                ArticleListGUI.addArticle(article, menge, picked, null);
                 articlesToAdd.add(article);
             } catch (NumberFormatException ex) {
                 new MessageDialog()
@@ -563,13 +747,17 @@ public final class ArticleUtils {
     }
 
     /**
-     * Splits details by any common separator and optionally cleans each part by removing
-     * leading abbreviated label prefixes (e.g. {@code "Gr. "}) and trailing quantity/unit
-     * suffixes (e.g. {@code " 100 Stk. Box"}), so that {@code "Gr. S, M, L, XL 100 Stk. Box"}
+     * Splits details by any common separator and optionally cleans each part by
+     * removing
+     * leading abbreviated label prefixes (e.g. {@code "Gr. "}) and trailing
+     * quantity/unit
+     * suffixes (e.g. {@code " 100 Stk. Box"}), so that
+     * {@code "Gr. S, M, L, XL 100 Stk. Box"}
      * yields {@code ["S", "M", "L", "XL"]}.
      *
-     * @param details        the raw details string
-     * @param cleanTokens    if {@code true}, strip label prefixes and quantity suffixes from each part
+     * @param details     the raw details string
+     * @param cleanTokens if {@code true}, strip label prefixes and quantity
+     *                    suffixes from each part
      */
     public static List<String> getPartsFromDetails(String details, boolean cleanTokens) {
         if (details == null || details.isBlank()) {
@@ -610,8 +798,10 @@ public final class ArticleUtils {
         if (parts.size() <= 1) {
             return false;
         }
-        // Only treat as variants if every part is purely alphabetic (e.g. S/M/L/XL, Blau/Gelb/Grün)
-        // Parts containing digits (e.g. "50mm", "25m Rolle") are dimension specs, not variants.
+        // Only treat as variants if every part is purely alphabetic (e.g. S/M/L/XL,
+        // Blau/Gelb/Grün)
+        // Parts containing digits (e.g. "50mm", "25m Rolle") are dimension specs, not
+        // variants.
         return parts.stream().allMatch(p -> p.matches("[\\p{L}]+"));
     }
 
@@ -620,11 +810,13 @@ public final class ArticleUtils {
             return List.of();
         }
         Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
-        if (article == null) return List.of();
+        if (article == null)
+            return List.of();
         List<String> parts = getPartsFromDetails(article.getDetails(), true);
         List<SeperateArticle> result = new ArrayList<>(parts.size());
         for (String part : parts) {
-            if (part == null || part.isBlank()) continue;
+            if (part == null || part.isBlank())
+                continue;
             result.add(new SeperateArticle(new Random().nextInt(1000000), articleNumber, part));
         }
         return result;

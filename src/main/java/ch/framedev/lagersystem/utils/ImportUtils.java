@@ -23,9 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * TODO: Performance optimizations if needed for large files.
- */
 public class ImportUtils {
 
     private static final Logger LOGGER = LogManager.getLogger(ImportUtils.class);
@@ -464,13 +461,23 @@ public class ImportUtils {
                 jsonStrings.addAll(ArticleUtils.newSeperatedArticles(article.getArticleNumber()));
             }
         }
+        int updated = 0;
+        int inserted = 0;
         JsonElement jsonElement = new JsonArray();
         for(SeperateArticle seperateArticle : jsonStrings) {
             jsonElement.getAsJsonArray().add(new Gson().toJsonTree(seperateArticle));
             if(!articleManager.existsSeperateArticleByDetail(seperateArticle.getArticleNumber(), seperateArticle.getOtherDetails())) {
-                articleManager.insertSeperateArticle(seperateArticle);
+                if(!articleManager.insertSeperateArticle(seperateArticle)) {
+                    Main.logUtils.addLog("Failed to insert separated article with number " + seperateArticle.getArticleNumber() + " and detail '" + seperateArticle.getOtherDetails() + "' into database");
+                } else {
+                    inserted++;
+                }
             } else {
-                articleManager.updateSeperateArticle(seperateArticle);
+                if(!articleManager.updateSeperateArticle(seperateArticle)) {
+                    Main.logUtils.addLog("Failed to update separated article with number " + seperateArticle.getArticleNumber() + " and detail '" + seperateArticle.getOtherDetails() + "' in database");
+                } else {
+                    updated++;
+                }
             }
             Main.logUtils.addLog("Loaded separated article with number " + seperateArticle.getArticleNumber() + " and detail '" + seperateArticle.getOtherDetails() + "' into database");
         }
@@ -480,5 +487,6 @@ public class ImportUtils {
             Main.logUtils.addLog("Failed to write separated articles to file");
             LOGGER.error("Failed to write separated articles to file", e);
         }
+        Main.logUtils.addLog("Inserted " + inserted + " separated articles and updated " + updated + " separated articles into database");
     }
 }

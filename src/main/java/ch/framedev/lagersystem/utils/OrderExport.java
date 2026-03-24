@@ -16,6 +16,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.Color;
 import java.io.File;
 import java.io.InputStream;
 import java.time.LocalDateTime;
@@ -51,6 +52,18 @@ public class OrderExport {
     private static final float ROW_HEIGHT = 18f;
     private static final float FOOTER_Y = 30f;
     private static final float MIN_Y_BEFORE_PAGE_BREAK = 150f;
+    private static final float TABLE_CELL_PADDING = 8f;
+
+    // Visual palette
+    private static final Color COLOR_PRIMARY = new Color(30, 58, 95);
+    private static final Color COLOR_PRIMARY_SOFT = new Color(62, 84, 98);
+    private static final Color COLOR_TEXT = new Color(23, 33, 45);
+    private static final Color COLOR_MUTED = new Color(130, 139, 149);
+    private static final Color COLOR_SURFACE = new Color(245, 247, 250);
+    private static final Color COLOR_ROW_ALT = new Color(250, 250, 250);
+    private static final Color COLOR_LINE = new Color(210, 214, 220);
+    private static final Color COLOR_SUCCESS = new Color(27, 94, 32);
+    private static final Color COLOR_WARNING = new Color(230, 81, 0);
 
     private static final Locale LOCALE_CH = Locale.forLanguageTag("de-CH");
     private static final DecimalFormat CHF = new DecimalFormat("0.00", new DecimalFormatSymbols(LOCALE_CH));
@@ -115,7 +128,7 @@ public class OrderExport {
         String department = safe(order.getDepartment());
         String status = order.getStatus() != null ? order.getStatus() : "In Bearbeitung";
 
-        if (orderedArticles == null) {
+        if (orderedArticles == null || orderedArticles.isEmpty()) {
             new MessageDialog()
                     .setTitle("Keine Artikel")
                     .setMessage("Diese Bestellung enthält keine Artikel.")
@@ -140,6 +153,7 @@ public class OrderExport {
             double total = 0.0;
             boolean alternateRow = false;
             int articleIndex = 0;
+            int pageNumber = 1;
             boolean firstPage = true;
 
             while (articleIndex < articles.size()) {
@@ -164,7 +178,8 @@ public class OrderExport {
                         ps.y -= 10f;
                     }
 
-                    ps.y = drawTableHeader(cs, fonts.bold, pageWidth, ps.y);
+                    TableColumns columns = createTableColumns(pageWidth);
+                    ps.y = drawTableHeader(cs, fonts.bold, pageWidth, ps.y, columns);
 
                     while (articleIndex < articles.size() && ps.y >= MIN_Y_BEFORE_PAGE_BREAK) {
                         Article article = articles.get(articleIndex);
@@ -174,34 +189,18 @@ public class OrderExport {
                             qty = orderedArticles.getOrDefault(safe(article.getName()), 0);
                         }
 
-                        double unit = article.getSellPrice();
+                        String filling = order.getArticleFilling(article.getArticleNumber());
+                        double unit = ArticleUtils.resolveEffectiveSellPrice(article, filling);
                         double line = unit * qty;
                         total += line;
 
                         if (alternateRow) {
-                            cs.setNonStrokingColor(250f / 255f, 250f / 255f, 250f / 255f);
+                            setFillColor(cs, COLOR_ROW_ALT);
                             cs.addRect(MARGIN, ps.y - 15, pageWidth - 2 * MARGIN, 18);
                             cs.fill();
                         }
 
-                        cs.beginText();
-                        cs.setNonStrokingColor(0f, 0f, 0f);
-                        cs.setFont(fonts.regular, 9);
-                        cs.newLineAtOffset(MARGIN + 5, ps.y - 10);
-
-                        String articleName = safe(article.getName());
-                        if (articleName.length() > 35) {
-                            articleName = articleName.substring(0, 32) + "...";
-                        }
-
-                        cs.showText(articleName + " (" + safe(article.getArticleNumber()) + ")");
-                        cs.newLineAtOffset(200, 0);
-                        cs.showText(String.valueOf(qty));
-                        cs.newLineAtOffset(60, 0);
-                        cs.showText(CHF.format(unit) + " CHF");
-                        cs.newLineAtOffset(80, 0);
-                        cs.showText(CHF.format(line) + " CHF");
-                        cs.endText();
+                        drawArticleRow(cs, fonts, article, filling, qty, unit, line, ps.y, columns);
 
                         ps.y -= ROW_HEIGHT;
                         alternateRow = !alternateRow;
@@ -212,10 +211,11 @@ public class OrderExport {
                         ps.y = drawTotals(cs, fonts.bold, pageWidth, ps.y, total);
                     }
 
-                    drawFooter(cs, fonts.regular);
+                    drawFooter(cs, fonts.regular, pageNumber, pageWidth);
                 }
 
                 firstPage = false;
+                pageNumber++;
             }
 
             doc.save(outputFile);
@@ -237,7 +237,7 @@ public class OrderExport {
     }
 
     private static float drawHeader(PDPageContentStream cs, PDFont boldFont, float pageWidth, float y) throws Exception {
-        cs.setNonStrokingColor(30f / 255f, 58f / 255f, 95f / 255f);
+        setFillColor(cs, COLOR_PRIMARY);
         cs.addRect(MARGIN, y - HEADER_HEIGHT, pageWidth - 2 * MARGIN, HEADER_HEIGHT);
         cs.fill();
 
@@ -248,27 +248,34 @@ public class OrderExport {
         cs.showText("VEBO BESTELLUNG");
         cs.endText();
 
+        cs.beginText();
+        cs.setNonStrokingColor(1f, 1f, 1f);
+        cs.setFont(boldFont, 10);
+        cs.newLineAtOffset(pageWidth - MARGIN - 165, y - 18);
+        cs.showText("Bestelluebersicht");
+        cs.endText();
+
         return y - (HEADER_HEIGHT + 20f);
     }
 
     private static float drawOrderInfo(PDPageContentStream cs, Fonts fonts, String orderDate, String orderId, String status, float y) throws Exception {
         // Bestelldatum
-        text(cs, fonts.bold, 11, 0f, 0f, 0f, MARGIN, y, "Bestelldatum:");
-        text(cs, fonts.regular, 11, 0f, 0f, 0f, MARGIN + 100, y, orderDate);
+        text(cs, fonts.bold, 11, COLOR_TEXT, MARGIN, y, "Bestelldatum:");
+        text(cs, fonts.regular, 11, COLOR_TEXT, MARGIN + 100, y, orderDate);
         y -= 18;
 
         // Bestell-ID
-        text(cs, fonts.bold, 11, 0f, 0f, 0f, MARGIN, y, "Bestell-ID:");
-        text(cs, fonts.regular, 11, 0f, 0f, 0f, MARGIN + 100, y, orderId);
+        text(cs, fonts.bold, 11, COLOR_TEXT, MARGIN, y, "Bestell-ID:");
+        text(cs, fonts.regular, 11, COLOR_TEXT, MARGIN + 100, y, orderId);
         y -= 18;
 
         // Status
-        text(cs, fonts.bold, 11, 0f, 0f, 0f, MARGIN, y, "Status:");
+        text(cs, fonts.bold, 11, COLOR_TEXT, MARGIN, y, "Status:");
 
         if ("Abgeschlossen".equals(status)) {
-            text(cs, fonts.bold, 11, 27f / 255f, 94f / 255f, 32f / 255f, MARGIN + 100, y, status);
+            text(cs, fonts.bold, 11, COLOR_SUCCESS, MARGIN + 100, y, status);
         } else {
-            text(cs, fonts.bold, 11, 230f / 255f, 81f / 255f, 0f, MARGIN + 100, y, status);
+            text(cs, fonts.bold, 11, COLOR_WARNING, MARGIN + 100, y, status);
         }
 
         return y - 30;
@@ -279,53 +286,61 @@ public class OrderExport {
                                            String receiverName, String receiverKonto, String department,
                                            float y) throws Exception {
 
-        cs.setNonStrokingColor(245f / 255f, 247f / 255f, 250f / 255f);
+        setFillColor(cs, COLOR_SURFACE);
         cs.addRect(MARGIN, y - BOX_HEIGHT, (pageWidth - 2 * MARGIN - 10) / 2, BOX_HEIGHT);
         cs.fill();
 
-        cs.setNonStrokingColor(245f / 255f, 247f / 255f, 250f / 255f);
+        setFillColor(cs, COLOR_SURFACE);
         cs.addRect(MARGIN + (pageWidth - 2 * MARGIN) / 2 + 5, y - BOX_HEIGHT, (pageWidth - 2 * MARGIN - 10) / 2, BOX_HEIGHT);
         cs.fill();
 
         // Sender
-        text(cs, fonts.bold, 12, 0f, 0f, 0f, MARGIN + 10, y - 15, "ABSENDER");
-        text(cs, fonts.regular, 10, 0f, 0f, 0f, MARGIN + 10, y - 32, senderName);
-        text(cs, fonts.regular, 9, 0f, 0f, 0f, MARGIN + 10, y - 47, "Konto: " + senderKonto);
+        text(cs, fonts.bold, 12, COLOR_TEXT, MARGIN + 10, y - 15, "ABSENDER");
+        text(cs, fonts.regular, 10, COLOR_TEXT, MARGIN + 10, y - 32, senderName);
+        text(cs, fonts.regular, 9, COLOR_TEXT, MARGIN + 10, y - 47, "Konto: " + senderKonto);
 
         // Receiver
         float rightBoxX = MARGIN + (pageWidth - 2 * MARGIN) / 2 + 15;
-        text(cs, fonts.bold, 12, 0f, 0f, 0f, rightBoxX, y - 15, "EMPFAENGER");
-        text(cs, fonts.regular, 10, 0f, 0f, 0f, rightBoxX, y - 32, receiverName);
-        text(cs, fonts.regular, 9, 0f, 0f, 0f, rightBoxX, y - 47, "Konto: " + receiverKonto);
-        text(cs, fonts.regular, 9, 0f, 0f, 0f, rightBoxX, y - 62, "Abteilung: " + department);
+        text(cs, fonts.bold, 12, COLOR_TEXT, rightBoxX, y - 15, "EMPFAENGER");
+        text(cs, fonts.regular, 10, COLOR_TEXT, rightBoxX, y - 32, receiverName);
+        text(cs, fonts.regular, 9, COLOR_TEXT, rightBoxX, y - 47, "Konto: " + receiverKonto);
+        text(cs, fonts.regular, 9, COLOR_TEXT, rightBoxX, y - 62, "Abteilung: " + department);
 
         return y - (BOX_HEIGHT + 30f);
     }
 
-    private static float drawTableHeader(PDPageContentStream cs, PDFont boldFont, float pageWidth, float y) throws Exception {
-        cs.setNonStrokingColor(62f / 255f, 84f / 255f, 98f / 255f);
+    private static float drawTableHeader(PDPageContentStream cs, PDFont boldFont, float pageWidth, float y,
+                                         TableColumns columns) throws Exception {
+        setFillColor(cs, COLOR_PRIMARY_SOFT);
         cs.addRect(MARGIN, y - TABLE_HEADER_HEIGHT, pageWidth - 2 * MARGIN, TABLE_HEADER_HEIGHT);
         cs.fill();
 
-        cs.beginText();
-        cs.setNonStrokingColor(1f, 1f, 1f);
-        cs.setFont(boldFont, 10);
-        cs.newLineAtOffset(MARGIN + 5, y - 14);
-        cs.showText("Artikel");
-        cs.newLineAtOffset(200, 0);
-        cs.showText("Menge");
-        cs.newLineAtOffset(60, 0);
-        cs.showText("Einzelpreis");
-        cs.newLineAtOffset(80, 0);
-        cs.showText("Gesamt");
-        cs.endText();
+        text(cs, boldFont, 10, Color.WHITE, columns.articleX(), y - 14, "Artikel");
+        text(cs, boldFont, 10, Color.WHITE, columns.qtyX(), y - 14, "Menge");
+        text(cs, boldFont, 10, Color.WHITE, columns.unitX(), y - 14, "Einzelpreis");
+        text(cs, boldFont, 10, Color.WHITE, columns.totalX(), y - 14, "Gesamt");
 
         return y - 25f;
     }
 
+    private static void drawArticleRow(PDPageContentStream cs, Fonts fonts, Article article, String filling, int qty,
+                       double unitPrice, double lineTotal, float y,
+                       TableColumns columns) throws Exception {
+    String articleLabel = truncate(ArticleUtils.formatArticleWithFilling(article, filling), 34)
+            + " (" + safe(article.getArticleNumber()) + ")";
+
+    text(cs, fonts.regular, 9, COLOR_TEXT, columns.articleX(), y - 10, articleLabel);
+    textRight(cs, fonts.regular, 9, COLOR_TEXT, columns.unitX() - TABLE_CELL_PADDING,
+        y - 10, String.valueOf(qty));
+    textRight(cs, fonts.regular, 9, COLOR_TEXT, columns.totalX() - TABLE_CELL_PADDING,
+        y - 10, CHF.format(unitPrice) + " CHF");
+    textRight(cs, fonts.regular, 9, COLOR_TEXT, columns.tableRightX() - TABLE_CELL_PADDING,
+        y - 10, CHF.format(lineTotal) + " CHF");
+    }
+
     private static float drawTotals(PDPageContentStream cs, PDFont boldFont, float pageWidth, float y, double total) throws Exception {
         y -= 10;
-        cs.setNonStrokingColor(200f / 255f, 200f / 255f, 200f / 255f);
+    setStrokeColor(cs, COLOR_LINE);
         cs.setLineWidth(1);
         cs.moveTo(MARGIN, y);
         cs.lineTo(pageWidth - MARGIN, y);
@@ -333,7 +348,7 @@ public class OrderExport {
 
         y -= 25;
 
-        cs.setNonStrokingColor(30f / 255f, 58f / 255f, 95f / 255f);
+        setFillColor(cs, COLOR_PRIMARY);
         cs.addRect(pageWidth - MARGIN - 150, y - 25, 150, 30);
         cs.fill();
 
@@ -349,25 +364,59 @@ public class OrderExport {
         return y - 10;
     }
 
-    private static void drawFooter(PDPageContentStream cs, PDFont regularFont) throws Exception {
-        cs.beginText();
-        cs.setNonStrokingColor(150f / 255f, 150f / 255f, 150f / 255f);
-        cs.setFont(regularFont, 8);
-        cs.newLineAtOffset(MARGIN, FOOTER_Y);
-        cs.showText("VEBO Lagersystem - Generiert am " + LocalDateTime.now().format(FOOTER_TIMESTAMP_FORMATTER));
-        cs.endText();
+    private static void drawFooter(PDPageContentStream cs, PDFont regularFont, int pageNumber, float pageWidth) throws Exception {
+        text(cs, regularFont, 8, COLOR_MUTED, MARGIN, FOOTER_Y,
+                "VEBO Lagersystem - Generiert am " + LocalDateTime.now().format(FOOTER_TIMESTAMP_FORMATTER));
+        textRight(cs, regularFont, 8, COLOR_MUTED, pageWidth - MARGIN, FOOTER_Y,
+                "Seite " + pageNumber);
     }
 
     private static void text(PDPageContentStream cs, PDFont font, float size,
-                             float r, float g, float b,
+                             Color color,
                              float x, float y,
                              String text) throws Exception {
         cs.beginText();
-        cs.setNonStrokingColor(r, g, b);
+        setFillColor(cs, color);
         cs.setFont(font, size);
         cs.newLineAtOffset(x, y);
         cs.showText(text == null ? "" : text);
         cs.endText();
+    }
+
+    private static void textRight(PDPageContentStream cs, PDFont font, float size, Color color,
+                                  float rightX, float y, String value) throws Exception {
+        String content = value == null ? "" : value;
+        float textWidth = font.getStringWidth(content) / 1000f * size;
+        text(cs, font, size, color, rightX - textWidth, y, content);
+    }
+
+    private static void setFillColor(PDPageContentStream cs, Color color) throws Exception {
+        cs.setNonStrokingColor(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f);
+    }
+
+    private static void setStrokeColor(PDPageContentStream cs, Color color) throws Exception {
+        cs.setStrokingColor(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f);
+    }
+
+    private static TableColumns createTableColumns(float pageWidth) {
+        float tableLeftX = MARGIN;
+        float tableRightX = pageWidth - MARGIN;
+        float tableWidth = tableRightX - tableLeftX;
+
+        float articleX = tableLeftX + TABLE_CELL_PADDING;
+        float qtyX = tableLeftX + tableWidth * 0.62f;
+        float unitX = tableLeftX + tableWidth * 0.75f;
+        float totalX = tableLeftX + tableWidth * 0.89f;
+
+        return new TableColumns(articleX, qtyX, unitX, totalX, tableRightX);
+    }
+
+    private static String truncate(String text, int maxLength) {
+        String safeText = safe(text);
+        if (safeText.length() <= maxLength) {
+            return safeText;
+        }
+        return safeText.substring(0, Math.max(0, maxLength - 3)) + "...";
     }
 
     private static String safe(Object value) {
@@ -421,6 +470,9 @@ public class OrderExport {
     }
 
     private record Fonts(PDFont regular, PDFont bold) {
+    }
+
+    private record TableColumns(float articleX, float qtyX, float unitX, float totalX, float tableRightX) {
     }
 
     private static final class PageState {

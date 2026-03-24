@@ -40,6 +40,9 @@ public class JFrameUtils {
      * Minimum column width used by {@link #adjustColumnWidths(JTable, JScrollPane, int[])}.
      */
     private static final int MIN_COLUMN_WIDTH = 60;
+    private static final Insets DEFAULT_BUTTON_PADDING = new Insets(10, 18, 10, 18);
+    private static final Insets TEXT_BUTTON_PADDING = new Insets(10, 12, 10, 12);
+    private static final int HEADER_RADIUS = 22;
 
     /**
      * A custom JPanel that paints itself with rounded corners and a specified background color. This can be used to create visually appealing containers for other components, such as forms or sections within the application's windows.
@@ -140,12 +143,14 @@ public class JFrameUtils {
         if (field == null) return;
         field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
+                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1, true),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)
         ));
         field.setBackground(ThemeManager.getInputBackgroundColor());
         field.setForeground(ThemeManager.getTextPrimaryColor());
         field.setCaretColor(ThemeManager.getTextPrimaryColor());
+        field.setSelectionColor(ThemeManager.getSelectionBackgroundColor());
+        field.setSelectedTextColor(ThemeManager.getSelectionForegroundColor());
     }
 
     public static void styleComboBox(JComboBox<String> combo) {
@@ -157,12 +162,14 @@ public class JFrameUtils {
         Color selFg = ThemeManager.getSelectionForegroundColor();
         Color surface = ThemeManager.getSurfaceColor();
 
+        combo.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         combo.setBackground(bg);
         combo.setForeground(fg);
         combo.setOpaque(true);
         combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        combo.setMaximumRowCount(12);
         combo.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(border, 1),
+            BorderFactory.createLineBorder(border, 1, true),
                 BorderFactory.createEmptyBorder(4, 8, 4, 8)
         ));
 
@@ -181,6 +188,7 @@ public class JFrameUtils {
                 list.setSelectionForeground(selFg);
 
                 c.setOpaque(true);
+                    c.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
                 c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
 
                 if (isSelected) {
@@ -222,6 +230,7 @@ public class JFrameUtils {
                     basic.getList().setForeground(fg);
                     basic.getList().setSelectionBackground(selBg);
                     basic.getList().setSelectionForeground(selFg);
+                    basic.getList().setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
                 }
                 return popup;
             }
@@ -255,6 +264,7 @@ public class JFrameUtils {
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
             GradientPaint gp = new GradientPaint(0, 0, color1, getWidth(), 0, color2);
             g2.setPaint(gp);
             g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
@@ -265,13 +275,7 @@ public class JFrameUtils {
 
     public static JButton createRoundedButton(String text) {
         JButton button = new JButton(text);
-        button.setFocusPainted(false);
-        button.setBorderPainted(true);
-        button.setContentAreaFilled(true);
-        button.setOpaque(true);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        configureBaseButton(button, ThemeManager.getTextOnPrimaryColor());
 
         // Apply default accent palette (hover/pressed) without stacking listeners.
         applyButtonPalette(button, ThemeManager.getAccentColor());
@@ -280,15 +284,41 @@ public class JFrameUtils {
 
     public static JButton createThemeButton(String text, Color baseBg) {
         JButton button = new JButton(text);
+        configureBaseButton(button, ThemeManager.getTextOnPrimaryColor());
+
+        applyButtonPalette(button, baseBg);
+        return button;
+    }
+
+    private static void configureBaseButton(JButton button, Color foreground) {
         button.setFocusPainted(false);
         button.setBorderPainted(true);
         button.setContentAreaFilled(true);
         button.setOpaque(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
+        button.setForeground(foreground);
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        button.setMargin(DEFAULT_BUTTON_PADDING);
+    }
 
-        applyButtonPalette(button, baseBg);
+    private static JButton createTextActionButton(String text, ActionListener action) {
+        JButton button = new JButton(text);
+        if (action != null) {
+            button.addActionListener(action);
+        }
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        button.setFocusPainted(false);
+        button.setContentAreaFilled(false);
+        button.setOpaque(false);
+        button.setBorderPainted(false);
+        button.setForeground(ThemeManager.getTextPrimaryColor());
+        button.setBorder(BorderFactory.createEmptyBorder(
+                TEXT_BUTTON_PADDING.top,
+                TEXT_BUTTON_PADDING.left,
+                TEXT_BUTTON_PADDING.bottom,
+                TEXT_BUTTON_PADDING.right
+        ));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return button;
     }
 
@@ -305,8 +335,13 @@ public class JFrameUtils {
 
         button.setBackground(baseBg);
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(baseBg.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 18, 10, 18)
+            BorderFactory.createLineBorder(baseBg.darker(), 1, true),
+            BorderFactory.createEmptyBorder(
+                DEFAULT_BUTTON_PADDING.top,
+                DEFAULT_BUTTON_PADDING.left,
+                DEFAULT_BUTTON_PADDING.bottom,
+                DEFAULT_BUTTON_PADDING.right
+            )
         ));
 
         // Remove only the listener previously installed by this utility (avoid breaking external listeners).
@@ -355,15 +390,7 @@ public class JFrameUtils {
 
 
     public static JButton createSecondaryButton(String text, ActionListener action) {
-        JButton btn = new JButton(text);
-        btn.addActionListener(action);
-        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        btn.setFocusPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(false);
-        btn.setForeground(ThemeManager.getTextPrimaryColor());
-        btn.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        JButton btn = createTextActionButton(text, action);
 
         Color fg = ThemeManager.getTextPrimaryColor();
         Color hover = ThemeManager.getButtonHoverColor(fg);
@@ -375,21 +402,10 @@ public class JFrameUtils {
     }
 
     public static JButton createPrimaryButton(String text, Color color, ActionListener action) {
-        JButton btn = new JButton(text);
-        btn.addActionListener(action);
-        btn.setBackground(color);
-        btn.setForeground(ThemeManager.getTextOnPrimaryColor());
-        btn.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
-        btn.setFocusPainted(false);
-        btn.setOpaque(true);
-        btn.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(color.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 16, 10, 16)
-        ));
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        Color hover = ThemeManager.getButtonHoverColor(color);
-        btn.addChangeListener(e -> btn.setBackground(btn.getModel().isRollover() ? hover : color));
+        JButton btn = createThemeButton(text, color);
+        if (action != null) {
+            btn.addActionListener(action);
+        }
         return btn;
     }
 
@@ -402,9 +418,11 @@ public class JFrameUtils {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
                 GradientPaint gp = new GradientPaint(0, 0, ThemeManager.getHeaderBackgroundColor(), getWidth(), 0, ThemeManager.getHeaderGradientColor());
                 g2.setPaint(gp);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 22, 22);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), HEADER_RADIUS, HEADER_RADIUS);
                 g2.setColor(new Color(0,0,0,30));
                 g2.fillRoundRect(4, getHeight()-8, getWidth()-8, 8, 8, 8); // subtle shadow
                 g2.dispose();
@@ -478,7 +496,6 @@ public class JFrameUtils {
                 .setMessage("Auswahl exportieren als:")
                 .setOptions(options)
                 .setIcon(Main.iconSmall)
-                .setOptions(options)
                 .displayWithOptions();
         if (choice == 0) {
             exportArticlesToCsv(selected);

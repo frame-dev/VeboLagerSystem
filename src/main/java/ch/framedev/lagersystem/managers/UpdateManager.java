@@ -471,7 +471,18 @@ public final class UpdateManager {
      * @return true if a newer version is available, false otherwise
      */
     public boolean isUpdateAvailable(String currentVersion) {
-        String latestVersion = getLatestVersion();
+        return isUpdateAvailable(currentVersion, getLatestVersion());
+    }
+
+    /**
+     * Checks if a newer version is available compared to the specified version and
+     * release tag.
+     *
+     * @param currentVersion The current application version
+     * @param latestVersion The latest version to compare against
+     * @return true if a newer version is available, false otherwise
+     */
+    public boolean isUpdateAvailable(String currentVersion, String latestVersion) {
 
         if (latestVersion == null) {
             logger.debug("No latest version available from GitHub");

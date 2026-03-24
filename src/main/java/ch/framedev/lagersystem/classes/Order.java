@@ -1,7 +1,9 @@
 package ch.framedev.lagersystem.classes;
 
 import ch.framedev.lagersystem.managers.ArticleManager;
+import ch.framedev.lagersystem.utils.ArticleUtils;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -45,6 +47,10 @@ public class Order {
      * Current order status label.
      */
     private String status;
+    /**
+     * Optional filling text per article number, e.g. "500 ml".
+     */
+    private Map<String, String> articleFillings;
 
     /**
      * Creates a new order with default status "In Bearbeitung".
@@ -60,15 +66,8 @@ public class Order {
      */
     public Order(String orderId, Map<String, Integer> orderedArticles, String receiverName,
                  String receiverKontoNumber, String orderDate, String senderName, String senderKontoNumber, String department) {
-        this.orderId = orderId;
-        this.orderedArticles = orderedArticles;
-        this.receiverName = receiverName;
-        this.receiverKontoNumber = receiverKontoNumber;
-        this.orderDate = orderDate;
-        this.senderName = senderName;
-        this.senderKontoNumber = senderKontoNumber;
-        this.department = department;
-        this.status = "In Bearbeitung";
+        this(orderId, orderedArticles, new LinkedHashMap<>(), receiverName, receiverKontoNumber,
+                orderDate, senderName, senderKontoNumber, department, "In Bearbeitung");
     }
 
     /**
@@ -85,8 +84,23 @@ public class Order {
      * @param status              order status label
      */
     public Order(String orderId, Map<String, Integer> orderedArticles, String receiverName, String receiverKontoNumber, String orderDate, String senderName, String senderKontoNumber, String department, String status) {
+        this(orderId, orderedArticles, new LinkedHashMap<>(), receiverName, receiverKontoNumber,
+                orderDate, senderName, senderKontoNumber, department, status);
+    }
+
+    public Order(String orderId, Map<String, Integer> orderedArticles, Map<String, String> articleFillings,
+                 String receiverName, String receiverKontoNumber, String orderDate, String senderName,
+                 String senderKontoNumber, String department) {
+        this(orderId, orderedArticles, articleFillings, receiverName, receiverKontoNumber,
+                orderDate, senderName, senderKontoNumber, department, "In Bearbeitung");
+    }
+
+    public Order(String orderId, Map<String, Integer> orderedArticles, Map<String, String> articleFillings,
+                 String receiverName, String receiverKontoNumber, String orderDate, String senderName,
+                 String senderKontoNumber, String department, String status) {
         this.orderId = orderId;
         this.orderedArticles = orderedArticles;
+        this.articleFillings = articleFillings == null ? new LinkedHashMap<>() : new LinkedHashMap<>(articleFillings);
         this.receiverName = receiverName;
         this.receiverKontoNumber = receiverKontoNumber;
         this.orderDate = orderDate;
@@ -100,7 +114,7 @@ public class Order {
      * Default constructor for Order. Initializes an empty order object. This constructor can be used when creating an order object that will be populated with data later, such as when deserializing from a data source or when using a builder pattern.
      */
     public Order() {
-
+        this.articleFillings = new LinkedHashMap<>();
     }
 
     /**
@@ -133,6 +147,24 @@ public class Order {
      */
     public void setOrderedArticles(Map<String, Integer> orderedArticles) {
         this.orderedArticles = orderedArticles;
+    }
+
+    public Map<String, String> getArticleFillings() {
+        if (articleFillings == null) {
+            articleFillings = new LinkedHashMap<>();
+        }
+        return articleFillings;
+    }
+
+    public void setArticleFillings(Map<String, String> articleFillings) {
+        this.articleFillings = articleFillings == null ? new LinkedHashMap<>() : new LinkedHashMap<>(articleFillings);
+    }
+
+    public String getArticleFilling(String articleNumber) {
+        if (articleNumber == null || getArticleFillings().isEmpty()) {
+            return "";
+        }
+        return getArticleFillings().getOrDefault(articleNumber, "");
     }
 
     /**
@@ -260,7 +292,8 @@ public class Order {
             int quantity = entry.getValue();
             Article article = articleManager.getArticleByNumber(articleNumber);
             if (article != null) {
-                totalPrice += article.getSellPrice() * quantity;
+                double unitPrice = ArticleUtils.resolveEffectiveSellPrice(article, getArticleFilling(articleNumber));
+                totalPrice += unitPrice * quantity;
             }
         }
         return totalPrice;

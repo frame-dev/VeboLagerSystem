@@ -80,16 +80,16 @@ public class ThemeManager {
          * Set the LookAndFeel by option. Falls back to system if not available.
          */
         public static void setLookAndFeel(LookAndFeelOption option) {
+            if (option == null) {
+                setSystemLookAndFeelSafely();
+                return;
+            }
             try {
                 UIManager.setLookAndFeel(option.className);
                 logger.info("Set LookAndFeel: {} ({})", option.displayName, option.className);
             } catch (Exception e) {
                 logger.warn("Could not set LookAndFeel: {} ({}), falling back to system.", option.displayName, option.className, e);
-                try {
-                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                } catch (Exception ex) {
-                    logger.error("Could not set system LookAndFeel", ex);
-                }
+                setSystemLookAndFeelSafely();
             }
         }
 
@@ -98,22 +98,27 @@ public class ThemeManager {
          */
         public static void setLookAndFeel(String name) {
             try {
+                String normalized = name == null ? "" : name.trim();
                 for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-                    if (info.getName().equalsIgnoreCase(name)) {
+                    if (info.getName().equalsIgnoreCase(normalized)) {
                         UIManager.setLookAndFeel(info.getClassName());
                         logger.info("Set LookAndFeel: {} ({})", info.getName(), info.getClassName());
                         return;
                     }
                 }
                 logger.warn("LookAndFeel not found: {}, falling back to system.", name);
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                setSystemLookAndFeelSafely();
             } catch (Exception e) {
                 logger.error("Could not set LookAndFeel: {}", name, e);
-                try {
-                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                } catch (Exception ex) {
-                    logger.error("Could not set system LookAndFeel", ex);
-                }
+                setSystemLookAndFeelSafely();
+            }
+        }
+
+        private static void setSystemLookAndFeelSafely() {
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception ex) {
+                logger.error("Could not set system LookAndFeel", ex);
             }
         }
 
@@ -126,6 +131,7 @@ public class ThemeManager {
             }
         }
     private static final Logger logger = LogManager.getLogger(ThemeManager.class);
+    private static final String OS_NAME = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT);
     // Set the system LookAndFeel for native appearance, but keep custom theming
     static {
         try {
@@ -415,12 +421,7 @@ public class ThemeManager {
             applyUIDefaults();
             updateAllWindows();
         };
-
-        if (SwingUtilities.isEventDispatchThread()) {
-            apply.run();
-        } else {
-            SwingUtilities.invokeLater(apply);
-        }
+        runOnEdt(apply);
     }
 
     /**
@@ -438,12 +439,7 @@ public class ThemeManager {
             applyUIDefaults();
             getInstance().updateAllWindows();
         };
-
-        if (SwingUtilities.isEventDispatchThread()) {
-            apply.run();
-        } else {
-            SwingUtilities.invokeLater(apply);
-        }
+        runOnEdt(apply);
     }
 
     public static Color getCustomAccentColor() {
@@ -1040,8 +1036,7 @@ public class ThemeManager {
             return new Font("Segoe UI Emoji", font.getStyle(), font.getSize());
         }
         // On Linux, fallback to DejaVu Sans if available
-        String osName = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT);
-        if (osName.contains("nux") || osName.contains("nix")) {
+        if (OS_NAME.contains("nux") || OS_NAME.contains("nix")) {
             return new Font("DejaVu Sans", font.getStyle(), font.getSize());
         }
         // Default fallback
@@ -1056,15 +1051,22 @@ public class ThemeManager {
     }
 
     private static boolean isWindows() {
-        String osName = System.getProperty("os.name", "");
-        String lower = osName.toLowerCase(java.util.Locale.ROOT);
-        return lower.contains("win");
+        return OS_NAME.contains("win");
     }
 
     private static boolean isMac() {
-        String osName = System.getProperty("os.name", "");
-        String lower = osName.toLowerCase(java.util.Locale.ROOT);
-        return lower.contains("mac");
+        return OS_NAME.contains("mac");
+    }
+
+    private static void runOnEdt(Runnable action) {
+        if (action == null) {
+            return;
+        }
+        if (SwingUtilities.isEventDispatchThread()) {
+            action.run();
+        } else {
+            SwingUtilities.invokeLater(action);
+        }
     }
 
     // =========================
@@ -1114,12 +1116,7 @@ public class ThemeManager {
                 window.repaint();
             }
         };
-
-        if (SwingUtilities.isEventDispatchThread()) {
-            refresh.run();
-        } else {
-            SwingUtilities.invokeLater(refresh);
-        }
+        runOnEdt(refresh);
     }
 
     /**

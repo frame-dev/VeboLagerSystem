@@ -2,6 +2,7 @@ package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.dialogs.MessageDialog;
+import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.SettingsUtils;
@@ -36,6 +37,7 @@ public class ConverterGUI extends JFrame {
     private Timer resultPulseTimer;
     private int resultPanelTintAlpha = 14;
     private JButton calcButton;
+    private JButton addToOrder;
 
     /**
      * Create a new converter GUI for the given article. The article's name and sell
@@ -110,6 +112,8 @@ public class ConverterGUI extends JFrame {
         unitBox.setEnabled(enabled);
         if (calcButton != null)
             calcButton.setEnabled(enabled);
+        if (addToOrder != null)
+            addToOrder.setEnabled(enabled);
 
         amountField.addActionListener(e -> calculate());
 
@@ -397,6 +401,11 @@ public class ConverterGUI extends JFrame {
         calcButton = createBigButton("Berechnen", true);
         JButton close = createBigButton("Schließen", false);
 
+        addToOrder = createBigButton("Zur Bestellung Hinzufügen", false);
+
+        addToOrder.setEnabled(false);
+        addToOrder.addActionListener(e -> addToOrder());
+
         calcButton.addActionListener(e -> calculate());
         reset.addActionListener(e -> {
             amountField.setText("");
@@ -413,8 +422,11 @@ public class ConverterGUI extends JFrame {
         });
         close.addActionListener(e -> dispose());
 
+
+
         actions.add(reset);
         actions.add(calcButton);
+        actions.add(addToOrder);
         actions.add(close);
 
         bottom.add(actions, BorderLayout.EAST);
@@ -423,6 +435,36 @@ public class ConverterGUI extends JFrame {
     }
 
     // ---------- LOGIC -------------------------------------------------------
+
+    private void addToOrder() {
+        if (article == null) {
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Kein Artikel ausgewählt.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
+            return;
+        }
+
+        String amount = amountField.getText() == null ? "" : amountField.getText().trim();
+        String unit = unitBox.getSelectedItem() == null ? "" : unitBox.getSelectedItem().toString().trim();
+        String filling = ArticleUtils.normalizeFilling(amount + " " + unit);
+
+        if (!ArticleUtils.isFillingValid(filling) || filling.isBlank()) {
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Bitte zuerst eine gültige Befüllmenge eingeben.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
+            return;
+        }
+
+        ArticleListGUI.addArticle(article, 1, null, filling);
+        if (Main.articleListGUI != null) {
+            Main.articleListGUI.refreshArticleList();
+            Main.articleListGUI.display();
+        }
+    }
 
     private void calculate() {
         if (article == null) {

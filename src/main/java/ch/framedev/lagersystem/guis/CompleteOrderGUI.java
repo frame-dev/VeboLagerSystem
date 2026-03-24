@@ -8,6 +8,7 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.UserManager;
+import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -298,7 +299,8 @@ public class CompleteOrderGUI extends JFrame {
             gbc.gridy++;
             int qty = order.getOrderedArticles().get(article.getArticleNumber());
             String articleInfo = String.format("  - %s (%s) - Menge: %d",
-                    safe(article.getName()), safe(article.getArticleNumber()), qty);
+                    safe(ArticleUtils.formatArticleWithFilling(article, order.getArticleFilling(article.getArticleNumber()))),
+                    safe(article.getArticleNumber()), qty);
             JLabel articleLabel = new JLabel(articleInfo);
             articleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
             articleLabel.setForeground(ThemeManager.getTextSecondaryColor());
@@ -367,6 +369,8 @@ public class CompleteOrderGUI extends JFrame {
                 continue;
             int ordered = selected.getOrderedArticles().get(article.getArticleNumber());
             int stock = article.getStockQuantity();
+            String articleLabel = safe(ArticleUtils.formatArticleWithFilling(article,
+                    selected.getArticleFilling(article.getArticleNumber())));
 
             int willFulfill = Math.min(stock, ordered);
             int missing = Math.max(0, ordered - stock);
@@ -374,7 +378,7 @@ public class CompleteOrderGUI extends JFrame {
             if (missing > 0) {
                 shortages.add(String.format(
                         "- %s (%s): Bestellt=%d, Lager=%d → Wird geliefert=%d, Fehlmenge=%d",
-                        safe(article.getName()),
+                        articleLabel,
                         safe(article.getArticleNumber()),
                         ordered,
                         stock,
@@ -385,7 +389,7 @@ public class CompleteOrderGUI extends JFrame {
                 if (newStockAfterFull < article.getMinStockLevel()) {
                     warnings.add(String.format(
                             "- %s (%s): Neuer Bestand=%d < Mindestbestand=%d",
-                            safe(article.getName()),
+                            articleLabel,
                             safe(article.getArticleNumber()),
                             newStockAfterFull,
                             article.getMinStockLevel()));
