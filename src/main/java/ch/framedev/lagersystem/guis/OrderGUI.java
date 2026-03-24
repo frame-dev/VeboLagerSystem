@@ -231,8 +231,8 @@ public class OrderGUI extends JFrame {
         editOrderButton.addActionListener(e -> {
             Vector<Object> rowData = getSelectedOrderData();
             if (rowData == null) {
-                new MessageDialog()                        
-                .setTitle("Keine Bestellung ausgewählt")
+                new MessageDialog()
+                        .setTitle("Keine Bestellung ausgewählt")
                         .setMessage("Bitte wählen Sie eine Bestellung zum Bearbeiten aus.")
                         .setMessageType(JOptionPane.WARNING_MESSAGE)
                         .display();
@@ -266,10 +266,10 @@ public class OrderGUI extends JFrame {
             String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
 
             int confirm = new MessageDialog().setTitle("Löschen")
-            .setMessage("Möchten Sie diese Bestellung wirklich löschen?")
-            .setOptionType(JOptionPane.YES_NO_OPTION)
-            .setMessageType(JOptionPane.WARNING_MESSAGE)
-            .displayWithOptions();
+                    .setMessage("Möchten Sie diese Bestellung wirklich löschen?")
+                    .setOptionType(JOptionPane.YES_NO_OPTION)
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .displayWithOptions();
 
             if (confirm == JOptionPane.YES_OPTION) {
                 if (OrderManager.getInstance().deleteOrder(orderId)) {
@@ -281,12 +281,14 @@ public class OrderGUI extends JFrame {
                             .setMessage("Bestellung erfolgreich gelöscht.")
                             .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                             .display();
+                    Main.logUtils.addLog(orderId + " wurde gelöscht.");
                 } else {
                     new MessageDialog()
                             .setTitle("Fehler")
                             .setMessage("Löschen fehlgeschlagen.")
                             .setMessageType(JOptionPane.ERROR_MESSAGE)
                             .display();
+                    Main.logUtils.addLog(orderId + " konnte nicht gelöscht werden.");
                 }
             }
         });
