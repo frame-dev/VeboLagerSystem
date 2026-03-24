@@ -610,6 +610,18 @@ if (file_exists($jsonFile)) {
                                         <div class="recent-field-label">Menge</div>
                                         <div class="recent-field-value"><?php echo htmlspecialchars($scan['quantity']); ?></div>
                                     </div>
+                                    <?php if (!empty($scan['size'])) { ?>
+                                        <div class="recent-field">
+                                            <div class="recent-field-label">Größe</div>
+                                            <div class="recent-field-value"><?php echo htmlspecialchars($scan['size']); ?></div>
+                                        </div>
+                                    <?php } ?>
+                                    <?php if (!empty($scan['color'])) { ?>
+                                        <div class="recent-field">
+                                            <div class="recent-field-label">Farbe</div>
+                                            <div class="recent-field-value"><?php echo htmlspecialchars($scan['color']); ?></div>
+                                        </div>
+                                    <?php } ?>
                                 <?php } else { ?>
                                     <div class="recent-field">
                                         <div class="recent-field-label">Daten</div>
@@ -619,6 +631,18 @@ if (file_exists($jsonFile)) {
                                         <div class="recent-field-label">Menge</div>
                                         <div class="recent-field-value"><?php echo htmlspecialchars($scan['quantity']); ?></div>
                                     </div>
+                                    <?php if (!empty($scan['size'])) { ?>
+                                        <div class="recent-field">
+                                            <div class="recent-field-label">Größe</div>
+                                            <div class="recent-field-value"><?php echo htmlspecialchars($scan['size']); ?></div>
+                                        </div>
+                                    <?php } ?>
+                                    <?php if (!empty($scan['color'])) { ?>
+                                        <div class="recent-field">
+                                            <div class="recent-field-label">Farbe</div>
+                                            <div class="recent-field-value"><?php echo htmlspecialchars($scan['color']); ?></div>
+                                        </div>
+                                    <?php } ?>
                                 <?php } ?>
                             </div>
                         </div>

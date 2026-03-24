@@ -604,37 +604,21 @@ function e($value)
             applyFilters();
         }
 
-        function csvEscape(value) {
-            const safe = String(value ?? '').replace(/"/g, '""');
-            return `"${safe}"`;
-        }
-
         function exportToCSV() {
-            const visibleItems = Array.from(document.querySelectorAll('.scan-item')).filter((item) => item.style.display !== 'none');
-            const rows = [
-                ['Zeitstempel', 'Daten', 'Menge', 'Typ', 'Eigenbedarf']
-            ];
-
-            visibleItems.forEach((item) => {
-                rows.push([
-                    item.dataset.timestamp || '',
-                    item.dataset.data || '',
-                    item.dataset.quantity || '',
-                    item.dataset.type || '',
-                    item.dataset.ownuse || ''
-                ]);
-            });
-
-            const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
-            const blob = new Blob([csv], {
-                type: 'text/csv;charset=utf-8;'
-            });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'scans_export.csv';
-            a.click();
-            window.URL.revokeObjectURL(url);
+            // Build export URL with current filters
+            const searchTerm = document.getElementById('searchInput') ? document.getElementById('searchInput').value : '';
+            const params = new URLSearchParams();
+            
+            if (activeFilter !== 'all') {
+                params.append('type', activeFilter);
+            }
+            
+            if (searchTerm) {
+                params.append('search', searchTerm);
+            }
+            
+            const url = 'export.php' + (params.toString() ? '?' + params.toString() : '');
+            window.location.href = url;
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -707,6 +691,9 @@ function e($value)
                     $scanQuantity = $scan['quantity'] ?? '';
                     $scanOwnUse = $scan['ownUse'] ?? 'Nein';
                     $scanTimestamp = $scan['timestamp'] ?? '';
+                    $scanSize = $scan['size'] ?? '';
+                    $scanColor = $scan['color'] ?? '';
+                    $scanId = $scan['id'] ?? '';
 
                     $parsedData = [];
                     $parts = preg_split('/[,;]/', $scanData);
@@ -726,6 +713,9 @@ function e($value)
                         data-data="<?php echo e($scanData); ?>"
                         data-quantity="<?php echo e($scanQuantity); ?>"
                         data-ownuse="<?php echo e($scanOwnUse); ?>"
+                        data-size="<?php echo e($scanSize); ?>"
+                        data-color="<?php echo e($scanColor); ?>"
+                        data-id="<?php echo e($scanId); ?>"
                     >
                         <div class="scan-header">
                             <div class="header-left">
@@ -782,6 +772,18 @@ function e($value)
                                 <div class="detail-label">Menge</div>
                                 <div class="detail-value"><?php echo e($scanQuantity); ?></div>
                             </div>
+                            <?php if (!empty($scanSize)): ?>
+                            <div class="detail-item">
+                                <div class="detail-label">Größe</div>
+                                <div class="detail-value"><?php echo e($scanSize); ?></div>
+                            </div>
+                            <?php endif; ?>
+                            <?php if (!empty($scanColor)): ?>
+                            <div class="detail-item">
+                                <div class="detail-label">Farbe</div>
+                                <div class="detail-value"><?php echo e($scanColor); ?></div>
+                            </div>
+                            <?php endif; ?>
                             <div class="detail-item">
                                 <div class="detail-label">Eigenbedarf</div>
                                 <div class="detail-value"><?php echo $scanOwnUse === 'Ja' ? 'Ja' : 'Nein'; ?></div>
