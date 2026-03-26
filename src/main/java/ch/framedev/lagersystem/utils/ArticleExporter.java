@@ -423,6 +423,8 @@ public final class ArticleExporter {
     public static void exportOrderToPDF(File file, JComboBox<String> receiverNameCombobox, JTextField receiverKontoField,
                                         JComboBox<String> senderNameCombobox, JTextField senderKontoField,
                                         JComboBox<String> departmentList, Map<Article, Integer> orderArticles,
+                                        Map<String, String> orderArticleSizes,
+                                        Map<String, String> orderArticleColors,
                                         Map<String, String> orderArticleFillings) throws IOException {
         if(file == null) throw new IllegalArgumentException("File cannot be null");
         if(receiverNameCombobox == null) throw new IllegalArgumentException("Receiver name combobox cannot be null");
@@ -605,6 +607,8 @@ public final class ArticleExporter {
                     String filling = (orderArticleFillings == null || a.getArticleNumber() == null)
                             ? ""
                             : ArticleUtils.normalizeFilling(orderArticleFillings.get(a.getArticleNumber()));
+                    String size = getNormalizedMetadata(orderArticleSizes, a);
+                    String color = getNormalizedMetadata(orderArticleColors, a);
                     double unit = safePrice(a, filling);
                     double line = unit * qty;
                     total += line;
@@ -621,6 +625,12 @@ public final class ArticleExporter {
                     cs.newLineAtOffset(margin + 5, yPosition - 10);
 
                     String articleName = ArticleUtils.formatArticleWithFilling(a, filling);
+                    if (!size.isBlank()) {
+                        articleName += " (" + size + ")";
+                    }
+                    if (!color.isBlank()) {
+                        articleName += " {" + color + "}";
+                    }
                     if (articleName.length() > 35) articleName = articleName.substring(0, 32) + "...";
                     String articleLabel = articleName + " (" + a.getArticleNumber() + ")";
 
@@ -686,6 +696,27 @@ public final class ArticleExporter {
         } catch (NoSuchMethodError | AbstractMethodError | RuntimeException ex) {
             return a.getSellPrice();
         }
+    }
+
+    private static String getNormalizedMetadata(Map<String, String> metadataMap, Article article) {
+        if (metadataMap == null || article == null || article.getArticleNumber() == null) {
+            return "";
+        }
+
+        String value = metadataMap.get(article.getArticleNumber());
+        if (value == null) {
+            return "";
+        }
+
+        String normalized = value.trim().replaceAll("\\s+", " ");
+        if (normalized.isBlank()
+                || normalized.equalsIgnoreCase("n/a")
+                || normalized.equalsIgnoreCase("null")
+                || normalized.equals("-")) {
+            return "";
+        }
+
+        return normalized;
     }
 
     /**

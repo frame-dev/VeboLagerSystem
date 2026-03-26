@@ -15,10 +15,12 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
+import javax.swing.event.TableModelEvent;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +38,11 @@ public class EditOrderGUI extends JFrame {
     private static final int CARD_PAD = 14;
     private static final int RADIUS_HEADER = 20;
     private static final int RADIUS_CARD = 18;
+    private static final int COL_ARTICLE_NUMBER = 1;
+    private static final int COL_QUANTITY = 2;
+    private static final int COL_SIZE = 3;
+    private static final int COL_FILLING = 4;
+    private static final int COL_UNIT_PRICE = 5;
 
     private final Order order;
     private final JTextField receiverNameField;
@@ -46,7 +53,9 @@ public class EditOrderGUI extends JFrame {
     private final JTextField departmentField;
 
     private final DefaultTableModel tableModel;
+    private final JTable articlesTable;
     private final Map<String, Article> articleCache = new HashMap<>();
+    private boolean updatingTableModel;
 
     /**
      * Initializes the EditOrderGUI with the given order, setting up the layout,
@@ -84,7 +93,7 @@ public class EditOrderGUI extends JFrame {
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         JLabel subtitleLabel = new JLabel(
-                UnicodeSymbols.INFO + " Empfänger/Absender, Abteilung und Artikelmengen anpassen");
+                UnicodeSymbols.INFO + " Empfänger/Absender, Abteilung sowie Menge, Größe und Füllung anpassen");
         subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
@@ -201,24 +210,25 @@ public class EditOrderGUI extends JFrame {
         rightCard.add(tableTitle, BorderLayout.NORTH);
 
         // Articles Table with modern styling
-        String[] columnNames = { "Artikel", "Menge", "Einzelpreis" };
+        String[] columnNames = { "Artikel", "Artikel-Nr.", "Menge", "Größe", "Füllung", "Einzelpreis" };
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 1; // Only quantity is editable
+                return column == COL_QUANTITY || column == COL_SIZE || column == COL_FILLING;
             }
 
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 return switch (columnIndex) {
-                    case 1 -> Integer.class;
+                    case COL_QUANTITY -> Integer.class;
                     default -> String.class;
                 };
             }
         };
 
-        JTable articlesTable = new JTable(tableModel);
+        articlesTable = new JTable(tableModel);
         applyTableTheme(articlesTable);
+        tableModel.addTableModelListener(e -> handleTableUpdate(e));
 
         JScrollPane scrollPane = new JScrollPane(articlesTable);
         scrollPane.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
@@ -231,7 +241,7 @@ public class EditOrderGUI extends JFrame {
         actionPanel.setOpaque(false);
         actionPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
-        JLabel infoLabel = new JLabel(UnicodeSymbols.BULB + " Tipp: Doppelklick zum Bearbeiten der Menge");
+        JLabel infoLabel = new JLabel(UnicodeSymbols.BULB + " Tipp: Doppelklick zum Bearbeiten von Menge, Größe oder Füllung");
         infoLabel.setFont(SettingsGUI.getFontByName(Font.ITALIC, 11));
         infoLabel.setForeground(ThemeManager.getTextSecondaryColor());
         actionPanel.add(infoLabel, BorderLayout.WEST);
@@ -286,7 +296,13 @@ public class EditOrderGUI extends JFrame {
         DefaultTableCellRenderer qtyRenderer = new DefaultTableCellRenderer();
         qtyRenderer.setHorizontalAlignment(SwingConstants.CENTER);
         if (table.getColumnModel().getColumnCount() > 1) {
-            table.getColumnModel().getColumn(1).setCellRenderer(qtyRenderer);
+            table.getColumnModel().getColumn(COL_QUANTITY).setCellRenderer(qtyRenderer);
+        }
+
+        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
+        rightRenderer.setHorizontalAlignment(SwingConstants.RIGHT);
+        if (table.getColumnModel().getColumnCount() > COL_UNIT_PRICE) {
+            table.getColumnModel().getColumn(COL_UNIT_PRICE).setCellRenderer(rightRenderer);
         }
 
         // Alternating rows + proper selection + theme-safe colors
@@ -325,6 +341,7 @@ public class EditOrderGUI extends JFrame {
         editorField.setForeground(ThemeManager.getTextPrimaryColor());
         editorField.setCaretColor(ThemeManager.getTextPrimaryColor());
         table.setDefaultEditor(Integer.class, new DefaultCellEditor(editorField));
+        table.setDefaultEditor(String.class, new DefaultCellEditor(editorField));
     }
 
     private void styleTextField(JTextField field) {
@@ -354,6 +371,7 @@ public class EditOrderGUI extends JFrame {
     }
 
     private void loadArticles() {
+        updatingTableModel = true;
         tableModel.setRowCount(0);
 
         Map<String, Integer> orderedArticles = order.getOrderedArticles();
@@ -374,18 +392,27 @@ public class EditOrderGUI extends JFrame {
         }
 
         for (Article article : articles) {
-            int quantity = orderedArticles.getOrDefault(article.getArticleNumber(), 0);
-            String articleLabel = ArticleUtils.formatArticleWithFilling(article, order.getArticleFilling(article.getArticleNumber()));
+            String articleNumber = article.getArticleNumber();
+            int quantity = orderedArticles.getOrDefault(articleNumber, 0);
+            String filling = normalizeFillingValue(order.getArticleFilling(articleNumber));
             Object[] rowData = {
-                    articleLabel + " (" + article.getArticleNumber() + ")",
+                    safe(article.getName()),
+                    articleNumber,
                     quantity,
-                    String.format("%.2f CHF", ArticleUtils.resolveEffectiveSellPrice(article, order.getArticleFilling(article.getArticleNumber())))
+                    ArticleUtils.normalizeMetadataValue(order.getArticleSize(articleNumber)),
+                    filling,
+                    formatPrice(resolveUnitPrice(article, filling))
             };
             tableModel.addRow(rowData);
         }
+        updatingTableModel = false;
     }
 
     private void saveChanges() {
+        if (articlesTable.isEditing()) {
+            articlesTable.getCellEditor().stopCellEditing();
+        }
+
         order.setReceiverName(receiverNameField.getText().trim());
         order.setReceiverKontoNumber(receiverKontoNumberField.getText().trim());
         order.setOrderDate(orderDateField.getText().trim());
@@ -393,8 +420,22 @@ public class EditOrderGUI extends JFrame {
         order.setSenderKontoNumber(senderKontoNumberField.getText().trim());
         order.setDepartment(departmentField.getText().trim());
 
-        Map<String, Integer> tableData = getTableData();
-        order.setOrderedArticles(new HashMap<>(tableData));
+        OrderTableData tableData;
+        try {
+            tableData = getTableData();
+        } catch (IllegalArgumentException ex) {
+            new MessageDialog()
+                    .setTitle("Ungültige Eingabe")
+                    .setMessage(ex.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
+            return;
+        }
+
+        order.setOrderedArticles(new LinkedHashMap<>(tableData.quantities));
+        order.setArticleSizes(new LinkedHashMap<>(tableData.sizes));
+        order.setArticleFillings(new LinkedHashMap<>(tableData.fillings));
+        order.setArticleColors(new LinkedHashMap<>(preserveArticleColors(tableData.quantities)));
 
         OrderManager orderManager = OrderManager.getInstance();
         boolean success = orderManager.updateOrder(order);
@@ -415,6 +456,7 @@ public class EditOrderGUI extends JFrame {
                         "<html><b>OK Erfolgreich gespeichert!</b><br/>Die Bestellung wurde aktualisiert.</html>")
                 .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                 .display();
+        firePropertyChange("orderUpdated", null, order);
         dispose();
     }
 
@@ -424,51 +466,142 @@ public class EditOrderGUI extends JFrame {
      * @return a map of article numbers to their corresponding quantities based on
      *         the current table data.
      */
-    public Map<String, Integer> getTableData() {
-        Map<String, Integer> data = new HashMap<>();
+    public OrderTableData getTableData() {
+        Map<String, Integer> quantities = new LinkedHashMap<>();
+        Map<String, String> sizes = new LinkedHashMap<>();
+        Map<String, String> fillings = new LinkedHashMap<>();
 
         for (int i = 0; i < tableModel.getRowCount(); i++) {
-            String articleNameWithNumber = (String) tableModel.getValueAt(i, 0);
-
-            String articleNumber = null;
-            int openParen = articleNameWithNumber.lastIndexOf('(');
-            int closeParen = articleNameWithNumber.lastIndexOf(')');
-            if (openParen != -1 && closeParen != -1 && closeParen > openParen) {
-                articleNumber = articleNameWithNumber.substring(openParen + 1, closeParen).trim();
+            String articleNumber = cellText(i, COL_ARTICLE_NUMBER);
+            if (articleNumber.isBlank()) {
+                throw new IllegalArgumentException("Artikelnummer fehlt in Zeile " + (i + 1) + ".");
             }
 
-            int quantity;
-            try {
-                Object qtyObj = tableModel.getValueAt(i, 1);
-                if (qtyObj instanceof Integer) {
-                    quantity = (Integer) qtyObj;
-                } else {
-                    quantity = Integer.parseInt(qtyObj.toString());
-                }
-            } catch (NumberFormatException | ClassCastException e) {
-                System.err.println("Invalid quantity at row " + i + ": " + tableModel.getValueAt(i, 1));
-                continue;
+            int quantity = parseQuantityForSave(i);
+            quantities.put(articleNumber, quantity);
+
+            String size = ArticleUtils.normalizeMetadataValue(cellText(i, COL_SIZE));
+            if (!size.isBlank()) {
+                sizes.put(articleNumber, size);
             }
 
-            if (quantity <= 0) {
-                continue;
-            }
-
-            if (articleNumber != null && !articleNumber.isEmpty()) {
-                data.put(articleNumber, quantity);
-            } else {
-                String articleName = articleNameWithNumber;
-                if (openParen != -1) {
-                    articleName = articleNameWithNumber.substring(0, openParen).trim();
+            String filling = normalizeFillingValue(cellText(i, COL_FILLING));
+            if (!filling.isBlank()) {
+                if (!ArticleUtils.isFillingValid(filling)) {
+                    throw new IllegalArgumentException("Ungültige Füllung in Zeile " + (i + 1)
+                            + ". Erlaubt sind z.B. \"500 ml\" oder \"1 l\".");
                 }
-                Article article = ArticleManager.getInstance().getArticleByName(articleName);
-                if (article != null) {
-                    data.put(article.getArticleNumber(), quantity);
-                }
+                fillings.put(articleNumber, filling);
             }
         }
 
-        return data;
+        return new OrderTableData(quantities, sizes, fillings);
+    }
+
+    private void handleTableUpdate(TableModelEvent event) {
+        if (updatingTableModel || event.getType() != TableModelEvent.UPDATE) {
+            return;
+        }
+
+        int firstRow = event.getFirstRow();
+        int lastRow = event.getLastRow();
+        if (firstRow < 0 || lastRow < firstRow) {
+            refreshAllPrices();
+            return;
+        }
+
+        for (int row = firstRow; row <= lastRow; row++) {
+            refreshPriceForRow(row);
+        }
+    }
+
+    private void refreshAllPrices() {
+        for (int row = 0; row < tableModel.getRowCount(); row++) {
+            refreshPriceForRow(row);
+        }
+    }
+
+    private void refreshPriceForRow(int row) {
+        if (row < 0 || row >= tableModel.getRowCount()) {
+            return;
+        }
+
+        Article article = getArticleForRow(row);
+        if (article == null) {
+            return;
+        }
+
+        String filling = normalizeFillingValue(cellText(row, COL_FILLING));
+        updatingTableModel = true;
+        tableModel.setValueAt(formatPrice(resolveUnitPrice(article, filling)), row, COL_UNIT_PRICE);
+        updatingTableModel = false;
+    }
+
+    private Article getArticleForRow(int row) {
+        String articleNumber = cellText(row, COL_ARTICLE_NUMBER);
+        if (articleNumber.isBlank()) {
+            return null;
+        }
+        Article article = articleCache.get(articleNumber);
+        if (article == null) {
+            article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+            if (article != null) {
+                articleCache.put(articleNumber, article);
+            }
+        }
+        return article;
+    }
+
+    private int parseQuantityForSave(int row) {
+        Object qtyObj = tableModel.getValueAt(row, COL_QUANTITY);
+        int quantity;
+        try {
+            if (qtyObj instanceof Integer integer) {
+                quantity = integer;
+            } else {
+                quantity = Integer.parseInt(String.valueOf(qtyObj).trim());
+            }
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Ungültige Menge in Zeile " + (row + 1) + ".");
+        }
+
+        if (quantity <= 0) {
+            throw new IllegalArgumentException("Die Menge muss in Zeile " + (row + 1) + " größer als 0 sein.");
+        }
+        return quantity;
+    }
+
+    private Map<String, String> preserveArticleColors(Map<String, Integer> quantities) {
+        Map<String, String> preservedColors = new LinkedHashMap<>();
+        for (String articleNumber : quantities.keySet()) {
+            String color = ArticleUtils.normalizeMetadataValue(order.getArticleColor(articleNumber));
+            if (!color.isBlank()) {
+                preservedColors.put(articleNumber, color);
+            }
+        }
+        return preservedColors;
+    }
+
+    private double resolveUnitPrice(Article article, String filling) {
+        try {
+            return ArticleUtils.resolveEffectiveSellPrice(article, filling);
+        } catch (RuntimeException ex) {
+            return article == null ? 0.0 : article.getSellPrice();
+        }
+    }
+
+    private String formatPrice(double price) {
+        return String.format("%.2f CHF", price);
+    }
+
+    private String cellText(int row, int column) {
+        Object value = tableModel.getValueAt(row, column);
+        return value == null ? "" : value.toString().trim();
+    }
+
+    private String normalizeFillingValue(String filling) {
+        String normalized = ArticleUtils.normalizeFilling(filling);
+        return normalized == null ? "" : normalized;
     }
 
     /**
@@ -489,5 +622,17 @@ public class EditOrderGUI extends JFrame {
      */
     private static String safe(String s) {
         return s == null ? "" : s;
+    }
+
+    public static final class OrderTableData {
+        private final Map<String, Integer> quantities;
+        private final Map<String, String> sizes;
+        private final Map<String, String> fillings;
+
+        private OrderTableData(Map<String, Integer> quantities, Map<String, String> sizes, Map<String, String> fillings) {
+            this.quantities = quantities;
+            this.sizes = sizes;
+            this.fillings = fillings;
+        }
     }
 }

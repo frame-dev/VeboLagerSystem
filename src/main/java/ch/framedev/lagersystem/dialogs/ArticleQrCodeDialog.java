@@ -312,7 +312,8 @@ public final class ArticleQrCodeDialog {
                 Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
                 if (article != null) {
                     String picked = tableModel.getValueAt(row, COL_SIZE).toString();
-                    ArticleListGUI.addArticle(article, menge, picked, null);
+                    String color = tableModel.getValueAt(row, COL_COLOR).toString();
+                    ArticleListGUI.addArticle(article, menge, picked, color, null);
                     added++;
                 }
             }
@@ -347,9 +348,19 @@ public final class ArticleQrCodeDialog {
             String data = (String) tableModel.getValueAt(selectedRow, COL_DATA);
             String artikelNr = extractArticleNumber(data);
             int menge = Integer.parseInt(tableModel.getValueAt(selectedRow, COL_QUANTITY).toString());
+            String id = tableModel.getValueAt(selectedRow, COL_ID).toString();
             Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
 
             if (article != null) {
+                if (ImportUtils.getImportedQrCodes().contains(id)) {
+                    new MessageDialog()
+                            .setTitle("Bereits verarbeitet")
+                            .setMessage("Dieser Datensatz wurde bereits verarbeitet und kann nicht erneut entfernt werden.")
+                            .setMessageType(JOptionPane.WARNING_MESSAGE)
+                            .display();
+                    return;
+                }
+
                 int confirm = new MessageDialog()
                         .setTitle("Entfernen bestätigen")
                         .setMessage(String.format("<html><b>%d Stück</b> von <b>\"%s\"</b><br/>aus dem Inventar entfernen?</html>",
@@ -359,17 +370,22 @@ public final class ArticleQrCodeDialog {
                         .displayWithOptions();
 
                 if (confirm == JOptionPane.YES_OPTION) {
-                    ArticleManager.getInstance().removeFromStock(artikelNr, menge);
-                    String id = tableModel.getValueAt(selectedRow, COL_ID).toString();
-                    if (!ImportUtils.getImportedQrCodes().contains(id)) {
-                        ImportUtils.addQrCodeImport(id);
+                    boolean removed = ArticleManager.getInstance().removeFromStock(artikelNr, menge);
+                    if (!removed) {
+                        new MessageDialog()
+                                .setTitle("Fehler")
+                                .setMessage("Der Artikel konnte nicht aus dem Inventar entfernt werden.")
+                                .setMessageType(JOptionPane.ERROR_MESSAGE)
+                                .display();
+                        return;
                     }
 
+                    ImportUtils.addQrCodeImport(id);
+                    ImportUtils.addToOwnUseList(data);
+                    tableModel.removeRow(selectedRow);
                     statusLabel.setText(menge + " Stück von \"" + article.getName() + "\" entfernt");
                     statusIcon.setForeground(ThemeManager.getErrorColor());
                     Main.logUtils.addLog("Artikel " + artikelNr + " wurde aus dem Inventar enfernt. Menge: " + menge);
-
-                    ImportUtils.addToOwnUseList(data);
                 }
             }
         });
@@ -645,9 +661,6 @@ public final class ArticleQrCodeDialog {
                 importAllBtn.setEnabled(false);
                 importBtn.setVisible(false);
                 importBtn.setEnabled(false);
-
-                removeFromInventoryBtn.setEnabled(true);
-                removeFromInventoryBtn.setVisible(true);
 
                 deleteBtn.setEnabled(true);
                 deleteBtn.setVisible(true);
@@ -997,7 +1010,6 @@ public final class ArticleQrCodeDialog {
                 continue;
             }
             Object[] rowData = createRowData(dataMap);
-            System.out.println(Arrays.toString(rowData));
             String rowId = rowData[COL_ID].toString();
             if (!importedIds.contains(rowId)) {
                 tableModel.addRow(rowData);

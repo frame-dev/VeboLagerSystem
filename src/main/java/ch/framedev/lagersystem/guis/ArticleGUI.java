@@ -1,6 +1,7 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.classes.SeperateArticle;
 import ch.framedev.lagersystem.dialogs.*;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
@@ -20,7 +21,6 @@ import java.io.*;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import static ch.framedev.lagersystem.main.Main.articleListGUI;
 import static ch.framedev.lagersystem.main.Main.logUtils;
@@ -47,6 +47,9 @@ public class ArticleGUI extends JFrame {
     private JTextField stockMaxField;
     private JTextField priceMinField;
     private JTextField priceMaxField;
+    private JTextField searchField;
+    private SwingWorker<List<Article>, Void> articleLoadWorker;
+    private int articleLoadGeneration = 0;
 
     // Category management
     private JComboBox<String> categoryFilter;
@@ -55,7 +58,6 @@ public class ArticleGUI extends JFrame {
      * Initializes the ArticleGUI, sets up the layout, loads categories and
      * articles, and configures interactions.
      */
-    @SuppressWarnings("unchecked")
     public ArticleGUI() {
         ThemeManager.getInstance().registerWindow(this);
 
@@ -186,55 +188,7 @@ public class ArticleGUI extends JFrame {
                 messageDialog.display();
                 return;
             }
-
-            int modelRow = articleTable.convertRowIndexToModel(selectedRow);
-            Object[] existingData = ((DefaultTableModel) articleTable.getModel())
-                    .getDataVector().elementAt(modelRow).toArray();
-
-            Object[] updatedRow = showUpdateArticleDialog(existingData);
-            if (updatedRow != null) {
-                if (updatedRow.length != 8)
-                    throw new IllegalArgumentException("Invalid number of fields in update article dialog");
-                // updatedRow: [artikelNr, name, details, lager, mindest, verkauf, einkauf,
-                // lieferant]
-                DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-
-                model.setValueAt(updatedRow[0], modelRow, 0); // Artikelnummer
-                model.setValueAt(updatedRow[1], modelRow, 1); // Name
-                String category = getCategoryForArticle((String) updatedRow[0]);
-                model.setValueAt(category, modelRow, 2); // Kategorie (recalculated)
-                model.setValueAt(updatedRow[2], modelRow, 3); // Details
-                model.setValueAt(updatedRow[3], modelRow, 4); // Lagerbestand
-                model.setValueAt(updatedRow[4], modelRow, 5); // Mindestbestand
-                model.setValueAt(parseDouble(updatedRow[5]), modelRow, 6); // Verkaufspreis
-                model.setValueAt(parseDouble(updatedRow[6]), modelRow, 7); // Einkaufspreis
-                model.setValueAt(updatedRow[7], modelRow, 8); // Lieferant
-
-                ArticleManager articleManager = ArticleManager.getInstance();
-                Article article = new Article(
-                        (String) updatedRow[0], // Artikelnummer
-                        (String) updatedRow[1], // Name
-                        (String) updatedRow[2], // Details
-                        (Integer) updatedRow[3], // Lagerbestand
-                        (Integer) updatedRow[4], // Mindestbestand
-                        parseDouble(updatedRow[5]), // Verkaufspreis
-                        parseDouble(updatedRow[6]), // Einkaufspreis
-                        (String) updatedRow[7] // lieferant
-                );
-
-                if (articleManager.updateArticle(article)) {
-                    loadArticles();
-                    MessageDialog messageDialog = new MessageDialog(
-                            "Artikel erfolgreich aktualisiert.",
-                            "Erfolg", 5000);
-                    messageDialog.display();
-                } else {
-                    MessageDialog messageDialog = new MessageDialog(
-                            "Fehler beim Aktualisieren des Artikels.",
-                            "Fehler", 5000);
-                    messageDialog.display();
-                }
-            }
+            editArticleAtModelRow(articleTable.convertRowIndexToModel(selectedRow));
         });
 
         // Delete Article button
@@ -274,6 +228,10 @@ public class ArticleGUI extends JFrame {
         showDetailsButton.setToolTipText("Zeigt detaillierte Lagerinformationen an");
         showDetailsButton.addActionListener(e -> showDetails());
 
+        JButton showSeparatedArticlesButton = createRoundedButton(UnicodeSymbols.CLIPBOARD + " Getrennte Artikel");
+        showSeparatedArticlesButton.setToolTipText("Zeigt alle getrennten Artikel an");
+        showSeparatedArticlesButton.addActionListener(e -> showSeparatedArticlesDialog());
+
         JPanel actionGroup = createToolbarGroup();
         actionGroup.add(addArticleButton);
         actionGroup.add(editArticleButton);
@@ -291,6 +249,7 @@ public class ArticleGUI extends JFrame {
 
         JPanel infoGroup = createToolbarGroup();
         infoGroup.add(showDetailsButton);
+        infoGroup.add(showSeparatedArticlesButton);
 
         toolbarWrapper.add(createToolbarDivider());
         toolbarWrapper.add(actionGroup);
@@ -366,19 +325,14 @@ public class ArticleGUI extends JFrame {
         searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
         searchLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
 
-        JTextField searchField = new JTextField(30);
+        searchField = new JTextField(30);
         styleTextField(searchField);
         searchField.setToolTipText("Tippen zum Filtern – Enter zum Suchen, ESC zum Leeren");
 
-        JPanel leftSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        leftSearch.setOpaque(false);
-        leftSearch.add(searchLabel);
-        leftSearch.add(searchField);
-
-        // Right-side actions (prettier grouping)
-        JPanel rightActions = new JPanel();
-        rightActions.setOpaque(false);
-        rightActions.setLayout(new BoxLayout(rightActions, BoxLayout.X_AXIS));
+        JPanel searchInputRow = new JPanel(new BorderLayout(10, 0));
+        searchInputRow.setOpaque(false);
+        searchInputRow.add(searchLabel, BorderLayout.WEST);
+        searchInputRow.add(searchField, BorderLayout.CENTER);
 
         // Count badge
         countLabel = new JLabel();
@@ -404,28 +358,29 @@ public class ArticleGUI extends JFrame {
         JButton clearBtn = createSecondaryButton(UnicodeSymbols.BROOM + " Leeren");
         clearBtn.setToolTipText("Löscht die Suchfilter und zeigt alle Artikel an");
 
-        // Assemble right side with spacing + subtle separators
-        rightActions.add(countLabel);
-        rightActions.add(Box.createHorizontalStrut(10));
-        rightActions.add(createMiniDivider());
-        rightActions.add(Box.createHorizontalStrut(10));
+        JPanel topRow = new JPanel(new BorderLayout(10, 8));
+        topRow.setOpaque(false);
+        topRow.add(searchInputRow, BorderLayout.CENTER);
+        topRow.add(countLabel, BorderLayout.EAST);
 
-        rightActions.add(addToClientOrder);
-        rightActions.add(Box.createHorizontalStrut(8));
-        rightActions.add(exportTableAsPdfBtn);
-        rightActions.add(Box.createHorizontalStrut(8));
-        rightActions.add(showWarningsBottomBtn);
+        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actionRow.setOpaque(false);
+        actionRow.add(addToClientOrder);
+        actionRow.add(exportTableAsPdfBtn);
+        actionRow.add(showWarningsBottomBtn);
+        actionRow.add(searchBtn);
+        actionRow.add(clearBtn);
 
-        rightActions.add(Box.createHorizontalStrut(10));
-        rightActions.add(createMiniDivider());
-        rightActions.add(Box.createHorizontalStrut(10));
+        JPanel searchContent = new JPanel();
+        searchContent.setOpaque(false);
+        searchContent.setLayout(new BoxLayout(searchContent, BoxLayout.Y_AXIS));
+        topRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        actionRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        searchContent.add(topRow);
+        searchContent.add(Box.createVerticalStrut(8));
+        searchContent.add(actionRow);
 
-        rightActions.add(searchBtn);
-        rightActions.add(Box.createHorizontalStrut(8));
-        rightActions.add(clearBtn);
-
-        searchCard.add(leftSearch, BorderLayout.CENTER);
-        searchCard.add(rightActions, BorderLayout.EAST);
+        searchCard.add(searchContent, BorderLayout.CENTER);
 
         JPanel searchWrapper = new JPanel(new BorderLayout());
         searchWrapper.setBackground(ThemeManager.getBackgroundColor());
@@ -434,61 +389,36 @@ public class ArticleGUI extends JFrame {
 
         add(searchWrapper, BorderLayout.SOUTH);
 
-        Runnable doSearch = () -> {
-            String text = searchField.getText().trim();
-            TableRowSorter<DefaultTableModel> sorter;
-            if (articleTable.getRowSorter() instanceof TableRowSorter) {
-                // noinspection unchecked
-                sorter = (TableRowSorter<DefaultTableModel>) articleTable.getRowSorter();
-            } else {
-                sorter = new TableRowSorter<>((DefaultTableModel) articleTable.getModel());
-                articleTable.setRowSorter(sorter);
-            }
-            if (text.isEmpty()) {
-                sorter.setRowFilter(null);
-            } else {
-                String regex = "(?i)" + Pattern.quote(text);
-                sorter.setRowFilter(RowFilter.regexFilter(regex));
-            }
-            updateCountLabel();
-        };
-
         // Live filter while typing
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                doSearch.run();
+                applyCombinedFilters();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                doSearch.run();
+                applyCombinedFilters();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                doSearch.run();
+                applyCombinedFilters();
             }
         });
 
-        searchBtn.addActionListener(e -> doSearch.run());
+        searchBtn.addActionListener(e -> applyCombinedFilters());
         clearBtn.addActionListener(e -> {
             searchField.setText("");
-            if (articleTable.getRowSorter() instanceof TableRowSorter) {
-                ((TableRowSorter<?>) articleTable.getRowSorter()).setRowFilter(null);
-            }
-            updateCountLabel();
+            applyCombinedFilters();
         });
 
-        searchField.addActionListener(e -> doSearch.run());
+        searchField.addActionListener(e -> applyCombinedFilters());
         // ESC clears
         searchField.registerKeyboardAction(
                 e -> {
                     searchField.setText("");
-                    if (articleTable.getRowSorter() instanceof TableRowSorter) {
-                        ((TableRowSorter<?>) articleTable.getRowSorter()).setRowFilter(null);
-                    }
-                    updateCountLabel();
+                    applyCombinedFilters();
                 },
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_FOCUSED);
@@ -508,6 +438,9 @@ public class ArticleGUI extends JFrame {
 
     @Override
     public void dispose() {
+        if (articleLoadWorker != null && !articleLoadWorker.isDone()) {
+            articleLoadWorker.cancel(true);
+        }
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
@@ -692,10 +625,39 @@ public class ArticleGUI extends JFrame {
     }
 
     private void loadArticles() {
-        ArticleManager articleManager = ArticleManager.getInstance();
-        List<Article> articles = articleManager.getAllArticles();
-        if (articles == null)
-            return;
+        int loadGeneration = ++articleLoadGeneration;
+        if (articleLoadWorker != null && !articleLoadWorker.isDone()) {
+            articleLoadWorker.cancel(true);
+        }
+        if (countLabel != null) {
+            countLabel.setText("Artikel werden geladen...");
+        }
+        articleLoadWorker = new SwingWorker<>() {
+            @Override
+            protected List<Article> doInBackground() {
+                List<Article> articles = ArticleManager.getInstance().getAllArticles();
+                return articles != null ? articles : java.util.Collections.emptyList();
+            }
+
+            @Override
+            protected void done() {
+                if (isCancelled() || loadGeneration != articleLoadGeneration) {
+                    return;
+                }
+                try {
+                    populateArticles(get());
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    updateCountLabel();
+                } catch (java.util.concurrent.ExecutionException ex) {
+                    updateCountLabel();
+                }
+            }
+        };
+        articleLoadWorker.execute();
+    }
+
+    private void populateArticles(List<Article> articles) {
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
         isUpdatingTable = true;
         model.setRowCount(0);
@@ -716,7 +678,7 @@ public class ArticleGUI extends JFrame {
             });
         }
         isUpdatingTable = false;
-        updateCountLabel();
+        applyCombinedFilters();
     }
 
     private void updateCountLabel() {
@@ -795,6 +757,68 @@ public class ArticleGUI extends JFrame {
         MessageDialog messageDialog = new MessageDialog(message, "Ungültige Eingabe", 5000);
         messageDialog.display();
         reloadRowFromDb(articleNumber, modelRow);
+    }
+
+    private void editArticleAtModelRow(int modelRow) {
+        DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
+        Object[] existingData = model.getDataVector().elementAt(modelRow).toArray();
+        Object[] updatedRow = showUpdateArticleDialog(existingData);
+        if (updatedRow == null) {
+            return;
+        }
+        if (updatedRow.length != 8) {
+            throw new IllegalArgumentException("Invalid number of fields in update article dialog");
+        }
+
+        Article updatedArticle = buildArticleFromDialogRow(updatedRow);
+        if (updatedArticle == null) {
+            new MessageDialog("Ungültige Artikeldaten. Bitte Eingaben prüfen.", "Fehler", 5000).display();
+            reloadRowFromDb(String.valueOf(model.getValueAt(modelRow, 0)), modelRow);
+            return;
+        }
+
+        if (ArticleManager.getInstance().updateArticle(updatedArticle)) {
+            applyArticleToTableRow(model, modelRow, updatedArticle);
+            applyCombinedFilters();
+            new MessageDialog("Artikel erfolgreich aktualisiert.", "Erfolg", 5000).display();
+        } else {
+            new MessageDialog("Fehler beim Aktualisieren des Artikels.", "Fehler", 5000).display();
+            reloadRowFromDb(String.valueOf(model.getValueAt(modelRow, 0)), modelRow);
+        }
+    }
+
+    private Article buildArticleFromDialogRow(Object[] updatedRow) {
+        Integer stockQuantity = parseInteger(updatedRow[3]);
+        Integer minStock = parseInteger(updatedRow[4]);
+        Double sellPrice = parseDouble(updatedRow[5]);
+        Double purchasePrice = parseDouble(updatedRow[6]);
+        if (stockQuantity == null || minStock == null || sellPrice == null || purchasePrice == null) {
+            return null;
+        }
+
+        return new Article(
+                String.valueOf(updatedRow[0]),
+                String.valueOf(updatedRow[1]),
+                String.valueOf(updatedRow[2]),
+                stockQuantity,
+                minStock,
+                sellPrice,
+                purchasePrice,
+                String.valueOf(updatedRow[7]));
+    }
+
+    private void applyArticleToTableRow(DefaultTableModel model, int modelRow, Article article) {
+        isUpdatingTable = true;
+        model.setValueAt(article.getArticleNumber(), modelRow, 0);
+        model.setValueAt(article.getName(), modelRow, 1);
+        model.setValueAt(getCategoryForArticle(article.getArticleNumber()), modelRow, 2);
+        model.setValueAt(article.getDetails(), modelRow, 3);
+        model.setValueAt(article.getStockQuantity(), modelRow, 4);
+        model.setValueAt(article.getMinStockLevel(), modelRow, 5);
+        model.setValueAt(article.getSellPrice(), modelRow, 6);
+        model.setValueAt(article.getPurchasePrice(), modelRow, 7);
+        model.setValueAt(article.getVendorName(), modelRow, 8);
+        isUpdatingTable = false;
     }
 
     private void reloadRowFromDb(String articleNumber, int modelRow) {
@@ -1227,18 +1251,7 @@ public class ArticleGUI extends JFrame {
             int sel = articleTable.getSelectedRow();
             if (sel == -1)
                 return;
-            int modelRow = articleTable.convertRowIndexToModel(sel);
-            Object[] existingData = ((DefaultTableModel) articleTable.getModel()).getDataVector().elementAt(modelRow)
-                    .toArray();
-            Object[] updated = showUpdateArticleDialog(existingData);
-            if (updated != null) {
-                DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
-                for (int i = 0; i < updated.length; i++)
-                    model.setValueAt(updated[i], modelRow, i);
-                ArticleManager.getInstance().updateArticle(new Article(
-                        (String) updated[0], (String) updated[1], (String) updated[2], (Integer) updated[3],
-                        (Integer) updated[4], (Double) updated[5], (Double) updated[6], (String) updated[7]));
-            }
+            editArticleAtModelRow(articleTable.convertRowIndexToModel(sel));
         });
 
         deleteItem.addActionListener(e -> deleteSelectedArticle());
@@ -1255,9 +1268,146 @@ public class ArticleGUI extends JFrame {
         DisplayWarningDialog.showAllWarnings(this);
     }
 
+    private void showSeparatedArticlesDialog() {
+        List<SeperateArticle> separatedArticles = ArticleManager.getInstance().getAllSeperateArticles();
+        if (separatedArticles == null || separatedArticles.isEmpty()) {
+            new MessageDialog()
+                    .setTitle("Keine getrennten Artikel")
+                    .setMessage("Es sind aktuell keine getrennten Artikel vorhanden.")
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
+            return;
+        }
+
+        ThemeManager.applyUIDefaults();
+
+        JDialog dialog = new JDialog(this, UnicodeSymbols.CLIPBOARD + " Getrennte Artikel", true);
+        dialog.setSize(820, 560);
+        dialog.setMinimumSize(new Dimension(720, 460));
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout(0, 0));
+
+        JPanel root = new JPanel(new BorderLayout(0, 12));
+        root.setBackground(ThemeManager.getBackgroundColor());
+        root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+
+        RoundedPanel headerCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        headerCard.setLayout(new BorderLayout(0, 6));
+        headerCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(16, 18, 16, 18)));
+
+        JLabel titleLabel = new JLabel(UnicodeSymbols.CLIPBOARD + " Getrennte Artikel");
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JLabel subtitleLabel = new JLabel(separatedArticles.size() + " Einträge aus der Datenbank");
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerText.add(titleLabel);
+        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(subtitleLabel);
+        headerCard.add(headerText, BorderLayout.CENTER);
+
+        DefaultTableModel model = new DefaultTableModel(new Object[] {
+                "Index", "Artikelnummer", "Zusatzdetails"
+        }, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                return columnIndex == 0 ? Integer.class : String.class;
+            }
+        };
+
+        for (SeperateArticle separatedArticle : separatedArticles) {
+            if (separatedArticle == null) {
+                continue;
+            }
+            model.addRow(new Object[] {
+                    separatedArticle.getIndex(),
+                    separatedArticle.getArticleNumber(),
+                    separatedArticle.getOtherDetails()
+            });
+        }
+
+        JTable table = new JTable(model);
+        table.setRowHeight(28);
+        table.setFillsViewportHeight(true);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setAutoCreateRowSorter(true);
+        table.getTableHeader().setReorderingAllowed(false);
+        table.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
+        table.setBackground(ThemeManager.getCardBackgroundColor());
+        table.setForeground(ThemeManager.getTextPrimaryColor());
+        table.setGridColor(ThemeManager.getBorderColor());
+        table.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
+        table.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
+
+        JTableHeader header = table.getTableHeader();
+        header.setBackground(ThemeManager.getTableHeaderBackground());
+        header.setForeground(ThemeManager.getTableHeaderForeground());
+        header.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+
+        TableColumnModel columnModel = table.getColumnModel();
+        columnModel.getColumn(0).setPreferredWidth(90);
+        columnModel.getColumn(1).setPreferredWidth(180);
+        columnModel.getColumn(2).setPreferredWidth(480);
+
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
+        columnModel.getColumn(0).setCellRenderer(centerRenderer);
+        columnModel.getColumn(1).setCellRenderer(centerRenderer);
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+        scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
+
+        RoundedPanel tableCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        tableCard.setLayout(new BorderLayout());
+        tableCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
+        tableCard.add(scrollPane, BorderLayout.CENTER);
+
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        footer.setOpaque(false);
+        JButton closeButton = createSecondaryButton(UnicodeSymbols.CLEAR + " Schließen");
+        closeButton.addActionListener(e -> dialog.dispose());
+        footer.add(closeButton);
+
+        root.add(headerCard, BorderLayout.NORTH);
+        root.add(tableCard, BorderLayout.CENTER);
+        root.add(footer, BorderLayout.SOUTH);
+
+        dialog.setContentPane(root);
+        dialog.getRootPane().setDefaultButton(closeButton);
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW);
+        dialog.setVisible(true);
+    }
+
     private void applyAdvancedFilters() {
+        applyCombinedFilters();
+    }
+
+    private void applyCombinedFilters() {
         String selectedCategory = categoryFilter == null ? null : (String) categoryFilter.getSelectedItem();
-        String vendorQuery = vendorFilterField == null ? "" : vendorFilterField.getText().trim().toLowerCase();
+        String searchQuery = searchField == null ? "" : searchField.getText().trim().toLowerCase(Locale.ROOT);
+        String vendorQuery = vendorFilterField == null ? "" : vendorFilterField.getText().trim().toLowerCase(Locale.ROOT);
         Integer stockMin = parseIntegerFilter(stockMinField);
         Integer stockMax = parseIntegerFilter(stockMaxField);
         Double priceMin = parseDoubleFilter(priceMinField);
@@ -1271,10 +1421,27 @@ public class ArticleGUI extends JFrame {
         }
 
         String categoryFilterValue = selectedCategory == null ? "Alle Kategorien" : selectedCategory;
+        boolean hasFilters = !searchQuery.isEmpty()
+                || !"Alle Kategorien".equals(categoryFilterValue)
+                || !vendorQuery.isEmpty()
+                || stockMin != null
+                || stockMax != null
+                || priceMin != null
+                || priceMax != null;
+
+        if (!hasFilters) {
+            sorter.setRowFilter(null);
+            updateCountLabel();
+            return;
+        }
 
         RowFilter<DefaultTableModel, Integer> rowFilter = new RowFilter<>() {
             @Override
             public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                if (!searchQuery.isEmpty() && !matchesSearchQuery(entry, searchQuery)) {
+                    return false;
+                }
+
                 if (!"Alle Kategorien".equals(categoryFilterValue)) {
                     String categoryValue = entry.getStringValue(2);
                     if (!categoryFilterValue.equals(categoryValue)) {
@@ -1319,6 +1486,17 @@ public class ArticleGUI extends JFrame {
 
         sorter.setRowFilter(rowFilter);
         updateCountLabel();
+    }
+
+    private boolean matchesSearchQuery(RowFilter.Entry<? extends DefaultTableModel, ? extends Integer> entry,
+            String searchQuery) {
+        for (int i = 0; i < entry.getValueCount(); i++) {
+            String value = entry.getStringValue(i);
+            if (value != null && value.toLowerCase(Locale.ROOT).contains(searchQuery)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Integer parseIntegerFilter(JTextField field) {
@@ -1556,15 +1734,5 @@ public class ArticleGUI extends JFrame {
         label.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)));
-    }
-
-    private JComponent createMiniDivider() {
-        JPanel p = new JPanel();
-        p.setOpaque(true);
-        p.setBackground(ThemeManager.getBorderColor());
-        p.setPreferredSize(new Dimension(1, 22));
-        p.setMinimumSize(new Dimension(1, 22));
-        p.setMaximumSize(new Dimension(1, 22));
-        return p;
     }
 }

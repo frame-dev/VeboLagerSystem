@@ -19,9 +19,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ImportUtils {
 
@@ -455,38 +457,117 @@ public class ImportUtils {
 
     public static void loadSeparatedArticles() {
         ArticleManager articleManager = ArticleManager.getInstance();
-        List<SeperateArticle> jsonStrings = new ArrayList<>();
-        for(Article article : articleManager.getAllArticles()) {
-            if(ArticleUtils.isArticleSeparated(article.getArticleNumber())) {
-                jsonStrings.addAll(ArticleUtils.newSeperatedArticles(article.getArticleNumber()));
-            }
-        }
-        int updated = 0;
+        List<SeperateArticle> separatedArticlesForFile = new ArrayList<>();
         int inserted = 0;
-        JsonElement jsonElement = new JsonArray();
-        for(SeperateArticle seperateArticle : jsonStrings) {
-            jsonElement.getAsJsonArray().add(new Gson().toJsonTree(seperateArticle));
-            if(!articleManager.existsSeperateArticleByDetail(seperateArticle.getArticleNumber(), seperateArticle.getOtherDetails())) {
-                if(!articleManager.insertSeperateArticle(seperateArticle)) {
-                    Main.logUtils.addLog("Failed to insert separated article with number " + seperateArticle.getArticleNumber() + " and detail '" + seperateArticle.getOtherDetails() + "' into database");
-                } else {
-                    inserted++;
+        int deleted = 0;
+
+        List<Article> articles = articleManager.getAllArticles();
+        if (articles == null) {
+            articles = List.of();
+        }
+        Set<String> knownArticleNumbers = new HashSet<>();
+        for (Article article : articles) {
+            if (article != null && article.getArticleNumber() != null && !article.getArticleNumber().isBlank()) {
+                knownArticleNumbers.add(article.getArticleNumber());
+            }
+        }
+
+        for (Article article : articles) {
+            if (article == null || article.getArticleNumber() == null || article.getArticleNumber().isBlank()) {
+                continue;
+            }
+
+            String articleNumber = article.getArticleNumber();
+            List<SeperateArticle> existingArticles = articleManager.getAllFromArticleNumber(articleNumber);
+
+            if (!ArticleUtils.isArticleSeparated(articleNumber)) {
+                for (SeperateArticle existingArticle : existingArticles) {
+                    if (existingArticle == null || existingArticle.getOtherDetails() == null) {
+                        continue;
+                    }
+                    if (articleManager.deleteSeperateArticle(articleNumber, existingArticle.getOtherDetails())) {
+                        deleted++;
+                    } else {
+                        Main.logUtils.addLog("Failed to delete separated article with number " + articleNumber
+                                + " and detail '" + existingArticle.getOtherDetails() + "' from database");
+                    }
                 }
-            } else {
-                if(!articleManager.updateSeperateArticle(seperateArticle)) {
-                    Main.logUtils.addLog("Failed to update separated article with number " + seperateArticle.getArticleNumber() + " and detail '" + seperateArticle.getOtherDetails() + "' in database");
-                } else {
-                    updated++;
+                continue;
+            }
+
+            List<SeperateArticle> desiredArticles = ArticleUtils.newSeperatedArticles(articleNumber);
+            separatedArticlesForFile.addAll(desiredArticles);
+
+            Map<String, SeperateArticle> existingByDetail = new HashMap<>();
+            for (SeperateArticle existingArticle : existingArticles) {
+                if (existingArticle == null || existingArticle.getOtherDetails() == null
+                        || existingArticle.getOtherDetails().isBlank()) {
+                    continue;
+                }
+                existingByDetail.putIfAbsent(existingArticle.getOtherDetails(), existingArticle);
+            }
+
+            Set<String> desiredDetails = new HashSet<>();
+            for (SeperateArticle desiredArticle : desiredArticles) {
+                if (desiredArticle == null || desiredArticle.getOtherDetails() == null
+                        || desiredArticle.getOtherDetails().isBlank()) {
+                    continue;
+                }
+                desiredDetails.add(desiredArticle.getOtherDetails());
+                if (!existingByDetail.containsKey(desiredArticle.getOtherDetails())) {
+                    if (!articleManager.insertSeperateArticle(desiredArticle)) {
+                        Main.logUtils.addLog("Failed to insert separated article with number "
+                                + desiredArticle.getArticleNumber() + " and detail '"
+                                + desiredArticle.getOtherDetails() + "' into database");
+                    } else {
+                        inserted++;
+                    }
                 }
             }
-            Main.logUtils.addLog("Loaded separated article with number " + seperateArticle.getArticleNumber() + " and detail '" + seperateArticle.getOtherDetails() + "' into database");
+
+            for (SeperateArticle existingArticle : existingArticles) {
+                if (existingArticle == null || existingArticle.getOtherDetails() == null
+                        || existingArticle.getOtherDetails().isBlank()) {
+                    continue;
+                }
+                if (!desiredDetails.contains(existingArticle.getOtherDetails())) {
+                    if (articleManager.deleteSeperateArticle(articleNumber, existingArticle.getOtherDetails())) {
+                        deleted++;
+                    } else {
+                        Main.logUtils.addLog("Failed to delete separated article with number " + articleNumber
+                                + " and detail '" + existingArticle.getOtherDetails() + "' from database");
+                    }
+                } else {
+                    existingByDetail.remove(existingArticle.getOtherDetails());
+                }
+            }
         }
+
+        for (SeperateArticle existingArticle : articleManager.getAllSeperateArticles()) {
+            if (existingArticle == null || existingArticle.getArticleNumber() == null
+                    || existingArticle.getArticleNumber().isBlank() || existingArticle.getOtherDetails() == null
+                    || existingArticle.getOtherDetails().isBlank()) {
+                continue;
+            }
+            if (!knownArticleNumbers.contains(existingArticle.getArticleNumber())) {
+                if (articleManager.deleteSeperateArticle(existingArticle.getArticleNumber(),
+                        existingArticle.getOtherDetails())) {
+                    deleted++;
+                } else {
+                    Main.logUtils.addLog("Failed to delete orphaned separated article with number "
+                            + existingArticle.getArticleNumber() + " and detail '"
+                            + existingArticle.getOtherDetails() + "' from database");
+                }
+            }
+        }
+
         try (FileWriter writer = new FileWriter(SEPERATED_ARTICLES_FILE)) {
-            new GsonBuilder().setPrettyPrinting().create().toJson(jsonElement, writer);
+            new GsonBuilder().setPrettyPrinting().create().toJson(separatedArticlesForFile, writer);
         } catch (IOException e) {
             Main.logUtils.addLog("Failed to write separated articles to file");
             LOGGER.error("Failed to write separated articles to file", e);
         }
-        Main.logUtils.addLog("Inserted " + inserted + " separated articles and updated " + updated + " separated articles into database");
+        Main.logUtils.addLog("Inserted " + inserted + " separated articles and deleted " + deleted
+                + " stale separated articles in database");
     }
 }

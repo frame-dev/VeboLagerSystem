@@ -118,6 +118,24 @@ public class OrderExport {
             }
         }
 
+        exportOrderToFile(outputFile, order);
+    }
+
+    public static void exportOrderToFile(File outputFile, Order order) {
+        if (order == null) {
+            new MessageDialog()
+                    .setTitle("Keine Bestellung")
+                    .setMessage("Keine Bestellung zum Exportieren vorhanden.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
+            return;
+        }
+        if (outputFile == null) {
+            throw new IllegalArgumentException("Output file cannot be null");
+        }
+
+        outputFile = ensurePdfExtension(outputFile);
+
         String orderId = safe(order.getOrderId());
         Map<String, Integer> orderedArticles = order.getOrderedArticles();
         String receiverName = safe(order.getReceiverName());
@@ -200,7 +218,7 @@ public class OrderExport {
                             cs.fill();
                         }
 
-                        drawArticleRow(cs, fonts, article, filling, qty, unit, line, ps.y, columns);
+                        drawArticleRow(cs, fonts, order, article, qty, unit, line, ps.y, columns);
 
                         ps.y -= ROW_HEIGHT;
                         alternateRow = !alternateRow;
@@ -323,10 +341,10 @@ public class OrderExport {
         return y - 25f;
     }
 
-    private static void drawArticleRow(PDPageContentStream cs, Fonts fonts, Article article, String filling, int qty,
+    private static void drawArticleRow(PDPageContentStream cs, Fonts fonts, Order order, Article article, int qty,
                        double unitPrice, double lineTotal, float y,
                        TableColumns columns) throws Exception {
-    String articleLabel = truncate(ArticleUtils.formatArticleWithFilling(article, filling), 34)
+    String articleLabel = truncate(order.formatArticleLabel(article), 34)
             + " (" + safe(article.getArticleNumber()) + ")";
 
     text(cs, fonts.regular, 9, COLOR_TEXT, columns.articleX(), y - 10, articleLabel);

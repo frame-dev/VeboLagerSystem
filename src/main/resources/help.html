@@ -7,20 +7,23 @@
     <title>Hilfe zur Anwendung</title>
     <style>
         :root {
-            --bg: #0b1220;
-            --surface: rgba(255, 255, 255, 0.06);
-            --surface-strong: rgba(255, 255, 255, 0.10);
-            --text: rgba(255, 255, 255, 0.92);
-            --muted: rgba(255, 255, 255, 0.70);
-            --border: rgba(255, 255, 255, 0.14);
-            --accent: #7c3aed;
-            --accent-2: #22c55e;
-            --shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
-            --radius: 18px;
-            --code: rgba(255, 255, 255, 0.06);
-            --code-border: rgba(255, 255, 255, 0.12);
-            --link: rgba(255, 255, 255, 0.92);
-            --link-muted: rgba(255, 255, 255, 0.75);
+            --bg: #f5efe4;
+            --bg-soft: #fcf8f1;
+            --surface: rgba(255, 251, 245, 0.80);
+            --surface-strong: rgba(255, 253, 248, 0.94);
+            --text: #1f2a29;
+            --muted: #5d6c69;
+            --border: rgba(36, 55, 50, 0.12);
+            --accent: #b85b34;
+            --accent-2: #1f6a5c;
+            --accent-3: #d79b42;
+            --shadow: 0 28px 70px rgba(93, 74, 43, 0.10);
+            --shadow-soft: 0 14px 34px rgba(93, 74, 43, 0.08);
+            --radius: 24px;
+            --code: #243635;
+            --code-border: rgba(255, 255, 255, 0.08);
+            --link: #1f6a5c;
+            --link-muted: #4e615d;
         }
 
         * {
@@ -28,8 +31,7 @@
         }
 
         html {
-            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji",
-                "Segoe UI Emoji";
+            font-family: "Avenir Next", "Trebuchet MS", "Segoe UI Variable Text", sans-serif;
             scroll-behavior: smooth;
         }
 
@@ -38,78 +40,140 @@
             min-height: 100vh;
             color: var(--text);
             background:
-                radial-gradient(900px 500px at 15% 10%, rgba(124, 58, 237, 0.25), transparent 60%),
-                radial-gradient(800px 450px at 80% 20%, rgba(34, 197, 94, 0.18), transparent 60%),
-                radial-gradient(700px 420px at 50% 95%, rgba(59, 130, 246, 0.16), transparent 55%),
-                linear-gradient(180deg, var(--bg), #060a12 70%);
+                radial-gradient(900px 520px at 8% 10%, rgba(184, 91, 52, 0.16), transparent 60%),
+                radial-gradient(840px 460px at 88% 12%, rgba(31, 106, 92, 0.16), transparent 58%),
+                radial-gradient(760px 440px at 50% 100%, rgba(215, 155, 66, 0.13), transparent 60%),
+                linear-gradient(180deg, #fffdf8, var(--bg) 52%, #efe5d6 100%);
         }
 
         .page {
-            max-width: 980px;
+            max-width: 1160px;
             margin: 0 auto;
-            padding: 44px 22px 72px;
+            padding: 42px 24px 82px;
         }
 
         header {
             display: flex;
             flex-direction: column;
-            gap: 14px;
-            margin-bottom: 22px;
+            gap: 18px;
+            margin-bottom: 26px;
         }
 
         .title {
+            position: relative;
             display: flex;
-            align-items: flex-start;
+            align-items: stretch;
             justify-content: space-between;
-            gap: 14px;
+            gap: 22px;
+            padding: 30px 32px;
+            border-radius: 30px;
+            border: 1px solid rgba(184, 91, 52, 0.18);
+            background:
+                linear-gradient(135deg, rgba(255, 249, 241, 0.98), rgba(249, 242, 231, 0.92)),
+                radial-gradient(circle at top right, rgba(31, 106, 92, 0.08), transparent 38%);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .title::after {
+            content: "";
+            position: absolute;
+            inset: auto -50px -60px auto;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(184, 91, 52, 0.16), transparent 68%);
+            pointer-events: none;
+        }
+
+        .title>div:first-child {
+            position: relative;
+            z-index: 1;
+            max-width: 720px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: rgba(31, 106, 92, 0.10);
+            border: 1px solid rgba(31, 106, 92, 0.14);
+            color: var(--accent-2);
+            font-size: 0.84rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .eyebrow::before {
+            content: "";
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent-3));
+            box-shadow: 0 0 0 5px rgba(184, 91, 52, 0.12);
         }
 
         h1 {
             margin: 0;
-            font-size: clamp(1.8rem, 2.3vw + 1.2rem, 2.6rem);
+            font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+            font-size: clamp(2.4rem, 3vw + 1.2rem, 4rem);
             letter-spacing: -0.02em;
-            line-height: 1.1;
+            line-height: 0.98;
+            max-width: 10ch;
+        }
+
+        h1 span {
+            color: var(--accent);
         }
 
         .subtitle {
             margin: 0;
             color: var(--muted);
-            line-height: 1.5;
-            max-width: 70ch;
+            line-height: 1.75;
+            max-width: 64ch;
+            font-size: 1.03rem;
         }
 
         .badges {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            margin-top: 8px;
+            margin-top: 4px;
         }
 
         .badges img {
-            height: 22px;
+            height: 24px;
             width: auto;
-            border-radius: 6px;
+            border-radius: 999px;
+            box-shadow: var(--shadow-soft);
         }
 
         blockquote {
             margin: 0;
-            padding: 12px 14px;
-            border-radius: 14px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.10);
+            padding: 18px 20px;
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(255, 252, 247, 0.90), rgba(247, 240, 229, 0.88));
+            border: 1px solid rgba(31, 106, 92, 0.12);
+            box-shadow: var(--shadow-soft);
             color: var(--muted);
+            border-left: 5px solid var(--accent-2);
         }
 
         hr {
             border: none;
             height: 1px;
-            background: rgba(255, 255, 255, 0.10);
+            background: rgba(36, 55, 50, 0.10);
             margin: 18px 0;
         }
 
         a {
             color: var(--link);
             text-decoration: none;
+            text-underline-offset: 3px;
         }
 
         a:hover {
@@ -118,41 +182,42 @@
 
         code {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            font-size: 0.95em;
-            padding: 0.15em 0.35em;
-            border-radius: 8px;
-            background: var(--code);
-            border: 1px solid var(--code-border);
+            font-size: 0.93em;
+            padding: 0.18em 0.45em;
+            border-radius: 10px;
+            background: rgba(31, 106, 92, 0.08);
+            border: 1px solid rgba(31, 106, 92, 0.12);
         }
 
         pre {
             position: relative;
-            margin: 12px 0;
-            padding: 14px;
-            border-radius: 14px;
+            margin: 14px 0;
+            padding: 16px;
+            border-radius: 20px;
             overflow: auto;
-            background: var(--code);
+            background:
+                linear-gradient(180deg, #203231, #182726);
             border: 1px solid var(--code-border);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 14px 24px rgba(26, 39, 38, 0.16);
         }
 
         pre code {
             padding: 0;
             border: none;
             background: transparent;
-            font-size: 0.9rem;
-            color: rgba(255, 255, 255, 0.88);
+            font-size: 0.92rem;
+            color: rgba(247, 246, 241, 0.92);
         }
 
         .copy-btn {
             position: absolute;
             top: 10px;
             right: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            background: rgba(255, 255, 255, 0.06);
-            color: rgba(255, 255, 255, 0.86);
-            padding: 8px 10px;
-            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.92);
+            padding: 8px 11px;
+            border-radius: 999px;
             font-size: 0.85rem;
             cursor: pointer;
             display: inline-flex;
@@ -164,7 +229,7 @@
 
         .copy-btn:hover {
             transform: translateY(-1px);
-            background: rgba(255, 255, 255, 0.10);
+            background: rgba(255, 255, 255, 0.16);
             border-color: rgba(255, 255, 255, 0.24);
         }
 
@@ -188,12 +253,12 @@
             transform: translateX(-50%);
             padding: 10px 12px;
             border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            background: rgba(0, 0, 0, 0.55);
-            color: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(31, 106, 92, 0.18);
+            background: rgba(27, 51, 48, 0.88);
+            color: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.16);
             font-size: 0.9rem;
             opacity: 0;
             pointer-events: none;
@@ -212,37 +277,48 @@
         .kpi {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 10px;
-            margin-top: 12px;
+            gap: 14px;
+            margin-top: 4px;
         }
 
         .kpi .card {
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 12px;
+            border: 1px solid rgba(36, 55, 50, 0.09);
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(255, 252, 246, 0.95), rgba(248, 242, 232, 0.92));
+            padding: 16px;
+            box-shadow: var(--shadow-soft);
         }
 
         .kpi .label {
-            font-size: 0.82rem;
-            color: rgba(255, 255, 255, 0.70);
+            font-size: 0.78rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
 
         .kpi .value {
-            margin-top: 4px;
+            margin-top: 8px;
             font-weight: 700;
             letter-spacing: -0.01em;
+            font-size: 1.08rem;
         }
 
         details {
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.05);
-            padding: 12px 12px;
+            border: 1px solid rgba(36, 55, 50, 0.10);
+            border-radius: 22px;
+            background: rgba(255, 252, 247, 0.78);
+            padding: 14px 15px;
+            box-shadow: var(--shadow-soft);
+            transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
         }
 
         details+details {
-            margin-top: 10px;
+            margin-top: 12px;
+        }
+
+        details[open] {
+            border-color: rgba(184, 91, 52, 0.22);
+            background: linear-gradient(180deg, rgba(255, 251, 245, 0.95), rgba(247, 240, 229, 0.90));
         }
 
         summary {
@@ -253,6 +329,8 @@
             justify-content: space-between;
             gap: 12px;
             font-weight: 700;
+            color: var(--text);
+            font-size: 1rem;
         }
 
         summary::-webkit-details-marker {
@@ -264,74 +342,93 @@
             font-size: 0.78rem;
             padding: 5px 10px;
             border-radius: 999px;
-            background: rgba(34, 197, 94, 0.10);
-            border: 1px solid rgba(34, 197, 94, 0.35);
-            color: rgba(255, 255, 255, 0.82);
+            background: rgba(31, 106, 92, 0.10);
+            border: 1px solid rgba(31, 106, 92, 0.16);
+            color: var(--accent-2);
             white-space: nowrap;
         }
 
         .screenshot-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-            margin-top: 10px;
+            gap: 14px;
+            margin-top: 14px;
         }
 
         .shot {
-            border: 1px dashed rgba(255, 255, 255, 0.22);
-            border-radius: 16px;
-            padding: 14px;
-            background: rgba(255, 255, 255, 0.03);
-            color: rgba(255, 255, 255, 0.72);
+            position: relative;
+            border: 1px solid rgba(36, 55, 50, 0.09);
+            border-radius: 22px;
+            padding: 18px;
+            background:
+                linear-gradient(160deg, rgba(255, 253, 249, 0.96), rgba(247, 240, 229, 0.88));
+            color: var(--muted);
+            box-shadow: var(--shadow-soft);
+            min-height: 118px;
+        }
+
+        .shot::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 100%;
+            height: 5px;
+            border-radius: 22px 22px 0 0;
+            background: linear-gradient(90deg, var(--accent), var(--accent-3), var(--accent-2));
         }
 
         .shot .title {
             font-weight: 700;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
+            color: var(--text);
         }
 
         .chip {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 12px;
-            border: 1px solid var(--border);
+            padding: 12px 16px;
+            border: 1px solid rgba(36, 55, 50, 0.12);
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--muted);
-            font-size: 0.9rem;
+            background: rgba(255, 252, 246, 0.92);
+            color: var(--text);
+            font-size: 0.92rem;
+            font-weight: 600;
             white-space: nowrap;
             height: fit-content;
+            box-shadow: var(--shadow-soft);
+            position: relative;
+            z-index: 1;
         }
 
         .chip .dot {
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent), #60a5fa);
-            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.18);
+            background: linear-gradient(135deg, var(--accent), var(--accent-3));
+            box-shadow: 0 0 0 4px rgba(184, 91, 52, 0.12);
         }
 
         nav {
             position: sticky;
             top: 14px;
             z-index: 10;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(36, 55, 50, 0.10);
+            border-radius: 28px;
+            background: rgba(255, 251, 245, 0.82);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            box-shadow: var(--shadow);
+            box-shadow: var(--shadow-soft);
             overflow: hidden;
         }
 
         .toc {
             list-style: none;
             margin: 0;
-            padding: 10px;
+            padding: 14px;
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
         }
 
         .toc a {
@@ -339,53 +436,67 @@
             align-items: center;
             justify-content: space-between;
             gap: 10px;
-            padding: 12px 14px;
-            border-radius: 14px;
+            padding: 14px 16px;
+            border-radius: 18px;
             text-decoration: none;
             color: var(--text);
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.10);
-            transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+            background: rgba(255, 253, 249, 0.76);
+            border: 1px solid rgba(36, 55, 50, 0.08);
+            transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+            box-shadow: 0 6px 18px rgba(72, 62, 43, 0.05);
         }
 
         .toc a span {
-            color: var(--muted);
+            color: var(--text);
             font-size: 0.95rem;
         }
 
         .toc a:hover {
             transform: translateY(-1px);
-            background: rgba(255, 255, 255, 0.07);
-            border-color: rgba(255, 255, 255, 0.18);
+            background: rgba(255, 248, 241, 0.96);
+            border-color: rgba(184, 91, 52, 0.18);
+            box-shadow: 0 10px 22px rgba(72, 62, 43, 0.08);
         }
 
         .toc a .arrow {
             font-weight: 700;
-            color: rgba(255, 255, 255, 0.75);
+            color: var(--accent);
         }
 
         main {
-            margin-top: 18px;
+            margin-top: 22px;
             display: grid;
-            gap: 16px;
+            gap: 18px;
         }
 
         section {
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
+            position: relative;
+            border: 1px solid rgba(36, 55, 50, 0.10);
+            border-radius: 28px;
             background: var(--surface);
             box-shadow: var(--shadow);
-            padding: 18px 18px 14px;
+            padding: 26px 24px 22px;
+            overflow: hidden;
+        }
+
+        section::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 0;
+            width: 100%;
+            height: 7px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-3), var(--accent-2));
         }
 
         section:target {
-            outline: 2px solid rgba(124, 58, 237, 0.55);
-            outline-offset: 2px;
+            outline: 3px solid rgba(184, 91, 52, 0.20);
+            outline-offset: 4px;
         }
 
         h2 {
-            margin: 0 0 8px;
-            font-size: 1.25rem;
+            margin: 0 0 12px;
+            font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+            font-size: 1.5rem;
             letter-spacing: -0.01em;
             display: flex;
             align-items: center;
@@ -395,37 +506,39 @@
 
         .badge {
             font-size: 0.78rem;
-            color: rgba(255, 255, 255, 0.82);
-            padding: 5px 10px;
+            color: var(--accent);
+            padding: 6px 11px;
             border-radius: 999px;
-            background: rgba(124, 58, 237, 0.20);
-            border: 1px solid rgba(124, 58, 237, 0.35);
+            background: rgba(184, 91, 52, 0.10);
+            border: 1px solid rgba(184, 91, 52, 0.16);
         }
 
         p {
             margin: 0 0 10px;
             color: var(--muted);
-            line-height: 1.7;
+            line-height: 1.75;
+            font-size: 1rem;
         }
 
         .steps {
-            margin: 10px 0 6px;
-            padding-left: 18px;
+            margin: 12px 0 6px;
+            padding-left: 22px;
             color: var(--text);
         }
 
         .steps li {
-            margin: 8px 0;
-            line-height: 1.6;
+            margin: 10px 0;
+            line-height: 1.7;
         }
 
         .callout {
-            margin-top: 12px;
-            padding: 12px 12px;
-            border-radius: 14px;
-            border: 1px solid rgba(34, 197, 94, 0.35);
-            background: rgba(34, 197, 94, 0.10);
-            color: rgba(255, 255, 255, 0.82);
+            margin-top: 14px;
+            padding: 14px 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(31, 106, 92, 0.14);
+            background: linear-gradient(180deg, rgba(236, 246, 243, 0.95), rgba(228, 240, 236, 0.92));
+            color: var(--text);
+            box-shadow: var(--shadow-soft);
         }
 
         .callout strong {
@@ -433,21 +546,31 @@
         }
 
         footer {
-            margin-top: 18px;
-            color: rgba(255, 255, 255, 0.55);
-            font-size: 0.9rem;
+            margin-top: 20px;
+            color: var(--muted);
+            font-size: 0.92rem;
             text-align: center;
         }
 
         /* Responsive */
+        @media (max-width: 980px) {
+            .toc {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .title {
+                flex-direction: column;
+            }
+        }
+
         @media (max-width: 720px) {
             .toc {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .title {
-                flex-direction: column;
                 align-items: flex-start;
+                padding: 24px 22px;
             }
 
             .kpi {
@@ -455,11 +578,26 @@
             }
 
             .toc a {
-                padding: 12px 12px;
+                padding: 12px 13px;
             }
 
             .screenshot-grid {
                 grid-template-columns: 1fr;
+            }
+
+            section {
+                padding: 22px 18px 18px;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .toc {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                max-width: none;
+                font-size: clamp(2rem, 8vw, 2.9rem);
             }
         }
     </style>
@@ -470,9 +608,12 @@
         <header>
             <div class="title">
                 <div>
-                    <h1>📦 VEBO Lagersystem</h1>
+                    <div class="eyebrow">Hilfe & Dokumentation</div>
+                    <h1>📦 <span>VEBO</span> Lagersystem</h1>
+                    <p class="subtitle" style="margin-top: 14px;">Alle wichtigen Bereiche der Anwendung an einem Ort:
+                        Lager, Bestellungen, QR-Workflows, Protokolle, Wartung und tägliche Arbeitsabläufe.</p>
                 </div>
-                <div class="chip"><span class="dot"></span><span>Desktop App • Java 21 • SQLite</span></div>
+                <div class="chip"><span class="dot"></span><span>Desktop App • Java 21 • SQLite • PDF</span></div>
             </div>
 
             <blockquote>
@@ -503,7 +644,7 @@
                 </div>
                 <div class="card">
                     <div class="label">Stand</div>
-                    <div class="value">Februar 2026</div>
+                    <div class="value">März 2026</div>
                 </div>
                 <div class="card">
                     <div class="label">Plattformen</div>
@@ -524,6 +665,8 @@
                 <li><a href="#stack"><span>🛠️ Technologie</span><span class="arrow">→</span></a></li>
                 <li><a href="#install"><span>📥 Installation</span><span class="arrow">→</span></a></li>
                 <li><a href="#usage"><span>🚀 Verwendung</span><span class="arrow">→</span></a></li>
+                <li><a href="#modules"><span>🗂️ Module</span><span class="arrow">→</span></a></li>
+                <li><a href="#workflows"><span>🧭 Arbeitsabläufe</span><span class="arrow">→</span></a></li>
                 <li><a href="#architecture"><span>🏗️ Architektur</span><span class="arrow">→</span></a></li>
                 <li><a href="#config"><span>⚙️ Konfiguration</span><span class="arrow">→</span></a></li>
                 <li><a href="#datadir"><span>💾 App-Daten</span><span class="arrow">→</span></a></li>
@@ -544,8 +687,14 @@
                     <li><strong>Automatisierung:</strong> Periodische Lagerchecks & Warnungen</li>
                     <li><strong>Benutzerfreundlichkeit:</strong> Moderne, konsistente UI mit Theme-/Font-Optionen</li>
                     <li><strong>Nachvollziehbarkeit:</strong> Protokolle, Audit-Trails und Logs</li>
-                    <li><strong>Flexibilität:</strong> Anpassbare Einstellungen, QR-Workflow, Updates</li>
+                    <li><strong>Flexibilität:</strong> Anpassbare Einstellungen, QR-Workflow, Varianten sowie PDF-Exporte</li>
                 </ul>
+                <div class="callout"><strong>Dashboard:</strong> Das Hauptfenster bündelt die Tabs
+                    <strong>Artikel</strong>, <strong>Lieferanten</strong>, <strong>Bestellungen</strong>,
+                    <strong>Kunden</strong>, <strong>Lieferantenbestellungen</strong> und
+                    <strong>Protokolle</strong>. Zusätzlich stehen oben direkte Aktionen für
+                    <strong>Einstellungen</strong>, <strong>Notizen</strong> und den
+                    <strong>Befüllungsrechner</strong> bereit.</div>
                 <div class="callout"><strong>Tipp:</strong> Für eine vollständige technische Dokumentation siehe die
                     README im Repository.</div>
             </section>
@@ -556,19 +705,42 @@
                 <details open>
                     <summary>📦 Artikelverwaltung <span class="pill">Core</span></summary>
                     <ul class="steps">
-                        <li>Artikelstamm inkl. Artikelnummer, Details, Preise</li>
-                        <li>Bestandsführung mit Min/Max, Kategorien, Lieferantenzuordnung</li>
-                        <li>Bulk-Aktionen: Mehrfach löschen, Bestand anpassen, Export</li>
-                        <li>QR-Codes: Generieren, Vorschau, PDF-Export, Daten abrufen</li>
+                        <li>Artikelstamm inkl. Artikelnummer, Details, Lieferant, Einkaufs- und Verkaufspreis</li>
+                        <li>Bestandsführung mit Mindestbestand, Kategorien und direkter Inline-Bearbeitung in der Tabelle</li>
+                        <li>Kombinierbare Filter für Kategorie, Lieferant, Lagerbereich, Preisbereich und Freitextsuche</li>
+                        <li>Bulk-Aktionen: Mehrfach löschen, Bestand anpassen, Export und Übernahme in Bestelllisten</li>
+                        <li>QR-Codes: Generieren, Vorschau, PDF-Export und Datenabruf aus gescannten Codes</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>👥 Kunden- & Lieferantenverwaltung <span class="pill">Stammdaten</span></summary>
+                    <ul class="steps">
+                        <li>Kunden mit Abteilungszuordnung verwalten, filtern und durchsuchen</li>
+                        <li>Lieferanten mit Kontaktdaten, Suchfunktion und direkter Bearbeitung verwalten</li>
+                        <li>Kontextsensitive Aktionen per Toolbar, Doppelklick und Rechtsklick-Menü</li>
+                        <li>Stammdaten werden in Bestell- und Nachbestellprozessen wiederverwendet</li>
                     </ul>
                 </details>
 
                 <details>
                     <summary>📋 Bestellungsverwaltung <span class="pill">Workflow</span></summary>
                     <ul class="steps">
-                        <li>Erstellen/Bearbeiten/Löschen, Status (Offen/Abgeschlossen)</li>
-                        <li>Abschließen-Workflow, Filter & Suche</li>
-                        <li>PDF-Export mit Layout + Protokoll inkl. Benutzer-Tracking</li>
+                        <li>Erstellen, Anzeigen, Bearbeiten und Abschließen von Bestellungen mit Statusverwaltung</li>
+                        <li>Bestellpositionen unterstützen zusätzliche Angaben wie Füllung, Größe und Farbe</li>
+                        <li>Neuer PDF-Export für Einzelbestellungen und Übersichten mit formatierten Positionsdaten</li>
+                        <li>Abschließen-Workflow mit Lagerprüfung, Mindestbestandswarnungen und Benutzerprotokoll</li>
+                        <li>Teilbestellungen können bei Lagerengpässen gezielt nacherfasst und abgeschlossen werden</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>🚚 Lieferantenbestellungen <span class="pill">Nachbestellung</span></summary>
+                    <ul class="steps">
+                        <li>Offene Nachbestellungen für Lieferanten gesammelt verwalten</li>
+                        <li>Artikelnummer, Name, Lieferant, Bestellmenge und Lagerbestand in einer Übersicht prüfen</li>
+                        <li>Einträge entfernen, alle löschen, speichern und aus Datei erneut laden</li>
+                        <li>Protokollierung für Lieferantenbestellungen über eigene Log-Einträge</li>
                     </ul>
                 </details>
 
@@ -577,7 +749,17 @@
                     <ul class="steps">
                         <li>Automatische Bestandsprüfungen (Intervall konfigurierbar)</li>
                         <li>Warnungen bei Mindest-/kritischen Beständen</li>
-                        <li>Ungelesene Warnungen werden hervorgehoben</li>
+                        <li>Ungelesene Warnungen werden hervorgehoben und können gesammelt angezeigt werden</li>
+                        <li>Warnungen greifen sowohl bei normaler Lagerführung als auch beim Bestellabschluss</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>📝 Notizen & Hilfswerkzeuge <span class="pill">Tools</span></summary>
+                    <ul class="steps">
+                        <li>Persönliche Notizen erstellen, suchen, bearbeiten und löschen</li>
+                        <li>Befüllungsrechner für ausgewählte Artikel mit Mengen- und Preisberechnung</li>
+                        <li>Einheitenumrechnung und direkte Übernahme berechneter Befüllungen in Bestelllisten</li>
                     </ul>
                 </details>
 
@@ -587,6 +769,17 @@
                         <li>Log-UI mit Kategorien, Datumsfilter, Export (PDF/CSV)</li>
                         <li>CSV Import/Export (Artikel, Lieferanten, Kunden, Bestellungen)</li>
                         <li>Startdaten-Import aus JSON-Ressourcen</li>
+                        <li>Persistenz von Bestellmetadaten und Audit-Logs für nachvollziehbare Abläufe</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>⚙️ Einstellungen & Wartung <span class="pill">Admin</span></summary>
+                    <ul class="steps">
+                        <li>Tabs für System, Darstellung, Verbindung, Datenbank, Import/Export und Über die Anwendung</li>
+                        <li>Farben, Schriftgrößen, Header-Anzeige und Theme-Verhalten anpassen</li>
+                        <li>Kategorien pflegen, Server-URL prüfen sowie QR- und Warnungs-Automatik konfigurieren</li>
+                        <li>Datenbank bereinigen, Tabellen gezielt löschen und Einstellungsprofile importieren/exportieren</li>
                     </ul>
                 </details>
             </section>
@@ -641,10 +834,92 @@ mvn exec:java -Dexec.mainClass="ch.framedev.lagersystem.main.Main"</code></pre>
                 <ul class="steps">
                     <li><strong>Erster Start:</strong> DB & Einstellungen werden initialisiert, optional Import von
                         Startdaten</li>
-                    <li><strong>Artikel:</strong> hinzufügen/bearbeiten/löschen, Bulk-Aktionen, QR-Export</li>
-                    <li><strong>Bestellungen:</strong> anlegen, bearbeiten, abschließen, PDF-Export</li>
-                    <li><strong>Logs:</strong> filtern, suchen, exportieren</li>
+                    <li><strong>Dashboard:</strong> Über die Haupttabs schnell zwischen Artikel-, Lieferanten-, Kunden-, Bestell- und Protokollansichten wechseln</li>
+                    <li><strong>Artikel:</strong> hinzufügen, bearbeiten, löschen, filtern, Bulk-Aktionen ausführen und QR-Codes verwalten</li>
+                    <li><strong>Lieferanten & Kunden:</strong> Stammdaten pflegen und für Folgeprozesse wie Bestellungen wiederverwenden</li>
+                    <li><strong>Bestelllisten:</strong> Artikel aus der Artikelverwaltung oder per QR-Datenabruf in die Liste übernehmen</li>
+                    <li><strong>Nachbestellungen:</strong> Lieferantenbestellungen sammeln, speichern und später weiterbearbeiten</li>
+                    <li><strong>Bestellungen:</strong> anlegen, mit Empfänger/Abteilung vervollständigen, als PDF exportieren und abschließen</li>
+                    <li><strong>Werkzeuge:</strong> Notizen, Befüllungsrechner und Einstellungen direkt über das Hauptfenster öffnen</li>
+                    <li><strong>Logs & Warnungen:</strong> filtern, durchsuchen, exportieren und offene Probleme gezielt nachverfolgen</li>
                 </ul>
+            </section>
+
+            <section id="modules">
+                <h2>🗂️ Module Im Überblick <span class="badge">Abgedeckt</span></h2>
+                <ul class="steps">
+                    <li><strong>Artikelverwaltung:</strong> Bestände, Kategorien, QR-Codes, Inline-Bearbeitung und Bulk-Aktionen</li>
+                    <li><strong>Lieferantenverwaltung:</strong> Lieferantenstamm, Suche, Bearbeitung und Zuordnung zu Artikeln</li>
+                    <li><strong>Bestellungen:</strong> offene und abgeschlossene Bestellungen, PDF-Ansichten, Bearbeitung und Abschluss</li>
+                    <li><strong>Kundenverwaltung:</strong> Kunden mit Abteilungen, Filterung und Suchfunktionen</li>
+                    <li><strong>Lieferantenbestellungen:</strong> zentrale Nachbestellliste für Artikel mit Lieferantenbezug</li>
+                    <li><strong>Protokolle:</strong> Bestell-, Lieferanten- und Lieferantenbestellungs-Logs mit Filter- und Exportfunktionen</li>
+                    <li><strong>Notizen:</strong> persönliche Arbeitsnotizen mit Such- und Zoomfunktion</li>
+                    <li><strong>Befüllungsrechner:</strong> Preis- und Mengenberechnung für befüllbare Artikel</li>
+                    <li><strong>Einstellungen:</strong> System, Design, Verbindung, Datenbank, Import/Export und Wartung</li>
+                </ul>
+            </section>
+
+            <section id="workflows">
+                <h2>🧭 Typische Arbeitsabläufe <span class="badge">Praxis</span></h2>
+
+                <details open>
+                    <summary>1. Artikel finden und bearbeiten <span class="pill">Artikel</span></summary>
+                    <ul class="steps">
+                        <li>Artikelverwaltung öffnen und bei Bedarf mit <strong>Kategorie</strong>, <strong>Lieferant</strong>, <strong>Lager</strong> oder <strong>Preis</strong> filtern</li>
+                        <li>Zusätzlich unten die Freitextsuche verwenden; sie arbeitet zusammen mit den erweiterten Filtern</li>
+                        <li>Artikel direkt in der Tabelle ändern oder über <strong>Artikel bearbeiten</strong> / Rechtsklick bearbeiten</li>
+                        <li>Für mehrere Einträge gleichzeitig Bulk-Aktionen wie <strong>Mehrfach löschen</strong> oder <strong>Bestand anpassen</strong> nutzen</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>2. Bestellung mit Varianten erstellen <span class="pill">Bestellung</span></summary>
+                    <ul class="steps">
+                        <li>Artikel per Doppelklick oder aus QR-Daten in die Bestellliste übernehmen</li>
+                        <li>Falls vorhanden, Varianten bzw. Zusatzangaben wie <strong>Füllung</strong>, <strong>Größe</strong> und <strong>Farbe</strong> auswählen</li>
+                        <li>In <strong>Neue Bestellung</strong> Empfänger, Kontonummern und Abteilung setzen</li>
+                        <li>Artikel aus der Bestellliste übernehmen, Zusammenfassung prüfen und bei Bedarf als PDF exportieren</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>3. Bestellung abschließen oder Teilbestellung nachführen <span class="pill">Lager</span></summary>
+                    <ul class="steps">
+                        <li>In <strong>Bestellung Abschließen</strong> eine offene Bestellung auswählen und die Details prüfen</li>
+                        <li>Bei ausreichendem Bestand wird der Lagerbestand reduziert und die Bestellung abgeschlossen</li>
+                        <li>Wenn Artikel fehlen, öffnet sich der Ablauf für <strong>Teilbestellung vervollständigen</strong></li>
+                        <li>Dort können fehlende Mengen nacherfasst werden; danach wird die Bestellung als abgeschlossen gespeichert</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>4. QR-Workflow nutzen <span class="pill">QR</span></summary>
+                    <ul class="steps">
+                        <li>QR-Codes für einzelne oder mehrere Artikel generieren</li>
+                        <li>Über <strong>QR-Code Vorschau/PDF</strong> vor dem Druck kontrollieren</li>
+                        <li>Mit <strong>QR-Code Daten abrufen</strong> gescannte Daten importieren und direkt weiterverarbeiten</li>
+                        <li>Je nach Datenquelle können Artikel in Lagerbuchungen, Eigenverbrauch oder Bestelllisten übernommen werden</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>5. Kunden, Lieferanten und Nachbestellungen pflegen <span class="pill">Stammdaten</span></summary>
+                    <ul class="steps">
+                        <li>Kunden mit Abteilungen pflegen, damit neue Bestellungen schneller erfasst werden können</li>
+                        <li>Lieferanten mit Suchfunktion und Bearbeitungsdialogen aktuell halten</li>
+                        <li>Unter <strong>Lieferantenbestellungen</strong> Nachbestellungen sammeln und in der Datei <code>supplier_orders.txt</code> sichern</li>
+                    </ul>
+                </details>
+
+                <details>
+                    <summary>6. Protokolle und Einstellungen administrieren <span class="pill">Admin</span></summary>
+                    <ul class="steps">
+                        <li>In <strong>Protokolle</strong> nach Kategorie, Text und Datum filtern und bei Bedarf PDF oder CSV exportieren</li>
+                        <li>In <strong>Einstellungen</strong> Warnungen, QR-Import, Kategorien, Theme, Datenbank und Datenexport verwalten</li>
+                        <li>Optional Notizen für interne Abläufe oder temporäre Hinweise direkt in der App führen</li>
+                    </ul>
+                </details>
             </section>
 
             <section id="architecture">
@@ -669,6 +944,8 @@ load-from-files=true
 # Scheduler
 stock_check_interval=30
 enable_auto_stock_check=true
+enable_warning_display=true
+warning_display_interval=1
 
 # QR-Code Import
 enable_automatic_import_qrcode=true
@@ -678,10 +955,16 @@ server_url=https://framedev.ch/vebo/scans.json
 # Theme / UI
 dark_mode=false
 table_font_size=16
+table_font_size_tab=16
 font_style=Dialog
+disable_header=false
+theme_accent_color=
+theme_header_color=
+theme_button_color=
 
 # Update-Manager
 github-token=</code></pre>
+                <p class="muted">Wichtige Bereiche sind Theme/UI, Warnungen, automatischer QR-Import, Kategorien, Server-Verbindung, Datenbankpflege und Update-Verhalten.</p>
             </section>
 
             <section id="datadir">
@@ -702,10 +985,12 @@ github-token=</code></pre>
 ├── imported_qrcodes.txt
 ├── imported_items.txt
 ├── own_use_list.txt
+├── categories.json
 └── logs/
     ├── vebo_lager_system.log
     ├── bestellung.log
     └── vendorOrder.log</code></pre>
+                <p class="muted">Je nach Nutzung können zusätzlich exportierte PDFs, QR-Bilder und weitere temporäre Importdateien entstehen.</p>
             </section>
 
             <section id="scanserver">

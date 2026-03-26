@@ -6,7 +6,6 @@ import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
-import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -81,7 +80,7 @@ public class PartialOrderGUI extends JFrame {
             row.setBorder(new EmptyBorder(4,0,4,0));
 
             JLabel label = new JLabel(
-                    ArticleUtils.formatArticleWithFilling(article, order.getArticleFilling(article.getArticleNumber()))
+                    order.formatArticleLabel(article)
                             + "  (Fehlmenge: " + missing + ")"
             );
             label.setForeground(ThemeManager.getTextPrimaryColor());

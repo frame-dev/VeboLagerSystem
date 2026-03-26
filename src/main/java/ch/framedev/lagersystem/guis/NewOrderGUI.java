@@ -10,9 +10,9 @@ import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.ArticleManager;
-import ch.framedev.lagersystem.utils.ArticleExporter;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.OrderExport;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 
@@ -60,6 +60,8 @@ public class NewOrderGUI extends JFrame {
     private final DefaultTableModel orderTableModel;
     // track Article -> qty so prices are available
     private final Map<Article, Integer> orderArticles = new LinkedHashMap<>();
+    private final Map<String, String> orderArticleSizes = new LinkedHashMap<>();
+    private final Map<String, String> orderArticleColors = new LinkedHashMap<>();
     private final Map<String, String> orderArticleFillings = new LinkedHashMap<>();
     private final JLabel totalPriceLabel;
 
@@ -73,11 +75,15 @@ public class NewOrderGUI extends JFrame {
     private final JLabel summaryDepartmentValue;
     private final JLabel summaryItemsValue;
     private final JLabel summaryTotalValue;
+    private final JTable orderTable;
 
     // ---- Inline Article Search/Add (NEW) -----------------------------------
     private JTextField articleSearchField;
     private JComboBox<Article> articleCombo;
     private JSpinner articleQtySpinner;
+    private JComboBox<String> articleSizeCombo;
+    private JComboBox<String> articleColorCombo;
+    private JComboBox<String> articleFillingCombo;
     private List<Article> allArticlesCache = new ArrayList<>();
 
     /**
@@ -177,7 +183,11 @@ public class NewOrderGUI extends JFrame {
 
         receiverNameCombobox.addActionListener(listener -> {
             String selected = (String) receiverNameCombobox.getSelectedItem();
-            if (selected == null || selected.trim().isEmpty()) return;
+            if (selected == null || selected.trim().isEmpty()) {
+                receiverKontoField.setText("");
+                updateSummaryBar();
+                return;
+            }
 
             String department = ClientManager.getInstance().getDepartmentByName(selected);
             if (department != null && !department.trim().isEmpty()) {
@@ -207,6 +217,8 @@ public class NewOrderGUI extends JFrame {
                 if (dept != null && dept.get("kontoNumber") != null) {
                     receiverKontoField.setText(dept.get("kontoNumber").toString());
                 }
+            } else {
+                receiverKontoField.setText("");
             }
             updateSummaryBar();
         });
@@ -223,6 +235,8 @@ public class NewOrderGUI extends JFrame {
                         if (dept != null && dept.get("kontoNumber") != null) {
                             receiverKontoField.setText(dept.get("kontoNumber").toString());
                         }
+                    } else {
+                        receiverKontoField.setText("");
                     }
                 }
             });
@@ -271,13 +285,14 @@ public class NewOrderGUI extends JFrame {
             }
         };
 
-        JTable orderTable = new JTable(orderTableModel);
+        orderTable = new JTable(orderTableModel);
         applyOrderTableTheme(orderTable);
         DefaultTableCellRenderer right = new DefaultTableCellRenderer();
         right.setHorizontalAlignment(SwingConstants.RIGHT);
         orderTable.getColumnModel().getColumn(1).setCellRenderer(right);
         orderTable.getColumnModel().getColumn(2).setCellRenderer(right);
         orderTable.getColumnModel().getColumn(3).setCellRenderer(right);
+        bindOrderTableActions();
 
         JScrollPane orderScroll = new JScrollPane(orderTable);
         orderScroll.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
@@ -327,11 +342,16 @@ public class NewOrderGUI extends JFrame {
             }
         });
 
+        JButton removeArticleBtn = createThemeButton(UnicodeSymbols.TRASH + " Entfernen", ThemeManager.getErrorColor());
+        removeArticleBtn.setToolTipText("Entfernt den ausgewählten Artikel aus der Bestellung.");
+        removeArticleBtn.addActionListener(e -> removeSelectedOrderArticle());
+
         JButton createOrderBtn = createThemeButton(UnicodeSymbols.CHECKMARK + " Bestellen", ThemeManager.getSuccessColor());
         createOrderBtn.setToolTipText("Erstellt die Bestellung und speichert sie im System.");
         createOrderBtn.addActionListener(e -> onCreateOrder());
 
         actionButtons.add(addArticlesBtn);
+        actionButtons.add(removeArticleBtn);
         actionButtons.add(exportPdfBtn);
         actionButtons.add(createOrderBtn);
         bottomPanel.add(actionButtons, BorderLayout.EAST);
@@ -449,6 +469,59 @@ public class NewOrderGUI extends JFrame {
         gc.weightx = 0.10;
         panel.add(articleAddButton, gc);
 
+        JLabel sizeLabel = new JLabel("Größe:");
+        sizeLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        sizeLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        gc.gridx = 0;
+        gc.gridy = 1;
+        gc.weightx = 0.0;
+        panel.add(sizeLabel, gc);
+
+        articleSizeCombo = createMetadataComboBox("Optionale Größe");
+
+        gc.gridx = 1;
+        gc.weightx = 0.22;
+        panel.add(articleSizeCombo, gc);
+
+        JLabel colorLabel = new JLabel("Farbe:");
+        colorLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        colorLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        gc.gridx = 2;
+        gc.weightx = 0.0;
+        panel.add(colorLabel, gc);
+
+        articleColorCombo = createMetadataComboBox("Optionale Farbe");
+
+        gc.gridx = 3;
+        gc.weightx = 0.22;
+        panel.add(articleColorCombo, gc);
+
+        JLabel fillingLabel = new JLabel("Füllung:");
+        fillingLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        fillingLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        gc.gridx = 4;
+        gc.weightx = 0.0;
+        panel.add(fillingLabel, gc);
+
+        articleFillingCombo = createMetadataComboBox("Füllung aus dem Rechner übernehmen");
+        articleFillingCombo.setEditable(true);
+        resetComboBoxOptions(articleFillingCombo, List.of(), "");
+
+        gc.gridx = 5;
+        gc.weightx = 0.18;
+        panel.add(articleFillingCombo, gc);
+
+        JButton fillingButton = createThemeButton(UnicodeSymbols.CALCULATOR + " Rechner", ThemeManager.getAccentColor());
+        fillingButton.setToolTipText("Öffnet den Befüllungsrechner für den ausgewählten Artikel.");
+        fillingButton.addActionListener(e -> openInlineFillingConverter());
+
+        gc.gridx = 6;
+        gc.weightx = 0.14;
+        panel.add(fillingButton, gc);
+
         // live filter
         articleSearchField.getDocument().addDocumentListener(new DocumentListener() {
             private void update() {
@@ -465,6 +538,7 @@ public class NewOrderGUI extends JFrame {
                 rebuildArticleComboModel(articleSearchField.getText());
             }
         });
+        articleCombo.addActionListener(e -> updateInlineMetadataChoices());
 
         // add action
         articleAddButton.addActionListener(e -> addSelectedInlineArticle());
@@ -473,6 +547,10 @@ public class NewOrderGUI extends JFrame {
         if (articleQtySpinner.getEditor() instanceof JSpinner.DefaultEditor de) {
             de.getTextField().addActionListener(e -> addSelectedInlineArticle());
         }
+        bindComboEditorToAdd(articleSizeCombo);
+        bindComboEditorToAdd(articleColorCombo);
+        bindComboEditorToAdd(articleFillingCombo);
+        updateInlineMetadataChoices();
 
         return panel;
     }
@@ -490,20 +568,48 @@ public class NewOrderGUI extends JFrame {
 
         int qty = (Integer) articleQtySpinner.getValue();
         if (qty <= 0) qty = 1;
-        addOrMergeOrderArticle(selected, qty, null);
+        String size = getComboValue(articleSizeCombo);
+        String color = getComboValue(articleColorCombo);
+        String filling = getComboValue(articleFillingCombo);
+        String normalizedFilling = getNormalizedOrderFilling(filling);
+        if (!normalizedFilling.isBlank() && !ArticleUtils.isFillingValid(normalizedFilling)) {
+            new MessageDialog()
+                    .setTitle("Ungültige Füllung")
+                    .setMessage("Bitte eine gültige Füllung eingeben, z.B. 500 ml oder 1 l.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
+            if (articleFillingCombo != null && articleFillingCombo.getEditor().getEditorComponent() instanceof JTextField tf) {
+                tf.requestFocusInWindow();
+                tf.selectAll();
+            }
+            return;
+        }
+
+        addOrMergeOrderArticle(selected, qty, size, color, normalizedFilling);
         rebuildOrderTable();
         updateTotalPrice();
+
+        articleQtySpinner.setValue(1);
+        updateInlineMetadataChoices();
     }
 
-    private void addOrMergeOrderArticle(Article article, int qty, String filling) {
+    private void addOrMergeOrderArticle(Article article, int qty, String size, String color, String filling) {
         if (article == null || qty <= 0) {
             return;
         }
 
-        String normalizedFilling = ArticleUtils.normalizeFilling(filling);
+        String normalizedSize = getNormalizedOrderMetadata(size);
+        String normalizedColor = getNormalizedOrderMetadata(color);
+        String normalizedFilling = getNormalizedOrderFilling(filling);
         for (Map.Entry<Article, Integer> entry : orderArticles.entrySet()) {
             if (sameArticle(entry.getKey(), article)) {
                 orderArticles.put(entry.getKey(), entry.getValue() + qty);
+                if (!normalizedSize.isBlank()) {
+                    updateOrderArticleSize(article, normalizedSize);
+                }
+                if (!normalizedColor.isBlank()) {
+                    updateOrderArticleColor(article, normalizedColor);
+                }
                 if (!normalizedFilling.isBlank()) {
                     updateOrderArticleFilling(article, normalizedFilling);
                 }
@@ -512,7 +618,30 @@ public class NewOrderGUI extends JFrame {
         }
 
         orderArticles.put(article, qty);
+        updateOrderArticleSize(article, normalizedSize);
+        updateOrderArticleColor(article, normalizedColor);
         updateOrderArticleFilling(article, normalizedFilling);
+    }
+
+    private void updateOrderArticleSize(Article article, String size) {
+        updateOrderArticleMetadata(orderArticleSizes, article, size);
+    }
+
+    private void updateOrderArticleColor(Article article, String color) {
+        updateOrderArticleMetadata(orderArticleColors, article, color);
+    }
+
+    private void updateOrderArticleMetadata(Map<String, String> targetMap, Article article, String value) {
+        if (article == null || article.getArticleNumber() == null) {
+            return;
+        }
+
+        String normalized = getNormalizedOrderMetadata(value);
+        if (normalized.isBlank()) {
+            targetMap.remove(article.getArticleNumber());
+        } else {
+            targetMap.put(article.getArticleNumber(), normalized);
+        }
     }
 
     private void updateOrderArticleFilling(Article article, String filling) {
@@ -520,7 +649,7 @@ public class NewOrderGUI extends JFrame {
             return;
         }
 
-        String normalized = ArticleUtils.normalizeFilling(filling);
+        String normalized = getNormalizedOrderFilling(filling);
         if (normalized.isBlank()) {
             orderArticleFillings.remove(article.getArticleNumber());
         } else {
@@ -535,10 +664,216 @@ public class NewOrderGUI extends JFrame {
         return ArticleUtils.normalizeFilling(orderArticleFillings.get(article.getArticleNumber()));
     }
 
+    private String getOrderArticleSize(Article article) {
+        if (article == null || article.getArticleNumber() == null) {
+            return "";
+        }
+        return getNormalizedOrderMetadata(orderArticleSizes.get(article.getArticleNumber()));
+    }
+
+    private String getOrderArticleColor(Article article) {
+        if (article == null || article.getArticleNumber() == null) {
+            return "";
+        }
+        return getNormalizedOrderMetadata(orderArticleColors.get(article.getArticleNumber()));
+    }
+
     private boolean sameArticle(Article a, Article b) {
         if (a == b) return true;
         if (a == null || b == null) return false;
         return Objects.equals(a.getArticleNumber(), b.getArticleNumber());
+    }
+
+    private String getNormalizedOrderMetadata(String value) {
+        return ArticleUtils.normalizeMetadataValue(value);
+    }
+
+    private String getNormalizedOrderFilling(String value) {
+        return ArticleUtils.normalizeFilling(value);
+    }
+
+    private JComboBox<String> createMetadataComboBox(String tooltip) {
+        JComboBox<String> combo = new JComboBox<>();
+        combo.setEditable(true);
+        combo.setToolTipText(tooltip);
+        styleComboBox(combo);
+        return combo;
+    }
+
+    private void bindComboEditorToAdd(JComboBox<String> combo) {
+        if (combo == null || !combo.isEditable()) {
+            return;
+        }
+        Component editorComponent = combo.getEditor().getEditorComponent();
+        if (editorComponent instanceof JTextField textField) {
+            textField.addActionListener(e -> addSelectedInlineArticle());
+        }
+    }
+
+    private void updateInlineMetadataChoices() {
+        Article selected = (Article) articleCombo.getSelectedItem();
+        List<String> exactOptions = ArticleUtils.getExactDetailOptions(selected);
+        String autoValue = exactOptions.size() == 1 ? exactOptions.get(0) : "";
+
+        resetComboBoxOptions(articleSizeCombo, exactOptions, autoValue);
+        resetComboBoxOptions(articleColorCombo, exactOptions, "");
+
+        if (selected != null && ArticleUtils.canCalculateFillingPrice(selected)) {
+            articleFillingCombo.setEnabled(true);
+            resetComboBoxOptions(articleFillingCombo, List.of(), "");
+        } else {
+            resetComboBoxOptions(articleFillingCombo, List.of(), "");
+            articleFillingCombo.setEnabled(false);
+        }
+    }
+
+    private void resetComboBoxOptions(JComboBox<String> combo, List<String> options, String selectedValue) {
+        if (combo == null) {
+            return;
+        }
+
+        DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+        model.addElement("");
+        if (options != null) {
+            for (String option : options) {
+                String normalized = ArticleUtils.normalizeMetadataValue(option);
+                if (!normalized.isBlank()) {
+                    model.addElement(normalized);
+                }
+            }
+        }
+        combo.setModel(model);
+        combo.setEditable(true);
+        setComboValue(combo, selectedValue);
+    }
+
+    private void setComboValue(JComboBox<String> combo, String value) {
+        if (combo == null) {
+            return;
+        }
+        String normalized = ArticleUtils.normalizeMetadataValue(value);
+        if (combo == articleFillingCombo) {
+            normalized = getNormalizedOrderFilling(value);
+        }
+        combo.setSelectedItem(normalized);
+        if (combo.isEditable() && combo.getEditor().getEditorComponent() instanceof JTextField textField) {
+            textField.setText(normalized);
+        }
+    }
+
+    private String getComboValue(JComboBox<String> combo) {
+        if (combo == null) {
+            return "";
+        }
+        Object value = combo.isEditable() ? combo.getEditor().getItem() : combo.getSelectedItem();
+        return value == null ? "" : value.toString().trim();
+    }
+
+    private void openInlineFillingConverter() {
+        Article selected = (Article) articleCombo.getSelectedItem();
+        if (selected == null) {
+            new MessageDialog()
+                    .setTitle("Hinweis")
+                    .setMessage("Bitte zuerst einen Artikel auswählen.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
+            return;
+        }
+        if (!ArticleUtils.canCalculateFillingPrice(selected)) {
+            new MessageDialog()
+                    .setTitle("Nicht verfügbar")
+                    .setMessage("Für diesen Artikel ist keine Befüllungsberechnung verfügbar.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
+            return;
+        }
+
+        ConverterGUI converterGUI = new ConverterGUI(selected, filling ->
+                SwingUtilities.invokeLater(() -> {
+                    articleFillingCombo.setEnabled(true);
+                    setComboValue(articleFillingCombo, filling);
+                }));
+        converterGUI.setVisible(true);
+    }
+
+    private void bindOrderTableActions() {
+        InputMap inputMap = orderTable.getInputMap(JComponent.WHEN_FOCUSED);
+        ActionMap actionMap = orderTable.getActionMap();
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "removeOrderArticle");
+        actionMap.put("removeOrderArticle", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                removeSelectedOrderArticle();
+            }
+        });
+    }
+
+    private void removeSelectedOrderArticle() {
+        int selectedRow = orderTable.getSelectedRow();
+        if (selectedRow < 0) {
+            new MessageDialog()
+                    .setTitle("Keine Auswahl")
+                    .setMessage("Bitte wählen Sie einen Artikel aus, um ihn zu entfernen.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
+            return;
+        }
+
+        Article article = getOrderArticleAtRow(selectedRow);
+        if (article == null) {
+            return;
+        }
+
+        removeOrderArticle(article);
+        rebuildOrderTable();
+        updateTotalPrice();
+    }
+
+    private Article getOrderArticleAtRow(int row) {
+        if (row < 0 || row >= orderArticles.size()) {
+            return null;
+        }
+
+        int currentIndex = 0;
+        for (Article article : orderArticles.keySet()) {
+            if (currentIndex == row) {
+                return article;
+            }
+            currentIndex++;
+        }
+        return null;
+    }
+
+    private void removeOrderArticle(Article article) {
+        if (article == null) {
+            return;
+        }
+
+        orderArticles.remove(article);
+        if (article.getArticleNumber() != null) {
+            orderArticleSizes.remove(article.getArticleNumber());
+            orderArticleColors.remove(article.getArticleNumber());
+            orderArticleFillings.remove(article.getArticleNumber());
+        }
+    }
+
+    private String formatOrderArticleLabel(Article article) {
+        if (article == null) {
+            return "";
+        }
+
+        String label = ArticleUtils.formatArticleWithFilling(article, getOrderArticleFilling(article));
+        String size = getOrderArticleSize(article);
+        String color = getOrderArticleColor(article);
+
+        if (!size.isBlank()) {
+            label += " (" + size + ")";
+        }
+        if (!color.isBlank()) {
+            label += " {" + color + "}";
+        }
+        return label;
     }
 
     private void reloadAllArticlesCache() {
@@ -886,6 +1221,8 @@ public class NewOrderGUI extends JFrame {
 
     private void addArticlesFromList() {
         Map<Article, Integer> articlesWithQty = ArticleListGUI.getArticlesAndQuantity();
+        Map<Article, String> articleWithSize = ArticleListGUI.getArticlesWithSize();
+        Map<Article, String> articleWithColor = ArticleListGUI.getArticlesWithColor();
         Map<Article, String> articleWithFilling = ArticleListGUI.getArticlesWithFilling();
 
         if (articlesWithQty.isEmpty()) {
@@ -902,7 +1239,7 @@ public class NewOrderGUI extends JFrame {
             if(a == null) continue;
             Integer qty = entry.getValue();
             if (qty != null && qty > 0) {
-                addOrMergeOrderArticle(a, qty, articleWithFilling.get(a));
+                addOrMergeOrderArticle(a, qty, articleWithSize.get(a), articleWithColor.get(a), articleWithFilling.get(a));
             }
         }
 
@@ -928,7 +1265,7 @@ public class NewOrderGUI extends JFrame {
             double unit = safePrice(a, getOrderArticleFilling(a));
             double line = unit * qty;
             orderTableModel.addRow(new Object[]{
-                    ArticleUtils.formatArticleWithFilling(a, getOrderArticleFilling(a)),
+                    formatOrderArticleLabel(a),
                     qty,
                     String.format("%.2f CHF", unit),
                     String.format("%.2f CHF", line)
@@ -1036,6 +1373,8 @@ public class NewOrderGUI extends JFrame {
         }
 
         Map<String, Integer> payload = new LinkedHashMap<>();
+        Map<String, String> sizesPayload = new LinkedHashMap<>();
+        Map<String, String> colorsPayload = new LinkedHashMap<>();
         Map<String, String> fillingsPayload = new LinkedHashMap<>();
         for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
             Article article = e.getKey();
@@ -1043,13 +1382,29 @@ public class NewOrderGUI extends JFrame {
                 continue;
             }
             payload.put(article.getArticleNumber(), e.getValue());
+            String size = getOrderArticleSize(article);
+            if (!size.isBlank()) {
+                sizesPayload.put(article.getArticleNumber(), size);
+            }
+            String color = getOrderArticleColor(article);
+            if (!color.isBlank()) {
+                colorsPayload.put(article.getArticleNumber(), color);
+            }
             String filling = getOrderArticleFilling(article);
             if (!filling.isBlank()) {
                 fillingsPayload.put(article.getArticleNumber(), filling);
             }
         }
 
-        createOrder(payload, fillingsPayload, receiver, rKonto, sender, sKonto, department);
+        Order createdOrder = createOrder(payload, sizesPayload, colorsPayload, fillingsPayload, receiver, rKonto, sender, sKonto, department);
+        if (createdOrder == null) {
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Bestellung konnte nicht erstellt werden.")
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
+            return;
+        }
 
         File file = chooseSaveFile();
         if (file != null) {
@@ -1075,7 +1430,11 @@ public class NewOrderGUI extends JFrame {
                 .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                 .display();
 
+        firePropertyChange("orderCreated", null, createdOrder);
+
         orderArticles.clear();
+        orderArticleSizes.clear();
+        orderArticleColors.clear();
         orderArticleFillings.clear();
         rebuildOrderTable();
         updateTotalPrice();
@@ -1090,13 +1449,63 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void exportOrderToPDF(File file) throws IOException {
-        ArticleExporter.exportOrderToPDF(file, receiverNameCombobox,
-                receiverKontoField,
-                senderNameCombobox,
-                senderKontoField,
-                departmentList,
-                orderArticles,
-                orderArticleFillings);
+        OrderExport.exportOrderToFile(file, buildDraftOrderForExport());
+    }
+
+    private Order buildDraftOrderForExport() {
+        Map<String, Integer> payload = new LinkedHashMap<>();
+        Map<String, String> sizesPayload = new LinkedHashMap<>();
+        Map<String, String> colorsPayload = new LinkedHashMap<>();
+        Map<String, String> fillingsPayload = new LinkedHashMap<>();
+
+        for (Map.Entry<Article, Integer> entry : orderArticles.entrySet()) {
+            Article article = entry.getKey();
+            if (article == null || article.getArticleNumber() == null) {
+                continue;
+            }
+
+            String articleNumber = article.getArticleNumber();
+            payload.put(articleNumber, entry.getValue());
+
+            String size = getOrderArticleSize(article);
+            if (!size.isBlank()) {
+                sizesPayload.put(articleNumber, size);
+            }
+
+            String color = getOrderArticleColor(article);
+            if (!color.isBlank()) {
+                colorsPayload.put(articleNumber, color);
+            }
+
+            String filling = getOrderArticleFilling(article);
+            if (!filling.isBlank()) {
+                fillingsPayload.put(articleNumber, filling);
+            }
+        }
+
+        String receiver = receiverNameCombobox.getSelectedItem() != null
+                ? receiverNameCombobox.getSelectedItem().toString().trim()
+                : "";
+        String sender = senderNameCombobox.getSelectedItem() != null
+                ? senderNameCombobox.getSelectedItem().toString().trim()
+                : "";
+        String department = departmentList.getSelectedItem() != null
+                ? departmentList.getSelectedItem().toString().trim()
+                : "";
+
+        return new Order(
+                "ORD" + System.currentTimeMillis(),
+                payload,
+                sizesPayload,
+                colorsPayload,
+                fillingsPayload,
+                receiver,
+                receiverKontoField.getText().trim(),
+                new SimpleDateFormat("dd.MM.yyyy").format(new Date()),
+                sender,
+                senderKontoField.getText().trim(),
+                department
+        );
     }
 
     private JMenuBar createJMenu() {
@@ -1243,14 +1652,17 @@ public class NewOrderGUI extends JFrame {
                 "</div></html>";
     }
 
-    private void createOrder(Map<String, Integer> orderArticles, Map<String, String> orderArticleFillings,
-                             String receiverName, String receiverKontoNumber,
-                             String senderName, String senderKontoNumber, String department) {
+    private Order createOrder(Map<String, Integer> orderArticles, Map<String, String> orderArticleSizes,
+                              Map<String, String> orderArticleColors, Map<String, String> orderArticleFillings,
+                              String receiverName, String receiverKontoNumber,
+                              String senderName, String senderKontoNumber, String department) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
         String date = dateFormat.format(new Date());
         Order order = new Order(
                 "ORD" + System.currentTimeMillis(),
                 orderArticles,
+                orderArticleSizes,
+                orderArticleColors,
                 orderArticleFillings,
                 receiverName,
                 receiverKontoNumber,
@@ -1259,7 +1671,7 @@ public class NewOrderGUI extends JFrame {
                 senderKontoNumber,
                 department
         );
-        OrderManager.getInstance().insertOrder(order);
+        return OrderManager.getInstance().insertOrder(order) ? order : null;
     }
 
     private static String safe(String s) {

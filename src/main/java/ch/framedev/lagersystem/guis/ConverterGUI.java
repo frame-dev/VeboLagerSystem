@@ -16,6 +16,7 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.function.Consumer;
 
 /**
  * A GUI for calculating the price of filling an article with a certain amount.
@@ -38,6 +39,7 @@ public class ConverterGUI extends JFrame {
     private int resultPanelTintAlpha = 14;
     private JButton calcButton;
     private JButton addToOrder;
+    private final Consumer<String> fillingConsumer;
 
     /**
      * Create a new converter GUI for the given article. The article's name and sell
@@ -47,7 +49,12 @@ public class ConverterGUI extends JFrame {
      *                show placeholders and disable calculation.
      */
     public ConverterGUI(Article article) {
+        this(article, null);
+    }
+
+    public ConverterGUI(Article article, Consumer<String> fillingConsumer) {
         this.article = article;
+        this.fillingConsumer = fillingConsumer;
         ThemeManager.getInstance().registerWindow(this);
         ThemeManager.applyUIDefaults();
 
@@ -401,7 +408,7 @@ public class ConverterGUI extends JFrame {
         calcButton = createBigButton("Berechnen", true);
         JButton close = createBigButton("Schließen", false);
 
-        addToOrder = createBigButton("Zur Bestellung Hinzufügen", false);
+        addToOrder = createBigButton(fillingConsumer == null ? "Zur Bestellung Hinzufügen" : "Füllung Übernehmen", false);
 
         addToOrder.setEnabled(false);
         addToOrder.addActionListener(e -> addToOrder());
@@ -448,7 +455,7 @@ public class ConverterGUI extends JFrame {
 
         String amount = amountField.getText() == null ? "" : amountField.getText().trim();
         String unit = unitBox.getSelectedItem() == null ? "" : unitBox.getSelectedItem().toString().trim();
-        String filling = ArticleUtils.normalizeFilling(amount + " " + unit);
+        String filling = ArticleUtils.normalizeFilling(amount, unit);
 
         if (!ArticleUtils.isFillingValid(filling) || filling.isBlank()) {
             new MessageDialog()
@@ -456,6 +463,12 @@ public class ConverterGUI extends JFrame {
                     .setMessage("Bitte zuerst eine gültige Befüllmenge eingeben.")
                     .setMessageType(JOptionPane.ERROR_MESSAGE)
                     .display();
+            return;
+        }
+
+        if (fillingConsumer != null) {
+            fillingConsumer.accept(filling);
+            dispose();
             return;
         }
 

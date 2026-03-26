@@ -436,11 +436,11 @@ public class LogManager {
         long cutoffMillis = System.currentTimeMillis() - (daysOld * 24L * 60L * 60L * 1000L);
         String sql = "DELETE FROM " + TABLE_LOGS + " WHERE epochMillis < ?;";
         try {
-            boolean ok = databaseManager.executePreparedUpdate(sql, new Object[]{cutoffMillis});
-            if (ok) {
+            int deletedCount = databaseManager.executeUpdateWithCount(sql, cutoffMillis);
+            if (deletedCount >= 0) {
                 invalidateCaches();
             }
-            return ok ? 1 : 0;
+            return Math.max(deletedCount, 0);
         } catch (Exception e) {
             logger.error("Error deleting old logs: {}", e.getMessage(), e);
             return 0;

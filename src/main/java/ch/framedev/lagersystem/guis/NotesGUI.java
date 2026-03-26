@@ -4,6 +4,7 @@ import ch.framedev.lagersystem.managers.LogManager;
 import ch.framedev.lagersystem.managers.NotesManager;
 import ch.framedev.lagersystem.classes.Note;
 import ch.framedev.lagersystem.dialogs.MessageDialog;
+import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -75,52 +76,55 @@ public class NotesGUI extends JFrame {
      */
     public NotesGUI() {
         ThemeManager.getInstance().registerWindow(this);
+        ThemeManager.applyUIDefaults();
 
         setTitle(UnicodeSymbols.MEMO + " Notizen");
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(1060, 860);
+        setSize(1060, 760);
+        setMinimumSize(new Dimension(920, 600));
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        JPanel root = new JPanel(new BorderLayout());
-        root.setBackground(ThemeManager.getBackgroundColor());
-        root.setBorder(BorderFactory.createEmptyBorder(32, 32, 32, 32));
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(ThemeManager.getBackgroundColor());
 
-        // Top: header and search bar in a card with shadow and more roundness
-        JPanel topCard = new ShadowRoundedPanel(ThemeManager.getCardBackgroundColor(), 28, 12);
-        topCard.setLayout(new BorderLayout(0, 0));
-        topCard.setBorder(BorderFactory.createEmptyBorder(24, 32, 24, 32));
+        JPanel topContainer = new JPanel();
+        topContainer.setBackground(ThemeManager.getBackgroundColor());
+        topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
+        topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
 
-        JPanel headerPanel = createHeaderPanel();
-        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JPanel searchBar = createSearchBar();
-        searchBar.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel headerWrapper = createHeaderWrapper();
+        if (headerWrapper != null) {
+            topContainer.add(headerWrapper);
+            topContainer.add(Box.createVerticalStrut(10));
+        }
 
-        JPanel topPanel = new JPanel();
-        topPanel.setOpaque(false);
-        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
-        topPanel.add(headerPanel);
-        topPanel.add(Box.createVerticalStrut(16));
-        topPanel.add(searchBar);
+        JPanel toolbarWrapper = new JPanel(new BorderLayout());
+        toolbarWrapper.setOpaque(false);
+        toolbarWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        toolbarWrapper.add(createToolbarCard(), BorderLayout.CENTER);
+        topContainer.add(toolbarWrapper);
 
-        topCard.add(topPanel, BorderLayout.CENTER);
-        root.add(topCard, BorderLayout.NORTH);
+        mainPanel.add(topContainer, BorderLayout.NORTH);
 
-        // Center: content split in a card with shadow and more roundness
-        JPanel contentCard = new ShadowRoundedPanel(ThemeManager.getCardBackgroundColor(), 28, 16);
-        contentCard.setLayout(new BorderLayout());
-        contentCard.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
-        contentCard.add(createContentPanel(), BorderLayout.CENTER);
-        root.add(contentCard, BorderLayout.CENTER);
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        centerWrapper.setBackground(ThemeManager.getBackgroundColor());
+        centerWrapper.setBorder(BorderFactory.createEmptyBorder(0, 14, 0, 14));
 
-        // Bottom: toolbar in a card with shadow and more roundness
-        JPanel bottomCard = new ShadowRoundedPanel(ThemeManager.getCardBackgroundColor(), 28, 10);
-        bottomCard.setLayout(new BorderLayout());
-        bottomCard.setBorder(BorderFactory.createEmptyBorder(16, 24, 16, 24));
-        bottomCard.add(createFooterToolbar(), BorderLayout.CENTER);
-        root.add(bottomCard, BorderLayout.SOUTH);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weightx = 1.0;
+        gbc.weighty = 1.0;
+        centerWrapper.add(createContentCard(), gbc);
+        mainPanel.add(centerWrapper, BorderLayout.CENTER);
 
-        setContentPane(root);
+        JPanel bottomWrapper = new JPanel(new BorderLayout());
+        bottomWrapper.setBackground(ThemeManager.getBackgroundColor());
+        bottomWrapper.setBorder(BorderFactory.createEmptyBorder(10, 14, 14, 14));
+        bottomWrapper.add(createSearchBar(), BorderLayout.CENTER);
+        mainPanel.add(bottomWrapper, BorderLayout.SOUTH);
+
+        setContentPane(mainPanel);
         setupList();
         setupKeyBindings();
     }
@@ -131,20 +135,27 @@ public class NotesGUI extends JFrame {
         super.dispose();
     }
 
-    private JPanel createHeaderPanel() {
-        JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(ThemeManager.getHeaderBackgroundColor());
+    private JPanel createHeaderWrapper() {
+        boolean disableHeader = Main.settings.getProperty("disable_header") != null
+                && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
+        if (disableHeader) {
+            return null;
+        }
+
+        RoundedPanel header = createCardPanel(20);
+        header.setLayout(new BorderLayout());
         header.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor()),
-                BorderFactory.createEmptyBorder(12, 18, 12, 18)));
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)));
+        header.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel title = new JLabel(UnicodeSymbols.MEMO + " Notizen");
         title.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-        title.setForeground(ThemeManager.getTextOnPrimaryColor());
+        title.setForeground(ThemeManager.getTextPrimaryColor());
 
         JLabel subtitle = new JLabel(UnicodeSymbols.INFO + " Persönliche Notizen verwalten und durchsuchen");
         subtitle.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        subtitle.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 200));
+        subtitle.setForeground(ThemeManager.getTextSecondaryColor());
 
         JPanel titleBox = new JPanel();
         titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
@@ -152,17 +163,24 @@ public class NotesGUI extends JFrame {
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
         titleBox.add(title);
-        titleBox.add(Box.createVerticalStrut(10));
+        titleBox.add(Box.createVerticalStrut(4));
         titleBox.add(subtitle);
 
         header.add(titleBox, BorderLayout.WEST);
-        header.add(createToolbar(), BorderLayout.EAST);
-        return header;
+
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        wrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        wrapper.add(header, BorderLayout.CENTER);
+        return wrapper;
     }
 
-    private JPanel createToolbar() {
-        JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        toolbar.setOpaque(false);
+    private JPanel createToolbarCard() {
+        RoundedPanel toolbar = createCardPanel(18);
+        toolbar.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        toolbar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 
         JButton createNoteButton = new JButton(UnicodeSymbols.HEAVY_PLUS + " Notiz erstellen");
         createNoteButton.addActionListener(e -> createNoteDialog());
@@ -176,31 +194,57 @@ public class NotesGUI extends JFrame {
         JButton refreshButton = new JButton(UnicodeSymbols.REFRESH + " Aktualisieren");
         refreshButton.addActionListener(e -> setupList());
 
-        for (JButton button : new JButton[] { createNoteButton, updateDialogButton, deleteDialogButton,
-                refreshButton }) {
-            styleToolbarButton(button);
-            toolbar.add(button);
-        }
+        styleToolbarButton(createNoteButton, ThemeManager.getAccentColor());
+        styleToolbarButton(updateDialogButton, ThemeManager.getPrimaryColor());
+        styleToolbarButton(deleteDialogButton, ThemeManager.getErrorColor());
+        styleToolbarButton(refreshButton, ThemeManager.getPrimaryColor());
+
+        toolbar.add(createNoteButton);
+        toolbar.add(updateDialogButton);
+        toolbar.add(deleteDialogButton);
+        toolbar.add(refreshButton);
 
         return toolbar;
     }
 
-    private JPanel createFooterToolbar() {
-        JPanel toolBar = new JPanel(new BorderLayout());
-        toolBar.setOpaque(false);
-        toolBar.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+    private JPanel createSearchBar() {
+        RoundedPanel searchCard = createCardPanel(18);
+        searchCard.setLayout(new BorderLayout(10, 0));
+        searchCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+
+        JLabel label = new JLabel(UnicodeSymbols.SEARCH + " Suche:");
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+
+        searchField.setColumns(24);
+        JFrameUtils.styleTextField(searchField);
+        searchField.setToolTipText("Titel durchsuchen (Strg/Cmd+F)");
+        installSearchListener();
+
+        JButton clearButton = new JButton(UnicodeSymbols.CLEAR + " Leeren");
+        clearButton.setToolTipText("Suchfeld leeren");
+        clearButton.addActionListener(e -> {
+            searchField.setText("");
+            searchField.requestFocusInWindow();
+        });
+
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        left.setOpaque(false);
+        left.add(label);
+        left.add(searchField);
+        left.add(clearButton);
 
         statusLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         statusLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 0));
-
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        left.setOpaque(false);
-        left.add(statusLabel);
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
+        right.add(statusLabel);
 
+        styleToolbarButton(clearButton, ThemeManager.getPrimaryColor());
         JButton fontSizeBiggerButton = new JButton(UnicodeSymbols.PLUS + " Zoom");
         fontSizeBiggerButton.setToolTipText("Schriftgröße erhöhen");
         fontSizeBiggerButton.addActionListener(listener -> bumpFontSize(2f));
@@ -210,19 +254,28 @@ public class NotesGUI extends JFrame {
         fontSizeSmallerButton.addActionListener(listener -> bumpFontSize(-2f));
 
         for (JButton button : new JButton[] { fontSizeSmallerButton, fontSizeBiggerButton }) {
-            styleToolbarButton(button);
+            styleToolbarButton(button, ThemeManager.getPrimaryColor());
             right.add(button);
         }
 
-        toolBar.add(left, BorderLayout.WEST);
-        toolBar.add(right, BorderLayout.EAST);
-        return toolBar;
+        searchCard.add(left, BorderLayout.CENTER);
+        searchCard.add(right, BorderLayout.EAST);
+        return searchCard;
+    }
+
+    private JPanel createContentCard() {
+        RoundedPanel card = createCardPanel(18);
+        card.setLayout(new BorderLayout(12, 12));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
+        card.add(createContentPanel(), BorderLayout.CENTER);
+        return card;
     }
 
     private JPanel createContentPanel() {
         JPanel content = new JPanel(new BorderLayout());
         content.setOpaque(false);
-        content.setBorder(BorderFactory.createEmptyBorder(14, 0, 0, 0));
 
         notesList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         notesList.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
@@ -230,6 +283,26 @@ public class NotesGUI extends JFrame {
         notesList.setForeground(ThemeManager.getTextPrimaryColor());
         notesList.setSelectionBackground(ThemeManager.getSelectionBackgroundColor());
         notesList.setSelectionForeground(ThemeManager.getSelectionForegroundColor());
+        notesList.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        notesList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected,
+                        cellHasFocus);
+                label.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+                label.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+                if (isSelected) {
+                    label.setBackground(ThemeManager.getSelectionBackgroundColor());
+                    label.setForeground(ThemeManager.getSelectionForegroundColor());
+                } else {
+                    label.setBackground(index % 2 == 0 ? ThemeManager.getCardBackgroundColor()
+                            : ThemeManager.getSurfaceColor());
+                    label.setForeground(ThemeManager.getTextPrimaryColor());
+                }
+                return label;
+            }
+        });
 
         // Selection for Selected Note
         notesList.addListSelectionListener(e -> {
@@ -251,6 +324,9 @@ public class NotesGUI extends JFrame {
         noteContentArea.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
         noteContentArea.setBackground(ThemeManager.getInputBackgroundColor());
         noteContentArea.setForeground(ThemeManager.getTextPrimaryColor());
+        noteContentArea.setCaretColor(ThemeManager.getTextPrimaryColor());
+        noteContentArea.setSelectionColor(ThemeManager.getSelectionBackgroundColor());
+        noteContentArea.setSelectedTextColor(ThemeManager.getSelectionForegroundColor());
         noteContentArea.setMargin(new Insets(10, 12, 10, 12));
         noteContentArea.setLineWrap(true);
         noteContentArea.setWrapStyleWord(true);
@@ -266,35 +342,55 @@ public class NotesGUI extends JFrame {
         contentScroll.getViewport().setBackground(ThemeManager.getInputBackgroundColor());
         contentScroll.getVerticalScrollBar().setUnitIncrement(16);
 
-        RoundedPanel listCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
-        listCard.setLayout(new BorderLayout());
+        RoundedPanel listCard = createCardPanel(14);
+        listCard.setLayout(new BorderLayout(0, 8));
         listCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+        listCard.add(createSectionLabel(UnicodeSymbols.MEMO + " Notizenliste"), BorderLayout.NORTH);
         listCard.add(listScroll, BorderLayout.CENTER);
 
-        RoundedPanel contentCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
-        contentCard.setLayout(new BorderLayout());
+        RoundedPanel contentCard = createCardPanel(14);
+        contentCard.setLayout(new BorderLayout(0, 8));
         contentCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                 BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+        contentCard.add(createSectionLabel(UnicodeSymbols.DOCUMENT + " Vorschau"), BorderLayout.NORTH);
         contentCard.add(contentScroll, BorderLayout.CENTER);
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, listCard, contentCard);
         splitPane.setDividerLocation(260);
         splitPane.setDividerSize(8);
+        splitPane.setResizeWeight(0.3);
+        splitPane.setContinuousLayout(true);
         splitPane.setBorder(BorderFactory.createEmptyBorder());
         splitPane.setOpaque(false);
+        splitPane.setBackground(ThemeManager.getBackgroundColor());
+        splitPane.setForeground(ThemeManager.getBorderColor());
 
         content.add(splitPane, BorderLayout.CENTER);
         return content;
     }
 
-    private void styleToolbarButton(JButton button) {
-        if (button == null) return;
+    private JLabel createSectionLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        label.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+        return label;
+    }
+
+    private RoundedPanel createCardPanel(int radius) {
+        return new RoundedPanel(radius, ThemeManager::getCardBackgroundColor);
+    }
+
+    private void styleToolbarButton(JButton button, Color bg) {
+        if (button == null) {
+            return;
+        }
         button.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        JFrameUtils.applyButtonPalette(button, ThemeManager.getAccentColor());
+        JFrameUtils.applyButtonPalette(button, bg);
     }
 
     /**
@@ -350,7 +446,7 @@ public class NotesGUI extends JFrame {
             if (newContent.isEmpty()) {
                 new MessageDialog()
                     .setTitle("Fehler")
-                    .setMessage("Titel und Inhalt dürfen nicht leer sein.")
+                    .setMessage("Der Inhalt darf nicht leer sein.")
                     .setMessageType(JOptionPane.ERROR_MESSAGE)
                     .display();
                 return;
@@ -364,7 +460,7 @@ public class NotesGUI extends JFrame {
             } else {
                 new MessageDialog()
                     .setTitle("Fehler")
-                    .setMessage("Notiz mit diesem Titel existiert bereits.")
+                    .setMessage("Die Notiz konnte nicht aktualisiert werden.")
                     .setMessageType(JOptionPane.ERROR_MESSAGE)
                     .display();
             }
@@ -403,7 +499,7 @@ public class NotesGUI extends JFrame {
         }
         int confirm = new MessageDialog()
                 .setTitle("Notiz löschen")
-                .setMessage("Möchten Sie die Notiz \" + selectedTitle + \" wirklich löschen?")
+                .setMessage("Möchten Sie die Notiz \"" + selectedTitle + "\" wirklich löschen?")
                 .setOptionType(JOptionPane.YES_NO_OPTION)
                 .setMessageType(JOptionPane.QUESTION_MESSAGE)
                 .displayWithOptions();
@@ -538,25 +634,25 @@ public class NotesGUI extends JFrame {
         root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
         // Card wrapper to match other dialogs
-        RoundedPanel card = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
+        RoundedPanel card = createCardPanel(16);
         card.setLayout(new BorderLayout());
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                 BorderFactory.createEmptyBorder(0, 0, 0, 0)));
 
-        // Header strip
         JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(ThemeManager.getHeaderBackgroundColor());
-        header.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
-
+        header.setOpaque(false);
+        header.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor()),
+                BorderFactory.createEmptyBorder(12, 16, 12, 16)));
         JLabel headerTitle = new JLabel(title);
         headerTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
-        headerTitle.setForeground(ThemeManager.getTextOnPrimaryColor());
+        headerTitle.setForeground(ThemeManager.getTextPrimaryColor());
         header.add(headerTitle, BorderLayout.WEST);
 
         JButton close = new JButton(UnicodeSymbols.CLOSE);
         close.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        close.setForeground(ThemeManager.getTextOnPrimaryColor());
+        close.setForeground(ThemeManager.getTextPrimaryColor());
         close.setContentAreaFilled(false);
         close.setBorderPainted(false);
         close.setFocusPainted(false);
@@ -565,11 +661,9 @@ public class NotesGUI extends JFrame {
         header.add(close, BorderLayout.EAST);
 
         // Body card
-        RoundedPanel body = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
+        RoundedPanel body = createCardPanel(14);
         body.setLayout(new BorderLayout(10, 10));
-        body.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
-                BorderFactory.createEmptyBorder(16, 16, 16, 16)));
+        body.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
         card.add(header, BorderLayout.NORTH);
         card.add(body, BorderLayout.CENTER);
@@ -647,12 +741,7 @@ public class NotesGUI extends JFrame {
     private JTextField createDialogTextField() {
         JTextField field = new JTextField();
         field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        field.setBackground(ThemeManager.getInputBackgroundColor());
-        field.setForeground(ThemeManager.getTextPrimaryColor());
-        field.setCaretColor(ThemeManager.getTextPrimaryColor());
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getInputBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+        JFrameUtils.styleTextField(field);
         return field;
     }
 
@@ -674,6 +763,8 @@ public class NotesGUI extends JFrame {
         area.setBackground(ThemeManager.getInputBackgroundColor());
         area.setForeground(ThemeManager.getTextPrimaryColor());
         area.setCaretColor(ThemeManager.getTextPrimaryColor());
+        area.setSelectionColor(ThemeManager.getSelectionBackgroundColor());
+        area.setSelectedTextColor(ThemeManager.getSelectionForegroundColor());
         area.setLineWrap(true);
         area.setWrapStyleWord(true);
         return area;
@@ -774,24 +865,11 @@ public class NotesGUI extends JFrame {
         updateStatus();
     }
 
-    private JPanel createSearchBar() {
-        JPanel wrap = new JPanel(new BorderLayout(10, 0));
-        wrap.setOpaque(false);
-        wrap.setBorder(BorderFactory.createEmptyBorder(12, 0, 0, 0));
-
-        JLabel label = new JLabel(UnicodeSymbols.SEARCH + " Suchen:");
-        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
-        label.setForeground(ThemeManager.getTextPrimaryColor());
-
-        searchField.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        searchField.setBackground(ThemeManager.getInputBackgroundColor());
-        searchField.setForeground(ThemeManager.getTextPrimaryColor());
-        searchField.setCaretColor(ThemeManager.getTextPrimaryColor());
-        searchField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
-        searchField.setToolTipText("Titel durchsuchen (Strg/Cmd+F)");
-
+    private void installSearchListener() {
+        if (Boolean.TRUE.equals(searchField.getClientProperty("notes.search.listenerInstalled"))) {
+            return;
+        }
+        searchField.putClientProperty("notes.search.listenerInstalled", Boolean.TRUE);
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
@@ -808,17 +886,6 @@ public class NotesGUI extends JFrame {
                 applySearchFilter();
             }
         });
-
-        RoundedPanel card = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 14);
-        card.setLayout(new BorderLayout(10, 0));
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
-        card.add(label, BorderLayout.WEST);
-        card.add(searchField, BorderLayout.CENTER);
-
-        wrap.add(card, BorderLayout.CENTER);
-        return wrap;
     }
 
     private void applySearchFilter() {
@@ -964,18 +1031,20 @@ public class NotesGUI extends JFrame {
      * behavior with rounded corners.
      */
     private static class RoundedPanel extends JPanel {
-        private final Color backgroundColor;
         private final int radius;
-        RoundedPanel(Color bg, int radius) {
-            this.backgroundColor = bg;
+        private final java.util.function.Supplier<Color> backgroundSupplier;
+
+        RoundedPanel(int radius, java.util.function.Supplier<Color> backgroundSupplier) {
             this.radius = radius;
+            this.backgroundSupplier = backgroundSupplier;
             setOpaque(false);
         }
+
         @Override
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            paintRoundedBackground(g2, backgroundColor, 0, 0, getWidth(), getHeight(), radius);
+            paintRoundedBackground(g2, backgroundSupplier.get(), 0, 0, getWidth(), getHeight(), radius);
             g2.dispose();
             super.paintComponent(g);
         }
@@ -990,36 +1059,4 @@ public class NotesGUI extends JFrame {
         }
     }
 
-    // Adds a drop shadow to the rounded panel for a modern, elevated look
-    private static class ShadowRoundedPanel extends RoundedPanel {
-        private final int shadowSize;
-        private final int localRadius;
-        private final Color localBackground;
-        ShadowRoundedPanel(Color bg, int radius, int shadowSize) {
-            super(bg, radius + 4); // slightly rounder
-            this.shadowSize = shadowSize;
-            this.localRadius = radius + 4;
-            this.localBackground = bg;
-            setBorder(BorderFactory.createEmptyBorder(0, 0, shadowSize, shadowSize));
-        }
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            int w = getWidth();
-            int h = getHeight();
-            int r = localRadius;
-            // Draw soft shadow
-            for (int i = shadowSize; i > 0; i--) {
-                int alpha = (int)(18.0 * i/shadowSize);
-                g2.setColor(new Color(0,0,0,alpha));
-                g2.fillRoundRect(i, i, w-i*2, h-i*2, r, r);
-            }
-            // Draw subtle gradient background
-            GradientPaint gp = new GradientPaint(0, 0, localBackground.brighter(), 0, h, localBackground.darker());
-            g2.setPaint(gp);
-            g2.fillRoundRect(0, 0, w-shadowSize, h-shadowSize, r, r);
-            g2.dispose();
-        }
-    }
 }

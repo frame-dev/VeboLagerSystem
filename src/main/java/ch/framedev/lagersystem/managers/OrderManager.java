@@ -55,6 +55,8 @@ public class OrderManager {
         String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_ORDERS + " (" +
                 "orderId TEXT UNIQUE," +
                 "orderedArticles TEXT," +
+                "articleSizes TEXT," +
+                "articleColors TEXT," +
                 "articleFillings TEXT," +
                 "receiverName TEXT," +
                 "receiverKontoNumber TEXT," +
@@ -65,22 +67,31 @@ public class OrderManager {
                 "status TEXT" +
                 ");";
         databaseManager.executeUpdate(sql);
-        ensureArticleFillingsColumn();
+        ensureMetadataColumns();
     }
 
-    private void ensureArticleFillingsColumn() {
+    private void ensureMetadataColumns() {
+        List<String> existingColumns = new ArrayList<>();
         String sql = "PRAGMA table_info(" + DatabaseManager.TABLE_ORDERS + ");";
         try (var resultSet = databaseManager.executeQuery(sql)) {
             while (resultSet != null && resultSet.next()) {
-                if ("articleFillings".equalsIgnoreCase(resultSet.getString("name"))) {
-                    return;
-                }
+                existingColumns.add(resultSet.getString("name"));
             }
         } catch (Exception ignored) {
-            // Fall through and try to add the column.
+            // Fall through and try to add missing columns.
         }
-        databaseManager.executeUpdate("ALTER TABLE " + DatabaseManager.TABLE_ORDERS
-                + " ADD COLUMN articleFillings TEXT;");
+
+        ensureColumnExists(existingColumns, "articleSizes");
+        ensureColumnExists(existingColumns, "articleColors");
+        ensureColumnExists(existingColumns, "articleFillings");
+    }
+
+    private void ensureColumnExists(List<String> existingColumns, String columnName) {
+        boolean exists = existingColumns.stream().anyMatch(name -> columnName.equalsIgnoreCase(name));
+        if (!exists) {
+            databaseManager.executeUpdate("ALTER TABLE " + DatabaseManager.TABLE_ORDERS
+                    + " ADD COLUMN " + columnName + " TEXT;");
+        }
     }
 
     private static String normalizeId(String orderId) {
@@ -126,10 +137,10 @@ public class OrderManager {
         return orderedArticles;
     }
 
-    private static String serializeArticleFillings(Map<String, String> articleFillings) {
-        if (articleFillings == null || articleFillings.isEmpty()) return "";
+    private static String serializeArticleMetadata(Map<String, String> articleMetadata) {
+        if (articleMetadata == null || articleMetadata.isEmpty()) return "";
         Map<String, String> sanitized = new HashMap<>();
-        for (Map.Entry<String, String> entry : articleFillings.entrySet()) {
+        for (Map.Entry<String, String> entry : articleMetadata.entrySet()) {
             if (entry.getKey() == null || entry.getKey().isBlank()) continue;
             String filling = entry.getValue();
             if (filling == null || filling.isBlank()) continue;
@@ -138,14 +149,14 @@ public class OrderManager {
         return sanitized.isEmpty() ? "" : GSON.toJson(sanitized);
     }
 
-    private static Map<String, String> parseArticleFillings(String articleFillingsStr) {
-        if (articleFillingsStr == null || articleFillingsStr.isBlank()) {
+    private static Map<String, String> parseArticleMetadata(String articleMetadataStr) {
+        if (articleMetadataStr == null || articleMetadataStr.isBlank()) {
             return new HashMap<>();
         }
         try {
             java.lang.reflect.Type mapType = new TypeToken<Map<String, String>>() {
             }.getType();
-            Map<String, String> parsed = GSON.fromJson(articleFillingsStr, mapType);
+            Map<String, String> parsed = GSON.fromJson(articleMetadataStr, mapType);
             return parsed == null ? new HashMap<>() : new HashMap<>(parsed);
         } catch (Exception ignored) {
             return new HashMap<>();
@@ -183,14 +194,18 @@ public class OrderManager {
         }
 
         String articlesStr = serializeOrderedArticles(order.getOrderedArticles());
-        String fillingsStr = serializeArticleFillings(order.getArticleFillings());
+        String sizesStr = serializeArticleMetadata(order.getArticleSizes());
+        String colorsStr = serializeArticleMetadata(order.getArticleColors());
+        String fillingsStr = serializeArticleMetadata(order.getArticleFillings());
 
-        String sql = "INSERT INTO " + DatabaseManager.TABLE_ORDERS + " (orderId, orderedArticles, articleFillings, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber, department, status) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        String sql = "INSERT INTO " + DatabaseManager.TABLE_ORDERS + " (orderId, orderedArticles, articleSizes, articleColors, articleFillings, receiverName, receiverKontoNumber, orderDate, senderName, senderKontoNumber, department, status) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
                 id,
                 articlesStr,
+                sizesStr,
+                colorsStr,
                 fillingsStr,
                 order.getReceiverName(),
                 order.getReceiverKontoNumber(),
@@ -224,14 +239,18 @@ public class OrderManager {
         }
 
         String articlesStr = serializeOrderedArticles(order.getOrderedArticles());
-        String fillingsStr = serializeArticleFillings(order.getArticleFillings());
+        String sizesStr = serializeArticleMetadata(order.getArticleSizes());
+        String colorsStr = serializeArticleMetadata(order.getArticleColors());
+        String fillingsStr = serializeArticleMetadata(order.getArticleFillings());
 
         String sql = "UPDATE " + DatabaseManager.TABLE_ORDERS +
-                " SET orderedArticles = ?, articleFillings = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?, status = ? " +
+                " SET orderedArticles = ?, articleSizes = ?, articleColors = ?, articleFillings = ?, receiverName = ?, receiverKontoNumber = ?, orderDate = ?, senderName = ?, senderKontoNumber = ?, department = ?, status = ? " +
                 "WHERE orderId = ?;";
 
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{
                 articlesStr,
+                sizesStr,
+                colorsStr,
                 fillingsStr,
                 order.getReceiverName(),
                 order.getReceiverKontoNumber(),
@@ -290,10 +309,14 @@ public class OrderManager {
             if (resultSet.next()) {
                 String orderedArticlesStr = resultSet.getString("orderedArticles");
                 Map<String, Integer> orderedArticles = parseOrderedArticles(orderedArticlesStr);
-                Map<String, String> articleFillings = parseArticleFillings(resultSet.getString("articleFillings"));
+                Map<String, String> articleSizes = parseArticleMetadata(resultSet.getString("articleSizes"));
+                Map<String, String> articleColors = parseArticleMetadata(resultSet.getString("articleColors"));
+                Map<String, String> articleFillings = parseArticleMetadata(resultSet.getString("articleFillings"));
                 Order o = new Order(
                         resultSet.getString("orderId"),
                         new java.util.HashMap<>(orderedArticles),
+                        articleSizes,
+                        articleColors,
                         articleFillings,
                         resultSet.getString("receiverName"),
                         resultSet.getString("receiverKontoNumber"),
@@ -326,10 +349,14 @@ public class OrderManager {
             while (resultSet.next()) {
                 String orderedArticlesStr = resultSet.getString("orderedArticles");
                 Map<String, Integer> orderedArticles = parseOrderedArticles(orderedArticlesStr);
-                Map<String, String> articleFillings = parseArticleFillings(resultSet.getString("articleFillings"));
+                Map<String, String> articleSizes = parseArticleMetadata(resultSet.getString("articleSizes"));
+                Map<String, String> articleColors = parseArticleMetadata(resultSet.getString("articleColors"));
+                Map<String, String> articleFillings = parseArticleMetadata(resultSet.getString("articleFillings"));
                 Order o = new Order(
                         resultSet.getString("orderId"),
                         orderedArticles,
+                        articleSizes,
+                        articleColors,
                         articleFillings,
                         resultSet.getString("receiverName"),
                         resultSet.getString("receiverKontoNumber"),

@@ -3,9 +3,11 @@ package ch.framedev.lagersystem.utils;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.swing.UIManager;
 
@@ -32,11 +34,13 @@ import javax.swing.UIManager;
  * <p>The Unicode symbols are represented as escape sequences to maintain source code compatibility
  * with ASCII file encodings.
  */
-@SuppressWarnings({"UnnecessaryUnicodeEscape", "unused"})
+@SuppressWarnings({"UnnecessaryUnicodeEscape"})
 public final class UnicodeSymbols {
 
     private static final Font DEFAULT_UI_FONT = new Font("Dialog", Font.PLAIN, 12);
     private static final Font[] EMPTY_FONTS = new Font[0];
+    private static final String VARIATION_SELECTOR_16 = "\uFE0F";
+    private static final String ZERO_WIDTH_JOINER = "\u200D";
 
     private UnicodeSymbols() {
         // utility class
@@ -46,8 +50,10 @@ public final class UnicodeSymbols {
         private static final String OS_NAME = getOSName();
         private static final boolean WINDOWS = OS_NAME.contains("win");
         private static final boolean MAC = OS_NAME.contains("mac");
+        private static final boolean LINUX = OS_NAME.contains("nux") || OS_NAME.contains("nix");
         private static final Font UI_FONT = initUiFont();
-        private static final Font[] EMOJI_FONTS = initEmojiFonts();
+        private static final Set<String> AVAILABLE_FONT_FAMILIES = initAvailableFontFamilies();
+        private static final Font[] RELIABLE_FONTS = initReliableFonts();
         private static volatile Font[] FONTS;
         private static final Object FONTS_LOCK = new Object();
         private static final Map<String, Boolean> CACHE = new ConcurrentHashMap<>();
@@ -69,8 +75,10 @@ public final class UnicodeSymbols {
     }
 
     private static boolean isAvailableFont(String name) {
-        Font font = new Font(name, Font.PLAIN, 12);
-        return font.getFamily(Locale.ROOT).equalsIgnoreCase(name);
+        if (name == null || name.isBlank()) {
+            return false;
+        }
+        return FontSupport.AVAILABLE_FONT_FAMILIES.contains(name.toLowerCase(Locale.ROOT));
     }
 
     private static Font initUiFont() {
@@ -88,31 +96,90 @@ public final class UnicodeSymbols {
         return DEFAULT_UI_FONT;
     }
 
-    private static Font[] initEmojiFonts() {
+    private static Set<String> initAvailableFontFamilies() {
+        Set<String> familyNames = new HashSet<>();
+        try {
+            if (isHeadlessEnvironment()) {
+                return familyNames;
+            }
+            for (String familyName : GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames(Locale.ROOT)) {
+                if (familyName != null && !familyName.isBlank()) {
+                    familyNames.add(familyName.toLowerCase(Locale.ROOT));
+                }
+            }
+        } catch (Exception ignored) {
+            // Keep the set empty and fall back gracefully.
+        }
+        return familyNames;
+    }
+
+    private static Font[] initReliableFonts() {
         try {
             if (isHeadlessEnvironment()) {
                 return EMPTY_FONTS;
             }
-            List<Font> fonts = new ArrayList<>();
-            String[] candidates;
 
-            if (FontSupport.WINDOWS) {
-                candidates = new String[]{"Segoe UI Emoji", "Segoe UI Symbol", "Segoe UI"};
-            } else if (FontSupport.MAC) {
-                candidates = new String[]{"Apple Color Emoji", "Helvetica", "Arial"};
-            } else {
-                candidates = new String[]{"Noto Color Emoji", "DejaVu Sans", "Liberation Sans"};
+            List<Font> fonts = new ArrayList<>();
+            addFontIfPresent(fonts, FontSupport.UI_FONT);
+
+            for (String logicalName : new String[]{"Dialog", "SansSerif", "Serif", "Monospaced"}) {
+                addFontIfPresent(fonts, new Font(logicalName, Font.PLAIN, 12));
             }
 
-            for (String name : candidates) {
+            String[] platformCandidates;
+            if (FontSupport.WINDOWS) {
+                platformCandidates = new String[]{
+                        "Segoe UI Emoji",
+                        "Segoe UI Symbol",
+                        "Segoe UI",
+                        "Arial Unicode MS"
+                };
+            } else if (FontSupport.MAC) {
+                platformCandidates = new String[]{
+                        "Apple Color Emoji",
+                        "SF Pro Text",
+                        "Helvetica Neue",
+                        "Helvetica",
+                        "Arial Unicode MS"
+                };
+            } else if (FontSupport.LINUX) {
+                platformCandidates = new String[]{
+                        "Noto Color Emoji",
+                        "Noto Emoji",
+                        "Noto Sans Symbols 2",
+                        "Noto Sans Symbols",
+                        "Noto Sans",
+                        "DejaVu Sans",
+                        "Liberation Sans"
+                };
+            } else {
+                platformCandidates = new String[]{"Dialog", "SansSerif"};
+            }
+
+            for (String name : platformCandidates) {
                 if (isAvailableFont(name)) {
-                    fonts.add(new Font(name, Font.PLAIN, 12));
+                    addFontIfPresent(fonts, new Font(name, Font.PLAIN, 12));
                 }
             }
+
             return fonts.isEmpty() ? EMPTY_FONTS : fonts.toArray(EMPTY_FONTS);
         } catch (Exception ignored) {
             return EMPTY_FONTS;
         }
+    }
+
+    private static void addFontIfPresent(List<Font> fonts, Font font) {
+        if (font == null) {
+            return;
+        }
+
+        String family = font.getFamily(Locale.ROOT);
+        for (Font existing : fonts) {
+            if (existing.getFamily(Locale.ROOT).equalsIgnoreCase(family)) {
+                return;
+            }
+        }
+        fonts.add(font);
     }
 
     private static Font[] getAllFonts() {
@@ -139,28 +206,78 @@ public final class UnicodeSymbols {
         }
     }
 
+    private static boolean isEmojiLike(String text) {
+        if (text == null || text.isEmpty()) {
+            return false;
+        }
+
+        if (text.contains(VARIATION_SELECTOR_16) || text.contains(ZERO_WIDTH_JOINER)) {
+            return true;
+        }
+
+        return text.codePoints().anyMatch(codePoint -> codePoint > Character.MAX_VALUE);
+    }
+
+    private static boolean canDisplayWithFonts(String text, Font[] fonts) {
+        for (Font font : fonts) {
+            if (font != null && font.canDisplayUpTo(text) == -1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean canDisplayAll(String text) {
         if (text == null || text.isEmpty()) {
             return true;
         }
 
-        Font uiFont = FontSupport.UI_FONT;
-        if (uiFont != null && uiFont.canDisplayUpTo(text) == -1) {
+        String normalized = text.replace(VARIATION_SELECTOR_16, "");
+        if (normalized.isEmpty()) {
+            normalized = text;
+        }
+
+        if (canDisplayWithFonts(normalized, FontSupport.RELIABLE_FONTS)) {
             return true;
         }
 
-        for (Font font : FontSupport.EMOJI_FONTS) {
-            if (font.canDisplayUpTo(text) == -1) {
-                return true;
-            }
+        if (isEmojiLike(normalized)) {
+            return false;
         }
 
         for (Font font : getAllFonts()) {
-            if (font.canDisplayUpTo(text) == -1) {
+            if (font != null && font.canDisplayUpTo(normalized) == -1) {
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Returns whether the current runtime is Windows.
+     *
+     * @return true if running on Windows
+     */
+    public static boolean isWindows() {
+        return FontSupport.WINDOWS;
+    }
+
+    /**
+     * Returns whether the current runtime is macOS.
+     *
+     * @return true if running on macOS
+     */
+    public static boolean isMac() {
+        return FontSupport.MAC;
+    }
+
+    /**
+     * Returns whether the current runtime is Linux/Unix-like.
+     *
+     * @return true if running on Linux
+     */
+    public static boolean isLinux() {
+        return FontSupport.LINUX;
     }
 
 
@@ -196,128 +313,128 @@ public final class UnicodeSymbols {
 
     // ===================== Business Icons =====================
     /** A folder icon. Unicode: U+D83D U+DCC1. */
-    public static final String FOLDER = getSymbol("\uD83D\uDCC1", "DIR");
+    public static final String FOLDER = getSymbol("DIR", "\u25A4", "\uD83D\uDCC1");
     /** A package or box icon. Unicode: U+D83D U+DCE6. */
-    public static final String PACKAGE = getSymbol("\uD83D\uDCE6", "PKG");
+    public static final String PACKAGE = getSymbol("PKG", "\u25A3", "\uD83D\uDCE6");
     /** A truck icon, for deliveries or logistics. Unicode: U+D83D U+DE9A. */
-    public static final String TRUCK = getSymbol("\uD83D\uDE9A", "TRK");
+    public static final String TRUCK = getSymbol("TRK", "\u21E2", "\uD83D\uDE9A");
     /** An edit symbol (pen). Unicode: U+270E. */
     public static final String EDIT = "\u270E";
     /** A pencil icon. Unicode: U+270F. */
     public static final String PENCIL = "\u270F";
     /** A more detailed pencil icon for editing. Unicode: U+D83D U+DCDD. */
-    public static final String BETTER_PENCIL = getSymbol("\uD83D\uDCDD", "EDIT");
+    public static final String BETTER_PENCIL = getSymbol("EDIT", "\u270E", "\uD83D\uDCDD");
     /** A document icon. Unicode: U+D83D U+DCC4. */
-    public static final String DOCUMENT = getSymbol("\uD83D\uDCC4", "DOC");
+    public static final String DOCUMENT = getSymbol("DOC", "\u2630", "\uD83D\uDCC4");
     /** A clipboard icon. Unicode: U+D83D U+DCCB. */
-    public static final String CLIPBOARD = getSymbol("\uD83D\uDCCB", "CLIP");
+    public static final String CLIPBOARD = getSymbol("CLIP", "\u2630", "\uD83D\uDCCB");
     /** A chart or graph icon. Unicode: U+D83D U+DCCA. */
-    public static final String CHART = getSymbol("\uD83D\uDCCA", "CHRT");
+    public static final String CHART = getSymbol("CHRT", "\u2263", "\uD83D\uDCCA");
     /** A money bag or currency symbol. Unicode: U+D83D U+DCB0. */
-    public static final String MONEY = getSymbol("\uD83D\uDCB0", "$");
+    public static final String MONEY = getSymbol("$", "\u00A4", "\uD83D\uDCB0");
     /** A price tag icon. Unicode: U+D83C U+DFF7. */
-    public static final String TAG = getSymbol("\uD83C\uDFF7", "TAG");
+    public static final String TAG = getSymbol("TAG", "#", "\uD83C\uDFF7");
     /** A person or user icon. Unicode: U+D83D U+DC64. */
-    public static final String PERSON = getSymbol("\uD83D\uDC64", "USR");
+    public static final String PERSON = getSymbol("USR", "\u263A", "\uD83D\uDC64");
     /** An ID card or identifier symbol. Unicode: U+D83C U+DD94. */
-    public static final String ID = getSymbol("\uD83C\uDD94", "ID");
+    public static final String ID = getSymbol("ID", "\u2116", "\uD83C\uDD94");
     /** A mobile phone icon. Unicode: U+D83D U+DCF1. */
-    public static final String PHONE = getSymbol("\uD83D\uDCF1", "TEL");
+    public static final String PHONE = getSymbol("TEL", "\u260E", "\uD83D\uDCF1");
     /** A clock icon. Unicode: U+D83D U+DD70. */
-    public static final String CLOCK = getSymbol("\uD83D\uDD70", "TIME");
+    public static final String CLOCK = getSymbol("TIME", "\u23F0", "\uD83D\uDD70");
     /** A calendar icon. Unicode: U+D83D U+DCC5. */
-    public static final String CALENDAR = getSymbol("\uD83D\uDCC5", "DATE");
+    public static final String CALENDAR = getSymbol("DATE", "\u25A6", "\uD83D\uDCC5");
     /** A trash can icon for deletion. Unicode: U+D83D U+DDD1. */
-    public static final String TRASH = getSymbol("\uD83D\uDDD1", "DEL");
+    public static final String TRASH = getSymbol("DEL", "\u232B", "\uD83D\uDDD1");
     /** A download icon (arrow pointing down). Unicode: U+D83D U+DCE5. */
-    public static final String DOWNLOAD = getSymbol("\uD83D\uDCE5", "DL");
+    public static final String DOWNLOAD = getSymbol("DL", "\u2B07", "\uD83D\uDCE5");
     /** An upload icon (arrow pointing up). Unicode: U+D83D U+DCE4. */
-    public static final String UPLOAD = getSymbol("\uD83D\uDCE4", "UP");
+    public static final String UPLOAD = getSymbol("UP", "\u2B06", "\uD83D\uDCE4");
     /** A refresh or reload icon. Unicode: U+D83D U+DD04. */
-    public static final String REFRESH = getSymbol("\uD83D\uDD04", "REF");
+    public static final String REFRESH = getSymbol("REF", "\u21BB", "\uD83D\uDD04");
     /** A gear icon for settings. Unicode: U+2699. */
     public static final String GEAR = "\u2699";
     /** A more detailed gear icon for configuration. Unicode: U+D83D U+DEE0. */
-    public static final String BETTER_GEAR = getSymbol("\uD83D\uDEE0", "CFG");
+    public static final String BETTER_GEAR = getSymbol("CFG", "\u2699", "\uD83D\uDEE0");
     /** A magnifying glass for search. Unicode: U+D83D U+DD0D. */
-    public static final String SEARCH = getSymbol("\uD83D\uDD0D", "SRCH");
+    public static final String SEARCH = getSymbol("SRCH", "\u2315", "\uD83D\uDD0D");
     /** A group of people or users. Unicode: U+D83D U+DC65. */
-    public static final String PEOPLE = getSymbol("\uD83D\uDC65", "USERS");
+    public static final String PEOPLE = getSymbol("USERS", "\u263A", "\uD83D\uDC65");
     /** A building or office icon. Unicode: U+D83C U+DFE2. */
-    public static final String BUILDING = getSymbol("\uD83C\uDFE2", "BLDG");
+    public static final String BUILDING = getSymbol("BLDG", "\u2302", "\uD83C\uDFE2");
     /** A numbers or digits icon (1234). Unicode: U+D83D U+DD22. */
-    public static final String NUMBERS = getSymbol("\uD83D\uDD22", "#");
+    public static final String NUMBERS = getSymbol("#", "\u2116", "\uD83D\uDD22");
     /** A memo or note icon. Unicode: U+D83D U+DCDD. */
-    public static final String MEMO = getSymbol("\uD83D\uDCDD", "MEMO");
+    public static final String MEMO = getSymbol("MEMO", "\u270E", "\uD83D\uDCDD");
     /** A broom icon for clearing or cleaning. Unicode: U+D83E U+DDF9. */
-    public static final String BROOM = getSymbol("\uD83E\uDDF9", "CLR");
+    public static final String BROOM = getSymbol("CLR", "\u232B", "\uD83E\uDDF9");
     /** A floppy disk icon for saving. Unicode: U+D83D U+DCBE. */
-    public static final String FLOPPY = getSymbol("\uD83D\uDCBE", "SAVE");
+    public static final String FLOPPY = getSymbol("SAVE", "\u25A3", "\uD83D\uDCBE");
     /** A list or document with lines. Unicode: U+D83D U+DCC3. */
-    public static final String LIST = getSymbol("\uD83D\uDCC3", "LIST");
+    public static final String LIST = getSymbol("LIST", "\u2630", "\uD83D\uDCC3");
     /** A clear or delete symbol. Unicode: U+D83D U+DDD1. */
-    public static final String CLEAR = getSymbol("\uD83D\uDDD1", "DEL");
+    public static final String CLEAR = getSymbol("DEL", "\u2715", "\u232B", "\uD83D\uDDD1");
     /** A client or briefcase icon. Unicode: U+D83D U+DCBC. */
-    public static final String CLIENT = getSymbol("\uD83D\uDCBC", "CLNT");
+    public static final String CLIENT = getSymbol("CLNT", "\u263A", "\uD83D\uDCBC");
     /** An update or refresh symbol. Unicode: U+D83D U+DD04. */
-    public static final String UPDATE = getSymbol("\uD83D\uDD04", "UPD");
+    public static final String UPDATE = getSymbol("UPD", "\u21BB", "\uD83D\uDD04");
     /** A department or building icon. Unicode: U+D83C U+DFE2. */
-    public static final String DEPARTMENT = getSymbol("\uD83C\uDFE2", "DEPT");
+    public static final String DEPARTMENT = getSymbol("DEPT", "\u2302", "\u25A6", "\uD83C\uDFE2");
     /** A settings gear icon. Unicode: U+2699. */
     public static final String SETTINGS = "\u2699";
     /** A health or medical symbol (syringe). Unicode: U+D83D U+DC89. */
-    public static final String HEALTH = getSymbol("\uD83D\uDC89", "HLTH");
+    public static final String HEALTH = getSymbol("HLTH", "\u2695", "\uD83D\uDC89");
     /** A credit card icon. Unicode: U+D83D U+DCB3. */
-    public static final String CREDIT_CARD = getSymbol("\uD83D\uDCB3", "CARD");
+    public static final String CREDIT_CARD = getSymbol("CARD", "\u00A4", "\uD83D\uDCB3");
     /** A calculator icon. Unicode: U+D83D U+DCB1. */
-    public static final String CALCULATOR = getSymbol("\uD83D\uDCB1", "CALC");
+    public static final String CALCULATOR = getSymbol("CALC", "\u2211", "\uD83D\uDCB1");
     /** A light bulb icon for tips or ideas. Unicode: U+D83D U+DCA1. */
-    public static final String BULB = getSymbol("\uD83D\uDCA1", "TIP");
+    public static final String BULB = getSymbol("TIP", "\u2600", "\uD83D\uDCA1");
     /** The letters 'ABC' in a block. Unicode: U+D83D U+DD24. */
-    public static final String ABC = getSymbol("\uD83D\uDD24", "ABC");
+    public static final String ABC = "ABC";
     /** A color palette icon. Unicode: U+D83C U+DFA8. */
-    public static final String COLOR_PALETTE = getSymbol("\uD83C\uDFA8", "COL");
+    public static final String COLOR_PALETTE = getSymbol("COL", "\u25A7", "\uD83C\uDFA8");
     /** A wrench icon for tools or utilities. Unicode: U+D83D U+DD27. */
-    public static final String WRENCH = getSymbol("\uD83D\uDD27", "TOOL");
+    public static final String WRENCH = getSymbol("TOOL", "\u2692", "\uD83D\uDD27");
     /** A globe icon for web or internationalization. Unicode: U+D83C U+DF10. */
-    public static final String GLOBE = getSymbol("\uD83C\uDF10", "WEB");
+    public static final String GLOBE = getSymbol("WEB", "\u2295", "\uD83C\uDF10");
     /** A computer or developer icon. Unicode: U+D83D U+DCBB. */
-    public static final String DEVELOPER = getSymbol("\uD83D\uDCBB", "DEV");
+    public static final String DEVELOPER = getSymbol("DEV", "\u2328", "\uD83D\uDCBB");
     /** A shopping cart icon. Unicode: U+D83D U+DED2. */
-    public static final String SHOPPING_CART = getSymbol("\uD83D\uDED2", "CART");
+    public static final String SHOPPING_CART = getSymbol("CART", "\u229E", "\uD83D\uDED2");
     /** A laptop or computer icon. Unicode: U+D83D U+DCBB. */
-    public static final String LAPTOP = getSymbol("\uD83D\uDCBB", "LAP");
+    public static final String LAPTOP = getSymbol("LAP", "\u2328", "\uD83D\uDCBB");
     /** A monitor icon. Unicode: U+D83D U+DCFA. */
-    public static final String MONITOR = getSymbol("\uD83D\uDCFA", "MON");
+    public static final String MONITOR = getSymbol("MON", "\u25A1", "\uD83D\uDCFA");
     /** An experiment icon. Unicode: U+D83D U+DCAD. */
-    public static final String EXPERIMENT = getSymbol("\uD83D\uDCAD", "EXP");
+    public static final String EXPERIMENT = getSymbol("EXP", "\u2736", "\uD83D\uDCAD");
     /** A test tube icon. Unicode: U+D83E U+DD2C. */
-    public static final String TEST_TUBE = getSymbol("\uD83E\uDD2C", "TEST");
+    public static final String TEST_TUBE = getSymbol("TEST", "\u2697", "\uD83E\uDD2C");
     /** A beta icon. Unicode: U+1F171. */
-    public static final String BETA = getSymbol("\uD83C\uDD71", "BETA");
+    public static final String BETA = getSymbol("BETA", "\u03B2", "\uD83C\uDD71");
     /** An alpha icon. Unicode: U+1F170. */
-    public static final String ALPHA = getSymbol("\uD83C\uDD70", "ALPHA");
+    public static final String ALPHA = getSymbol("ALPHA", "\u03B1", "\uD83C\uDD70");
     /** A box icon. Unicode: U+1F4E6. */
-    public static final String BOX = getSymbol("\uD83D\uDCE6", "BOX");
+    public static final String BOX = getSymbol("BOX", "\u25A3", "\uD83D\uDCE6");
     /** A test icon. Unicode: U+1F4DD. */
-    public static final String TEST = getSymbol("\uD83D\uDCDD", "TEST");
+    public static final String TEST = getSymbol("TEST", "\u270E", "\uD83D\uDCDD");
     // ===================== Table/Column Icons =====================
     /** An icon for an article number column. */
     public static final String ARTIKELNUMMER = NUMBERS;
     /** An icon for an article name column. Unicode: U+D83D U+DCD6. */
-    public static final String ARTICLE_NAME = getSymbol("\uD83D\uDCD6", "NAME");
+    public static final String ARTICLE_NAME = getSymbol("NAME", "\u2630", "\uD83D\uDCD6");
     /** An icon for a category column. Unicode: U+D83D U+DCCF. */
-    public static final String CATEGORY = getSymbol("\uD83D\uDCCF", "CAT");
+    public static final String CATEGORY = getSymbol("CAT", "\u25A6", "\uD83D\uDCCF");
     /** An icon for a details column. */
     public static final String DETAILS = CLIPBOARD;
     /** An icon for a stock quantity column. */
     public static final String STOCK_QUANTITY = PACKAGE;
     /** An icon for a minimum stock column. Unicode: U+D83D U+DD3A. */
-    public static final String MIN_STOCK = getSymbol("\uD83D\uDD3A", "MIN");
+    public static final String MIN_STOCK = getSymbol("MIN", "\u25B3", "\uD83D\uDD3A");
     /** An icon for a sales price column. */
     public static final String SELL_PRICE = MONEY;
     /** An icon for a purchase price column. Unicode: U+D83D U+DCB3. */
-    public static final String PURCHASE_PRICE = getSymbol("\uD83D\uDCB3", "BUY");
+    public static final String PURCHASE_PRICE = getSymbol("BUY", "\u00A4", "\uD83D\uDCB3");
     /** An icon for a supplier column. */
     public static final String SUPPLIER = PEOPLE;
     /** An icon for adding a quantity. Unicode: U+2795. */
@@ -325,17 +442,17 @@ public final class UnicodeSymbols {
     /** An icon for an order quantity column. */
     public static final String ORDER_QUANTITY = CLIPBOARD;
     /** An icon representing the time something was added. Unicode: U+23F0. */
-    public static final String ADDED_AT = getSymbol("\u23F0", "TIME");
+    public static final String ADDED_AT = getSymbol("TIME", "\u23F0", "\uD83D\uDD70");
     /** An icon for an address column. Unicode: U+D83C U+DFE0. */
-    public static final String ADDRESS = getSymbol("\uD83C\uDFE0", "ADDR");
+    public static final String ADDRESS = getSymbol("ADDR", "\u2302", "\uD83C\uDFE0");
     /** An icon for an email column. Unicode: U+D83D U+DCE7. */
-    public static final String EMAIL = getSymbol("\uD83D\uDCE7", "MAIL");
+    public static final String EMAIL = getSymbol("MAIL", "\u2709", "\uD83D\uDCE7");
     /** An icon for a contact person column. */
     public static final String CONTACT = PERSON;
     /** An icon for delivered articles. */
     public static final String DELIVERED_ARTICLES = PACKAGE;
     /** An icon for a minimum order value column. Unicode: U+D83D U+DCB5. */
-    public static final String MIN_ORDER_VALUE = getSymbol("\uD83D\uDCB5", "MIN$");
+    public static final String MIN_ORDER_VALUE = getSymbol("MIN$", "\u00A4", "\uD83D\uDCB5");
     /** An icon for a vendor column. */
     public static final String VENDOR = PEOPLE;
     /** An icon for a supplier order. */
@@ -395,11 +512,11 @@ public final class UnicodeSymbols {
     /** A text file icon. */
     public static final String FILE_TEXT = LIST;
     /** A PDF file icon. Unicode: U+D83D U+DCD1. */
-    public static final String FILE_PDF = getSymbol("\uD83D\uDCD1", "PDF");
+    public static final String FILE_PDF = getSymbol("PDF", "\u25A4", "\uD83D\uDCD1");
     /** A file archive (zip) icon. Unicode: U+D83D U+DDDC. */
-    public static final String ARCHIVE = getSymbol("\uD83D\uDDDC", "ZIP");
+    public static final String ARCHIVE = getSymbol("ZIP", "\u25A6", "\uD83D\uDDDC");
     /** A database icon. Unicode: U+D83D U+DDC3. */
-    public static final String DATABASE = getSymbol("\uD83D\uDDC3", "DB");
+    public static final String DATABASE = getSymbol("DB", "\u25A6", "\uD83D\uDDC3");
     /** A cloud icon. Unicode: U+2601. */
     public static final String CLOUD = getSymbol("\u2601", "CLD");
     /** A cloud upload icon. */
@@ -409,17 +526,17 @@ public final class UnicodeSymbols {
 
     // ===================== Security & Permissions =====================
     /** A lock icon (locked). Unicode: U+D83D U+DD12. */
-    public static final String LOCK = getSymbol("\uD83D\uDD12", "LOCK");
+    public static final String LOCK = getSymbol("LOCK", "\u26BF", "\uD83D\uDD12");
     /** An unlock icon (unlocked). Unicode: U+D83D U+DD13. */
-    public static final String UNLOCK = getSymbol("\uD83D\uDD13", "UNLK");
+    public static final String UNLOCK = getSymbol("UNLK", "\u26BF", "\uD83D\uDD13");
     /** A key icon. Unicode: U+D83D U+DD11. */
-    public static final String KEY = getSymbol("\uD83D\uDD11", "KEY");
+    public static final String KEY = getSymbol("KEY", "\u26BF", "\uD83D\uDD11");
     /** A shield icon for security. Unicode: U+D83D U+DEE1. */
-    public static final String SHIELD = getSymbol("\uD83D\uDEE1", "SEC");
+    public static final String SHIELD = getSymbol("SEC", "\u26E8", "\uD83D\uDEE1");
     /** A shield with a warning symbol. Unicode: U+26E8. */
     public static final String WARNING_SHIELD = getSymbol("\u26E8", "!");
     /** A verification or success checkmark in a box. Unicode: U+2705. */
-    public static final String VERIFIED = getSymbol("\u2705", "OK");
+    public static final String VERIFIED = getSymbol("OK", "\u2714", "\u2705");
     /** A blocked or no-entry symbol. Unicode: U+26D4. */
     public static final String BLOCKED = getSymbol("\u26D4", "NO");
 
@@ -429,21 +546,21 @@ public final class UnicodeSymbols {
     /** A multiple users icon. */
     public static final String USERS = PEOPLE;
     /** An administrator icon (crown). Unicode: U+D83D U+DC51. */
-    public static final String ADMIN = getSymbol("\uD83D\uDC51", "ADMIN");
+    public static final String ADMIN = getSymbol("ADMIN", "\u2605", "\uD83D\uDC51");
     /** A guest user icon. Unicode: U+D83D U+DC68. */
-    public static final String GUEST = getSymbol("\uD83D\uDC68", "GUEST");
+    public static final String GUEST = getSymbol("GUEST", "\u263A", "\uD83D\uDC68");
     /** A user profile icon. Unicode: U+D83D U+DC72. */
-    public static final String PROFILE = getSymbol("\uD83D\uDC72", "PROF");
+    public static final String PROFILE = getSymbol("PROF", "\u263A", "\uD83D\uDC72");
 
     // ===================== Communication =====================
     /** A message or speech bubble icon. Unicode: U+D83D U+DCAC. */
-    public static final String MESSAGE = getSymbol("\uD83D\uDCAC", "MSG");
+    public static final String MESSAGE = getSymbol("MSG", "\u2709", "\uD83D\uDCAC");
     /** A chat or multiple messages icon. Unicode: U+D83D U+DDE8. */
-    public static final String CHAT = getSymbol("\uD83D\uDDE8", "CHAT");
+    public static final String CHAT = getSymbol("CHAT", "\u2709", "\uD83D\uDDE8");
     /** A notification bell icon. Unicode: U+D83D U+DD14. */
-    public static final String NOTIFICATION = getSymbol("\uD83D\uDD14", "NOTIF");
+    public static final String NOTIFICATION = getSymbol("NOTIF", "\u266A", "\uD83D\uDD14");
     /** A muted or silent notification bell. Unicode: U+D83D U+DD15. */
-    public static final String MUTED = getSymbol("\uD83D\uDD15", "MUTE");
+    public static final String MUTED = getSymbol("MUTE", "\u266B", "\uD83D\uDD15");
     /** A send icon (paper airplane). Unicode: U+27A1. */
     public static final String SEND = "\u27A1";
     /** A receive icon (arrow pointing left). Unicode: U+2B05. */
@@ -457,13 +574,13 @@ public final class UnicodeSymbols {
     /** A sort-down icon (downward triangle). Unicode: U+25BC. */
     public static final String SORT_DOWN = getSymbol("\u25BC", "v");
     /** A filter icon (magnifying glass with funnel). Unicode: U+D83D U+DD0E. */
-    public static final String FILTER = getSymbol("\uD83D\uDD0E", "FILTER");
+    public static final String FILTER = getSymbol("FILTER", "\u2315", "\uD83D\uDD0E");
     /** A funnel icon for filtering. Unicode: U+D83D U+DDC4. */
-    public static final String FUNNEL = getSymbol("\uD83D\uDDC4", "FILTER");
+    public static final String FUNNEL = getSymbol("FILTER", "\u2301", "\uD83D\uDDC4");
 
     // ===================== Status & Indicators =====================
     /** An online or active status indicator (green circle). Unicode: U+D83D U+DFE2. */
-    public static final String ONLINE = getSymbol("\uD83D\uDFE2", "ON");
+    public static final String ONLINE = getSymbol("ON", "\u25CF", "\uD83D\uDFE2");
     /** An offline or inactive status indicator (black circle). Unicode: U+26AB. */
     public static final String OFFLINE = getSymbol("\u26AB", "OFF");
     /** An in-progress or loading indicator (hourglass). Unicode: U+23F3. */
@@ -477,25 +594,25 @@ public final class UnicodeSymbols {
 
     // ===================== Misc UI Helpers =====================
     /** An eye icon for viewing or showing. Unicode: U+D83D U+DC41. */
-    public static final String EYE = getSymbol("\uD83D\uDC41", "VIEW");
+    public static final String EYE = getSymbol("VIEW", "\u25C9", "\uD83D\uDC41");
     /** An icon for hidden or redacted content. Unicode: U+D83D U+DE48. */
-    public static final String HIDDEN = getSymbol("\uD83D\uDE48", "HIDE");
+    public static final String HIDDEN = getSymbol("HIDE", "\u25CC", "\uD83D\uDE48");
     /** A link icon. Unicode: U+D83D U+DD17. */
-    public static final String LINK = getSymbol("\uD83D\uDD17", "LINK");
+    public static final String LINK = getSymbol("LINK", "\u21C4", "\uD83D\uDD17");
     /** An unlink icon. Unicode: U+D83D U+DD18. */
-    public static final String UNLINK = getSymbol("\uD83D\uDD18", "UNLNK");
+    public static final String UNLINK = getSymbol("UNLNK", "\u21AE", "\uD83D\uDD18");
     /** A pin icon. Unicode: U+D83D U+DCCC. */
-    public static final String PIN = getSymbol("\uD83D\uDCCC", "PIN");
+    public static final String PIN = getSymbol("PIN", "\u2022", "\uD83D\uDCCC");
     /** A location or map marker icon. Unicode: U+D83D U+DCCD. */
-    public static final String LOCATION = getSymbol("\uD83D\uDCCD", "LOC");
+    public static final String LOCATION = getSymbol("LOC", "\u2316", "\uD83D\uDCCD");
 
     // ===================== Time & History =====================
     /** A history or clock icon. Unicode: U+23F2. */
     public static final String HISTORY = getSymbol("\u23F2", "HIST");
     /** A time or clock icon. Unicode: U+23F0. */
-    public static final String TIME = getSymbol("\u23F0", "TIME");
+    public static final String TIME = getSymbol("TIME", "\u23F0", "\uD83D\uDD70");
     /** An alternative calendar icon. Unicode: U+D83D U+DCC6. */
-    public static final String CALENDAR_ALT = getSymbol("\uD83D\uDCC6", "DATE");
+    public static final String CALENDAR_ALT = getSymbol("DATE", "\u25A6", "\uD83D\uDCC6");
     /** A status icon. */
     public static final String STATUS = WARNING;
     /** A title icon. */
@@ -547,17 +664,17 @@ public final class UnicodeSymbols {
     /** A filled star for ratings. Unicode: U+2605. */
     public static final String STAR_FILLED = "\u2605";
     /** A thumbs-up icon. Unicode: U+D83D U+DC4D. */
-    public static final String THUMBS_UP = getSymbol("\uD83D\uDC4D", "OK");
+    public static final String THUMBS_UP = getSymbol("OK", "\u2713", "\uD83D\uDC4D");
     /** A thumbs-down icon. Unicode: U+D83D U+DC4E. */
-    public static final String THUMBS_DOWN = getSymbol("\uD83D\uDC4E", "NO");
+    public static final String THUMBS_DOWN = getSymbol("NO", "\u2716", "\uD83D\uDC4E");
 
     // ===================== System & Power =====================
     /** A power symbol. Unicode: U+23FB. */
     public static final String POWER = getSymbol("\u23FB", "PWR");
     /** A restart symbol. Unicode: U+21BB. */
-    public static final String RESTART = getSymbol("\u21BB", "RST");
+    public static final String RESTART = getSymbol("RST", "\u21BB", "\uD83D\uDD04");
     /** A shutdown symbol. Unicode: U+23FC. */
-    public static final String SHUTDOWN = getSymbol("\u23FC", "OFF");
+    public static final String SHUTDOWN = getSymbol("OFF", "\u23FB", "\u23FC");
     /** A terminal or command line icon. Unicode: U+2328. */
     public static final String TERMINAL = getSymbol("\u2328", "TERM");
     /** A console or empty square icon. Unicode: U+25A1. */
@@ -588,15 +705,9 @@ public final class UnicodeSymbols {
     public static final String CHEVRON_DOWN = getSymbol("\u02C5", "v");
 
     // ===================== Currency (Extended) =====================
-    /** A Swiss Franc currency symbol. Unicode: U+20A3. */
-    public static final String SWISS_FRANC = getSymbol("\u20A3", "CHF");
-    /** An Indian Rupee currency symbol. Unicode: U+20B9. */
-    public static final String RUPEE = getSymbol("\u20B9", "INR");
-    /** A Korean Won currency symbol. Unicode: U+20A9. */
-    public static final String WON = getSymbol("\u20A9", "KRW");
-    /** A Bitcoin currency symbol. Unicode: U+20BF. */
-    public static final String BITCOIN = getSymbol("\u20BF", "BTC");
-
+    /** Swiss Franc label. CHF is used because there is no dedicated modern Unicode symbol. */
+    public static final String SWISS_FRANC = "CHF";
+    
     // ===================== Legal & Documents =====================
     /** The copyright symbol (©). Unicode: U+00A9. */
     public static final String COPYRIGHT = "\u00A9";
@@ -609,7 +720,7 @@ public final class UnicodeSymbols {
 
     // ===================== Debug & Developer =====================
     /** A bug icon for debugging purposes. Unicode: U+D83D U+DC1B. */
-    public static final String BUG = getSymbol("\uD83D\uDC1B", "BUG");
+    public static final String BUG = getSymbol("BUG", "\u2731", "\uD83D\uDC1B");
     /** A tools icon for developer or configuration utilities. Unicode: U+2692. */
     public static final String TOOLS = getSymbol("\u2692", "TOOLS");
     /** A code or script icon, represented by a pencil. */
@@ -677,15 +788,45 @@ public final class UnicodeSymbols {
      * @param fallback ASCII text fallback (unsupported platforms)
      * @return emoji if supported, otherwise fallback text
      */
-    public static String getSymbol(String emoji, String fallback) {
+    public static String getSymbol(String symbol, String fallback) {
         String safeFallback = normalizeFallback(fallback);
 
-        if (emoji == null || emoji.isEmpty()) {
+        if (symbol == null || symbol.isEmpty()) {
             return safeFallback;
         }
 
-        boolean cached = FontSupport.CACHE.computeIfAbsent(emoji, UnicodeSymbols::canDisplayAll);
-        return cached ? emoji : safeFallback;
+        boolean supported = FontSupport.CACHE.computeIfAbsent(symbol, UnicodeSymbols::canDisplayAll);
+        return supported ? symbol : safeFallback;
+    }
+
+    /**
+     * Resolves the first reliably displayable symbol from the provided candidates.
+     * This prefers symbols that work with common UI/system fonts across Windows, macOS,
+     * and Linux before falling back to ASCII text.
+     *
+     * @param fallback ASCII fallback text
+     * @param candidates ordered list of symbol candidates, best to least preferred
+     * @return the first supported symbol, otherwise the fallback
+     */
+    public static String getSymbol(String fallback, String... candidates) {
+        String safeFallback = normalizeFallback(fallback);
+
+        if (candidates == null || candidates.length == 0) {
+            return safeFallback;
+        }
+
+        for (String candidate : candidates) {
+            if (candidate == null || candidate.isEmpty()) {
+                continue;
+            }
+
+            boolean supported = FontSupport.CACHE.computeIfAbsent(candidate, UnicodeSymbols::canDisplayAll);
+            if (supported) {
+                return candidate;
+            }
+        }
+
+        return safeFallback;
     }
 
     /**
@@ -713,6 +854,34 @@ public final class UnicodeSymbols {
     }
 
     /**
+     * Variant of {@link #safeSymbol(String, String, Font)} that accepts multiple
+     * ordered symbol candidates and returns the first one displayable by the
+     * provided font.
+     *
+     * @param fallback ASCII fallback text
+     * @param font font to check directly
+     * @param candidates ordered symbol candidates
+     * @return first symbol supported by the font, otherwise the fallback
+     */
+    public static String safeSymbol(String fallback, Font font, String... candidates) {
+        String safeFallback = normalizeFallback(fallback);
+        if (candidates == null || candidates.length == 0) {
+            return safeFallback;
+        }
+
+        if (font == null) {
+            return getSymbol(safeFallback, candidates);
+        }
+
+        for (String candidate : candidates) {
+            if (candidate != null && !candidate.isEmpty() && font.canDisplayUpTo(candidate) == -1) {
+                return candidate;
+            }
+        }
+        return safeFallback;
+    }
+
+    /**
      * Legacy method for backward compatibility.
      * Now delegates to getSymbol for consistent behavior.
      *
@@ -725,7 +894,15 @@ public final class UnicodeSymbols {
     }
 
     private static String columnLabel(String icon, String label) {
-        return normalizeFallback(icon) + " " + normalizeFallback(label);
+        String safeIcon = normalizeFallback(icon).trim();
+        String safeLabel = normalizeFallback(label).trim();
+        if (safeIcon.isEmpty()) {
+            return safeLabel;
+        }
+        if (safeLabel.isEmpty()) {
+            return safeIcon;
+        }
+        return safeIcon + " " + safeLabel;
     }
 
 }

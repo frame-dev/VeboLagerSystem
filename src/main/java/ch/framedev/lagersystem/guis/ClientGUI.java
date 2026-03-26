@@ -40,6 +40,8 @@ public class ClientGUI extends JFrame {
     private final JLabel clientCountLabel = new JLabel();
 
     private final JComboBox<String> filterDepartmentCombobox;
+    private SwingWorker<List<Map<String, String>>, Void> clientLoadWorker;
+    private int clientLoadGeneration = 0;
 
     private static final String ALL_DEPARTMENTS_LABEL = UnicodeSymbols.DEPARTMENT + " Alle Abteilungen";
 
@@ -369,10 +371,6 @@ public class ClientGUI extends JFrame {
 
         refreshButton.addActionListener(e -> {
             loadClients();
-            new MessageDialog()
-                    .setTitle("Aktualisiert")
-                    .setMessage("Kundenliste wurde aktualisiert.")
-                    .display();
         });
 
         // ===== Auto resize columns =====
@@ -389,6 +387,9 @@ public class ClientGUI extends JFrame {
 
     @Override
     public void dispose() {
+        if (clientLoadWorker != null && !clientLoadWorker.isDone()) {
+            clientLoadWorker.cancel(true);
+        }
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
@@ -421,9 +422,37 @@ public class ClientGUI extends JFrame {
     }
 
     private void loadClients() {
-        ClientManager clientManager = ClientManager.getInstance();
-        List<Map<String, String>> dbClients = clientManager.getAllClients();
+        int loadGeneration = ++clientLoadGeneration;
+        if (clientLoadWorker != null && !clientLoadWorker.isDone()) {
+            clientLoadWorker.cancel(true);
+        }
+        clientCountLabel.setText("Kunden werden geladen...");
+        clientLoadWorker = new SwingWorker<>() {
+            @Override
+            protected List<Map<String, String>> doInBackground() {
+                List<Map<String, String>> dbClients = ClientManager.getInstance().getAllClients();
+                return dbClients != null ? dbClients : java.util.Collections.emptyList();
+            }
 
+            @Override
+            protected void done() {
+                if (isCancelled() || loadGeneration != clientLoadGeneration) {
+                    return;
+                }
+                try {
+                    populateClients(get());
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    updateClientCountLabel((TableRowSorter<?>) clientTable.getRowSorter());
+                } catch (java.util.concurrent.ExecutionException ex) {
+                    updateClientCountLabel((TableRowSorter<?>) clientTable.getRowSorter());
+                }
+            }
+        };
+        clientLoadWorker.execute();
+    }
+
+    private void populateClients(List<Map<String, String>> dbClients) {
         clients.clear();
         DefaultTableModel model = (DefaultTableModel) clientTable.getModel();
         model.setRowCount(0);

@@ -338,6 +338,7 @@ public class Main {
         databaseManager = new DatabaseManager(getAppDataDir().getAbsolutePath(), "vebo_lager_system.db");
         System.out.println("✓ Datenbank initialisiert");
         logger.info("Database initialized.");
+        cleanupOldLogsIfEnabled();
         logUtils.addLog("Datenbank initialisiert.");
     }
 
@@ -691,6 +692,9 @@ public class Main {
      * Get boolean setting with a default value
      */
     private static boolean getBooleanSetting(String key, boolean defaultValue) {
+        if (settings == null) {
+            return defaultValue;
+        }
         String value = settings.getProperty(key);
         return value == null ? defaultValue : Boolean.parseBoolean(value);
     }
@@ -699,6 +703,9 @@ public class Main {
      * Get boolean setting with support for legacy key aliases.
      */
     private static boolean getBooleanSetting(String key, boolean defaultValue, String... aliases) {
+        if (settings == null) {
+            return defaultValue;
+        }
         String value = settings.getProperty(key);
         if (value != null) {
             return Boolean.parseBoolean(value);
@@ -719,6 +726,29 @@ public class Main {
         }
 
         return defaultValue;
+    }
+
+    private static void cleanupOldLogsIfEnabled() {
+        if (!getBooleanSetting("delete_old_logs_on_startup", false)) {
+            return;
+        }
+
+        int deletedDatabaseLogs = ch.framedev.lagersystem.managers.LogManager.getInstance()
+                .deleteOldLogs(LogUtils.DEFAULT_LOG_RETENTION_DAYS);
+        LogUtils.LogCleanupResult fileCleanup = logUtils.deleteLogsOlderThan(LogUtils.DEFAULT_LOG_RETENTION_DAYS);
+
+        String cleanupMessage = String.format(
+                "Automatische Log-Bereinigung abgeschlossen: %d Datenbankeintraege und %d Protokolldateien aelter als %d Tage geloescht.",
+                deletedDatabaseLogs,
+                fileCleanup.deletedFileCount(),
+                LogUtils.DEFAULT_LOG_RETENTION_DAYS);
+
+        if (fileCleanup.failedFileCount() > 0) {
+            cleanupMessage += " " + fileCleanup.failedFileCount() + " Protokolldatei(en) konnten nicht geloescht werden.";
+        }
+
+        logger.info(cleanupMessage);
+        logUtils.addLog(cleanupMessage);
     }
 
     /**
@@ -780,7 +810,9 @@ public class Main {
             return resolved;
         } catch (FileNotFoundException e) {
             logger.error("Could not get VeboLagerSystem directory.", e);
-            logUtils.addLog("Fehler beim Ermitteln des App-Datenverzeichnisses: " + e.getMessage());
+            if (logUtils != null) {
+                logUtils.addLog("Fehler beim Ermitteln des App-Datenverzeichnisses: " + e.getMessage());
+            }
             File fallback = new File(".");
             appDataDirCache = fallback;
             return fallback;

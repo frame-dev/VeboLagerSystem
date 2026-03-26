@@ -1,5 +1,17 @@
 package ch.framedev.lagersystem.guis;
 
+import ch.framedev.lagersystem.dialogs.MessageDialog;
+import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.ArticleExporter;
+import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.LogUtils;
+import ch.framedev.lagersystem.utils.OrderLoggingUtils;
+import ch.framedev.lagersystem.utils.UnicodeSymbols;
+import ch.framedev.lagersystem.utils.VendorOrderLogging;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -9,13 +21,13 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
-import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -26,40 +38,39 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import ch.framedev.lagersystem.dialogs.MessageDialog;
-import ch.framedev.lagersystem.main.Main;
-import ch.framedev.lagersystem.utils.*;
-import ch.framedev.lagersystem.managers.ThemeManager;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 /**
- * The LogsGUI class provides a graphical user interface for viewing, filtering,
- * and managing logs related to orders, suppliers, and supplier orders in the
- * inventory system. It allows users to switch between different log categories,
- * apply text and date filters, export logs to PDF or CSV formats, and clear
- * logs. The GUI is designed with a modern look using custom styling and themes,
- * and it includes features such as auto-refreshing logs and a context menu for
- * copying log entries. The class interacts with various logging utilities to
- * retrieve and manage log data, and it uses Log4j for logging any errors that
- * occur within the GUI.
- * 
- * @author framedev
+ * GUI for viewing and filtering application logs.
  */
+@SuppressWarnings("DuplicatedCode")
 public class LogsGUI extends JFrame {
+
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final SimpleDateFormat TIMESTAMP_FORMAT = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
     private final Logger logger = LogManager.getLogger(LogsGUI.class);
 
     private final List<String> orderLogsData = new ArrayList<>();
     private final List<String> supplierLogsData = new ArrayList<>();
     private final List<String> supplierOrderLogs = new ArrayList<>();
+
     private final JTextPane logTextPane = new JTextPane();
-    private final JTextField searchField = new JTextField(18);
+    private final JTextField searchField = new JTextField(20);
     private final JTextField fromDateField = new JTextField(8);
     private final JTextField toDateField = new JTextField(8);
     private final JLabel lastUpdatedLabel = new JLabel("Letzte Aktualisierung: -");
+    private final JLabel categoryBadgeLabel = new JLabel();
+    private final JLabel resultsBadgeLabel = new JLabel();
+    private final JLabel filterStateLabel = new JLabel("Keine Filter aktiv");
+    private final JLabel viewerTitleLabel = new JLabel(UnicodeSymbols.DOCUMENT + " Log-Ausgabe");
     private final JCheckBox autoRefreshCheckBox = new JCheckBox("Auto-Refresh");
     private final Timer autoRefreshTimer;
+
+    private final JButton orderLogsButton;
+    private final JButton supplierLogsButton;
+    private final JButton supplierOrderLogsButton;
+    private final JButton allLogsButton;
+    private final JButton clearLogsButton;
+
     private List<String> currentLogs = new ArrayList<>();
     private List<String> filteredLogs = new ArrayList<>();
     private LogCategory currentCategory = LogCategory.ORDER;
@@ -67,228 +78,90 @@ public class LogsGUI extends JFrame {
     private enum LogCategory {
         ORDER,
         SUPPLIER,
-        SUPPLIER_ORDER
+        SUPPLIER_ORDER,
+        ALL
     }
 
-    /**
-     * Initializes the LogsGUI by setting up the user interface components,
-     * including the header, buttons for log categories, filter fields, action
-     * buttons, and the main content area for displaying logs. It also attaches
-     * listeners for filtering logs based on user input and sets up a timer for
-     * auto-refreshing logs if enabled. The constructor loads the initial set of
-     * logs for the default category (ORDER) and applies the necessary styles and
-     * themes to the components.
-     */
     public LogsGUI() {
         ThemeManager.getInstance().registerWindow(this);
         ThemeManager.applyUIDefaults();
+
         setTitle(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");
-        setSize(900, 650);
-        setMinimumSize(new Dimension(860, 560));
+        setSize(980, 680);
+        setMinimumSize(new Dimension(900, 580));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // Main panel with padding and background
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        JPanel mainPanel = new JPanel(new BorderLayout(0, 10));
         mainPanel.setBackground(ThemeManager.getBackgroundColor());
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
         add(mainPanel, BorderLayout.CENTER);
 
-        // ===== Top area (Header + Toolbar) =====
         JPanel topContainer = new JPanel();
         topContainer.setBackground(ThemeManager.getBackgroundColor());
         topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
-        // mainPanel already provides outer padding; keep only vertical spacing here
-        topContainer.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
-        JPanel headerWrapper = null;
-        boolean disableHeader = Main.settings.getProperty("disable_header") != null
-                && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
-        if (!disableHeader) {
-
-            // Header card (VendorGUI-style)
-            JFrameUtils.RoundedPanel headerPanel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(),
-                    20);
-            headerPanel.setLayout(new BorderLayout());
-            headerPanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                    BorderFactory.createEmptyBorder(14, 18, 14, 18)));
-            headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-            JLabel titleLabel = new JLabel(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");
-            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-            titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
-            JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Protokolle und Systemereignisse anzeigen");
-            subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-            subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
-
-            JPanel headerText = new JPanel();
-            headerText.setOpaque(false);
-            headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            headerText.add(titleLabel);
-            headerText.add(Box.createVerticalStrut(4));
-            headerText.add(subtitleLabel);
-
-            headerPanel.add(headerText, BorderLayout.WEST);
-
-            // BoxLayout: use a standard wrapper so the header stretches to the left
-            // edge/full width
-            headerWrapper = new JPanel(new BorderLayout());
-            headerWrapper.setOpaque(false);
-            headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-            headerWrapper.add(headerPanel, BorderLayout.CENTER);
-
-            Dimension hpPref = headerPanel.getPreferredSize();
-            headerWrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, hpPref.height));
-        }
-
+        JPanel headerWrapper = createHeaderPanel();
         if (headerWrapper != null) {
             topContainer.add(headerWrapper);
             topContainer.add(Box.createVerticalStrut(10));
         }
 
-        // Button panel for log categories (floating card look)
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 18, 12));
-        buttonPanel.setOpaque(false);
-        JButton orderLogsButton = new JButton(UnicodeSymbols.PACKAGE + " Bestellungs-Protokolle");
-        styleButton(orderLogsButton, ThemeManager.getSuccessColor(), ThemeManager.getTextOnPrimaryColor());
-        orderLogsButton.addActionListener(e -> setCategory(LogCategory.ORDER));
-        JButton supplierLogsButton = new JButton(UnicodeSymbols.TRUCK + " Lieferanten-Protokolle");
-        styleButton(supplierLogsButton, ThemeManager.getAccentColor(), ThemeManager.getTextOnPrimaryColor());
-        supplierLogsButton.addActionListener(e -> setCategory(LogCategory.SUPPLIER));
-        JButton supplierOrderLogsButton = new JButton(UnicodeSymbols.DOCUMENT + " Lieferanten-Bestellungs-Protokolle");
-        styleButton(supplierOrderLogsButton, ThemeManager.getWarningColor(), ThemeManager.getTextOnPrimaryColor());
-        supplierOrderLogsButton.addActionListener(e -> setCategory(LogCategory.SUPPLIER_ORDER));
-        // All Logs Button
-        JButton allLogsButton = new JButton(UnicodeSymbols.CLIPBOARD + " Alle Protokolle");
-        styleButton(allLogsButton, ThemeManager.getPrimaryColor(), ThemeManager.getTextOnPrimaryColor());
-        allLogsButton.addActionListener(this::allLogs);
-        buttonPanel.add(supplierOrderLogsButton);
-        buttonPanel.add(orderLogsButton);
-        buttonPanel.add(supplierLogsButton);
-        buttonPanel.add(allLogsButton);
+        orderLogsButton = createCategoryButton(UnicodeSymbols.PACKAGE + " Bestellungs-Protokolle",
+                ThemeManager.getSuccessColor(),
+                LogCategory.ORDER);
+        supplierLogsButton = createCategoryButton(UnicodeSymbols.TRUCK + " Lieferanten-Protokolle",
+                ThemeManager.getAccentColor(),
+                LogCategory.SUPPLIER);
+        supplierOrderLogsButton = createCategoryButton(UnicodeSymbols.DOCUMENT + " Lieferanten-Bestellungs-Protokolle",
+                ThemeManager.getWarningColor(),
+                LogCategory.SUPPLIER_ORDER);
+        allLogsButton = createCategoryButton(UnicodeSymbols.CLIPBOARD + " Alle Protokolle",
+                ThemeManager.getPrimaryColor(),
+                LogCategory.ALL);
 
-        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 12));
-        filterPanel.setOpaque(false);
-        JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche:");
-        styleLabel(searchLabel, Font.BOLD, ThemeManager.getTextPrimaryColor());
-        filterPanel.add(searchLabel);
-        searchField.setToolTipText("Textsuche in Logs");
-        styleTextField(searchField);
-        filterPanel.add(searchField);
-        JLabel fromLabel = new JLabel("Von (dd.MM.yyyy):");
-        styleLabel(fromLabel, Font.PLAIN, ThemeManager.getTextPrimaryColor());
-        filterPanel.add(fromLabel);
-        fromDateField.setToolTipText("z.B. 01.01.2024");
-        styleTextField(fromDateField);
-        filterPanel.add(fromDateField);
-        JLabel toLabel = new JLabel("Bis (dd.MM.yyyy):");
-        styleLabel(toLabel, Font.PLAIN, ThemeManager.getTextPrimaryColor());
-        filterPanel.add(toLabel);
-        toDateField.setToolTipText("z.B. 31.12.2024");
-        styleTextField(toDateField);
-        filterPanel.add(toDateField);
+        JPanel categoryCard = createCardPanel(18, new BorderLayout(10, 10));
+        categoryCard.add(buildCategoryPanel(), BorderLayout.CENTER);
+        topContainer.add(categoryCard);
+        topContainer.add(Box.createVerticalStrut(10));
 
-        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
-        actionPanel.setOpaque(false);
-        JButton exportPdfButton = new JButton(UnicodeSymbols.DOCUMENT + " PDF Export");
-        styleActionButton(exportPdfButton, ThemeManager.getAccentColor());
+        clearLogsButton = JFrameUtils.createThemeButton(UnicodeSymbols.TRASH + " Logs löschen", ThemeManager.getErrorColor());
+        clearLogsButton.setToolTipText("Aktuelle Log-Kategorie löschen");
+        clearLogsButton.addActionListener(e -> clearCurrentLogs());
+
+        JButton refreshButton = JFrameUtils.createSecondaryButton(UnicodeSymbols.REFRESH + " Aktualisieren");
+        refreshButton.setToolTipText("Logs neu laden");
+        refreshButton.addActionListener(e -> refreshCurrentLogs());
+
+        JButton exportPdfButton = JFrameUtils.createSecondaryButton(UnicodeSymbols.DOCUMENT + " PDF Export");
+        exportPdfButton.setToolTipText("Gefilterte Logs als PDF exportieren");
         exportPdfButton.addActionListener(e -> exportLogsToPdf(filteredLogs));
 
-        JButton exportCsvButton = new JButton(UnicodeSymbols.DOWNLOAD + " CSV Export");
-        styleActionButton(exportCsvButton, ThemeManager.getPrimaryColor());
+        JButton exportCsvButton = JFrameUtils.createSecondaryButton(UnicodeSymbols.DOWNLOAD + " CSV Export");
+        exportCsvButton.setToolTipText("Gefilterte Logs als CSV exportieren");
         exportCsvButton.addActionListener(e -> exportLogsToCsv(filteredLogs));
 
-        JButton clearButton = new JButton(UnicodeSymbols.TRASH + " Logs löschen");
-        styleActionButton(clearButton, ThemeManager.getErrorColor());
-        clearButton.addActionListener(e -> clearCurrentLogs());
+        JButton clearFilterButton = JFrameUtils.createSecondaryButton(UnicodeSymbols.CLEAR + " Filter leeren");
+        clearFilterButton.setToolTipText("Such- und Datumsfilter zurücksetzen");
+        clearFilterButton.addActionListener(e -> clearFilters());
 
+        JPanel controlsCard = createCardPanel(18, new BorderLayout(10, 10));
+        controlsCard.add(buildFilterPanel(), BorderLayout.CENTER);
+        controlsCard.add(buildActionPanel(autoRefreshCheckBox, lastUpdatedLabel, refreshButton, exportPdfButton, exportCsvButton, clearLogsButton, clearFilterButton), BorderLayout.SOUTH);
+        topContainer.add(controlsCard);
+
+        mainPanel.add(topContainer, BorderLayout.NORTH);
+        mainPanel.add(buildContentCard(), BorderLayout.CENTER);
+
+        initPopupMenu();
+        attachFilterListeners();
+
+        autoRefreshTimer = new Timer(30_000, e -> refreshCurrentLogs());
+        autoRefreshTimer.setRepeats(true);
         autoRefreshCheckBox.setOpaque(false);
         autoRefreshCheckBox.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
         autoRefreshCheckBox.setForeground(ThemeManager.getTextPrimaryColor());
-        lastUpdatedLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        lastUpdatedLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        actionPanel.add(autoRefreshCheckBox);
-        actionPanel.add(lastUpdatedLabel);
-        actionPanel.add(exportPdfButton);
-        actionPanel.add(exportCsvButton);
-        actionPanel.add(clearButton);
-
-        JPanel toolbarPanel = new JPanel(new BorderLayout());
-        toolbarPanel.setOpaque(false);
-        toolbarPanel.setBorder(BorderFactory.createEmptyBorder(12, 0, 12, 0));
-        toolbarPanel.add(buttonPanel, BorderLayout.NORTH);
-        toolbarPanel.add(filterPanel, BorderLayout.CENTER);
-        toolbarPanel.add(actionPanel, BorderLayout.SOUTH);
-
-        JPanel toolbarCard = createCardWrapper(toolbarPanel);
-        toolbarCard.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        toolbarCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-        Dimension tbPref = toolbarCard.getPreferredSize();
-        toolbarCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, tbPref.height));
-
-        topContainer.add(toolbarCard);
-        mainPanel.add(topContainer, BorderLayout.NORTH);
-
-        // Card-like content panel for logs (fills all remaining space)
-        JPanel contentPanel = getContentPanel();
-        logTextPane.setEditable(false);
-        logTextPane.setFont(SettingsGUI.getFontByName(Font.PLAIN, 15));
-        logTextPane.setBackground(ThemeManager.getInputBackgroundColor());
-        logTextPane.setForeground(ThemeManager.getTextPrimaryColor());
-        logTextPane.setBorder(BorderFactory.createEmptyBorder(16, 18, 16, 18));
-        JScrollPane scrollPane = new JScrollPane(logTextPane, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(true);
-        scrollPane.getViewport().setBackground(ThemeManager.getInputBackgroundColor());
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        contentPanel.add(scrollPane, BorderLayout.CENTER);
-        mainPanel.add(contentPanel, BorderLayout.CENTER);
-
-        initPopupMenu();
-
-        attachFilterListeners();
-
-        // Button hover effects with smooth color transitions
-        for (JButton button : new JButton[] { orderLogsButton, supplierLogsButton, supplierOrderLogsButton,
-                allLogsButton }) {
-            if (button == null)
-                continue;
-            button.addMouseListener(new MouseAdapter() {
-                final Color orig = button.getBackground();
-                final Color hover = orig.brighter();
-                final Color pressed = orig.darker();
-
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    button.setBackground(hover);
-                }
-
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    button.setBackground(orig);
-                }
-
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    button.setBackground(pressed);
-                }
-
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    button.setBackground(button.contains(e.getPoint()) ? hover : orig);
-                }
-            });
-        }
-
-        autoRefreshTimer = new Timer(30000, e -> refreshCurrentLogs());
-        autoRefreshTimer.setRepeats(true);
         autoRefreshCheckBox.addActionListener(e -> {
             if (autoRefreshCheckBox.isSelected()) {
                 autoRefreshTimer.start();
@@ -296,6 +169,14 @@ public class LogsGUI extends JFrame {
                 autoRefreshTimer.stop();
             }
         });
+
+        styleBadge(categoryBadgeLabel);
+        styleBadge(resultsBadgeLabel);
+        styleBadge(lastUpdatedLabel);
+        styleBadge(filterStateLabel);
+        filterStateLabel.setBackground(ThemeManager.getInputBackgroundColor());
+        viewerTitleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
+        viewerTitleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         setCategory(LogCategory.ORDER);
     }
@@ -307,128 +188,198 @@ public class LogsGUI extends JFrame {
         super.dispose();
     }
 
-    private static JPanel getContentPanel() {
-        JPanel contentPanel = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(ThemeManager.getCardBackgroundColor());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
-                g2.setColor(new Color(0, 0, 0, 10));
-                g2.fillRoundRect(4, getHeight() - 8, getWidth() - 8, 8, 8, 8); // subtle shadow
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        contentPanel.setOpaque(false);
-        contentPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        return contentPanel;
-    }
-
-    private void allLogs(ActionEvent actionEvent) {
-        File allLogsFile = new File(new File(Main.getAppDataDir(), "logs"), "vebo_lager_system.log");
-        File orderLogFile = new File(new File(Main.getAppDataDir(), "logs"), "bestellung.log");
-        File vendorOrderFile = new File(new File(Main.getAppDataDir(), "logs"), "vendorOrder.log");
-        File supplierOrderFile = new File(new File(Main.getAppDataDir(), "logs"), "supplier_orders.txt");
-        List<String> allLogs = new ArrayList<>();
-        if (allLogsFile.exists()) {
-            try {
-                allLogs.add("--- Haupt-Protokolle ---");
-                allLogs.addAll(Files.readAllLines(allLogsFile.toPath(), StandardCharsets.UTF_8));
-            } catch (IOException ignored) {
-            }
+    private JPanel createHeaderPanel() {
+        boolean disableHeader = Main.settings.getProperty("disable_header") != null
+                && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
+        if (disableHeader) {
+            return null;
         }
-        if (orderLogFile.exists()) {
-            try {
-                allLogs.add("--- Bestellungs-Protokolle ---");
-                allLogs.addAll(Files.readAllLines(orderLogFile.toPath(), StandardCharsets.UTF_8));
-            } catch (IOException ignored) {
-            }
-        }
-        if (vendorOrderFile.exists()) {
-            try {
-                allLogs.add("--- Lieferanten-Protokolle ---");
-                allLogs.addAll(Files.readAllLines(vendorOrderFile.toPath(), StandardCharsets.UTF_8));
-            } catch (IOException ignored) {
-            }
-        }
-        if (supplierOrderFile.exists()) {
-            try {
-                allLogs.add("--- Lieferanten-Bestellungs-Protokolle ---");
-                allLogs.addAll(Files.readAllLines(supplierOrderFile.toPath(), StandardCharsets.UTF_8));
-            } catch (IOException ignored) {
-            }
-        }
-        currentLogs = allLogs;
-        applyFilters();
-        lastUpdatedLabel
-                .setText("Letzte Aktualisierung: " + new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(new Date()));
-    }
 
-    /**
-     * Helper method to style buttons consistently
-     */
-    private void styleButton(JButton button, Color bgColor, Color fgColor) {
-        if (button == null)
-            return;
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
-        button.setForeground(fgColor);
-        button.setPreferredSize(new Dimension(260, 46));
-        JFrameUtils.applyButtonPalette(button, bgColor);
-    }
-
-    // ---- ADDED HELPER METHODS ----
-    private void styleTextField(JTextField field) {
-        if (field == null)
-            return;
-        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
-        JFrameUtils.styleTextField(field);
-    }
-
-    private void styleLabel(JLabel label, int style, Color color) {
-        if (label == null)
-            return;
-        label.setFont(SettingsGUI.getFontByName(style, 12));
-        label.setForeground(color);
-    }
-
-    private void styleActionButton(JButton button, Color bg) {
-        if (button == null)
-            return;
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
-        button.setForeground(ThemeManager.getTextOnPrimaryColor());
-        JFrameUtils.applyButtonPalette(button, bg);
-    }
-
-    private JPanel createCardWrapper(JComponent inner) {
-        JPanel card = new JPanel(new BorderLayout());
-        card.setOpaque(false);
-        card.setBorder(BorderFactory.createCompoundBorder(
+        JFrameUtils.RoundedPanel headerPanel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
+        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)
+        ));
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JPanel painted = new JPanel(new BorderLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(ThemeManager.getCardBackgroundColor());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 18, 18);
-                g2.setColor(ThemeManager.withAlpha(Color.BLACK, 12));
-                g2.fillRoundRect(4, getHeight() - 8, getWidth() - 8, 8, 8, 8);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        painted.setOpaque(false);
-        painted.add(inner, BorderLayout.CENTER);
-        card.add(painted, BorderLayout.CENTER);
-        return card;
+        JLabel titleLabel = new JLabel(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Protokolle durchsuchen, filtern und exportieren");
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+        headerText.add(titleLabel);
+        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(subtitleLabel);
+
+        headerPanel.add(headerText, BorderLayout.WEST);
+
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        wrapper.add(headerPanel, BorderLayout.CENTER);
+        return wrapper;
+    }
+
+    private JPanel buildCategoryPanel() {
+        JPanel categoryPanel = new JPanel(new BorderLayout(10, 10));
+        categoryPanel.setOpaque(false);
+
+        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        buttonRow.setOpaque(false);
+        buttonRow.add(orderLogsButton);
+        buttonRow.add(supplierLogsButton);
+        buttonRow.add(supplierOrderLogsButton);
+        buttonRow.add(allLogsButton);
+
+        JScrollPane buttonScrollPane = new JScrollPane(
+                buttonRow,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
+        );
+        buttonScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        buttonScrollPane.setOpaque(false);
+        buttonScrollPane.getViewport().setOpaque(false);
+        buttonScrollPane.getHorizontalScrollBar().setUnitIncrement(16);
+
+        JPanel badgeRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        badgeRow.setOpaque(false);
+        badgeRow.add(categoryBadgeLabel);
+        badgeRow.add(resultsBadgeLabel);
+
+        categoryPanel.add(buttonScrollPane, BorderLayout.CENTER);
+        categoryPanel.add(badgeRow, BorderLayout.EAST);
+        return categoryPanel;
+    }
+
+    private JPanel buildFilterPanel() {
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        filterPanel.setOpaque(false);
+
+        JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche:");
+        styleLabel(searchLabel, Font.BOLD, ThemeManager.getTextPrimaryColor());
+
+        JLabel fromLabel = new JLabel("Von:");
+        styleLabel(fromLabel, Font.PLAIN, ThemeManager.getTextPrimaryColor());
+
+        JLabel toLabel = new JLabel("Bis:");
+        styleLabel(toLabel, Font.PLAIN, ThemeManager.getTextPrimaryColor());
+
+        styleTextField(searchField);
+        styleTextField(fromDateField);
+        styleTextField(toDateField);
+
+        searchField.setToolTipText("Textsuche in Logs");
+        fromDateField.setToolTipText("Format: dd.MM.yyyy");
+        toDateField.setToolTipText("Format: dd.MM.yyyy");
+
+        filterPanel.add(searchLabel);
+        filterPanel.add(searchField);
+        filterPanel.add(fromLabel);
+        filterPanel.add(fromDateField);
+        filterPanel.add(toLabel);
+        filterPanel.add(toDateField);
+        return filterPanel;
+    }
+
+    private JPanel buildActionPanel(JCheckBox autoRefresh, JLabel updatedLabel, JButton refreshButton,
+                                    JButton exportPdfButton, JButton exportCsvButton, JButton clearButton,
+                                    JButton clearFilterButton) {
+        JPanel actionPanel = new JPanel(new BorderLayout(10, 10));
+        actionPanel.setOpaque(false);
+        actionPanel.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+
+        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        infoPanel.setOpaque(false);
+        infoPanel.add(autoRefresh);
+        infoPanel.add(updatedLabel);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        buttonPanel.setOpaque(false);
+        buttonPanel.add(refreshButton);
+        buttonPanel.add(clearFilterButton);
+        buttonPanel.add(exportPdfButton);
+        buttonPanel.add(exportCsvButton);
+        buttonPanel.add(clearButton);
+
+        actionPanel.add(infoPanel, BorderLayout.WEST);
+        actionPanel.add(buttonPanel, BorderLayout.EAST);
+        return actionPanel;
+    }
+
+    private JPanel buildContentCard() {
+        JPanel contentCard = createCardPanel(18, new BorderLayout());
+        contentCard.add(buildViewerHeader(), BorderLayout.NORTH);
+
+        logTextPane.setEditable(false);
+        logTextPane.setFont(SettingsGUI.getFontByName(Font.PLAIN, 15));
+        logTextPane.setBackground(ThemeManager.getInputBackgroundColor());
+        logTextPane.setForeground(ThemeManager.getTextPrimaryColor());
+        logTextPane.setBorder(BorderFactory.createEmptyBorder(16, 18, 16, 18));
+
+        JScrollPane scrollPane = new JScrollPane(logTextPane,
+                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(true);
+        scrollPane.getViewport().setBackground(ThemeManager.getInputBackgroundColor());
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+        contentCard.add(scrollPane, BorderLayout.CENTER);
+        return contentCard;
+    }
+
+    private JPanel buildViewerHeader() {
+        JPanel headerPanel = new JPanel(new BorderLayout(10, 10));
+        headerPanel.setOpaque(false);
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+
+        JLabel helperLabel = new JLabel("Rechtsklick zum Kopieren • Datum: dd.MM.yyyy");
+        helperLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        helperLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        JPanel leftPanel = new JPanel();
+        leftPanel.setOpaque(false);
+        leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
+        leftPanel.add(viewerTitleLabel);
+        leftPanel.add(Box.createVerticalStrut(3));
+        leftPanel.add(helperLabel);
+
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        rightPanel.setOpaque(false);
+        rightPanel.add(filterStateLabel);
+
+        headerPanel.add(leftPanel, BorderLayout.WEST);
+        headerPanel.add(rightPanel, BorderLayout.EAST);
+        return headerPanel;
+    }
+
+    private JPanel createCardPanel(int radius, LayoutManager layout) {
+        JFrameUtils.RoundedPanel panel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), radius);
+        panel.setLayout(layout);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)
+        ));
+        return panel;
+    }
+
+    private JButton createCategoryButton(String text, Color color, LogCategory category) {
+        JButton button = JFrameUtils.createThemeButton(text, color);
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        button.setToolTipText(text);
+        button.addActionListener(e -> setCategory(category));
+        return button;
     }
 
     private void attachFilterListeners() {
-        DocumentListener dl = new DocumentListener() {
+        DocumentListener listener = new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 applyFilters();
@@ -444,14 +395,45 @@ public class LogsGUI extends JFrame {
                 applyFilters();
             }
         };
-        searchField.getDocument().addDocumentListener(dl);
-        fromDateField.getDocument().addDocumentListener(dl);
-        toDateField.getDocument().addDocumentListener(dl);
+        searchField.getDocument().addDocumentListener(listener);
+        fromDateField.getDocument().addDocumentListener(listener);
+        toDateField.getDocument().addDocumentListener(listener);
+        registerClearShortcut(searchField);
+        registerClearShortcut(fromDateField);
+        registerClearShortcut(toDateField);
+    }
+
+    private void registerClearShortcut(JTextField field) {
+        field.registerKeyboardAction(
+                e -> clearFilters(),
+                KeyStroke.getKeyStroke("ESCAPE"),
+                JComponent.WHEN_FOCUSED
+        );
     }
 
     private void setCategory(LogCategory category) {
         currentCategory = category;
+        updateCategoryButtons();
         refreshCurrentLogs();
+    }
+
+    private void updateCategoryButtons() {
+        orderLogsButton.setEnabled(currentCategory != LogCategory.ORDER);
+        supplierLogsButton.setEnabled(currentCategory != LogCategory.SUPPLIER);
+        supplierOrderLogsButton.setEnabled(currentCategory != LogCategory.SUPPLIER_ORDER);
+        allLogsButton.setEnabled(currentCategory != LogCategory.ALL);
+        clearLogsButton.setEnabled(currentCategory != LogCategory.ALL);
+        categoryBadgeLabel.setText("Kategorie: " + getCategoryDisplayName(currentCategory));
+        viewerTitleLabel.setText(UnicodeSymbols.DOCUMENT + " " + getCategoryDisplayName(currentCategory));
+    }
+
+    private String getCategoryDisplayName(LogCategory category) {
+        return switch (category) {
+            case ORDER -> "Bestellungs-Protokolle";
+            case SUPPLIER -> "Lieferanten-Protokolle";
+            case SUPPLIER_ORDER -> "Lieferanten-Bestellungs-Protokolle";
+            case ALL -> "Alle Protokolle";
+        };
     }
 
     private void refreshCurrentLogs() {
@@ -459,23 +441,75 @@ public class LogsGUI extends JFrame {
             case ORDER -> loadOrderLogs();
             case SUPPLIER -> loadSupplierLogs();
             case SUPPLIER_ORDER -> loadSupplierOrderLogs();
+            case ALL -> loadAllLogs();
         };
         applyFilters();
-        lastUpdatedLabel
-                .setText("Letzte Aktualisierung: " + new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(new Date()));
+        lastUpdatedLabel.setText("Letzte Aktualisierung: " + TIMESTAMP_FORMAT.format(new Date()));
+    }
+
+    private List<String> loadAllLogs() {
+        File orderLogFile = new File(new File(Main.getAppDataDir(), "logs"), "bestellung.log");
+        File vendorOrderFile = new File(new File(Main.getAppDataDir(), "logs"), "vendorOrder.log");
+        File supplierOrderFile = new File(Main.getAppDataDir(), "supplier_orders.txt");
+
+        List<String> allLogs = new ArrayList<>();
+        List<Path> mainLogFiles = getMainApplicationLogFiles();
+        if (!mainLogFiles.isEmpty()) {
+            allLogs.add("--- Haupt-Protokolle ---");
+            for (Path logPath : mainLogFiles) {
+                allLogs.add("[Datei] " + logPath.getFileName());
+                try {
+                    allLogs.addAll(Files.readAllLines(logPath, StandardCharsets.UTF_8));
+                } catch (IOException ignored) {
+                }
+            }
+        }
+
+        appendLogFileSection(allLogs, orderLogFile, "--- Bestellungs-Protokolle ---");
+        appendLogFileSection(allLogs, vendorOrderFile, "--- Lieferanten-Protokolle ---");
+        appendLogFileSection(allLogs, supplierOrderFile, "--- Lieferanten-Bestellungs-Protokolle ---");
+
+        return allLogs;
+    }
+
+    private void appendLogFileSection(List<String> target, File logFile, String title) {
+        if (!logFile.exists()) {
+            return;
+        }
+        try {
+            target.add(title);
+            target.addAll(Files.readAllLines(logFile.toPath(), StandardCharsets.UTF_8));
+        } catch (IOException ignored) {
+        }
+    }
+
+    private List<Path> getMainApplicationLogFiles() {
+        Path logDirectory = Main.logUtils.getLogDirectoryPath();
+        if (!Files.isDirectory(logDirectory)) {
+            return List.of();
+        }
+
+        try (var fileStream = Files.list(logDirectory)) {
+            return fileStream
+                    .filter(Files::isRegularFile)
+                    .filter(LogUtils::isMainLogFile)
+                    .sorted()
+                    .toList();
+        } catch (IOException ex) {
+            logger.error("Fehler beim Laden der Haupt-Protokolle: {}", ex.getMessage(), ex);
+            return List.of();
+        }
     }
 
     private List<String> loadOrderLogs() {
-        OrderLoggingUtils orderLoggingUtils = OrderLoggingUtils.getInstance();
         orderLogsData.clear();
-        orderLogsData.addAll(orderLoggingUtils.getAllLogs());
+        orderLogsData.addAll(OrderLoggingUtils.getInstance().getAllLogs());
         return new ArrayList<>(orderLogsData);
     }
 
     private List<String> loadSupplierLogs() {
-        VendorOrderLogging vendorOrderLogging = VendorOrderLogging.getInstance();
         supplierLogsData.clear();
-        supplierLogsData.addAll(vendorOrderLogging.getLogs());
+        supplierLogsData.addAll(VendorOrderLogging.getInstance().getLogs());
         return new ArrayList<>(supplierLogsData);
     }
 
@@ -514,31 +548,58 @@ public class LogsGUI extends JFrame {
         }
 
         filteredLogs = result;
+        resultsBadgeLabel.setText("Treffer: " + filteredLogs.size() + " / " + currentLogs.size());
+        filterStateLabel.setText(buildFilterSummary(query, fromDate, toDate));
         renderLogs(filteredLogs);
     }
 
+    private String buildFilterSummary(String query, LocalDate fromDate, LocalDate toDate) {
+        List<String> parts = new ArrayList<>();
+        if (query != null && !query.isBlank()) {
+            parts.add("Suche: " + query);
+        }
+        if (fromDate != null) {
+            parts.add("Von: " + DATE_FORMAT.format(fromDate));
+        }
+        if (toDate != null) {
+            parts.add("Bis: " + DATE_FORMAT.format(toDate));
+        }
+        if (parts.isEmpty()) {
+            return "Keine Filter aktiv";
+        }
+        return String.join(" • ", parts);
+    }
+
+    private void clearFilters() {
+        searchField.setText("");
+        fromDateField.setText("");
+        toDateField.setText("");
+        applyFilters();
+    }
+
     private void renderLogs(List<String> logs) {
-        StyledDocument doc = logTextPane.getStyledDocument();
-        doc.putProperty("filterNewlines", Boolean.TRUE);
+        StyledDocument document = logTextPane.getStyledDocument();
         try {
-            doc.remove(0, doc.getLength());
+            document.remove(0, document.getLength());
         } catch (BadLocationException ignored) {
         }
 
         if (logs == null || logs.isEmpty()) {
-            appendStyledLine(doc, "Keine Logs vorhanden.", "default");
+            appendStyledLine(document, "Keine Logs vorhanden.", "muted");
+            logTextPane.setCaretPosition(0);
             return;
         }
 
         for (String line : logs) {
-            appendStyledLine(doc, line, resolveStyleName(line));
+            appendStyledLine(document, line, resolveStyleName(line));
         }
+        logTextPane.setCaretPosition(0);
     }
 
-    private void appendStyledLine(StyledDocument doc, String line, String styleName) {
+    private void appendStyledLine(StyledDocument document, String line, String styleName) {
         Style style = getStyle(styleName);
         try {
-            doc.insertString(doc.getLength(), line + System.lineSeparator(), style);
+            document.insertString(document.getLength(), line + System.lineSeparator(), style);
         } catch (BadLocationException ignored) {
         }
     }
@@ -554,19 +615,32 @@ public class LogsGUI extends JFrame {
         StyleConstants.setFontSize(style, logTextPane.getFont().getSize());
         StyleConstants.setForeground(style, ThemeManager.getTextPrimaryColor());
 
-        if ("info".equals(styleName)) {
-            StyleConstants.setForeground(style, ThemeManager.getInfoColor());
-        } else if ("warn".equals(styleName)) {
-            StyleConstants.setForeground(style, ThemeManager.getWarningColor());
-        } else if ("error".equals(styleName)) {
-            StyleConstants.setForeground(style, ThemeManager.getErrorColor());
+        switch (styleName) {
+            case "info" -> StyleConstants.setForeground(style, ThemeManager.getInfoColor());
+            case "warn" -> StyleConstants.setForeground(style, ThemeManager.getWarningColor());
+            case "error" -> StyleConstants.setForeground(style, ThemeManager.getErrorColor());
+            case "section" -> {
+                StyleConstants.setBold(style, true);
+                StyleConstants.setForeground(style, ThemeManager.getAccentColor());
+            }
+            case "muted" -> StyleConstants.setForeground(style, ThemeManager.getTextSecondaryColor());
+            default -> {
+            }
         }
         return style;
     }
 
     private String resolveStyleName(String line) {
-        if (line == null)
+        if (line == null) {
             return "default";
+        }
+        if (line.startsWith("---")) {
+            return "section";
+        }
+        if (line.startsWith("[Datei]")) {
+            return "muted";
+        }
+
         String upper = line.toUpperCase();
         if (upper.contains("ERROR") || upper.contains("FEHLER") || upper.contains("EXCEPTION")) {
             return "error";
@@ -584,11 +658,13 @@ public class LogsGUI extends JFrame {
         if (input == null || input.trim().isEmpty()) {
             return null;
         }
+
         String trimmed = input.trim();
-        DateTimeFormatter[] formats = new DateTimeFormatter[] {
-                DateTimeFormatter.ofPattern("dd.MM.yyyy"),
+        DateTimeFormatter[] formats = new DateTimeFormatter[]{
+                DATE_FORMAT,
                 DateTimeFormatter.ofPattern("yyyy-MM-dd")
         };
+
         for (DateTimeFormatter formatter : formats) {
             try {
                 return LocalDate.parse(trimmed, formatter);
@@ -599,47 +675,46 @@ public class LogsGUI extends JFrame {
     }
 
     private LocalDate extractDateFromLog(String logEntry) {
-        Pattern pattern = Pattern.compile("(\\d{2}\\.\\d{2}\\.\\d{4})|(\\d{4}-\\d{2}-\\d{2})");
-        Matcher matcher = pattern.matcher(logEntry);
+        Matcher matcher = Pattern.compile("(\\d{2}\\.\\d{2}\\.\\d{4})|(\\d{4}-\\d{2}-\\d{2})").matcher(logEntry);
         if (!matcher.find()) {
             return null;
         }
-        String dateText = matcher.group();
-        return parseDateInput(dateText);
+        return parseDateInput(matcher.group());
     }
 
     private void initPopupMenu() {
-        JPopupMenu popupMenu = getPopupMenu();
+        JPopupMenu popupMenu = new JPopupMenu();
+
+        JMenuItem copySelected = new JMenuItem("Auswahl kopieren");
+        copySelected.addActionListener(e -> copyText(logTextPane.getSelectedText()));
+
+        JMenuItem copyLine = new JMenuItem("Zeile kopieren");
+        copyLine.addActionListener(e -> copyText(getCurrentLineText()));
+
+        JMenuItem copyAll = new JMenuItem("Alles kopieren");
+        copyAll.addActionListener(e -> copyText(logTextPane.getText()));
+
+        popupMenu.add(copySelected);
+        popupMenu.add(copyLine);
+        popupMenu.add(copyAll);
 
         logTextPane.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (e.isPopupTrigger()) {
-                    popupMenu.show(e.getComponent(), e.getX(), e.getY());
-                }
+                maybeShowPopup(e);
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
+                maybeShowPopup(e);
+            }
+
+            private void maybeShowPopup(MouseEvent e) {
                 if (e.isPopupTrigger()) {
                     popupMenu.show(e.getComponent(), e.getX(), e.getY());
                 }
             }
         });
-    }
-
-    private JPopupMenu getPopupMenu() {
-        JPopupMenu popupMenu = new JPopupMenu();
-        JMenuItem copySelected = new JMenuItem("Auswahl kopieren");
-        copySelected.addActionListener(e -> copyText(logTextPane.getSelectedText()));
-        JMenuItem copyLine = new JMenuItem("Zeile kopieren");
-        copyLine.addActionListener(e -> copyText(getCurrentLineText()));
-        JMenuItem copyAll = new JMenuItem("Alles kopieren");
-        copyAll.addActionListener(e -> copyText(logTextPane.getText()));
-        popupMenu.add(copySelected);
-        popupMenu.add(copyLine);
-        popupMenu.add(copyAll);
-        return popupMenu;
     }
 
     private String getCurrentLineText() {
@@ -673,8 +748,7 @@ public class LogsGUI extends JFrame {
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("CSV Speichern");
-        fileChooser.setSelectedFile(
-                new File("Logs_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".csv"));
+        fileChooser.setSelectedFile(new File("Logs_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".csv"));
         int userSelection = fileChooser.showSaveDialog(this);
         if (userSelection != JFileChooser.APPROVE_OPTION) {
             return;
@@ -691,6 +765,7 @@ public class LogsGUI extends JFrame {
                 writer.write("\"" + escaped + "\"");
                 writer.write(System.lineSeparator());
             }
+
             new MessageDialog()
                     .setTitle("CSV Export")
                     .setMessage("CSV erfolgreich exportiert:\n" + fileToSave.getAbsolutePath())
@@ -702,7 +777,6 @@ public class LogsGUI extends JFrame {
                     .setMessage("Fehler beim CSV-Export: " + ex.getMessage())
                     .setMessageType(JOptionPane.ERROR_MESSAGE)
                     .display();
-
             logger.error("Could not export CSV {}", ex.getMessage(), ex);
         }
     }
@@ -712,16 +786,21 @@ public class LogsGUI extends JFrame {
     }
 
     private void clearCurrentLogs() {
-        String categoryName = switch (currentCategory) {
-            case ORDER -> "Bestellungs-Protokolle";
-            case SUPPLIER -> "Lieferanten-Protokolle";
-            case SUPPLIER_ORDER -> "Lieferanten-Bestellungs-Protokolle";
-        };
+        if (currentCategory == LogCategory.ALL) {
+            new MessageDialog()
+                    .setTitle("Logs löschen")
+                    .setMessage("Bitte wählen Sie eine konkrete Log-Kategorie zum Löschen aus.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
+            return;
+        }
+
+        String categoryName = getCategoryDisplayName(currentCategory);
         int confirm = new MessageDialog()
                 .setTitle("Logs löschen")
                 .setMessage("Möchten Sie alle " + categoryName + " löschen?")
                 .setMessageType(JOptionPane.WARNING_MESSAGE)
-                .setOptions(new String[] { "Ja, löschen", "Abbrechen" })
+                .setOptions(new String[]{"Ja, löschen", "Abbrechen"})
                 .displayWithOptions();
         if (confirm != JOptionPane.YES_OPTION) {
             return;
@@ -731,14 +810,16 @@ public class LogsGUI extends JFrame {
             case ORDER -> new File(new File(Main.getAppDataDir(), "logs"), "bestellung.log");
             case SUPPLIER -> new File(new File(Main.getAppDataDir(), "logs"), "vendorOrder.log");
             case SUPPLIER_ORDER -> new File(Main.getAppDataDir(), "supplier_orders.txt");
+            case ALL -> null;
         };
 
+        if (logFile == null) {
+            return;
+        }
+
         try {
-            if (logFile.getParentFile() != null && !logFile.getParentFile().exists()) {
-                if (!logFile.getParentFile().mkdirs()) {
-                    logger.error("Could not create Parent file: {}", logFile.getParentFile().getAbsolutePath());
-                    throw new IOException("Fehler beim Erstellen der Verzeichnisse");
-                }
+            if (logFile.getParentFile() != null && !logFile.getParentFile().exists() && !logFile.getParentFile().mkdirs()) {
+                throw new IOException("Fehler beim Erstellen der Verzeichnisse");
             }
             Files.writeString(logFile.toPath(), "", StandardCharsets.UTF_8);
             refreshCurrentLogs();
@@ -750,5 +831,26 @@ public class LogsGUI extends JFrame {
                     .display();
             logger.error("Fehler beim Löschen der Logs: {}", ex.getMessage(), ex);
         }
+    }
+
+    private void styleTextField(JTextField field) {
+        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+        JFrameUtils.styleTextField(field);
+    }
+
+    private void styleLabel(JLabel label, int style, Color color) {
+        label.setFont(SettingsGUI.getFontByName(style, 12));
+        label.setForeground(color);
+    }
+
+    private void styleBadge(JLabel label) {
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        label.setOpaque(true);
+        label.setBackground(ThemeManager.getSurfaceColor());
+        label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
     }
 }

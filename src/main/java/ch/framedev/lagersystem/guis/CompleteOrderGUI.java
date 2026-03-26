@@ -8,7 +8,6 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.UserManager;
-import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -299,7 +298,7 @@ public class CompleteOrderGUI extends JFrame {
             gbc.gridy++;
             int qty = order.getOrderedArticles().get(article.getArticleNumber());
             String articleInfo = String.format("  - %s (%s) - Menge: %d",
-                    safe(ArticleUtils.formatArticleWithFilling(article, order.getArticleFilling(article.getArticleNumber()))),
+                    safe(order.formatArticleLabel(article)),
                     safe(article.getArticleNumber()), qty);
             JLabel articleLabel = new JLabel(articleInfo);
             articleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
@@ -369,8 +368,7 @@ public class CompleteOrderGUI extends JFrame {
                 continue;
             int ordered = selected.getOrderedArticles().get(article.getArticleNumber());
             int stock = article.getStockQuantity();
-            String articleLabel = safe(ArticleUtils.formatArticleWithFilling(article,
-                    selected.getArticleFilling(article.getArticleNumber())));
+            String articleLabel = safe(selected.formatArticleLabel(article));
 
             int willFulfill = Math.min(stock, ordered);
             int missing = Math.max(0, ordered - stock);
@@ -483,6 +481,10 @@ public class CompleteOrderGUI extends JFrame {
                     .setMessage("Fehler beim Abschließen der Bestellung.")
                     .setMessageType(JOptionPane.ERROR_MESSAGE)
                     .display();
+        }
+
+        if (updated) {
+            firePropertyChange("orderCompleted", null, selected);
         }
 
         refreshList();

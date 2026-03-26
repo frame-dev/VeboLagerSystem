@@ -44,3 +44,6 @@ scans.jsonl
 /Docs
 ignored.txt
 log.txt
+AGENTS.md
+/.junie/
+.env

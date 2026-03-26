@@ -50,6 +50,8 @@ public class Order {
     /**
      * Optional filling text per article number, e.g. "500 ml".
      */
+    private Map<String, String> articleSizes;
+    private Map<String, String> articleColors;
     private Map<String, String> articleFillings;
 
     /**
@@ -66,7 +68,7 @@ public class Order {
      */
     public Order(String orderId, Map<String, Integer> orderedArticles, String receiverName,
                  String receiverKontoNumber, String orderDate, String senderName, String senderKontoNumber, String department) {
-        this(orderId, orderedArticles, new LinkedHashMap<>(), receiverName, receiverKontoNumber,
+        this(orderId, orderedArticles, new LinkedHashMap<>(), new LinkedHashMap<>(), new LinkedHashMap<>(), receiverName, receiverKontoNumber,
                 orderDate, senderName, senderKontoNumber, department, "In Bearbeitung");
     }
 
@@ -84,22 +86,40 @@ public class Order {
      * @param status              order status label
      */
     public Order(String orderId, Map<String, Integer> orderedArticles, String receiverName, String receiverKontoNumber, String orderDate, String senderName, String senderKontoNumber, String department, String status) {
-        this(orderId, orderedArticles, new LinkedHashMap<>(), receiverName, receiverKontoNumber,
+        this(orderId, orderedArticles, new LinkedHashMap<>(), new LinkedHashMap<>(), new LinkedHashMap<>(), receiverName, receiverKontoNumber,
                 orderDate, senderName, senderKontoNumber, department, status);
     }
 
     public Order(String orderId, Map<String, Integer> orderedArticles, Map<String, String> articleFillings,
                  String receiverName, String receiverKontoNumber, String orderDate, String senderName,
                  String senderKontoNumber, String department) {
-        this(orderId, orderedArticles, articleFillings, receiverName, receiverKontoNumber,
+        this(orderId, orderedArticles, new LinkedHashMap<>(), new LinkedHashMap<>(), articleFillings, receiverName, receiverKontoNumber,
                 orderDate, senderName, senderKontoNumber, department, "In Bearbeitung");
     }
 
     public Order(String orderId, Map<String, Integer> orderedArticles, Map<String, String> articleFillings,
                  String receiverName, String receiverKontoNumber, String orderDate, String senderName,
                  String senderKontoNumber, String department, String status) {
+        this(orderId, orderedArticles, new LinkedHashMap<>(), new LinkedHashMap<>(), articleFillings, receiverName, receiverKontoNumber,
+                orderDate, senderName, senderKontoNumber, department, status);
+    }
+
+    public Order(String orderId, Map<String, Integer> orderedArticles, Map<String, String> articleSizes,
+                 Map<String, String> articleColors, Map<String, String> articleFillings,
+                 String receiverName, String receiverKontoNumber, String orderDate, String senderName,
+                 String senderKontoNumber, String department) {
+        this(orderId, orderedArticles, articleSizes, articleColors, articleFillings, receiverName, receiverKontoNumber,
+                orderDate, senderName, senderKontoNumber, department, "In Bearbeitung");
+    }
+
+    public Order(String orderId, Map<String, Integer> orderedArticles, Map<String, String> articleSizes,
+                 Map<String, String> articleColors, Map<String, String> articleFillings,
+                 String receiverName, String receiverKontoNumber, String orderDate, String senderName,
+                 String senderKontoNumber, String department, String status) {
         this.orderId = orderId;
         this.orderedArticles = orderedArticles;
+        this.articleSizes = articleSizes == null ? new LinkedHashMap<>() : new LinkedHashMap<>(articleSizes);
+        this.articleColors = articleColors == null ? new LinkedHashMap<>() : new LinkedHashMap<>(articleColors);
         this.articleFillings = articleFillings == null ? new LinkedHashMap<>() : new LinkedHashMap<>(articleFillings);
         this.receiverName = receiverName;
         this.receiverKontoNumber = receiverKontoNumber;
@@ -114,6 +134,8 @@ public class Order {
      * Default constructor for Order. Initializes an empty order object. This constructor can be used when creating an order object that will be populated with data later, such as when deserializing from a data source or when using a builder pattern.
      */
     public Order() {
+        this.articleSizes = new LinkedHashMap<>();
+        this.articleColors = new LinkedHashMap<>();
         this.articleFillings = new LinkedHashMap<>();
     }
 
@@ -165,6 +187,61 @@ public class Order {
             return "";
         }
         return getArticleFillings().getOrDefault(articleNumber, "");
+    }
+
+    public Map<String, String> getArticleSizes() {
+        if (articleSizes == null) {
+            articleSizes = new LinkedHashMap<>();
+        }
+        return articleSizes;
+    }
+
+    public void setArticleSizes(Map<String, String> articleSizes) {
+        this.articleSizes = articleSizes == null ? new LinkedHashMap<>() : new LinkedHashMap<>(articleSizes);
+    }
+
+    public String getArticleSize(String articleNumber) {
+        if (articleNumber == null || getArticleSizes().isEmpty()) {
+            return "";
+        }
+        return getArticleSizes().getOrDefault(articleNumber, "");
+    }
+
+    public Map<String, String> getArticleColors() {
+        if (articleColors == null) {
+            articleColors = new LinkedHashMap<>();
+        }
+        return articleColors;
+    }
+
+    public void setArticleColors(Map<String, String> articleColors) {
+        this.articleColors = articleColors == null ? new LinkedHashMap<>() : new LinkedHashMap<>(articleColors);
+    }
+
+    public String getArticleColor(String articleNumber) {
+        if (articleNumber == null || getArticleColors().isEmpty()) {
+            return "";
+        }
+        return getArticleColors().getOrDefault(articleNumber, "");
+    }
+
+    public String formatArticleLabel(Article article) {
+        if (article == null) {
+            return "";
+        }
+
+        String articleNumber = article.getArticleNumber();
+        String label = ArticleUtils.formatArticleWithFilling(article, getArticleFilling(articleNumber));
+        String size = ArticleUtils.normalizeMetadataValue(getArticleSize(articleNumber));
+        String color = ArticleUtils.normalizeMetadataValue(getArticleColor(articleNumber));
+
+        if (!size.isBlank()) {
+            label += " (" + size + ")";
+        }
+        if (!color.isBlank()) {
+            label += " {" + color + "}";
+        }
+        return label;
     }
 
     /**

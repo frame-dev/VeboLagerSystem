@@ -10,6 +10,7 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -19,6 +20,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.GradientPaint;
@@ -34,11 +36,12 @@ import java.nio.file.Files;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -200,6 +203,28 @@ public final class ArticleUtils {
             case "ml", "l", "g", "kg" -> normalizedUnit;
             default -> candidate;
         };
+    }
+
+    public static String normalizeFilling(String amount, String unit) {
+        String safeAmount = amount == null ? "" : amount.trim();
+        String safeUnit = unit == null ? "" : unit.trim();
+        return normalizeFilling((safeAmount + " " + safeUnit).trim());
+    }
+
+    public static String normalizeMetadataValue(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        String normalized = value.trim().replaceAll("\\s+", " ");
+        if (normalized.isBlank()
+                || normalized.equalsIgnoreCase("n/a")
+                || normalized.equalsIgnoreCase("null")
+                || normalized.equals("-")) {
+            return "";
+        }
+
+        return normalized;
     }
 
     public static boolean isFillingValid(String fillingValue) {
@@ -663,7 +688,6 @@ public final class ArticleUtils {
                     return; // User cancelled or closed the dialog
                 }
                 picked = options[choice];
-                continue;
             }
 
             String input = new MessageDialog()
@@ -785,6 +809,35 @@ public final class ArticleUtils {
         return trimmedParts.isEmpty() ? List.of() : trimmedParts;
     }
 
+    public static List<String> getExactDetailOptions(Article article) {
+        if (article == null) {
+            return List.of();
+        }
+
+        LinkedHashSet<String> values = new LinkedHashSet<>();
+        ArticleManager articleManager = ArticleManager.getInstance();
+        String articleNumber = article.getArticleNumber();
+
+        if (articleNumber != null && !articleNumber.isBlank()
+                && articleManager.hasSeperateArticles(articleNumber)) {
+            for (String detail : articleManager.getAllDetailsForArticleNumber(articleNumber)) {
+                String normalized = normalizeMetadataValue(detail);
+                if (!normalized.isBlank()) {
+                    values.add(normalized);
+                }
+            }
+        }
+
+        for (String part : getPartsFromDetails(article.getDetails(), true)) {
+            String normalized = normalizeMetadataValue(part);
+            if (!normalized.isBlank()) {
+                values.add(normalized);
+            }
+        }
+
+        return values.isEmpty() ? List.of() : new ArrayList<>(values);
+    }
+
     public static boolean isArticleSeparated(String articleNumber) {
         if (articleNumber == null || articleNumber.isBlank()) {
             return false;
@@ -809,15 +862,48 @@ public final class ArticleUtils {
         if (articleNumber == null || articleNumber.isBlank()) {
             return List.of();
         }
-        Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
-        if (article == null)
+        ArticleManager articleManager = ArticleManager.getInstance();
+        Article article = articleManager.getArticleByNumber(articleNumber);
+        if (article == null) {
             return List.of();
-        List<String> parts = getPartsFromDetails(article.getDetails(), true);
+        }
+
+        List<SeperateArticle> allExistingArticles = articleManager.getAllSeperateArticles();
+        Set<Integer> existingIds = new HashSet<>(allExistingArticles.stream()
+                .map(SeperateArticle::getIndex)
+                .toList());
+        Map<String, SeperateArticle> existingByDetail = new HashMap<>();
+        for (SeperateArticle existing : articleManager.getAllFromArticleNumber(articleNumber)) {
+            if (existing == null || existing.getOtherDetails() == null || existing.getOtherDetails().isBlank()) {
+                continue;
+            }
+            existingByDetail.putIfAbsent(existing.getOtherDetails(), existing);
+        }
+
+        int nextIndex = allExistingArticles.stream()
+                .mapToInt(SeperateArticle::getIndex)
+                .max()
+                .orElse(0) + 1;
+
+        LinkedHashSet<String> parts = new LinkedHashSet<>(getPartsFromDetails(article.getDetails(), true));
         List<SeperateArticle> result = new ArrayList<>(parts.size());
         for (String part : parts) {
-            if (part == null || part.isBlank())
+            if (part == null || part.isBlank()) {
                 continue;
-            result.add(new SeperateArticle(new Random().nextInt(1000000), articleNumber, part));
+            }
+
+            SeperateArticle existing = existingByDetail.get(part);
+            if (existing != null) {
+                result.add(new SeperateArticle(existing.getIndex(), articleNumber, part));
+                continue;
+            }
+
+            while (existingIds.contains(nextIndex)) {
+                nextIndex++;
+            }
+            existingIds.add(nextIndex);
+            result.add(new SeperateArticle(nextIndex, articleNumber, part));
+            nextIndex++;
         }
         return result;
     }

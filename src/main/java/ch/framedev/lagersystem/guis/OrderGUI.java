@@ -1,6 +1,5 @@
 package ch.framedev.lagersystem.guis;
 
-import ch.framedev.lagersystem.actions.OrderActions;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.dialogs.MessageDialog;
@@ -16,6 +15,7 @@ import javax.swing.*;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,6 +43,11 @@ public class OrderGUI extends JFrame {
     private final JScrollPane tableScrollPane;
     private final int[] baseColumnWidths = new int[] { 150, 180, 150, 150, 120, 120, 120 };
     private final JLabel orderCountLabel;
+    private final JComboBox<String> filterComboBox;
+    private final JTextField searchField;
+    private TableRowSorter<DefaultTableModel> sorter;
+    private SwingWorker<List<Order>, Void> orderLoadWorker;
+    private int orderLoadGeneration = 0;
 
     // ---- Order cache (GUI-level) ----------------------------------------------
     private static final long ORDER_CACHE_TTL_MS = 30_000; // 30s GUI cache
@@ -117,7 +122,7 @@ public class OrderGUI extends JFrame {
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                 BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 
-        JComboBox<String> filterComboBox = new JComboBox<>(new String[] {
+        filterComboBox = new JComboBox<>(new String[] {
                 "Alle Bestellungen", "Abgeschlossene Bestellungen", "Offene Bestellungen"
         });
         styleComboBox(filterComboBox);
@@ -188,29 +193,40 @@ public class OrderGUI extends JFrame {
         searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
         searchLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
 
-        JTextField searchField = new JTextField(26);
+        searchField = new JTextField(26);
         styleTextField(searchField);
         searchField.setToolTipText("Tippen zum Filtern – Enter zum Suchen, ESC zum Leeren");
 
-        JPanel leftSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        leftSearch.setOpaque(false);
-        leftSearch.add(orderCountLabel);
-        leftSearch.add(searchLabel);
-        leftSearch.add(searchField);
-
-        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        rightActions.setOpaque(false);
+        JPanel searchInputRow = new JPanel(new BorderLayout(10, 0));
+        searchInputRow.setOpaque(false);
+        searchInputRow.add(searchLabel, BorderLayout.WEST);
+        searchInputRow.add(searchField, BorderLayout.CENTER);
 
         JButton searchBtn = createSecondaryButton(UnicodeSymbols.SEARCH + " Suchen");
         searchBtn.setToolTipText("Bestellungen filtern");
         JButton clearBtn = createSecondaryButton(UnicodeSymbols.CLEAR + " Leeren");
         clearBtn.setToolTipText("Suchfeld leeren");
 
-        rightActions.add(searchBtn);
-        rightActions.add(clearBtn);
+        JPanel topRow = new JPanel(new BorderLayout(12, 8));
+        topRow.setOpaque(false);
+        topRow.add(orderCountLabel, BorderLayout.WEST);
+        topRow.add(searchInputRow, BorderLayout.CENTER);
 
-        searchCard.add(leftSearch, BorderLayout.CENTER);
-        searchCard.add(rightActions, BorderLayout.EAST);
+        JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actionRow.setOpaque(false);
+        actionRow.add(searchBtn);
+        actionRow.add(clearBtn);
+
+        JPanel searchContent = new JPanel();
+        searchContent.setOpaque(false);
+        searchContent.setLayout(new BoxLayout(searchContent, BoxLayout.Y_AXIS));
+        topRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        actionRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        searchContent.add(topRow);
+        searchContent.add(Box.createVerticalStrut(8));
+        searchContent.add(actionRow);
+
+        searchCard.add(searchContent, BorderLayout.CENTER);
 
         JPanel searchWrapper = new JPanel(new BorderLayout());
         searchWrapper.setBackground(ThemeManager.getBackgroundColor());
@@ -226,7 +242,7 @@ public class OrderGUI extends JFrame {
         setupTableInteractions();
 
         // Wire actions
-        newOrderButton.addActionListener(new OrderActions.CreateOrderAction());
+        newOrderButton.addActionListener(e -> openCreateOrderGui());
 
         editOrderButton.addActionListener(e -> {
             Vector<Object> rowData = getSelectedOrderData();
@@ -241,85 +257,25 @@ public class OrderGUI extends JFrame {
             String orderId = (String) rowData.getFirst();
             Order order = getOrderCached(orderId);
             if (order != null) {
-                EditOrderGUI editGui = new EditOrderGUI(order);
-                editGui.display();
-                editGui.addWindowListener(new WindowAdapter() {
-                    @Override
-                    public void windowClosed(WindowEvent e) {
-                        loadOrders();
-                    }
-                });
+                openEditOrderGui(order);
             }
         });
 
-        deleteOrderButton.addActionListener(e -> {
-            int sel = orderTable.getSelectedRow();
-            if (sel == -1) {
-                new MessageDialog()
-                        .setTitle("Keine Bestellung ausgewählt")
-                        .setMessage("Bitte wählen Sie eine Bestellung zum Löschen aus.")
-                        .setMessageType(JOptionPane.WARNING_MESSAGE)
-                        .display();
-                return;
-            }
-            int modelRow = orderTable.convertRowIndexToModel(sel);
-            String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
+        deleteOrderButton.addActionListener(e -> deleteSelectedOrder());
 
-            int confirm = new MessageDialog().setTitle("Löschen")
-                    .setMessage("Möchten Sie diese Bestellung wirklich löschen?")
-                    .setOptionType(JOptionPane.YES_NO_OPTION)
-                    .setMessageType(JOptionPane.WARNING_MESSAGE)
-                    .displayWithOptions();
-
-            if (confirm == JOptionPane.YES_OPTION) {
-                if (OrderManager.getInstance().deleteOrder(orderId)) {
-                    invalidateOrdersCache();
-                    loadOrders(true);
-                    updateOrderCount();
-                    new MessageDialog()
-                            .setTitle("Erfolg")
-                            .setMessage("Bestellung erfolgreich gelöscht.")
-                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                            .display();
-                    Main.logUtils.addLog(orderId + " wurde gelöscht.");
-                } else {
-                    new MessageDialog()
-                            .setTitle("Fehler")
-                            .setMessage("Löschen fehlgeschlagen.")
-                            .setMessageType(JOptionPane.ERROR_MESSAGE)
-                            .display();
-                    Main.logUtils.addLog(orderId + " konnte nicht gelöscht werden.");
-                }
-            }
-        });
-
-        completeOrderButton.addActionListener(new OrderActions.CompleteOrderAction());
+        completeOrderButton.addActionListener(e -> openCompleteOrderGui());
 
         refreshButton.addActionListener(e -> {
             invalidateOrdersCache();
             loadOrders(true);
             updateOrderCount();
-            new MessageDialog()
-                    .setTitle("Aktualisiert")
-                    .setMessage("Bestellungsliste wurde aktualisiert.")
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
         });
 
         // search logic using TableRowSorter
-        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) orderTable.getModel());
+        sorter = new TableRowSorter<>((DefaultTableModel) orderTable.getModel());
         orderTable.setRowSorter(sorter);
 
-        Runnable doSearch = () -> {
-            String text = searchField.getText().trim();
-            if (text.isEmpty()) {
-                sorter.setRowFilter(null);
-            } else {
-                String regex = "(?i)" + Pattern.quote(text);
-                sorter.setRowFilter(RowFilter.regexFilter(regex, 0, 1, 3));
-            }
-            updateOrderCount();
-        };
+        Runnable doSearch = this::applyCombinedFilter;
 
         // Live filter while typing
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -342,30 +298,18 @@ public class OrderGUI extends JFrame {
         searchBtn.addActionListener(e -> doSearch.run());
         clearBtn.addActionListener(e -> {
             searchField.setText("");
-            sorter.setRowFilter(null);
-            updateOrderCount();
+            applyCombinedFilter();
         });
         // ESC clears
         searchField.registerKeyboardAction(
                 e -> {
                     searchField.setText("");
-                    sorter.setRowFilter(null);
-                    updateOrderCount();
+                    applyCombinedFilter();
                 },
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_FOCUSED);
 
-        filterComboBox.addActionListener(e -> {
-            String selected = (String) filterComboBox.getSelectedItem();
-            if ("Alle Bestellungen".equals(selected)) {
-                sorter.setRowFilter(null);
-            } else if ("Abgeschlossene Bestellungen".equals(selected)) {
-                sorter.setRowFilter(RowFilter.regexFilter("^Abgeschlossen$", 6));
-            } else if ("Offene Bestellungen".equals(selected)) {
-                sorter.setRowFilter(RowFilter.notFilter(RowFilter.regexFilter("^Abgeschlossen$", 6)));
-            }
-            updateOrderCount();
-        });
+        filterComboBox.addActionListener(e -> applyCombinedFilter());
 
         // auto resize logic
         ComponentAdapter resizeListener = new ComponentAdapter() {
@@ -378,58 +322,51 @@ public class OrderGUI extends JFrame {
         tableScrollPane.getViewport().addComponentListener(resizeListener);
         SwingUtilities.invokeLater(this::adjustColumnWidths);
 
-        setVisible(true);
     }
 
     @Override
     public void dispose() {
+        if (orderLoadWorker != null && !orderLoadWorker.isDone()) {
+            orderLoadWorker.cancel(true);
+        }
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
 
     private void loadOrders() {
-        List<Order> orders = getOrdersCached(false);
-
-        DefaultTableModel model = (DefaultTableModel) orderTable.getModel();
-        model.setRowCount(0);
-
-        for (Order o : orders) {
-            if (o == null)
-                continue;
-            model.addRow(new Object[] {
-                    o.getOrderId(),
-                    o.getReceiverName(),
-                    o.getSenderName(),
-                    o.getDepartment(),
-                    o.getOrderDate(),
-                    o.getOrderedArticles().size() + " Artikel",
-                    o.getStatus() != null ? o.getStatus() : "In Bearbeitung"
-            });
-        }
-        updateOrderCount();
+        loadOrders(false);
     }
 
     @SuppressWarnings("SameParameterValue")
     private void loadOrders(boolean forceReload) {
-        List<Order> orders = getOrdersCached(forceReload);
-
-        DefaultTableModel model = (DefaultTableModel) orderTable.getModel();
-        model.setRowCount(0);
-
-        for (Order o : orders) {
-            if (o == null)
-                continue;
-            model.addRow(new Object[] {
-                    o.getOrderId(),
-                    o.getReceiverName(),
-                    o.getSenderName(),
-                    o.getDepartment(),
-                    o.getOrderDate(),
-                    o.getOrderedArticles().size() + " Artikel",
-                    o.getStatus() != null ? o.getStatus() : "In Bearbeitung"
-            });
+        String selectedOrderId = getSelectedOrderId();
+        int loadGeneration = ++orderLoadGeneration;
+        if (orderLoadWorker != null && !orderLoadWorker.isDone()) {
+            orderLoadWorker.cancel(true);
         }
-        updateOrderCount();
+        orderCountLabel.setText("Bestellungen werden geladen...");
+        orderLoadWorker = new SwingWorker<>() {
+            @Override
+            protected List<Order> doInBackground() {
+                return getOrdersCached(forceReload);
+            }
+
+            @Override
+            protected void done() {
+                if (isCancelled() || loadGeneration != orderLoadGeneration) {
+                    return;
+                }
+                try {
+                    rebuildTable(get(), selectedOrderId);
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    updateOrderCount();
+                } catch (java.util.concurrent.ExecutionException ex) {
+                    updateOrderCount();
+                }
+            }
+        };
+        orderLoadWorker.execute();
     }
 
     private void updateOrderCount() {
@@ -469,52 +406,13 @@ public class OrderGUI extends JFrame {
             }
             Order order = OrderManager.getInstance().getOrder((String) rowData.getFirst());
             if (order != null) {
-                EditOrderGUI editGui = new EditOrderGUI(order);
-                editGui.display();
-                editGui.addWindowListener(new java.awt.event.WindowAdapter() {
-                    @Override
-                    public void windowClosed(java.awt.event.WindowEvent e) {
-                        loadOrders();
-                    }
-                });
+                openEditOrderGui(order);
             }
         });
 
-        del.addActionListener(e -> {
-            int sel = orderTable.getSelectedRow();
-            if (sel == -1)
-                return;
+        del.addActionListener(e -> deleteSelectedOrder());
 
-            int modelRow = orderTable.convertRowIndexToModel(sel);
-            String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
-
-            int confirm = new MessageDialog()
-                    .setTitle("Löschen")
-                    .setMessage("Möchten Sie diese Bestellung wirklich löschen?")
-                    .setOptionType(JOptionPane.YES_NO_OPTION)
-                    .setMessageType(JOptionPane.WARNING_MESSAGE)
-                    .displayWithOptions();
-
-            if (confirm == JOptionPane.YES_OPTION) {
-                if (OrderManager.getInstance().deleteOrder(orderId)) {
-                    ((DefaultTableModel) orderTable.getModel()).removeRow(modelRow);
-                    updateOrderCount();
-                    new MessageDialog()
-                            .setTitle("Erfolg")
-                            .setMessage("Bestellung erfolgreich gelöscht.")
-                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                            .display();
-                } else {
-                    new MessageDialog()
-                            .setTitle("Fehler")
-                            .setMessage("Löschen fehlgeschlagen.")
-                            .setMessageType(JOptionPane.ERROR_MESSAGE)
-                            .display();
-                }
-            }
-        });
-
-        complete.addActionListener(e -> new OrderActions.CompleteOrderAction().actionPerformed(null));
+        complete.addActionListener(e -> openCompleteOrderGui());
 
         orderTable.addMouseListener(new MouseAdapter() {
             @Override
@@ -699,6 +597,10 @@ public class OrderGUI extends JFrame {
         JFrameUtils.adjustColumnWidths(orderTable, tableScrollPane, baseColumnWidths);
     }
 
+    public void display() {
+        SwingUtilities.invokeLater(() -> setVisible(true));
+    }
+
     // -------------------- UI helpers --------------------
 
     private void styleTextField(JTextField tf) {
@@ -771,14 +673,14 @@ public class OrderGUI extends JFrame {
             double unitPrice = ArticleUtils.resolveEffectiveSellPrice(a, filling);
             double lineTotal = quantity * unitPrice;
             totalPrice += lineTotal;
-            String articleName = ArticleUtils.formatArticleWithFilling(a, filling);
+            String articleName = order.formatArticleLabel(a);
 
             articlesHtml.append("<tr>")
-                    .append("<td>").append(a.getArticleNumber()).append("</td>")
-                    .append("<td>").append(articleName).append("</td>")
+                    .append("<td>").append(escapeHtml(a.getArticleNumber())).append("</td>")
+                    .append("<td>").append(escapeHtml(articleName)).append("</td>")
                     .append("<td align='right'>").append(quantity).append("</td>")
-                    .append("<td align='right'>").append(String.format("%.2f", unitPrice)).append(" CHF</td>")
-                    .append("<td align='right'><b>").append(String.format("%.2f", lineTotal)).append(" CHF</b></td>")
+                    .append("<td align='right'>").append(String.format(java.util.Locale.ROOT, "%.2f", unitPrice)).append(" CHF</td>")
+                    .append("<td align='right'><b>").append(String.format(java.util.Locale.ROOT, "%.2f", lineTotal)).append(" CHF</b></td>")
                     .append("</tr>");
         }
 
@@ -815,16 +717,16 @@ public class OrderGUI extends JFrame {
         String htmlContent = "<html><body style='font-family: Arial, sans-serif; padding: 10px;'>" +
                 "<h2 style='color: #1e3a5f; margin-bottom: 20px;'>Bestelldetails</h2>" +
                 "<table style='width: 100%; margin-bottom: 20px;'>" +
-                "<tr><td style='width: 180px;'><b>Bestell-ID:</b></td><td>" + order.getOrderId() + "</td></tr>" +
+                "<tr><td style='width: 180px;'><b>Bestell-ID:</b></td><td>" + escapeHtml(order.getOrderId()) + "</td></tr>" +
                 "<tr><td><b>Status:</b></td><td><span style='color: " +
                 ("Abgeschlossen".equals(order.getStatus()) ? "#1b5e20" : "#e65100") + "; font-weight: bold;'>" +
-                (order.getStatus() != null ? order.getStatus() : "In Bearbeitung") + "</span></td></tr>" +
-                "<tr><td><b>Datum:</b></td><td>" + order.getOrderDate() + "</td></tr>" +
-                "<tr><td><b>Abteilung:</b></td><td>" + order.getDepartment() + "</td></tr>" +
-                "<tr><td><b>Empfänger:</b></td><td>" + order.getReceiverName() + "</td></tr>" +
-                "<tr><td><b>Empfänger Konto:</b></td><td>" + order.getReceiverKontoNumber() + "</td></tr>" +
-                "<tr><td><b>Absender:</b></td><td>" + order.getSenderName() + "</td></tr>" +
-                "<tr><td><b>Absender Konto:</b></td><td>" + order.getSenderKontoNumber() + "</td></tr>" +
+                escapeHtml(order.getStatus() != null ? order.getStatus() : "In Bearbeitung") + "</span></td></tr>" +
+                "<tr><td><b>Datum:</b></td><td>" + escapeHtml(order.getOrderDate()) + "</td></tr>" +
+                "<tr><td><b>Abteilung:</b></td><td>" + escapeHtml(order.getDepartment()) + "</td></tr>" +
+                "<tr><td><b>Empfänger:</b></td><td>" + escapeHtml(order.getReceiverName()) + "</td></tr>" +
+                "<tr><td><b>Empfänger Konto:</b></td><td>" + escapeHtml(order.getReceiverKontoNumber()) + "</td></tr>" +
+                "<tr><td><b>Absender:</b></td><td>" + escapeHtml(order.getSenderName()) + "</td></tr>" +
+                "<tr><td><b>Absender Konto:</b></td><td>" + escapeHtml(order.getSenderKontoNumber()) + "</td></tr>" +
                 "</table>" +
                 "<h3 style='color: #1e3a5f; margin-top: 20px; margin-bottom: 10px;'>Bestellte Artikel</h3>" +
                 "<table border='1' cellpadding='8' cellspacing='0' style='width: 100%; border-collapse: collapse; border-color: #ddd;'>"
@@ -835,7 +737,7 @@ public class OrderGUI extends JFrame {
                 articlesHtml +
                 "<tr style='background-color: #f0f0f0; font-weight: bold;'>" +
                 "<td colspan='4' align='right'>Gesamtpreis:</td>" +
-                "<td align='right' style='color: #1e3a5f; font-size: 16px;'>" + String.format("%.2f", totalPrice)
+                "<td align='right' style='color: #1e3a5f; font-size: 16px;'>" + String.format(java.util.Locale.ROOT, "%.2f", totalPrice)
                 + " CHF</td>" +
                 "</tr>" +
                 "</table>" +
@@ -844,7 +746,18 @@ public class OrderGUI extends JFrame {
         JEditorPane editorPane = new JEditorPane("text/html", htmlContent);
         editorPane.setEditable(false);
         editorPane.setBackground(Color.WHITE);
+        editorPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
         return new JScrollPane(editorPane);
+    }
+
+    private static String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
     }
 
     private boolean isOrdersCacheValid() {
@@ -868,16 +781,16 @@ public class OrderGUI extends JFrame {
             return ordersCache != null ? ordersCache : java.util.Collections.emptyList();
         }
 
-        ordersCache = fresh;
+        ordersCache = new ArrayList<>(fresh);
         ordersCacheTime = System.currentTimeMillis();
 
         orderByIdCache.clear();
-        for (Order o : fresh) {
+        for (Order o : ordersCache) {
             if (o != null && o.getOrderId() != null) {
                 orderByIdCache.put(o.getOrderId(), o);
             }
         }
-        return fresh;
+        return ordersCache;
     }
 
     private Order getOrderCached(String orderId) {
@@ -903,5 +816,246 @@ public class OrderGUI extends JFrame {
         if (fresh != null)
             orderByIdCache.put(orderId, fresh);
         return fresh;
+    }
+
+    private void openCreateOrderGui() {
+        NewOrderGUI newOrderGUI = new NewOrderGUI();
+        newOrderGUI.addPropertyChangeListener("orderCreated", evt -> {
+            if (evt.getNewValue() instanceof Order createdOrder) {
+                upsertOrderRow(createdOrder, true);
+            }
+        });
+        newOrderGUI.display();
+    }
+
+    private void openEditOrderGui(Order order) {
+        if (order == null) {
+            return;
+        }
+        EditOrderGUI editGui = new EditOrderGUI(order);
+        editGui.addPropertyChangeListener("orderUpdated", evt -> {
+            if (evt.getNewValue() instanceof Order updatedOrder) {
+                upsertOrderRow(updatedOrder, true);
+            }
+        });
+        editGui.display();
+    }
+
+    private void openCompleteOrderGui() {
+        CompleteOrderGUI completeOrderGUI = new CompleteOrderGUI();
+        completeOrderGUI.addPropertyChangeListener("orderCompleted", evt -> {
+            if (evt.getNewValue() instanceof Order completedOrder) {
+                upsertOrderRow(completedOrder, false);
+            }
+        });
+        completeOrderGUI.display();
+    }
+
+    private void deleteSelectedOrder() {
+        int sel = orderTable.getSelectedRow();
+        if (sel == -1) {
+            new MessageDialog()
+                    .setTitle("Keine Bestellung ausgewählt")
+                    .setMessage("Bitte wählen Sie eine Bestellung zum Löschen aus.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
+            return;
+        }
+
+        int modelRow = orderTable.convertRowIndexToModel(sel);
+        String orderId = (String) orderTable.getModel().getValueAt(modelRow, 0);
+
+        int confirm = new MessageDialog().setTitle("Löschen")
+                .setMessage("Möchten Sie diese Bestellung wirklich löschen?")
+                .setOptionType(JOptionPane.YES_NO_OPTION)
+                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                .displayWithOptions();
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        if (OrderManager.getInstance().deleteOrder(orderId)) {
+            removeOrderRow(orderId);
+            new MessageDialog()
+                    .setTitle("Erfolg")
+                    .setMessage("Bestellung erfolgreich gelöscht.")
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
+            Main.logUtils.addLog(orderId + " wurde gelöscht.");
+            return;
+        }
+
+        new MessageDialog()
+                .setTitle("Fehler")
+                .setMessage("Löschen fehlgeschlagen.")
+                .setMessageType(JOptionPane.ERROR_MESSAGE)
+                .display();
+        Main.logUtils.addLog(orderId + " konnte nicht gelöscht werden.");
+    }
+
+    private void rebuildTable(List<Order> orders, String selectedOrderId) {
+        DefaultTableModel model = (DefaultTableModel) orderTable.getModel();
+        model.setRowCount(0);
+
+        for (Order order : orders) {
+            if (order == null) {
+                continue;
+            }
+            model.addRow(toRowData(order));
+        }
+
+        applyCombinedFilter();
+        selectOrderById(selectedOrderId);
+    }
+
+    private Object[] toRowData(Order order) {
+        return new Object[] {
+                order.getOrderId(),
+                order.getReceiverName(),
+                order.getSenderName(),
+                order.getDepartment(),
+                order.getOrderDate(),
+                order.getOrderedArticles().size() + " Artikel",
+                order.getStatus() != null ? order.getStatus() : "In Bearbeitung"
+        };
+    }
+
+    private void upsertOrderRow(Order order, boolean selectRow) {
+        if (order == null || order.getOrderId() == null) {
+            return;
+        }
+
+        upsertOrderInCache(order);
+
+        DefaultTableModel model = (DefaultTableModel) orderTable.getModel();
+        int modelRow = findModelRowByOrderId(order.getOrderId());
+        Object[] rowData = toRowData(order);
+
+        if (modelRow >= 0) {
+            for (int column = 0; column < rowData.length; column++) {
+                model.setValueAt(rowData[column], modelRow, column);
+            }
+        } else {
+            model.addRow(rowData);
+        }
+
+        applyCombinedFilter();
+        if (selectRow) {
+            selectOrderById(order.getOrderId());
+        }
+    }
+
+    private void removeOrderRow(String orderId) {
+        if (orderId == null) {
+            return;
+        }
+
+        int modelRow = findModelRowByOrderId(orderId);
+        if (modelRow >= 0) {
+            ((DefaultTableModel) orderTable.getModel()).removeRow(modelRow);
+        }
+
+        removeOrderFromCache(orderId);
+        applyCombinedFilter();
+    }
+
+    private int findModelRowByOrderId(String orderId) {
+        if (orderId == null) {
+            return -1;
+        }
+
+        DefaultTableModel model = (DefaultTableModel) orderTable.getModel();
+        for (int row = 0; row < model.getRowCount(); row++) {
+            if (orderId.equals(model.getValueAt(row, 0))) {
+                return row;
+            }
+        }
+        return -1;
+    }
+
+    private void selectOrderById(String orderId) {
+        if (orderId == null) {
+            return;
+        }
+
+        int modelRow = findModelRowByOrderId(orderId);
+        if (modelRow < 0) {
+            return;
+        }
+
+        int viewRow = sorter != null ? orderTable.convertRowIndexToView(modelRow) : modelRow;
+        if (viewRow < 0) {
+            orderTable.clearSelection();
+            return;
+        }
+
+        orderTable.setRowSelectionInterval(viewRow, viewRow);
+        orderTable.scrollRectToVisible(orderTable.getCellRect(viewRow, 0, true));
+    }
+
+    private String getSelectedOrderId() {
+        int selectedRow = orderTable.getSelectedRow();
+        if (selectedRow < 0) {
+            return null;
+        }
+
+        int modelRow = orderTable.convertRowIndexToModel(selectedRow);
+        Object value = orderTable.getModel().getValueAt(modelRow, 0);
+        return value instanceof String orderId ? orderId : null;
+    }
+
+    private void upsertOrderInCache(Order order) {
+        orderByIdCache.put(order.getOrderId(), order);
+
+        if (ordersCache == null) {
+            ordersCache = new ArrayList<>();
+        }
+
+        for (int i = 0; i < ordersCache.size(); i++) {
+            Order current = ordersCache.get(i);
+            if (current != null && order.getOrderId().equals(current.getOrderId())) {
+                ordersCache.set(i, order);
+                ordersCacheTime = System.currentTimeMillis();
+                return;
+            }
+        }
+
+        ordersCache.add(order);
+        ordersCacheTime = System.currentTimeMillis();
+    }
+
+    private void removeOrderFromCache(String orderId) {
+        orderByIdCache.remove(orderId);
+
+        if (ordersCache != null) {
+            ordersCache.removeIf(order -> order != null && orderId.equals(order.getOrderId()));
+        }
+
+        ordersCacheTime = System.currentTimeMillis();
+    }
+
+    private void applyCombinedFilter() {
+        if (sorter == null) {
+            updateOrderCount();
+            return;
+        }
+
+        List<RowFilter<Object, Object>> filters = new ArrayList<>();
+
+        String text = searchField.getText().trim();
+        if (!text.isEmpty()) {
+            filters.add(RowFilter.regexFilter("(?i)" + Pattern.quote(text), 0, 1, 3));
+        }
+
+        String selected = (String) filterComboBox.getSelectedItem();
+        if ("Abgeschlossene Bestellungen".equals(selected)) {
+            filters.add(RowFilter.regexFilter("^Abgeschlossen$", 6));
+        } else if ("Offene Bestellungen".equals(selected)) {
+            filters.add(RowFilter.notFilter(RowFilter.regexFilter("^Abgeschlossen$", 6)));
+        }
+
+        sorter.setRowFilter(filters.isEmpty() ? null : RowFilter.andFilter(filters));
+        updateOrderCount();
     }
 }

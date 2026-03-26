@@ -57,6 +57,7 @@ public class SettingsGUI extends JFrame {
     private JCheckBox enableAutoStockCheckCheckbox;
     private JCheckBox automaticImportCheckBox;
     private JCheckBox darkModeCheckbox;
+    private JCheckBox deleteOldLogsCheckBox;
     private JSpinner qrCodeImportIntervalSpinner;
     private JSpinner fontSizeTableSpinner;
     private JSpinner fontSizeTabSpinner;
@@ -118,6 +119,7 @@ public class SettingsGUI extends JFrame {
     private static final boolean DEFAULT_ENABLE_WARNINGS = true;
     private static final boolean DEFAULT_ENABLE_QR_IMPORT = true;
     private static final boolean DEFAULT_DARK_MODE = false;
+    private static final boolean DEFAULT_DELETE_OLD_LOGS_ON_STARTUP = false;
     private enum GlassIntensity {
         SUBTLE,
         MEDIUM
@@ -273,7 +275,11 @@ public class SettingsGUI extends JFrame {
          * Wird auch in anderen Bereichen der Anwendung verwendet, z.B. für die
          * "Hinzufügen"-Buttons in der Artikelverwaltung.
          */
-        THEME_BUTTON_COLOR("theme_button_color");
+        THEME_BUTTON_COLOR("theme_button_color"),
+        /**
+         * Ob alte Protokolle beim Start automatisch bereinigt werden sollen.
+         */
+        DELETE_OLD_LOGS_ON_STARTUP("delete_old_logs_on_startup");
 
         final String value;
 
@@ -1112,11 +1118,11 @@ public class SettingsGUI extends JFrame {
         otherCard.add(Box.createVerticalStrut(10));
         otherCard.add(deleteLogsButton);
         otherCard.add(Box.createVerticalStrut(15));
-        JLabel logsDeleteTime = createInfoLabel("Löscht alle Anwendungsprotokolle, die älter als 30 Tage sind, aus dem Protokolle-Ordner. So wie in der Datenbank.");
+        JLabel logsDeleteTime = createInfoLabel("Löscht alle Anwendungsprotokolle, die älter als 30 Tage sind, aus dem Protokolle-Ordner. Per Option kann die Bereinigung auch automatisch beim Start ausgeführt werden. So wie in der Datenbank.");
         logsDeleteTime.setAlignmentX(Component.LEFT_ALIGNMENT);
         otherCard.add(Box.createVerticalStrut(15));
         otherCard.add(logsDeleteTime);
-        JCheckBox deleteOldLogsCheckBox = new JCheckBox("Alte Protokolle (älter als 30 Tage) löschen");
+        deleteOldLogsCheckBox = new JCheckBox("Beim Start alte Protokolle (älter als 30 Tage) automatisch löschen");
         styleCheckbox(deleteOldLogsCheckBox);
         deleteOldLogsCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
         otherCard.add(Box.createVerticalStrut(10));
@@ -2833,6 +2839,12 @@ public class SettingsGUI extends JFrame {
         updatePreview();
     }
 
+    private void resetMaintenanceDefaults() {
+        if (deleteOldLogsCheckBox != null) {
+            deleteOldLogsCheckBox.setSelected(DEFAULT_DELETE_OLD_LOGS_ON_STARTUP);
+        }
+    }
+
     private void resetColorDefaults() {
         selectedAccentColor = null;
         selectedHeaderColor = null;
@@ -2854,6 +2866,7 @@ public class SettingsGUI extends JFrame {
         resetThemeDefaults();
         resetServerDefaults();
         resetColorDefaults();
+        resetMaintenanceDefaults();
     }
 
     private void exportSettingsProfile() {
@@ -2881,6 +2894,7 @@ public class SettingsGUI extends JFrame {
         props.setProperty("theme_accent_color", SettingsProfileService.colorToSetting(selectedAccentColor));
         props.setProperty("theme_header_color", SettingsProfileService.colorToSetting(selectedHeaderColor));
         props.setProperty("theme_button_color", SettingsProfileService.colorToSetting(selectedButtonColor));
+        props.setProperty("delete_old_logs_on_startup", String.valueOf(deleteOldLogsCheckBox.isSelected()));
         return props;
     }
 
@@ -2910,6 +2924,8 @@ public class SettingsGUI extends JFrame {
         selectedAccentColor = SettingsProfileService.parseColor(props.getProperty("theme_accent_color"));
         selectedHeaderColor = SettingsProfileService.parseColor(props.getProperty("theme_header_color"));
         selectedButtonColor = SettingsProfileService.parseColor(props.getProperty("theme_button_color"));
+        deleteOldLogsCheckBox.setSelected(Boolean.parseBoolean(
+                props.getProperty("delete_old_logs_on_startup", String.valueOf(DEFAULT_DELETE_OLD_LOGS_ON_STARTUP))));
         updateColorControls();
         updatePreview();
     }

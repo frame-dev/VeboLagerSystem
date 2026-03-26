@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.DatabaseManager;
+import ch.framedev.lagersystem.utils.LogUtils;
 import ch.framedev.lagersystem.utils.SettingsUtils;
 import org.apache.logging.log4j.Logger;
 
@@ -12,9 +13,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 final class SettingsMaintenanceService {
 
@@ -45,52 +43,39 @@ final class SettingsMaintenanceService {
     }
 
     static void deleteOldLogs(Logger logger) {
+        deleteOldLogs(logger, true);
+    }
+
+    static DeleteOldLogsResult deleteOldLogs(Logger logger, boolean showDialog) {
         ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager
                 .getInstance();
-        int deletedCount = logManager.deleteOldLogs(30);
-        File logsFolder = new File(Main.getAppDataDir(), "logs");
-        int fileDeletedCount = 0;
-        try {
-            File[] logFiles = logsFolder.listFiles();
-            if (logFiles != null) {
-                LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
-                for (File logFile : logFiles) {
-                    if (logFile.isFile()) {
-                        BasicFileAttributes attrs = Files.readAttributes(logFile.toPath(), BasicFileAttributes.class);
-                        LocalDateTime fileTime = LocalDateTime.ofInstant(attrs.creationTime().toInstant(),
-                                ZoneId.systemDefault());
-                        if (fileTime.isBefore(cutoffDate)) {
-                            Files.delete(logFile.toPath());
-                            fileDeletedCount++;
-                        }
-                    }
-                }
-            }
+        int deletedCount = logManager.deleteOldLogs(LogUtils.DEFAULT_LOG_RETENTION_DAYS);
+        var fileCleanup = Main.logUtils.deleteLogsOlderThan(LogUtils.DEFAULT_LOG_RETENTION_DAYS);
+        String message = String.format(
+                "Es wurden %d Protokolle aus der Datenbank und %d Protokolldateien gelöscht, die älter als 30 Tage sind.",
+                deletedCount, fileCleanup.deletedFileCount());
+        if (fileCleanup.failedFileCount() > 0) {
+            message += String.format("%n%nHinweis: %d Protokolldatei(en) konnten nicht gelöscht werden.",
+                    fileCleanup.failedFileCount());
+        }
+
+        if (showDialog) {
             new MessageDialog()
                     .setTitle("Alte Protokolle gelöscht")
-                    .setMessage(String.format(
-                            "Es wurden %d Protokolle aus der Datenbank und %d Protokolldateien gelöscht, die älter als 30 Tage sind.",
-                            deletedCount, fileDeletedCount))
+                    .setMessage(message)
                     .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                     .display();
-            logger.info(
-                    "Es wurden {} Protokolle aus der Datenbank und {} Protokolldateien gelöscht, die älter als 30 Tage sind.",
-                    deletedCount, fileDeletedCount);
-            Main.logUtils.addLog("Es wurden " + deletedCount + " Protokolle aus der Datenbank und " + fileDeletedCount
-                    + " Protokolldateien gelöscht, die älter als 30 Tage sind.");
-        } catch (IOException ex) {
-            logger.error("Fehler beim Löschen alter Protokolle: {}", ex.getMessage());
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Löschen alter Protokolle:\n" + ex.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            Main.logUtils.addLog("Fehler beim Löschen alter Protokolle: " + ex.getMessage());
         }
+        logger.info(
+                "{}{}",
+                message,
+                showDialog ? "" : " (automatisch)");
+        Main.logUtils.addLog(message + (showDialog ? "" : " (automatisch)"));
+        return new DeleteOldLogsResult(deletedCount, fileCleanup.deletedFileCount(), fileCleanup.failedFileCount());
     }
 
     static void deleteAllLogs(Logger logger, Component parent) {
-        File logsFolder = new File(Main.getAppDataDir(), "logs");
+        java.io.File logsFolder = new java.io.File(Main.getAppDataDir(), "logs");
         int confirm = JOptionPane.showConfirmDialog(parent,
                 "<html><b>Alle Protokolle wirklich löschen?</b><br/><br/>" +
                         "Diese Aktion löscht alle Protokolldateien im Protokolle-Ordner.<br/>" +
@@ -103,9 +88,9 @@ final class SettingsMaintenanceService {
         }
 
         try {
-            File[] logFiles = logsFolder.listFiles();
+            java.io.File[] logFiles = logsFolder.listFiles();
             if (logFiles != null) {
-                for (File logFile : logFiles) {
+                for (java.io.File logFile : logFiles) {
                     if (logFile.isFile()) {
                         Files.delete(logFile.toPath());
                     }
@@ -144,7 +129,7 @@ final class SettingsMaintenanceService {
     }
 
     static void openLogsFolder(Logger logger) {
-        File logsDir = new File(Main.getAppDataDir(), "logs");
+        java.io.File logsDir = new java.io.File(Main.getAppDataDir(), "logs");
         try {
             Desktop.getDesktop().open(logsDir);
         } catch (IOException e) {
@@ -160,6 +145,9 @@ final class SettingsMaintenanceService {
 
     static void openSettingsFolder(JFrame parent) {
         SettingsUtils.openSettingsFolder(parent);
+    }
+
+    record DeleteOldLogsResult(int deletedDatabaseLogs, int deletedFileLogs, int failedFileLogs) {
     }
 
     @SuppressWarnings("deprecation")

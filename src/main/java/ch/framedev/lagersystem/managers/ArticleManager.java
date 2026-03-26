@@ -123,6 +123,24 @@ public class ArticleManager {
                 "otherDetails TEXT" +
                 ");";
         databaseManager.executeUpdate(sqlSecond);
+        migrateSeparatedArticlesSchema();
+    }
+
+    private void migrateSeparatedArticlesSchema() {
+        String deleteDuplicateDetailsSql = "DELETE FROM " + DatabaseManager.TABLE_SEPERATE_ARTICLES +
+                " WHERE rowid NOT IN (" +
+                "SELECT MIN(rowid) FROM " + DatabaseManager.TABLE_SEPERATE_ARTICLES +
+                " GROUP BY articleNumber, otherDetails" +
+                ");";
+        databaseManager.executeUpdate(deleteDuplicateDetailsSql);
+
+        String uniqueArticleDetailIndexSql = "CREATE UNIQUE INDEX IF NOT EXISTS idx_seperate_articles_article_detail " +
+                "ON " + DatabaseManager.TABLE_SEPERATE_ARTICLES + " (articleNumber, otherDetails);";
+        databaseManager.executeUpdate(uniqueArticleDetailIndexSql);
+
+        String articleNumberIndexSql = "CREATE INDEX IF NOT EXISTS idx_seperate_articles_article_number " +
+                "ON " + DatabaseManager.TABLE_SEPERATE_ARTICLES + " (articleNumber);";
+        databaseManager.executeUpdate(articleNumberIndexSql);
     }
 
     /**
@@ -587,8 +605,8 @@ public class ArticleManager {
 
     public boolean updateSeperateArticle(SeperateArticle article) {
         if (article == null) throw new IllegalArgumentException("Article cannot be null");
-        if(!existsSeperateArticleByDetail(article.getArticleNumber(), article.getOtherDetails())) {
-            Main.logUtils.addLog("Seperate article with the number " + article.getArticleNumber() + " and detail '" + article.getOtherDetails() + "' does not exist!");
+        if(!existsSeperateArticle(article.getIndex(), article.getArticleNumber())) {
+            Main.logUtils.addLog("Seperate article with index '" + article.getIndex() + "' and number '" + article.getArticleNumber() + "' does not exist!");
             return false;
         }
         String sql = "UPDATE " + DatabaseManager.TABLE_SEPERATE_ARTICLES + " SET otherDetails = ? " +
@@ -600,6 +618,13 @@ public class ArticleManager {
         if (articleNumber == null) throw new IllegalArgumentException("Article number cannot be null");
         String sql = "DELETE FROM " + DatabaseManager.TABLE_SEPERATE_ARTICLES + " WHERE \"index\" = ? AND articleNumber = ?;";
         return databaseManager.executePreparedUpdate(sql, new Object[]{index, articleNumber});
+    }
+
+    public boolean deleteSeperateArticle(String articleNumber, String detail) {
+        if (articleNumber == null) throw new IllegalArgumentException("Article number cannot be null");
+        if (detail == null) throw new IllegalArgumentException("Detail cannot be null");
+        String sql = "DELETE FROM " + DatabaseManager.TABLE_SEPERATE_ARTICLES + " WHERE articleNumber = ? AND otherDetails = ?;";
+        return databaseManager.executePreparedUpdate(sql, new Object[]{articleNumber, detail});
     }
 
     public boolean existsSeperateArticle(int index, String articleNumber) {

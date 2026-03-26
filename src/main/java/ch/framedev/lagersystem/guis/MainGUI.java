@@ -32,6 +32,38 @@ import org.apache.logging.log4j.Logger;
 public class MainGUI extends JFrame {
     private static final Logger logger = LogManager.getLogger(MainGUI.class);
     private static final String TAB_LOADED_PROPERTY = "loaded";
+    private static final String EMBEDDED_CONTENT_PROPERTY = "embeddedContent";
+
+    private static final class TabContentWrapper extends JPanel {
+        private Dimension stablePreferredSize;
+
+        private TabContentWrapper() {
+            super(new BorderLayout());
+            setBackground(ThemeManager.getBackgroundColor());
+            setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        }
+
+        @Override
+        public void setBounds(int x, int y, int width, int height) {
+            super.setBounds(x, y, width, height);
+            if (width > 0 && height > 0) {
+                stablePreferredSize = new Dimension(width, height);
+            }
+        }
+
+        @Override
+        public Dimension getPreferredSize() {
+            if (stablePreferredSize != null) {
+                return new Dimension(stablePreferredSize);
+            }
+            return super.getPreferredSize();
+        }
+
+        @Override
+        public Dimension getMinimumSize() {
+            return new Dimension(0, 0);
+        }
+    }
 
     private JTabbedPane tabbedPane;
 
@@ -53,12 +85,12 @@ public class MainGUI extends JFrame {
     private NotesGUI notesGUI;
 
     // Tab wrappers
-    private final JPanel articleWrapper = createTabWrapper();
-    private final JPanel vendorWrapper = createTabWrapper();
-    private final JPanel orderWrapper = createTabWrapper();
-    private final JPanel clientWrapper = createTabWrapper();
-    private final JPanel supplierOrderWrapper = createTabWrapper();
-    private final JPanel logsWrapper = createTabWrapper();
+    private final TabContentWrapper articleWrapper = createTabWrapper();
+    private final TabContentWrapper vendorWrapper = createTabWrapper();
+    private final TabContentWrapper orderWrapper = createTabWrapper();
+    private final TabContentWrapper clientWrapper = createTabWrapper();
+    private final TabContentWrapper supplierOrderWrapper = createTabWrapper();
+    private final TabContentWrapper logsWrapper = createTabWrapper();
 
     /**
      * Constructs the main GUI window for the VEBO Lagersystem application. This
@@ -115,11 +147,77 @@ public class MainGUI extends JFrame {
     /**
      * Creates a wrapper panel with padding for tab content
      */
-    private static JPanel createTabWrapper() {
-        JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setBackground(ThemeManager.getBackgroundColor());
-        wrapper.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        return wrapper;
+    private static TabContentWrapper createTabWrapper() {
+        return new TabContentWrapper();
+    }
+
+    private static JComponent extractEmbeddedTabContent(JFrame frame) {
+        Object existingContent = frame.getRootPane().getClientProperty(EMBEDDED_CONTENT_PROPERTY);
+        if (existingContent instanceof JComponent component) {
+            return component;
+        }
+
+        Container contentPane = frame.getContentPane();
+        JComponent embeddedContent;
+        if (contentPane instanceof JComponent component) {
+            embeddedContent = component;
+        } else {
+            JPanel fallback = new JPanel(new BorderLayout());
+            fallback.setOpaque(false);
+            fallback.add(contentPane, BorderLayout.CENTER);
+            embeddedContent = fallback;
+        }
+
+        embeddedContent.setMinimumSize(new Dimension(0, 0));
+        frame.getRootPane().putClientProperty(EMBEDDED_CONTENT_PROPERTY, embeddedContent);
+
+        JPanel placeholder = new JPanel(new BorderLayout());
+        placeholder.setOpaque(false);
+        frame.setContentPane(placeholder);
+
+        return embeddedContent;
+    }
+
+    private JFrame getTabFrame(int tabIndex) {
+        return switch (tabIndex) {
+            case 0 -> {
+                if (articleGUI == null) {
+                    articleGUI = new ArticleGUI();
+                }
+                yield articleGUI;
+            }
+            case 1 -> {
+                if (vendorGUI == null) {
+                    vendorGUI = new VendorGUI();
+                }
+                yield vendorGUI;
+            }
+            case 2 -> {
+                if (orderGUI == null) {
+                    orderGUI = new OrderGUI();
+                }
+                yield orderGUI;
+            }
+            case 3 -> {
+                if (clientGUI == null) {
+                    clientGUI = new ClientGUI();
+                }
+                yield clientGUI;
+            }
+            case 4 -> {
+                if (supplierOrderGUI == null) {
+                    supplierOrderGUI = new SupplierOrderGUI();
+                }
+                yield supplierOrderGUI;
+            }
+            case 5 -> {
+                if (logsGUI == null) {
+                    logsGUI = new LogsGUI();
+                }
+                yield logsGUI;
+            }
+            default -> null;
+        };
     }
 
     /**
@@ -131,39 +229,7 @@ public class MainGUI extends JFrame {
         wrapper.removeAll();
         JFrame frame = null;
         try {
-            frame = switch (tabIndex) {
-                case 0 -> {
-                    if (articleGUI == null)
-                        articleGUI = new ArticleGUI();
-                    yield articleGUI;
-                }
-                case 1 -> {
-                    if (vendorGUI == null)
-                        vendorGUI = new VendorGUI();
-                    yield vendorGUI;
-                }
-                case 2 -> {
-                    if (orderGUI == null)
-                        orderGUI = new OrderGUI();
-                    yield orderGUI;
-                }
-                case 3 -> {
-                    if (clientGUI == null)
-                        clientGUI = new ClientGUI();
-                    yield clientGUI;
-                }
-                case 4 -> {
-                    if (supplierOrderGUI == null)
-                        supplierOrderGUI = new SupplierOrderGUI();
-                    yield supplierOrderGUI;
-                }
-                case 5 -> {
-                    if (logsGUI == null)
-                        logsGUI = new LogsGUI();
-                    yield logsGUI;
-                }
-                default -> null;
-            };
+            frame = getTabFrame(tabIndex);
         } catch (Exception ex) {
             logger.error("Error loading tab content for tab {}: {}", tabIndex, ex.getMessage(), ex);
             return;
@@ -174,15 +240,7 @@ public class MainGUI extends JFrame {
         }
         frame.setVisible(false);
         frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        Container cp = frame.getContentPane();
-        if (cp instanceof JPanel panel) {
-            wrapper.add(panel, BorderLayout.CENTER);
-        } else {
-            JPanel fallback = new JPanel(new BorderLayout());
-            fallback.setOpaque(false);
-            fallback.add(cp, BorderLayout.CENTER);
-            wrapper.add(fallback, BorderLayout.CENTER);
-        }
+        wrapper.add(extractEmbeddedTabContent(frame), BorderLayout.CENTER);
         wrapper.revalidate();
         wrapper.repaint();
         logger.debug("Loaded tab content for tab {}", tabIndex);
@@ -210,11 +268,10 @@ public class MainGUI extends JFrame {
         JFrameUtils.GradientPanel headerPanel = new JFrameUtils.GradientPanel(
                 ThemeManager.getHeaderBackgroundColor(),
                 ThemeManager.getHeaderGradientColor());
-        headerPanel.setLayout(new BorderLayout());
-        headerPanel.setPreferredSize(new Dimension(0, 180));
+        headerPanel.setLayout(new BorderLayout(24, 16));
         headerPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 0, 0, 30)),
-                BorderFactory.createEmptyBorder(30, 60, 30, 60)));
+                BorderFactory.createEmptyBorder(24, 28, 24, 28)));
         return headerPanel;
     }
 
@@ -272,7 +329,7 @@ public class MainGUI extends JFrame {
      */
     private JPanel createHeaderRightPanel() {
         JPanel rightPanel = new JPanel();
-        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.X_AXIS));
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         rightPanel.setOpaque(false);
 
         Font headerButtonFont = SettingsGUI.getFontByName(Font.BOLD, 12);
@@ -297,13 +354,25 @@ public class MainGUI extends JFrame {
         dateLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
         dateLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        rightPanel.add(converterButton);
-        rightPanel.add(Box.createHorizontalStrut(8));
-        rightPanel.add(notesButton);
-        rightPanel.add(Box.createHorizontalStrut(8));
-        rightPanel.add(settingsButton);
-        rightPanel.add(Box.createHorizontalStrut(10));
-        rightPanel.add(dateLabel);
+        JPanel buttonGrid = new JPanel(new GridLayout(0, 2, 8, 8));
+        buttonGrid.setOpaque(false);
+        buttonGrid.add(converterButton);
+        buttonGrid.add(notesButton);
+        buttonGrid.add(settingsButton);
+
+        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        buttonRow.setOpaque(false);
+        buttonRow.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        buttonRow.add(buttonGrid);
+
+        JPanel dateRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        dateRow.setOpaque(false);
+        dateRow.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        dateRow.add(dateLabel);
+
+        rightPanel.add(buttonRow);
+        rightPanel.add(Box.createVerticalStrut(8));
+        rightPanel.add(dateRow);
 
         return rightPanel;
     }

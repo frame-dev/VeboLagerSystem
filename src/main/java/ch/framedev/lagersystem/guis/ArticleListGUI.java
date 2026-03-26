@@ -31,7 +31,8 @@ import java.util.function.Supplier;
 public class ArticleListGUI extends JFrame {
 
     private static Map<Article, Integer> articlesAndQuantity = new HashMap<>();
-    private static Map<Article, String> picked = new HashMap<>();
+    private static Map<Article, String> articleAndSize = new HashMap<>();
+    private static Map<Article, String> articleAndColor = new HashMap<>();
     private static Map<Article, String> articleAndFilling = new HashMap<>();
 
     // UI state
@@ -50,7 +51,8 @@ public class ArticleListGUI extends JFrame {
     private JLabel emptyStateLabel;
 
     // Helper class to track article and quantity together
-    private record ArticleDisplay(Article article, int quantity, String picked, String filling, String searchableText) {
+    private record ArticleDisplay(Article article, int quantity, String size, String color, String filling,
+                                  String searchableText) {
         @Override
         public String toString() {
             // Fallback (not used for renderer, but helpful for debugging)
@@ -58,8 +60,10 @@ public class ArticleListGUI extends JFrame {
                 String name = article.getName();
                 if (name != null && name.length() > 34)
                     name = name.substring(0, 31) + "...";
-                if (picked != null && !picked.isBlank())
-                    name += " (" + picked + ")";
+                if (size != null && !size.isBlank())
+                    name += " (" + size + ")";
+                if (color != null && !color.isBlank())
+                    name += " {" + color + "}";
                 if (filling != null && !filling.isBlank())
                     name += " [" + filling + "]";
                 return String.format("%s | Nr: %s | Qty: %d", name, article.getArticleNumber(), quantity);
@@ -107,7 +111,7 @@ public class ArticleListGUI extends JFrame {
     private void initializeList() {
         articleJList = new JList<>(listModel);
         articleJList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        articleJList.setFixedCellHeight(76);
+        articleJList.setFixedCellHeight(92);
         articleJList.setCellRenderer(new ArticleCellRenderer());
         articleJList.setBackground(ThemeManager.getCardBackgroundColor());
         articleJList.setForeground(ThemeManager.getTextPrimaryColor());
@@ -503,7 +507,8 @@ public class ArticleListGUI extends JFrame {
 
         if (res == JOptionPane.YES_OPTION) {
             articlesAndQuantity.clear();
-            picked.clear();
+            articleAndSize.clear();
+            articleAndColor.clear();
             articleAndFilling.clear();
             refreshArticleListPreservingQuery();
         }
@@ -526,7 +531,8 @@ public class ArticleListGUI extends JFrame {
                         "<b>Selected Qty:</b> %d<br/>" +
                         "<b>Sell Price:</b> %.2f CHF<br/>" +
                         "<b>Purchase Price:</b> %.2f CHF<br/>" +
-                        "<b>Picked:</b> %s<br/>" +
+                        "<b>Größe:</b> %s<br/>" +
+                        "<b>Farbe:</b> %s<br/>" +
                         "<b>Filling:</b> %s<br/>" +
                         "</div></html>",
                 safe(ad.article::getName),
@@ -537,7 +543,8 @@ public class ArticleListGUI extends JFrame {
                 ad.quantity,
                 safeDouble(ad.article::getSellPrice),
                 safeDouble(ad.article::getPurchasePrice),
-                ad.picked == null ? "—" : ad.picked,
+                ad.size == null || ad.size.isBlank() ? "—" : ad.size,
+                ad.color == null || ad.color.isBlank() ? "—" : ad.color,
                 ad.filling == null ? "—" : ad.filling);
 
         new MessageDialog()
@@ -566,6 +573,7 @@ public class ArticleListGUI extends JFrame {
 
     private void rebuildDisplayCache() {
         displayCache.clear();
+        cleanupMetadataMaps();
 
         // Stable, pretty ordering: name -> article number
         List<Map.Entry<Article, Integer>> entries = new ArrayList<>(articlesAndQuantity.entrySet());
@@ -653,28 +661,57 @@ public class ArticleListGUI extends JFrame {
         String name = safe(article::getName);
         String number = safe(article::getArticleNumber);
         String details = safe(article::getDetails);
-        String picked = normalizePicked(ArticleListGUI.picked.get(article));
+        String size = normalizeSize(ArticleListGUI.articleAndSize.get(article));
+        String color = normalizeColor(ArticleListGUI.articleAndColor.get(article));
         String filling = normalizeFilling(ArticleListGUI.articleAndFilling.get(article));
 
-        String searchable = (name + " " + number + " " + details + " qty:" + quantity + " Ausgewählt:" + picked
-                + " Füllung:" + filling)
+        String searchable = (name + " " + number + " " + details + " qty:" + quantity
+                + " Größe:" + size + " Farbe:" + color + " Füllung:" + filling)
                 .toLowerCase(Locale.ROOT);
 
-        return new ArticleDisplay(article, quantity, picked, filling, searchable);
+        return new ArticleDisplay(article, quantity, size, color, filling, searchable);
     }
 
-    private String normalizePicked(String pickedValue) {
-        if (pickedValue == null)
+    private String normalizeSize(String sizeValue) {
+        if (sizeValue == null)
             return "";
-        String normalized = pickedValue.trim().toUpperCase(Locale.ROOT);
-        return switch (normalized) {
-            case "S", "M", "L", "XL" -> normalized;
-            default -> "";
+        String normalized = sizeValue.trim().replaceAll("\\s+", " ");
+        if (isMetadataBlank(normalized)) {
+            return "";
+        }
+        String upper = normalized.toUpperCase(Locale.ROOT);
+        return switch (upper) {
+            case "XS", "S", "M", "L", "XL", "XXL", "XXXL" -> upper;
+            default -> normalized;
         };
+    }
+
+    private String normalizeColor(String colorValue) {
+        if (colorValue == null)
+            return "";
+        String normalized = colorValue.trim().replaceAll("\\s+", " ");
+        return isMetadataBlank(normalized) ? "" : normalized;
     }
 
     private String normalizeFilling(String fillingValue) {
         return ArticleUtils.normalizeFilling(fillingValue);
+    }
+
+    private boolean isMetadataBlank(String value) {
+        if (value == null) {
+            return true;
+        }
+        String normalized = value.trim();
+        return normalized.isBlank()
+                || normalized.equalsIgnoreCase("n/a")
+                || normalized.equalsIgnoreCase("null")
+                || normalized.equals("-");
+    }
+
+    private void cleanupMetadataMaps() {
+        articleAndSize.keySet().removeIf(article -> !articlesAndQuantity.containsKey(article));
+        articleAndColor.keySet().removeIf(article -> !articlesAndQuantity.containsKey(article));
+        articleAndFilling.keySet().removeIf(article -> !articlesAndQuantity.containsKey(article));
     }
 
     private String safe(Supplier<String> supplier) {
@@ -768,6 +805,9 @@ public class ArticleListGUI extends JFrame {
      */
     public static void setArticles(Map<Article, Integer> articleMap) {
         articlesAndQuantity = (articleMap == null) ? new HashMap<>() : articleMap;
+        articleAndSize.keySet().removeIf(article -> !articlesAndQuantity.containsKey(article));
+        articleAndColor.keySet().removeIf(article -> !articlesAndQuantity.containsKey(article));
+        articleAndFilling.keySet().removeIf(article -> !articlesAndQuantity.containsKey(article));
     }
 
     /**
@@ -806,17 +846,28 @@ public class ArticleListGUI extends JFrame {
      *                 it defaults to 1.
      */
     public static void addArticle(Article article, int quantity, String picked, String filling) {
+        addArticle(article, quantity, picked, null, filling);
+    }
+
+    public static void addArticle(Article article, int quantity, String size, String color, String filling) {
         if (article == null)
             return;
         if (quantity <= 0)
             quantity = 1;
-        String normalizedPicked = (picked == null) ? "" : picked.trim().toUpperCase(Locale.ROOT);
-        if (normalizedPicked.equals("S") || normalizedPicked.equals("M")
-                || normalizedPicked.equals("L") || normalizedPicked.equals("XL")) {
-            ArticleListGUI.picked.put(article, normalizedPicked);
+        String normalizedSize = ArticleUtils.normalizeMetadataValue(size);
+        if (!normalizedSize.isBlank()) {
+            ArticleListGUI.articleAndSize.put(article, normalizedSize);
         } else {
-            ArticleListGUI.picked.remove(article);
+            ArticleListGUI.articleAndSize.remove(article);
         }
+
+        String normalizedColor = ArticleUtils.normalizeMetadataValue(color);
+        if (!normalizedColor.isBlank()) {
+            ArticleListGUI.articleAndColor.put(article, normalizedColor);
+        } else {
+            ArticleListGUI.articleAndColor.remove(article);
+        }
+
         articlesAndQuantity.put(article, quantity);
         String normalizedFilling = ArticleUtils.normalizeFilling(filling);
         if (ArticleUtils.isFillingValid(normalizedFilling) && !normalizedFilling.isBlank()) {
@@ -836,7 +887,8 @@ public class ArticleListGUI extends JFrame {
         if (article == null)
             return;
         articlesAndQuantity.remove(article);
-        picked.remove(article);
+        articleAndSize.remove(article);
+        articleAndColor.remove(article);
         articleAndFilling.remove(article);
     }
 
@@ -863,7 +915,8 @@ public class ArticleListGUI extends JFrame {
             String name = safeStatic(article::getName);
             String number = safeStatic(article::getArticleNumber);
             int stock = safeIntStatic(article::getStockQuantity);
-            String picked = ad.picked == null ? "" : ad.picked.trim();
+            String size = ad.size == null ? "" : ad.size.trim();
+            String color = ad.color == null ? "" : ad.color.trim();
             String filling = ad.filling == null ? "" : ad.filling.trim();
 
             JLabel nameLabel = new JLabel(name);
@@ -872,20 +925,32 @@ public class ArticleListGUI extends JFrame {
                     isSelected ? ThemeManager.getTextOnPrimaryColor() : ThemeManager.getTextPrimaryColor());
 
             String metaText = String.format("📦 Nr: %s   ·   Stock: %d", number, stock);
-            if (!picked.isBlank()) {
-                metaText += "   ·   Picked: " + picked;
+            if (!size.isBlank()) {
+                metaText += "   ·   Größe: " + size;
             }
-            if (!filling.isBlank()) {
-                metaText += "   ·   Füllung: " + filling;
+            if (!color.isBlank()) {
+                metaText += "   ·   Farbe: " + color;
             }
             JLabel meta = new JLabel(metaText);
             meta.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
             meta.setForeground(
                     isSelected ? ThemeManager.getTextOnPrimaryColor() : ThemeManager.getTextSecondaryColor());
 
+            StringBuilder attributes = new StringBuilder();
+            if (!filling.isBlank()) {
+                attributes.append("Füllung: ").append(filling);
+            }
+            JLabel attributesLabel = new JLabel(attributes.isEmpty() ? " " : attributes.toString());
+            attributesLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
+            attributesLabel.setForeground(
+                    isSelected ? ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220)
+                            : ThemeManager.getTextSecondaryColor());
+
             info.add(nameLabel);
-            info.add(Box.createVerticalStrut(5));
+            info.add(Box.createVerticalStrut(4));
             info.add(meta);
+            info.add(Box.createVerticalStrut(3));
+            info.add(attributesLabel);
 
             panel.add(info, BorderLayout.CENTER);
 
@@ -973,6 +1038,14 @@ public class ArticleListGUI extends JFrame {
         return articleAndFilling.containsKey(article);
     }
 
+    public static String getArticleSize(Article article) {
+        return articleAndSize.get(article);
+    }
+
+    public static String getArticleColor(Article article) {
+        return articleAndColor.get(article);
+    }
+
     public static String getArticleFilling(Article article) {
         return articleAndFilling.get(article);
     }
@@ -983,5 +1056,13 @@ public class ArticleListGUI extends JFrame {
 
     public static Map<Article, String> getArticlesWithFilling() {
         return new HashMap<>(articleAndFilling);
+    }
+
+    public static Map<Article, String> getArticlesWithSize() {
+        return new HashMap<>(articleAndSize);
+    }
+
+    public static Map<Article, String> getArticlesWithColor() {
+        return new HashMap<>(articleAndColor);
     }
 }
