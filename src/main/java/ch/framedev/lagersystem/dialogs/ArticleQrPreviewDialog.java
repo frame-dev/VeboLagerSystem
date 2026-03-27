@@ -5,6 +5,7 @@ import ch.framedev.lagersystem.guis.SettingsGUI;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.QRCodeGenerator;
+import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -522,15 +523,7 @@ public final class ArticleQrPreviewDialog {
         String data = (article != null) ? article.getQrCodeData() : null;
         if (data == null) data = "";
         String encodedData = URLEncoder.encode(data, StandardCharsets.UTF_8);
-        String serverUrl = "https://framedev.ch/vebo/scan.php";
-        String serverUrlSettings = Main.settings.getProperty("server_url");
-        if (serverUrlSettings != null && !serverUrlSettings.isBlank()) {
-            if(serverUrl.startsWith("https://framedev.ch/vebo")) {
-                serverUrl = serverUrlSettings + "/scan.php";
-            } else {
-                serverUrl = serverUrlSettings;
-            }
-        }
+        String serverUrl = QRCodeUtils.resolveScanSubmitUrl(Main.settings.getProperty("server_url"));
         return serverUrl + "?data=" + encodedData;
     }
 

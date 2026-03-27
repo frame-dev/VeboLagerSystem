@@ -41,6 +41,7 @@ import ch.framedev.lagersystem.managers.UpdateManager;
 import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.managers.VendorManager;
 import ch.framedev.lagersystem.managers.ThemeManager.LookAndFeelOption;
+import ch.framedev.lagersystem.scan.ScanServer;
 import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
@@ -122,6 +123,17 @@ public class Main {
      * @param args command-line arguments (not used in this application)
      */
     public static void main(String[] args) {
+        // Check if application should start in server mode based on command-line arguments
+        if(args.length > 0 && args[0].equalsIgnoreCase("server")) {
+            System.out.println("Starte Server-Modus...");
+            try {
+                ScanServer.main(args);
+            } catch (Exception e) {
+                logger.error("Fehler im Server-Modus: {}", e.getMessage(), e);
+                logUtils.addLog("Fehler im Server-Modus: " + e.getMessage());
+            }
+            return;
+        }
         try {
             // Initialize application
             printStartupInfo();
@@ -284,9 +296,10 @@ public class Main {
             SimpleJavaUtils utils = new SimpleJavaUtils();
             icon = createScaledIcon(utils, "logo.png", 128, 128);
             iconSmall = createScaledIcon(utils, "logo-small.png", 64, 64);
+            logUtils.addLog("Icons successfully loaded!");
         } catch (MalformedURLException e) {
             String errorMsg = "Fehler beim Laden des Icons: " + e.getMessage();
-            System.err.println(errorMsg);
+            logger.error(errorMsg, e);
             logUtils.addLog(errorMsg);
             throw new RuntimeException("Icon konnte nicht geladen werden", e);
         }
@@ -323,7 +336,7 @@ public class Main {
         File appDataDir = getAppDataDir();
         if (!appDataDir.exists() && !appDataDir.mkdirs()) {
             String msg = "Konnte Anwendungsdatenverzeichnis nicht erstellen: " + appDataDir.getAbsolutePath();
-            System.err.println(msg);
+            logger.error(msg);
             logUtils.addLog(msg);
             throw new RuntimeException(msg);
         } else {

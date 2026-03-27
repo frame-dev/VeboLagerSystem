@@ -52,8 +52,11 @@ public class VendorGUI extends JFrame {
 
     private final JTable vendorTable;
     private final JScrollPane tableScrollPane;
+    private final JLabel vendorCountLabel = new JLabel();
+    private final JLabel tableCountLabel = new JLabel();
     private final int[] baseColumnWidths = new int[]{120, 260, 160, 140, 220, 300, 140};
     private final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("de-CH"));
+    private TableRowSorter<DefaultTableModel> sorter;
 
     // ---- Vendor cache (GUI-level) ------------------------------------------
     private static final long VENDOR_CACHE_TTL_MS = 30_000; // 30s GUI cache
@@ -77,55 +80,10 @@ public class VendorGUI extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // ===== Top area (Header + Toolbar) =====
         JPanel topContainer = new JPanel();
         topContainer.setBackground(ThemeManager.getBackgroundColor());
         topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
         topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
-
-        JPanel headerWrapper = null;
-        boolean disableHeader = Main.settings.getProperty("disable_header") != null
-                && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
-        if (!disableHeader) {
-            RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-            headerPanel.setLayout(new BorderLayout());
-            headerPanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                    BorderFactory.createEmptyBorder(14, 18, 14, 18)
-            ));
-            headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-            JLabel titleLabel = new JLabel(UnicodeSymbols.TRUCK + " Lieferant Verwaltung");
-            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-            titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
-            JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Lieferanten verwalten, suchen und bearbeiten");
-            subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-            subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
-
-            JPanel headerText = new JPanel();
-            headerText.setOpaque(false);
-            headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            headerText.add(titleLabel);
-            headerText.add(Box.createVerticalStrut(4));
-            headerText.add(subtitleLabel);
-
-            headerPanel.add(headerText, BorderLayout.WEST);
-
-            headerWrapper = new JPanel(new BorderLayout());
-            headerWrapper.setOpaque(false);
-            headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-            headerWrapper.add(headerPanel, BorderLayout.CENTER);
-        }
-
-        RoundedPanel toolbar = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
-        toolbar.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        toolbar.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)
-        ));
 
         JButton addVendorButton = createRoundedButton(UnicodeSymbols.HEAVY_PLUS + " Lieferant hinzufügen");
         addVendorButton.setToolTipText("Neuen Lieferanten hinzufügen");
@@ -136,21 +94,25 @@ public class VendorGUI extends JFrame {
         JButton refreshButton = createRoundedButton(UnicodeSymbols.REFRESH + " Aktualisieren");
         refreshButton.setToolTipText("Lieferantenliste aktualisieren");
 
-        toolbar.add(addVendorButton);
-        toolbar.add(editVendorButton);
-        toolbar.add(deleteVendorButton);
-        toolbar.add(refreshButton);
-
-        JPanel toolbarWrapper = new JPanel(new BorderLayout());
-        toolbarWrapper.setOpaque(false);
-        toolbarWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-        toolbarWrapper.add(toolbar, BorderLayout.SOUTH);
-
+        JPanel headerWrapper = createHeaderWrapper();
         if (headerWrapper != null) {
             topContainer.add(headerWrapper);
             topContainer.add(Box.createVerticalStrut(10));
         }
-        topContainer.add(toolbarWrapper);
+
+        topContainer.add(createToolbarCard(addVendorButton, editVendorButton, deleteVendorButton, refreshButton));
+        topContainer.add(Box.createVerticalStrut(10));
+
+        JTextField searchField = new JTextField(26);
+        styleTextField(searchField);
+        searchField.setToolTipText("Tippen zum Filtern – Enter zum Suchen, ESC zum Leeren");
+
+        JButton searchBtn = createSecondaryButton(UnicodeSymbols.SEARCH + " Suchen");
+        searchBtn.setToolTipText("Nach Lieferanten suchen");
+        JButton clearBtn = createSecondaryButton(UnicodeSymbols.CLEAR + " Leeren");
+        clearBtn.setToolTipText("Suchfeld leeren");
+
+        topContainer.add(createSearchCard(searchField, searchBtn, clearBtn));
 
         add(topContainer, BorderLayout.NORTH);
 
@@ -184,6 +146,7 @@ public class VendorGUI extends JFrame {
         tableScrollPane.setBackground(ThemeManager.getCardBackgroundColor());
         tableScrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
         card.add(tableScrollPane, BorderLayout.CENTER);
+        card.add(createTableFooterCard(), BorderLayout.SOUTH);
 
         JPanel centerWrapper = new JPanel(new GridBagLayout());
         centerWrapper.setBackground(ThemeManager.getBackgroundColor());
@@ -193,47 +156,6 @@ public class VendorGUI extends JFrame {
         gbc.weighty = 1.0;
         centerWrapper.add(card, gbc);
         add(centerWrapper, BorderLayout.CENTER);
-
-        RoundedPanel searchCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
-        searchCard.setLayout(new BorderLayout(10, 0));
-        searchCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-
-        JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche (Name, Kontakt oder Artikel):");
-        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
-        searchLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
-
-        JTextField searchField = new JTextField(26);
-        styleTextField(searchField);
-        searchField.setToolTipText("Tippen zum Filtern – Enter zum Suchen, ESC zum Leeren");
-
-        JPanel leftSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        leftSearch.setOpaque(false);
-        leftSearch.add(searchLabel);
-        leftSearch.add(searchField);
-
-        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        rightActions.setOpaque(false);
-
-        JButton searchBtn = createSecondaryButton(UnicodeSymbols.SEARCH + " Suchen");
-        searchBtn.setToolTipText("Nach Lieferanten suchen");
-        JButton clearBtn = createSecondaryButton(UnicodeSymbols.CLEAR + " Leeren");
-        clearBtn.setToolTipText("Suchfeld leeren");
-
-        rightActions.add(searchBtn);
-        rightActions.add(clearBtn);
-
-        searchCard.add(leftSearch, BorderLayout.CENTER);
-        searchCard.add(rightActions, BorderLayout.EAST);
-
-        JPanel searchWrapper = new JPanel(new BorderLayout());
-        searchWrapper.setBackground(ThemeManager.getBackgroundColor());
-        searchWrapper.setBorder(BorderFactory.createEmptyBorder(10, 12, 12, 12));
-        searchWrapper.add(searchCard, BorderLayout.CENTER);
-
-        add(searchWrapper, BorderLayout.SOUTH);
 
         loadVendors(false);
         setupTableInteractions();
@@ -276,7 +198,7 @@ public class VendorGUI extends JFrame {
             loadVendors(true);
         });
 
-        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) vendorTable.getModel());
+        sorter = new TableRowSorter<>((DefaultTableModel) vendorTable.getModel());
         vendorTable.setRowSorter(sorter);
 
         Runnable doSearch = () -> {
@@ -292,6 +214,7 @@ public class VendorGUI extends JFrame {
                         ADDRESS_COLUMN_INDEX,
                         ARTICLES_COLUMN_INDEX));
             }
+            updateVendorCountLabel();
         };
 
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -315,6 +238,7 @@ public class VendorGUI extends JFrame {
         clearBtn.addActionListener(e -> {
             searchField.setText("");
             sorter.setRowFilter(null);
+            updateVendorCountLabel();
         });
         searchField.addActionListener(e -> doSearch.run());
 
@@ -322,6 +246,7 @@ public class VendorGUI extends JFrame {
                 e -> {
                     searchField.setText("");
                     sorter.setRowFilter(null);
+                    updateVendorCountLabel();
                 },
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_FOCUSED
@@ -340,6 +265,120 @@ public class VendorGUI extends JFrame {
 
     public void display() {
         setVisible(true);
+    }
+
+    private JPanel createHeaderWrapper() {
+        boolean disableHeader = Main.settings.getProperty("disable_header") != null
+                && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
+        if (disableHeader) {
+            return null;
+        }
+
+        RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
+        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 18, 14, 18)
+        ));
+        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel titleLabel = new JLabel(UnicodeSymbols.TRUCK + " Lieferant Verwaltung");
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Lieferanten verwalten, suchen und bearbeiten");
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerText.add(titleLabel);
+        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(subtitleLabel);
+
+        styleCountBadge(vendorCountLabel);
+        vendorCountLabel.setText("Lieferanten werden geladen...");
+
+        headerPanel.add(headerText, BorderLayout.WEST);
+        headerPanel.add(vendorCountLabel, BorderLayout.EAST);
+
+        JPanel headerWrapper = new JPanel(new BorderLayout());
+        headerWrapper.setOpaque(false);
+        headerWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerWrapper.add(headerPanel, BorderLayout.CENTER);
+        return headerWrapper;
+    }
+
+    private JPanel createToolbarCard(JButton addVendorButton, JButton editVendorButton, JButton deleteVendorButton,
+                                     JButton refreshButton) {
+        RoundedPanel toolbar = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        toolbar.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        toolbar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)
+        ));
+        toolbar.add(addVendorButton);
+        toolbar.add(editVendorButton);
+        toolbar.add(deleteVendorButton);
+        toolbar.add(refreshButton);
+
+        JPanel toolbarWrapper = new JPanel(new BorderLayout());
+        toolbarWrapper.setOpaque(false);
+        toolbarWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        toolbarWrapper.add(toolbar, BorderLayout.CENTER);
+        return toolbarWrapper;
+    }
+
+    private JPanel createSearchCard(JTextField searchField, JButton searchBtn, JButton clearBtn) {
+        RoundedPanel searchCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        searchCard.setLayout(new BorderLayout(10, 0));
+        searchCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)
+        ));
+
+        JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche (Name, Kontakt oder Artikel):");
+        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        searchLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+
+        JPanel leftSearch = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        leftSearch.setOpaque(false);
+        leftSearch.add(searchLabel);
+        leftSearch.add(searchField);
+
+        JPanel rightActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        rightActions.setOpaque(false);
+        rightActions.add(searchBtn);
+        rightActions.add(clearBtn);
+
+        searchCard.add(leftSearch, BorderLayout.CENTER);
+        searchCard.add(rightActions, BorderLayout.EAST);
+
+        JPanel searchWrapper = new JPanel(new BorderLayout());
+        searchWrapper.setOpaque(false);
+        searchWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        searchWrapper.add(searchCard, BorderLayout.CENTER);
+        return searchWrapper;
+    }
+
+    private JPanel createTableFooterCard() {
+        JPanel footer = new JPanel(new BorderLayout());
+        footer.setOpaque(false);
+        footer.setBorder(BorderFactory.createEmptyBorder(6, 2, 0, 2));
+
+        JLabel hintLabel = new JLabel("Doppelklick oder Rechtsklick zum Bearbeiten");
+        hintLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        hintLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        styleCountBadge(tableCountLabel);
+        tableCountLabel.setText("Lieferanten werden geladen...");
+
+        footer.add(hintLabel, BorderLayout.WEST);
+        footer.add(tableCountLabel, BorderLayout.EAST);
+        return footer;
     }
 
     private boolean isVendorsCacheValid() {
@@ -387,6 +426,7 @@ public class VendorGUI extends JFrame {
         if (vendorLoadWorker != null && !vendorLoadWorker.isDone()) {
             vendorLoadWorker.cancel(true);
         }
+        vendorCountLabel.setText("Lieferanten werden geladen...");
         vendorLoadWorker = new SwingWorker<>() {
             @Override
             protected List<Vendor> doInBackground() {
@@ -402,8 +442,10 @@ public class VendorGUI extends JFrame {
                     populateVendors(get());
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
+                    updateVendorCountLabel();
                 } catch (java.util.concurrent.ExecutionException ex) {
                     LOGGER.error("Failed to load vendors for VendorGUI", ex);
+                    vendorCountLabel.setText("Lieferanten konnten nicht geladen werden");
                     // Keep the current table contents if loading fails.
                 }
             }
@@ -427,6 +469,7 @@ public class VendorGUI extends JFrame {
             });
         }
         LOGGER.info("Loaded {} vendors into VendorGUI", vendors.size());
+        updateVendorCountLabel();
     }
 
     private Object[] showAddVendorDialog() {
@@ -710,6 +753,25 @@ public class VendorGUI extends JFrame {
 
     private void adjustColumnWidths() {
         JFrameUtils.adjustColumnWidths(vendorTable, tableScrollPane, baseColumnWidths);
+    }
+
+    private void styleCountBadge(JLabel label) {
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        label.setOpaque(true);
+        label.setBackground(ThemeManager.getSurfaceColor());
+        label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
+    }
+
+    private void updateVendorCountLabel() {
+        int total = vendorTable.getModel().getRowCount();
+        int shown = sorter != null ? sorter.getViewRowCount() : total;
+        String text = "Lieferanten: " + shown + " / " + total;
+        vendorCountLabel.setText(text);
+        tableCountLabel.setText(text);
     }
 
     /**

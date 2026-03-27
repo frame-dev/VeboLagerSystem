@@ -33,6 +33,8 @@ import java.util.Map;
 public class QRCodeUtils {
 
     private static final Logger logger = LogManager.getLogger(QRCodeUtils.class);
+    private static final String DEFAULT_SCAN_SUBMIT_URL = "https://framedev.ch/vebo/scan.php";
+    private static final String DEFAULT_SCAN_LIST_URL = "https://framedev.ch/vebo/scans.json";
 
     /** Shared Gson instance (thread-safe for read-only use). */
     private static final Gson GSON = new Gson();
@@ -71,13 +73,7 @@ public class QRCodeUtils {
                 Main.logUtils.addLog("Fehler beim Kodieren der QR-Daten für Artikel: " + article.getArticleNumber() + " - " + ex.getMessage());
                 continue;
             }
-            String serverUrl = Main.settings.getProperty("server_url");
-            String url;
-            if (serverUrl == null || serverUrl.isBlank())
-                url = "https://framedev.ch/vebo/scan.php?data=" + encodedData;
-            else {
-                url = serverUrl + "/scan.php?data=" + encodedData;
-            }
+            String url = resolveScanSubmitUrl(Main.settings.getProperty("server_url")) + "?data=" + encodedData;
             try {
                 File qrCodeFile = QRCodeGenerator.generateQRCodeImage(url, 300, 300, Main.getAppDataDir() + "/qr_codes/" + article.getArticleNumber() + "_qrcode.png");
                 qrCodeFiles.add(qrCodeFile);
@@ -131,14 +127,7 @@ public class QRCodeUtils {
      */
     @SuppressWarnings("unchecked")
     public static List<Map<String, Object>> retrieveQrCodeDataFromWebsite() {
-        String serverUrl = Main.settings.getProperty("server_url");
-        if (serverUrl == null || serverUrl.trim().isEmpty()) {
-            serverUrl = "https://framedev.ch/vebo/scans.json";
-        }
-        if(serverUrl.equalsIgnoreCase("https://framedev.ch/vebo")) {
-            serverUrl = serverUrl + "/scans.json";
-        }
-        String urlString = serverUrl;
+        String urlString = resolveScanListUrl(Main.settings.getProperty("server_url"));
 
         List<Map<String, Object>> mapList = new ArrayList<>();
         HttpURLConnection connection = null;
@@ -179,6 +168,49 @@ public class QRCodeUtils {
             }
         }
         return mapList;
+    }
+
+    public static String resolveScanSubmitUrl(String serverUrlSetting) {
+        String normalized = normalizeServerUrl(serverUrlSetting);
+        if (normalized == null) {
+            return DEFAULT_SCAN_SUBMIT_URL;
+        }
+        return replaceScanEndpoint(normalized, "/scan.php");
+    }
+
+    public static String resolveScanListUrl(String serverUrlSetting) {
+        String normalized = normalizeServerUrl(serverUrlSetting);
+        if (normalized == null) {
+            return DEFAULT_SCAN_LIST_URL;
+        }
+        return replaceScanEndpoint(normalized, "/scans.json");
+    }
+
+    private static String normalizeServerUrl(String serverUrlSetting) {
+        if (serverUrlSetting == null) {
+            return null;
+        }
+
+        String normalized = serverUrlSetting.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private static String replaceScanEndpoint(String normalizedUrl, String targetEndpoint) {
+        String baseUrl = normalizedUrl;
+        for (String endpoint : List.of("/scan.php", "/scan", "/scans.json", "/list", "/latest", "/latest.json")) {
+            if (baseUrl.endsWith(endpoint)) {
+                baseUrl = baseUrl.substring(0, baseUrl.length() - endpoint.length());
+                break;
+            }
+        }
+        return baseUrl + targetEndpoint;
     }
 
     /**
