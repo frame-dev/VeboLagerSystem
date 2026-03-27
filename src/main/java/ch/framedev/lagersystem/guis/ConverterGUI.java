@@ -5,17 +5,12 @@ import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
+import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.SettingsUtils;
 
 import javax.swing.*;
-import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
-import javax.swing.plaf.basic.BasicComboBoxUI;
 import java.awt.*;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.function.Consumer;
 
 /**
@@ -59,47 +54,41 @@ public class ConverterGUI extends JFrame {
         ThemeManager.applyUIDefaults();
 
         setTitle("Befüllungsrechner");
-        setSize(1020, 640);
-        setMinimumSize(new Dimension(1020, 560));
+        setSize(980, 620);
+        setMinimumSize(new Dimension(920, 540));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout(0, 0));
 
-        JPanel root = new JPanel(new GridBagLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        JPanel root = new JPanel(new BorderLayout(0, 0));
+        root.setBackground(ThemeManager.getBackgroundColor());
+        root.setBorder(new EmptyBorder(12, 12, 12, 12));
 
-                int w = getWidth();
-                int h = getHeight();
-                Color bg = ThemeManager.getBackgroundColor();
-                Color top = blendColor(bg, ThemeManager.getSurfaceColor(), 0.25f);
-                GradientPaint gp = new GradientPaint(0, 0, top, 0, h, bg);
-                g2.setPaint(gp);
-                g2.fillRect(0, 0, w, h);
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+        topPanel.setBackground(ThemeManager.getBackgroundColor());
+        topPanel.add(buildHeaderCard());
+        topPanel.add(Box.createVerticalStrut(10));
+        topPanel.add(buildToolbarCard());
+        root.add(topPanel, BorderLayout.NORTH);
 
-                Color ac = ThemeManager.getAccentColor();
-                g2.setColor(new Color(ac.getRed(), ac.getGreen(), ac.getBlue(), 26));
-                g2.fillOval(-120, -90, 380, 260);
-                g2.setColor(new Color(ac.getRed(), ac.getGreen(), ac.getBlue(), 16));
-                g2.fillOval(w - 280, h - 220, 360, 260);
+        JPanel centerWrapper = new JPanel(new GridBagLayout());
+        centerWrapper.setBackground(ThemeManager.getBackgroundColor());
+        GridBagConstraints centerConstraints = new GridBagConstraints();
+        centerConstraints.gridx = 0;
+        centerConstraints.gridy = 0;
+        centerConstraints.weightx = 1.0;
+        centerConstraints.weighty = 1.0;
+        centerConstraints.fill = GridBagConstraints.BOTH;
+        centerWrapper.add(buildContentCard(), centerConstraints);
+        root.add(centerWrapper, BorderLayout.CENTER);
 
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        root.setOpaque(false);
-        root.setBorder(new EmptyBorder(36, 36, 36, 36));
+        JPanel bottomWrapper = new JPanel(new BorderLayout());
+        bottomWrapper.setBackground(ThemeManager.getBackgroundColor());
+        bottomWrapper.setBorder(new EmptyBorder(10, 0, 0, 0));
+        bottomWrapper.add(buildBottomCard(), BorderLayout.CENTER);
+        root.add(bottomWrapper, BorderLayout.SOUTH);
 
-        ShadowRoundedPanel card = new ShadowRoundedPanel(ThemeManager.getCardBackgroundColor(), 22, 12);
-        card.setLayout(new BorderLayout(0, 22));
-        card.setBorder(new EmptyBorder(28, 32, 28, 32));
-
-        card.add(buildHeader(), BorderLayout.NORTH);
-        card.add(buildContent(), BorderLayout.CENTER);
-        card.add(buildBottom(), BorderLayout.SOUTH);
-
-        root.add(card);
         setContentPane(root);
 
         // Make Enter trigger the primary action when possible
@@ -141,78 +130,45 @@ public class ConverterGUI extends JFrame {
 
     // ---------- HEADER ------------------------------------------------------
 
-    private JComponent buildHeader() {
-        JPanel outer = new JPanel(new BorderLayout(0, 10));
-        outer.setOpaque(false);
-
-        JPanel header = new JPanel(new BorderLayout(0, 0));
-        header.setOpaque(false);
-
-        // Left accent stripe
-        JPanel stripe = new JPanel() {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(ThemeManager.getAccentColor());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 4, 4);
-                g2.dispose();
-            }
-        };
-        stripe.setOpaque(false);
-        stripe.setPreferredSize(new Dimension(4, 0));
+    private JComponent buildHeaderCard() {
+        JFrameUtils.RoundedPanel headerCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
+        headerCard.setLayout(new BorderLayout());
+        headerCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(16, 18, 16, 18)));
 
         JPanel textPanel = new JPanel();
         textPanel.setOpaque(false);
         textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
-        textPanel.setBorder(new EmptyBorder(0, 12, 0, 0));
 
         JLabel title = new JLabel("Befüllungsrechner");
-        title.setFont(SettingsUtils.getFontByName(Font.BOLD, 26));
+        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         title.setForeground(ThemeManager.getTextPrimaryColor());
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Preis pro Abfüllmenge berechnen");
-        subtitle.setFont(SettingsUtils.getFontByName(Font.PLAIN, 14));
+        JLabel subtitle = new JLabel("Preis pro Abfüllmenge berechnen und zur Bestellung übernehmen");
+        subtitle.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         subtitle.setForeground(ThemeManager.getTextSecondaryColor());
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         textPanel.add(title);
-        textPanel.add(Box.createVerticalStrut(3));
+        textPanel.add(Box.createVerticalStrut(4));
         textPanel.add(subtitle);
 
-        header.add(stripe, BorderLayout.WEST);
-        header.add(textPanel, BorderLayout.CENTER);
-        header.add(buildArticleBadge(), BorderLayout.EAST);
-
-        JSeparator divider = new JSeparator();
-        divider.setForeground(ThemeManager.getDividerColor());
-
-        outer.add(header, BorderLayout.CENTER);
-        outer.add(divider, BorderLayout.SOUTH);
-        return outer;
+        headerCard.add(textPanel, BorderLayout.CENTER);
+        headerCard.add(buildArticleBadge(), BorderLayout.EAST);
+        return headerCard;
     }
 
     private JPanel buildArticleBadge() {
         String badgeName  = (article != null && article.getName() != null) ? article.getName() : "Kein Artikel";
         String badgePrice = (article != null) ? formatCHF(article.getSellPrice()) : "—";
 
-        JPanel badge = new JPanel() {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                Color ac = ThemeManager.getAccentColor();
-                g2.setColor(new Color(ac.getRed(), ac.getGreen(), ac.getBlue(), 18));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
-                g2.setColor(new Color(ac.getRed(), ac.getGreen(), ac.getBlue(), 70));
-                g2.setStroke(new BasicStroke(1f));
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        badge.setOpaque(false);
+        JFrameUtils.RoundedPanel badge = new JFrameUtils.RoundedPanel(ThemeManager.getSurfaceColor(), 14);
         badge.setLayout(new BoxLayout(badge, BoxLayout.Y_AXIS));
-        badge.setBorder(new EmptyBorder(8, 16, 8, 16));
+        badge.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                new EmptyBorder(10, 16, 10, 16)));
 
         JLabel nameLabel = new JLabel(badgeName);
         nameLabel.setFont(SettingsUtils.getFontByName(Font.BOLD, 13));
@@ -220,7 +176,7 @@ public class ConverterGUI extends JFrame {
         nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel priceLabel = new JLabel(badgePrice);
-        priceLabel.setFont(SettingsUtils.getFontByName(Font.BOLD, 16));
+        priceLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         priceLabel.setForeground(article != null
             ? ensureContrast(ThemeManager.getAccentColor(), ThemeManager.getCardBackgroundColor(), 3.2f)
             : ThemeManager.getTextSecondaryColor());
@@ -234,7 +190,40 @@ public class ConverterGUI extends JFrame {
 
     // ---------- CONTENT -----------------------------------------------------
 
-    private JComponent buildContent() {
+    private JComponent buildToolbarCard() {
+        JFrameUtils.RoundedPanel toolbarCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        toolbarCard.setLayout(new BorderLayout(12, 0));
+        toolbarCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+
+        JPanel left = new JPanel(new BorderLayout(12, 0));
+        left.setOpaque(false);
+        left.add(buildFormPanel(), BorderLayout.CENTER);
+
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        right.setOpaque(false);
+
+        JButton reset = createActionButton("Zurücksetzen", ThemeManager.getPrimaryColor());
+        calcButton = createActionButton("Berechnen", ThemeManager.getAccentColor());
+        reset.addActionListener(e -> resetCalculator());
+        calcButton.addActionListener(e -> calculate());
+
+        right.add(reset);
+        right.add(calcButton);
+
+        toolbarCard.add(left, BorderLayout.CENTER);
+        toolbarCard.add(right, BorderLayout.EAST);
+        return toolbarCard;
+    }
+
+    private JComponent buildContentCard() {
+        JFrameUtils.RoundedPanel contentCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        contentCard.setLayout(new BorderLayout(0, 12));
+        contentCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+
         JPanel content = new JPanel(new GridBagLayout());
         content.setOpaque(false);
 
@@ -243,11 +232,6 @@ public class ConverterGUI extends JFrame {
         gc.gridy = 0;
         gc.weightx = 1;
         gc.fill = GridBagConstraints.HORIZONTAL;
-        gc.insets = new Insets(0, 0, 14, 0);
-
-        content.add(buildFormPanel(), gc);
-
-        gc.gridy++;
         gc.insets = new Insets(2, 2, 12, 2);
         content.add(buildHintRow(), gc);
 
@@ -259,26 +243,13 @@ public class ConverterGUI extends JFrame {
         gc.weighty = 1;
         content.add(Box.createVerticalGlue(), gc);
 
-        return content;
+        contentCard.add(content, BorderLayout.CENTER);
+        return contentCard;
     }
 
     private JComponent buildFormPanel() {
-        JPanel form = new JPanel(new GridBagLayout()) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(ThemeManager.getSurfaceColor());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.setColor(ThemeManager.getBorderColor());
-                g2.setStroke(new BasicStroke(1f));
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
+        JPanel form = new JPanel(new GridBagLayout());
         form.setOpaque(false);
-        form.setBorder(new EmptyBorder(18, 18, 18, 18));
 
         GridBagConstraints fc = new GridBagConstraints();
         fc.gridy = 0;
@@ -289,7 +260,7 @@ public class ConverterGUI extends JFrame {
         fc.gridx = 0;
         fc.weightx = 0;
         JLabel amountLabel = new JLabel("Abfüllmenge:");
-        amountLabel.setFont(SettingsUtils.getFontByName(Font.PLAIN, 14));
+        amountLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
         amountLabel.setForeground(ThemeManager.getTextPrimaryColor());
         form.add(amountLabel, fc);
 
@@ -297,12 +268,9 @@ public class ConverterGUI extends JFrame {
         fc.gridx = 1;
         fc.weightx = 1;
         amountField = new JTextField();
-        amountField.setFont(SettingsUtils.getFontByName(Font.PLAIN, 15));
-        amountField.setBackground(ThemeManager.getInputBackgroundColor());
-        amountField.setForeground(ThemeManager.getTextPrimaryColor());
-        amountField.setCaretColor(ThemeManager.getAccentColor());
-        amountField.setBorder(compoundFieldBorder(false));
-        installFieldHoverAndFocus(amountField);
+        JFrameUtils.styleTextField(amountField);
+        amountField.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
+        amountField.setPreferredSize(new Dimension(160, 38));
         form.add(amountField, fc);
 
         // Unit
@@ -333,7 +301,7 @@ public class ConverterGUI extends JFrame {
     }
 
     private JComponent buildResultPanel() {
-        resultPanel = new JPanel(new BorderLayout()) {
+        resultPanel = new JFrameUtils.RoundedPanel(ThemeManager.getSurfaceColor(), 16) {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -341,10 +309,9 @@ public class ConverterGUI extends JFrame {
                 Color ac = ThemeManager.getAccentColor();
                 g2.setColor(new Color(ac.getRed(), ac.getGreen(), ac.getBlue(), clamp(resultPanelTintAlpha)));
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.setColor(new Color(ac.getRed(), ac.getGreen(), ac.getBlue(), 55));
+                g2.setColor(ThemeManager.getBorderColor());
                 g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
-                // Left accent stripe
                 g2.setColor(ac);
                 g2.fillRoundRect(0, 0, 4, getHeight(), 4, 4);
                 g2.dispose();
@@ -359,17 +326,17 @@ public class ConverterGUI extends JFrame {
         text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
 
         JLabel caption = new JLabel("Berechneter Gesamtpreis");
-        caption.setFont(SettingsUtils.getFontByName(Font.PLAIN, 12));
+        caption.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         caption.setForeground(ThemeManager.getTextSecondaryColor());
         caption.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         resultLabel = new JLabel("Preis: —");
-        resultLabel.setFont(SettingsUtils.getFontByName(Font.BOLD, 22));
+        resultLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
         resultLabel.setForeground(ThemeManager.getTextPrimaryColor());
         resultLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         resultMetaLabel = new JLabel("Menge: —");
-        resultMetaLabel.setFont(SettingsUtils.getFontByName(Font.PLAIN, 12));
+        resultMetaLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         resultMetaLabel.setForeground(ThemeManager.getTextSecondaryColor());
         resultMetaLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -385,60 +352,34 @@ public class ConverterGUI extends JFrame {
 
     // ---------- BOTTOM ------------------------------------------------------
 
-    private JComponent buildBottom() {
-        JPanel wrapper = new JPanel(new BorderLayout(0, 8));
-        wrapper.setOpaque(false);
+    private JComponent buildBottomCard() {
+        JFrameUtils.RoundedPanel bottomCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        bottomCard.setLayout(new BorderLayout(10, 0));
+        bottomCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
 
-        JSeparator sep = new JSeparator();
-        sep.setForeground(ThemeManager.getDividerColor());
-        wrapper.add(sep, BorderLayout.NORTH);
-
-        JPanel bottom = new JPanel(new BorderLayout());
-        bottom.setOpaque(false);
-
-        JLabel tip = new JLabel("Menge eingeben und Berechnen klicken (Enter funktioniert auch)");
-        tip.setFont(SettingsUtils.getFontByName(Font.PLAIN, 12));
+        JLabel tip = new JLabel("Tipp: Menge eingeben, berechnen und danach zur Bestellung übernehmen");
+        tip.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         tip.setForeground(ThemeManager.getTextSecondaryColor());
-        bottom.add(tip, BorderLayout.WEST);
+        bottomCard.add(tip, BorderLayout.WEST);
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 0));
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
 
-        JButton reset = createBigButton("Zurücksetzen", false);
-        calcButton = createBigButton("Berechnen", true);
-        JButton close = createBigButton("Schließen", false);
-
-        addToOrder = createBigButton(fillingConsumer == null ? "Zur Bestellung Hinzufügen" : "Füllung Übernehmen", false);
+        JButton close = createActionButton("Schließen", ThemeManager.getPrimaryColor());
+        addToOrder = createActionButton(
+                fillingConsumer == null ? "Zur Bestellung Hinzufügen" : "Füllung Übernehmen",
+                fillingConsumer == null ? ThemeManager.getSuccessColor() : ThemeManager.getAccentColor());
 
         addToOrder.setEnabled(false);
         addToOrder.addActionListener(e -> addToOrder());
-
-        calcButton.addActionListener(e -> calculate());
-        reset.addActionListener(e -> {
-            amountField.setText("");
-            resultLabel.setText("Preis: —");
-            resultLabel.setForeground(ThemeManager.getTextPrimaryColor());
-            if (resultMetaLabel != null) {
-                resultMetaLabel.setText("Menge: —");
-            }
-            stopResultPulse();
-            resultPanelTintAlpha = 14;
-            if (resultPanel != null) {
-                resultPanel.repaint();
-            }
-        });
         close.addActionListener(e -> dispose());
 
-
-
-        actions.add(reset);
-        actions.add(calcButton);
         actions.add(addToOrder);
         actions.add(close);
-
-        bottom.add(actions, BorderLayout.EAST);
-        wrapper.add(bottom, BorderLayout.CENTER);
-        return wrapper;
+        bottomCard.add(actions, BorderLayout.EAST);
+        return bottomCard;
     }
 
     // ---------- LOGIC -------------------------------------------------------
@@ -546,96 +487,25 @@ public class ConverterGUI extends JFrame {
 
     // ---------- HELPERS -----------------------------------------------------
 
-    private JButton createBigButton(String text, boolean primary) {
+    private JButton createActionButton(String text, Color color) {
         if (text == null)
             throw new NullPointerException("text must not be null");
-        JButton b = new JButton(text);
-        b.setFont(SettingsUtils.getFontByName(Font.BOLD, 15));
-        b.setPreferredSize(new Dimension(148, 40));
-        b.setFocusPainted(false);
-        b.setOpaque(true);
-        b.setContentAreaFilled(true);
-
-        Color normalBg = primary ? ThemeManager.getAccentColor() : ThemeManager.getSurfaceColor();
-        Color normalFg = primary
-            ? ensureContrast(ThemeManager.getTextOnPrimaryColor(), normalBg, 4.5f)
-            : ThemeManager.getTextPrimaryColor();
-        Color borderNormal = primary ? ThemeManager.getAccentColor().darker() : ThemeManager.getBorderColor();
-        Color hoverBg = ThemeManager.getButtonHoverColor(normalBg);
-        Color pressedBg = ThemeManager.getButtonPressedColor(normalBg);
-        Color borderHover = blendColor(borderNormal, Color.BLACK, 0.08f);
-
-        b.setBackground(normalBg);
-        b.setForeground(normalFg);
-        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(borderNormal, 1, true),
-                new EmptyBorder(10, 22, 10, 22)));
-
-        b.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                b.setBackground(hoverBg);
-                b.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(borderHover, 1, true),
-                        new EmptyBorder(10, 22, 10, 22)));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                b.setBackground(normalBg);
-                b.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(borderNormal, 1, true),
-                        new EmptyBorder(10, 22, 10, 22)));
-            }
-
-            @Override
-            public void mousePressed(MouseEvent e) {
-                b.setBackground(pressedBg);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                b.setBackground(b.contains(e.getPoint()) ? hoverBg : normalBg);
-            }
-        });
-
+        JButton b = JFrameUtils.createThemeButton(text, color);
+        b.setPreferredSize(new Dimension(176, 40));
         return b;
     }
 
-    // Modern shadowed rounded panel for card look
-    private static class ShadowRoundedPanel extends JPanel {
-        private final Color backgroundColor;
-        private final int radius;
-        private final int shadowSize;
-
-        ShadowRoundedPanel(Color bg, int radius, int shadowSize) {
-            this.backgroundColor = bg;
-            this.radius = radius;
-            this.shadowSize = shadowSize;
-            setOpaque(false);
+    private void resetCalculator() {
+        amountField.setText("");
+        resultLabel.setText("Preis: —");
+        resultLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        if (resultMetaLabel != null) {
+            resultMetaLabel.setText("Menge: —");
         }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            int w = getWidth();
-            int h = getHeight();
-            // Draw soft shadow
-            for (int i = shadowSize; i > 0; i--) {
-                int alpha = (int) (18.0 * i / shadowSize);
-                g2.setColor(new Color(0, 0, 0, alpha));
-                g2.fillRoundRect(i, i, w - i * 2, h - i * 2, radius, radius);
-            }
-            // Draw subtle gradient background
-            Color top = blendColor(backgroundColor, Color.WHITE, ThemeManager.isDarkMode() ? 0.08f : 0.14f);
-            Color bottom = blendColor(backgroundColor, Color.BLACK, ThemeManager.isDarkMode() ? 0.12f : 0.06f);
-            GradientPaint gp = new GradientPaint(0, 0, top, 0, h, bottom);
-            g2.setPaint(gp);
-            g2.fillRoundRect(0, 0, w - shadowSize, h - shadowSize, radius, radius);
-            g2.dispose();
-            super.paintComponent(g);
+        stopResultPulse();
+        resultPanelTintAlpha = 14;
+        if (resultPanel != null) {
+            resultPanel.repaint();
         }
     }
 
@@ -652,118 +522,14 @@ public class ConverterGUI extends JFrame {
         if (values == null)
             throw new NullPointerException("values must not be null");
         JComboBox<String> box = new JComboBox<>(values);
-
+        JFrameUtils.styleComboBox(box);
         box.setFont(SettingsUtils.getFontByName(Font.PLAIN, 15));
-        box.setForeground(ThemeManager.getTextPrimaryColor());
-        box.setBackground(ThemeManager.getInputBackgroundColor());
-        box.setBorder(compoundFieldBorder(false));
         box.setPreferredSize(new Dimension(100, 40));
         box.setFocusable(false);
-
-        // Hover + focus-like border effect
-        installComboHover(box);
-
-        // Renderer for consistent dropdown look
-        box.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(
-                    JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-
-                JLabel label = (JLabel) super.getListCellRendererComponent(
-                        list, value, index, isSelected, cellHasFocus);
-
-                label.setFont(SettingsUtils.getFontByName(Font.PLAIN, 15));
-                label.setBorder(new EmptyBorder(6, 10, 6, 10));
-
-                if (isSelected) {
-                    label.setBackground(ThemeManager.getAccentColor());
-                    label.setForeground(ensureContrast(
-                            ThemeManager.getTextOnPrimaryColor(),
-                            ThemeManager.getAccentColor(),
-                            4.5f));
-                } else {
-                    label.setBackground(ThemeManager.getInputBackgroundColor());
-                    label.setForeground(ThemeManager.getTextPrimaryColor());
-                }
-                return label;
-            }
-        });
-
-        // Minimal arrow button
-        box.setUI(new BasicComboBoxUI() {
-            @Override
-            protected JButton createArrowButton() {
-                JButton button = new JButton("▾");
-                button.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
-                button.setContentAreaFilled(false);
-                button.setFocusPainted(false);
-                button.setForeground(ThemeManager.getTextPrimaryColor());
-                button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                return button;
-            }
-        });
-
         return box;
     }
 
-    private void installComboHover(JComboBox<?> box) {
-        if (box == null)
-            throw new NullPointerException("box must not be null");
-        box.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                box.setBorder(compoundFieldBorder(true));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                box.setBorder(compoundFieldBorder(false));
-            }
-        });
-    }
-
     // ---------- TEXT FIELD HOVER/FOCUS -------------------------------------
-
-    private void installFieldHoverAndFocus(JTextField field) {
-        if (field == null)
-            throw new NullPointerException("field must not be null");
-        field.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                if (!field.isFocusOwner())
-                    field.setBorder(compoundFieldBorder(true));
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if (!field.isFocusOwner())
-                    field.setBorder(compoundFieldBorder(false));
-            }
-        });
-
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                field.setBorder(compoundFieldBorder(true));
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                field.setBorder(compoundFieldBorder(false));
-            }
-        });
-    }
-
-    /**
-     * Create a compound border for fields that becomes stronger on hover/focus.
-     */
-    private Border compoundFieldBorder(boolean active) {
-        Color line = active ? ThemeManager.getInputFocusBorderColor() : ThemeManager.getInputBorderColor();
-        int width = active ? 2 : 1;
-        return BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(line, width),
-                new EmptyBorder(8, 12, 8, 12));
-    }
 
     /**
      * Ensure text color has at least a minimal contrast against a background.

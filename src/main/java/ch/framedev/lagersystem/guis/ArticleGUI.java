@@ -353,6 +353,10 @@ public class ArticleGUI extends JFrame {
         showWarningsBottomBtn.setToolTipText("Zeigt alle Lagerwarnungen an");
         showWarningsBottomBtn.addActionListener(e -> showAllWarnings());
 
+        JButton refreshBtn = createSecondaryButton(UnicodeSymbols.REFRESH + " Aktualisieren");
+        refreshBtn.setToolTipText("Lädt die Artikeltabelle neu");
+        refreshBtn.addActionListener(e -> loadArticles());
+
         JButton searchBtn = createSecondaryButton(UnicodeSymbols.SEARCH + " Suchen");
         searchBtn.setToolTipText("Sucht nach Artikeln basierend auf dem eingegebenen Text");
         JButton clearBtn = createSecondaryButton(UnicodeSymbols.BROOM + " Leeren");
@@ -368,6 +372,7 @@ public class ArticleGUI extends JFrame {
         actionRow.add(addToClientOrder);
         actionRow.add(exportTableAsPdfBtn);
         actionRow.add(showWarningsBottomBtn);
+        actionRow.add(refreshBtn);
         actionRow.add(searchBtn);
         actionRow.add(clearBtn);
 
@@ -1710,9 +1715,8 @@ public class ArticleGUI extends JFrame {
      * Handles background, foreground, editor, popup list styling, and hover effects
      */
     private void styleComboBox(JComboBox<String> combo) {
-        if (combo == null) {
-            throw new IllegalArgumentException("ComboBox cannot be null");
-        }
+        if (combo == null)
+            return;
         JFrameUtils.styleComboBox(combo);
     }
 

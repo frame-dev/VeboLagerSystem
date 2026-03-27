@@ -4,12 +4,10 @@ import ch.framedev.lagersystem.guis.SettingsGUI;
 import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
-import javax.swing.plaf.basic.BasicComboBoxUI;
-import javax.swing.plaf.basic.BasicComboPopup;
-import javax.swing.plaf.basic.ComboPopup;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
@@ -115,6 +113,88 @@ public class ClientDialog {
         Object[] ui = buildClientDialogUI(dialog, UnicodeSymbols.HEAVY_PLUS, "Neuen Kunden hinzufügen", null, null);
         JPanel mainContainer = (JPanel) ui[0];
         JTextField nameField = (JTextField) ui[1];
+        @SuppressWarnings("unchecked")
+        JComboBox<String> departmentCombobox = (JComboBox<String>) ui[2];
+
+        // Buttons
+        JPanel buttonPanel = createFooterBar();
+        buttonPanel.add(createDialogButton(
+            UnicodeSymbols.CLOSE + " Abbrechen",
+            "Das Hinzufügen des neuen Kunden abbrechen",
+            ThemeManager.getErrorColor(),
+            ae -> {
+                holder[0] = null;
+                dialog.dispose();
+            }
+        ));
+        buttonPanel.add(createDialogButton(
+            UnicodeSymbols.CHECKMARK + " Hinzufügen",
+            "Den neuen Kunden zur Datenbank hinzufügen",
+            ThemeManager.getButtonBackgroundColor(),
+            ae -> {
+                String name = nameField.getText().trim();
+                String selectedDept = (String) departmentCombobox.getSelectedItem();
+                if (selectedDept == null) selectedDept = "";
+                String dept = selectedDept.trim();
+
+                if (name.isEmpty()) {
+                    new MessageDialog()
+                            .setTitle("Fehler")
+                            .setMessage("Name ist erforderlich.")
+                            .setMessageType(JOptionPane.ERROR_MESSAGE)
+                            .display();
+                return;
+                }
+
+                ClientManager clientManager = ClientManager.getInstance();
+                if (!clientManager.insertClient(name, dept)) {
+                    new MessageDialog()
+                            .setTitle("Fehler")
+                            .setMessage("Fehler beim Hinzufügen des Kunden zur Datenbank.")
+                            .setMessageType(JOptionPane.ERROR_MESSAGE)
+                            .display();
+                holder[0] = null;
+                return;
+                }
+
+                holder[0] = new Object[]{name, dept};
+                dialog.dispose();
+            }
+        ));
+        mainContainer.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.getContentPane().add(mainContainer);
+        // Set default button to the 'Add' button (second button in panel)
+        if (buttonPanel.getComponentCount() > 1 && buttonPanel.getComponent(1) instanceof JButton addBtn) {
+            dialog.getRootPane().setDefaultButton(addBtn);
+        }
+
+        dialog.setSize(DIALOG_WIDTH, DIALOG_HEIGHT_ADD);
+        dialog.setMinimumSize(new Dimension(DIALOG_MIN_WIDTH, DIALOG_MIN_HEIGHT_ADD));
+        dialog.setLocationRelativeTo(frame);
+        SwingUtilities.invokeLater(nameField::requestFocusInWindow);
+        dialog.setVisible(true);
+
+        return holder[0];
+    }
+
+    public static Object[] showAddClientDialog(JFrame frame, String receiver) {
+        if(frame == null) throw new NullPointerException("Frame must not be null");
+        ThemeManager.applyUIDefaults();
+        final Object[][] holder = new Object[1][];
+
+        JDialog dialog = new JDialog(frame, UnicodeSymbols.CLIENT + " Neuen Kunden hinzufügen", true);
+        dialog.setUndecorated(true);
+        dialog.getRootPane().registerKeyboardAction(
+            e -> dialog.dispose(),
+            KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        Object[] ui = buildClientDialogUI(dialog, UnicodeSymbols.HEAVY_PLUS, "Neuen Kunden hinzufügen", null, null);
+        JPanel mainContainer = (JPanel) ui[0];
+        JTextField nameField = (JTextField) ui[1];
+        nameField.setText(receiver);
         @SuppressWarnings("unchecked")
         JComboBox<String> departmentCombobox = (JComboBox<String>) ui[2];
 
@@ -541,99 +621,7 @@ public class ClientDialog {
 
     private static void styleComboBox(JComboBox<String> combo) {
         if(combo == null) throw new IllegalArgumentException("Combobox must not be null");
-        Color bg = ThemeManager.getInputBackgroundColor();
-        Color fg = ThemeManager.getTextPrimaryColor();
-        Color border = ThemeManager.getInputBorderColor();
-        Color selBg = ThemeManager.getSelectionBackgroundColor();
-        Color selFg = ThemeManager.getSelectionForegroundColor();
-        Color surface = ThemeManager.getSurfaceColor();
-
-        combo.setBackground(bg);
-        combo.setForeground(fg);
-        combo.setOpaque(true);
-        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        combo.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(border, 1),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
-
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(
-                    JList<?> list, Object value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-
-                JLabel c = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-
-                // enforce popup list colors
-                list.setBackground(bg);
-                list.setForeground(fg);
-                list.setSelectionBackground(selBg);
-                list.setSelectionForeground(selFg);
-
-                c.setOpaque(true);
-                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-
-                if (isSelected) {
-                    c.setBackground(selBg);
-                    c.setForeground(selFg);
-                } else {
-                    c.setBackground(bg);
-                    c.setForeground(fg);
-                }
-                return c;
-            }
-        });
-
-        // Theme arrow button + popup border (reliable across LAFs)
-        combo.setUI(new BasicComboBoxUI() {
-            @Override
-            protected JButton createArrowButton() {
-                JButton b = new JButton(UnicodeSymbols.ARROW_DOWN);
-                b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
-                b.setFocusPainted(false);
-                b.setContentAreaFilled(true);
-                b.setOpaque(true);
-                b.setBackground(bg);
-                b.setForeground(fg);
-                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                b.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        b.setBackground(surface);
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        b.setBackground(bg);
-                    }
-                });
-                return b;
-            }
-
-            @Override
-            protected ComboPopup createPopup() {
-                ComboPopup popup = super.createPopup();
-                if (popup instanceof BasicComboPopup basic) {
-                    basic.setBorder(BorderFactory.createLineBorder(border, 1));
-                    basic.getList().setBackground(bg);
-                    basic.getList().setForeground(fg);
-                    basic.getList().setSelectionBackground(selBg);
-                    basic.getList().setSelectionForeground(selFg);
-                }
-                return popup;
-            }
-        });
-
-        if (combo.isEditable()) {
-            Component editorComp = combo.getEditor().getEditorComponent();
-            if (editorComp instanceof JTextField tf) {
-                tf.setBackground(bg);
-                tf.setForeground(fg);
-                tf.setCaretColor(ThemeManager.getAccentColor());
-                tf.setBorder(null);
-            }
-        }
+        JFrameUtils.styleComboBox(combo);
     }
 
     // Rounded panel for card styling

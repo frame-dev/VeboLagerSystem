@@ -19,17 +19,12 @@ import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.plaf.basic.BasicComboBoxUI;
-import javax.swing.plaf.basic.BasicComboPopup;
-import javax.swing.plaf.basic.ComboPopup;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -949,51 +944,35 @@ public class NewOrderGUI extends JFrame {
 
     private void styleArticleComboBox(JComboBox<Article> combo) {
         if(combo == null) return;
+        JFrameUtils.styleComboBox(combo);
+
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
-        Color border = ThemeManager.getInputBorderColor();
         Color selBg = ThemeManager.getSelectionBackgroundColor();
         Color selFg = ThemeManager.getSelectionForegroundColor();
-        Color surface = ThemeManager.getSurfaceColor();
-
-        combo.setBackground(bg);
-        combo.setForeground(fg);
-        combo.setOpaque(true);
-        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        combo.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(border, 1),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
-
-        combo.setUI(new BasicComboBoxUI() {
+        combo.setRenderer(new DefaultListCellRenderer() {
             @Override
-            protected JButton createArrowButton() {
-                JButton b = new JButton(UnicodeSymbols.ARROW_DOWN);
-                b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
-                b.setFocusPainted(false);
-                b.setContentAreaFilled(true);
-                b.setOpaque(true);
-                b.setBackground(bg);
-                b.setForeground(fg);
-                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                b.addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(surface); }
-                    @Override public void mouseExited(MouseEvent e) { b.setBackground(bg); }
-                });
-                return b;
-            }
-
-            @Override
-            protected ComboPopup createPopup() {
-                ComboPopup popup = super.createPopup();
-                if (popup instanceof BasicComboPopup basic) {
-                    basic.setBorder(BorderFactory.createLineBorder(border, 1));
-                    basic.getList().setBackground(bg);
-                    basic.getList().setForeground(fg);
-                    basic.getList().setSelectionBackground(selBg);
-                    basic.getList().setSelectionForeground(selFg);
+            public Component getListCellRendererComponent(
+                    JList<?> list, Object value, int index,
+                    boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                list.setBackground(bg);
+                list.setForeground(fg);
+                list.setSelectionBackground(selBg);
+                list.setSelectionForeground(selFg);
+                label.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+                label.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+                if (value instanceof Article a) {
+                    label.setText(a.getName() + " (" + a.getArticleNumber() + ")");
                 }
-                return popup;
+                if (isSelected) {
+                    label.setBackground(selBg);
+                    label.setForeground(selFg);
+                } else {
+                    label.setBackground(bg);
+                    label.setForeground(fg);
+                }
+                return label;
             }
         });
     }
@@ -1030,91 +1009,7 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void styleComboBox(JComboBox<String> combo) {
-        if(combo == null) return;
-        Color bg = ThemeManager.getInputBackgroundColor();
-        Color fg = ThemeManager.getTextPrimaryColor();
-        Color border = ThemeManager.getInputBorderColor();
-        Color selBg = ThemeManager.getSelectionBackgroundColor();
-        Color selFg = ThemeManager.getSelectionForegroundColor();
-        Color surface = ThemeManager.getSurfaceColor();
-
-        combo.setBackground(bg);
-        combo.setForeground(fg);
-        combo.setOpaque(true);
-        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        combo.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(border, 1),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)
-        ));
-
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(
-                    JList<?> list, Object value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-
-                JLabel c = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-
-                list.setBackground(bg);
-                list.setForeground(fg);
-                list.setSelectionBackground(selBg);
-                list.setSelectionForeground(selFg);
-
-                c.setOpaque(true);
-                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-
-                if (isSelected) {
-                    c.setBackground(selBg);
-                    c.setForeground(selFg);
-                } else {
-                    c.setBackground(bg);
-                    c.setForeground(fg);
-                }
-                return c;
-            }
-        });
-
-        combo.setUI(new BasicComboBoxUI() {
-            @Override
-            protected JButton createArrowButton() {
-                JButton b = new JButton(UnicodeSymbols.ARROW_DOWN);
-                b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
-                b.setFocusPainted(false);
-                b.setContentAreaFilled(true);
-                b.setOpaque(true);
-                b.setBackground(bg);
-                b.setForeground(fg);
-                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                b.addMouseListener(new MouseAdapter() {
-                    @Override public void mouseEntered(MouseEvent e) { b.setBackground(surface); }
-                    @Override public void mouseExited(MouseEvent e) { b.setBackground(bg); }
-                });
-                return b;
-            }
-
-            @Override
-            protected ComboPopup createPopup() {
-                ComboPopup popup = super.createPopup();
-                if (popup instanceof BasicComboPopup basic) {
-                    basic.setBorder(BorderFactory.createLineBorder(border, 1));
-                    basic.getList().setBackground(bg);
-                    basic.getList().setForeground(fg);
-                    basic.getList().setSelectionBackground(selBg);
-                    basic.getList().setSelectionForeground(selFg);
-                }
-                return popup;
-            }
-        });
-
-        if (combo.isEditable()) {
-            Component editorComp = combo.getEditor().getEditorComponent();
-            if (editorComp instanceof JTextField tf) {
-                tf.setBackground(bg);
-                tf.setForeground(fg);
-                tf.setCaretColor(fg);
-                tf.setBorder(null);
-            }
-        }
+        JFrameUtils.styleComboBox(combo);
     }
 
     private void applyOrderTableTheme(JTable table) {
@@ -1354,6 +1249,19 @@ public class NewOrderGUI extends JFrame {
         String receiver = receiverNameCombobox.getSelectedItem() != null
                 ? receiverNameCombobox.getSelectedItem().toString().trim()
                 : "";
+        ClientManager clientManager = ClientManager.getInstance();
+        if(!clientManager.existsClient(receiver)) {
+            String message = "Der Empfänger '" + receiver + "' ist nicht in der Kundendatenbank. Sie werden aufgefordert den Kunden zu erstellen, bevor Sie die Bestellung abschließen können. Möchten Sie fortfahren?";
+            int res = new MessageDialog()
+                .setTitle("Neuen Kunden erstellen")
+                .setMessage(message)
+                .setOptionType(JOptionPane.YES_OPTION)
+                .displayWithOptions();
+            if (res != JOptionPane.YES_OPTION) {
+                return;
+            }
+            ClientGUI.openForNewClient(this, receiver);
+        }
         String rKonto = receiverKontoField.getText().trim();
         String sender = senderNameCombobox.getSelectedItem() != null
                 ? senderNameCombobox.getSelectedItem().toString().trim()

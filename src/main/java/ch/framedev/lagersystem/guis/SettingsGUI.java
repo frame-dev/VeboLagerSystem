@@ -1803,7 +1803,7 @@ public class SettingsGUI extends JFrame {
         importLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         importExportCard.add(importLabel);
         importExportCard.add(Box.createVerticalStrut(5));
-        JLabel importInfo = createInfoLabel("<html><div style='width:650px;'>Importieren Sie Artikel, Lieferanten oder andere Daten aus CSV-Dateien.<br/>Stellen Sie sicher, dass die CSV-Dateien das richtige Format haben.</div></html>");
+        JLabel importInfo = createInfoLabel("<html><div style='width:650px;'>Importieren Sie Artikel, Lieferanten, Kunden oder Abteilungen aus CSV-Dateien.<br/>Stellen Sie sicher, dass die CSV-Dateien das richtige Format haben.</div></html>");
         importInfo.setAlignmentX(Component.LEFT_ALIGNMENT);
         importExportCard.add(importInfo);
         importExportCard.add(Box.createVerticalStrut(10));
@@ -1829,7 +1829,8 @@ public class SettingsGUI extends JFrame {
                     "- Artikel (articles_export.csv)<br/>" +
                     "- Lieferanten (vendors_export.csv)<br/>" +
                     "- Kunden (clients_export.csv)<br/>" +
-                    "- Bestellungen (orders_export.csv)<br/><br/>" +
+                    "- Bestellungen (orders_export.csv)<br/>" +
+                    "- Abteilungen (departments_export.csv)<br/><br/>" +
                     "Speicherort: " + Main.getAppDataDir().getAbsolutePath() + "</html>";
             int confirm = new MessageDialog()
                 .setTitle("Export bestätigen")

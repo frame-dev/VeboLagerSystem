@@ -1,12 +1,10 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.JFrameUtils;
 
 import javax.swing.*;
-import javax.swing.plaf.basic.BasicComboBoxUI;
-import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.plaf.basic.BasicScrollBarUI;
-import javax.swing.plaf.basic.ComboPopup;
 import java.awt.*;
 import java.awt.event.*;
 
@@ -222,93 +220,7 @@ final class SettingsStylingService {
         if (combo == null) {
             throw new IllegalArgumentException("combo must not be null");
         }
-        Color bg = ThemeManager.getInputBackgroundColor();
-        Color fg = ThemeManager.getTextPrimaryColor();
-        Color border = ThemeManager.getInputBorderColor();
-        Color selBg = ThemeManager.getSelectionBackgroundColor();
-        Color selFg = ThemeManager.getSelectionForegroundColor();
-
-        combo.setOpaque(true);
-        combo.setBackground(bg);
-        combo.setForeground(fg);
-        combo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        combo.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(border, 1),
-                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
-
-        combo.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(
-                    JList<?> list, Object value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-                JLabel c = (JLabel) super.getListCellRendererComponent(
-                        list, value, index, isSelected, cellHasFocus);
-                list.setBackground(bg);
-                list.setForeground(fg);
-                list.setSelectionBackground(selBg);
-                list.setSelectionForeground(selFg);
-                c.setOpaque(true);
-                c.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-                if (isSelected) {
-                    c.setBackground(selBg);
-                    c.setForeground(selFg);
-                } else {
-                    c.setBackground(bg);
-                    c.setForeground(fg);
-                }
-                c.setToolTipText(value != null ? value.toString() : null);
-                return c;
-            }
-        });
-
-        combo.setUI(new BasicComboBoxUI() {
-            @Override
-            protected JButton createArrowButton() {
-                JButton b = new JButton("▾");
-                b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
-                b.setFocusPainted(false);
-                b.setContentAreaFilled(true);
-                b.setOpaque(true);
-                b.setBackground(bg);
-                b.setForeground(fg);
-                b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                b.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        b.setBackground(ThemeManager.getSurfaceColor());
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        b.setBackground(bg);
-                    }
-                });
-                return b;
-            }
-
-            @Override
-            protected ComboPopup createPopup() {
-                ComboPopup popup = super.createPopup();
-                if (popup instanceof BasicComboPopup basic) {
-                    basic.setBorder(BorderFactory.createLineBorder(border, 1));
-                    basic.getList().setBackground(bg);
-                    basic.getList().setForeground(fg);
-                    basic.getList().setSelectionBackground(selBg);
-                    basic.getList().setSelectionForeground(selFg);
-                }
-                return popup;
-            }
-        });
-
-        if (combo.isEditable()) {
-            Component editorComp = combo.getEditor().getEditorComponent();
-            if (editorComp instanceof JTextField tf) {
-                tf.setBackground(bg);
-                tf.setForeground(fg);
-                tf.setCaretColor(fg);
-                tf.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-            }
-        }
+        JFrameUtils.styleComboBox(combo);
     }
 
     private static BasicScrollBarUI createModernScrollBarUI() {

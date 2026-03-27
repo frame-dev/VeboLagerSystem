@@ -153,7 +153,7 @@ public class JFrameUtils {
         field.setSelectedTextColor(ThemeManager.getSelectionForegroundColor());
     }
 
-    public static void styleComboBox(JComboBox<String> combo) {
+    public static void styleComboBox(JComboBox<?> combo) {
         if (combo == null) return;
         Color bg = ThemeManager.getInputBackgroundColor();
         Color fg = ThemeManager.getTextPrimaryColor();
@@ -206,13 +206,43 @@ public class JFrameUtils {
         combo.setUI(new BasicComboBoxUI() {
             @Override
             protected JButton createArrowButton() {
-                JButton b = new JButton(UnicodeSymbols.ARROW_DOWN);
+                JButton b = new JButton() {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        super.paintComponent(g);
+                        Graphics2D g2 = (Graphics2D) g.create();
+                        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                        g2.setColor(getForeground());
+
+                        int triangleWidth = 10;
+                        int triangleHeight = 6;
+                        int centerX = getWidth() / 2;
+                        int centerY = getHeight() / 2;
+
+                        Polygon triangle = new Polygon(
+                                new int[] {
+                                        centerX - triangleWidth / 2,
+                                        centerX + triangleWidth / 2,
+                                        centerX
+                                },
+                                new int[] {
+                                        centerY - triangleHeight / 2,
+                                        centerY - triangleHeight / 2,
+                                        centerY + triangleHeight / 2
+                                },
+                                3);
+                        g2.fillPolygon(triangle);
+                        g2.dispose();
+                    }
+                };
                 b.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
                 b.setFocusPainted(false);
                 b.setContentAreaFilled(true);
                 b.setOpaque(true);
                 b.setBackground(bg);
                 b.setForeground(fg);
+                b.setText("");
+                b.setPreferredSize(new Dimension(30, 28));
                 b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 b.addMouseListener(new MouseAdapter() {
                     @Override public void mouseEntered(MouseEvent e) { b.setBackground(surface); }

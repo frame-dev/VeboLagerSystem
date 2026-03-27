@@ -678,4 +678,8 @@ public class ClientGUI extends JFrame {
             this.department = department;
         }
     }
+
+    public static void openForNewClient(JFrame frame, String receiver) {
+        ClientDialog.showAddClientDialog(frame, receiver);
+    }
 }

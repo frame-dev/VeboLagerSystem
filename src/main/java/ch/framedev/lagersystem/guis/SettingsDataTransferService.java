@@ -7,6 +7,7 @@ import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.ClientManager;
+import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.VendorManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -65,10 +66,12 @@ final class SettingsDataTransferService {
             importVendorsFromCsv(selectedFile);
         } else if (fileName.contains("client") || fileName.contains("customer")) {
             importClientsFromCsv(selectedFile);
+        } else if (fileName.contains("department")) {
+            importDepartmentsFromCsv(selectedFile);
         } else if (fileName.contains("order")) {
             importOrdersFromCsv();
         } else {
-            String[] options = { "Artikel", "Lieferanten", "Kunden", "Bestellungen", "Abbrechen" };
+            String[] options = { "Artikel", "Lieferanten", "Kunden", "Abteilungen", "Bestellungen", "Abbrechen" };
             int choice = JOptionPane.showOptionDialog(null,
                     "Welche Art von Daten möchten Sie importieren?",
                     "Datentyp auswählen",
@@ -82,7 +85,8 @@ final class SettingsDataTransferService {
                 case 0 -> importArticlesFromCsv(selectedFile);
                 case 1 -> importVendorsFromCsv(selectedFile);
                 case 2 -> importClientsFromCsv(selectedFile);
-                case 3 -> importOrdersFromCsv();
+                case 3 -> importDepartmentsFromCsv(selectedFile);
+                case 4 -> importOrdersFromCsv();
                 default -> System.out.println("[SettingsGUI] Import abgebrochen");
             }
         }
@@ -90,7 +94,7 @@ final class SettingsDataTransferService {
 
     static ExportSummary exportToCsv() {
         int successCount = 0;
-        int totalTables = 4;
+        int totalTables = 5;
 
         List<Article> articles = ArticleManager.getInstance().getAllArticles();
         File csvFile = new File(Main.getAppDataDir(), "articles_export.csv");
@@ -194,6 +198,25 @@ final class SettingsDataTransferService {
             successCount++;
         } catch (Exception ex) {
             String errorMsg = "Fehler beim Exportieren der Bestellungen: " + ex.getMessage();
+            System.err.println("[SettingsGUI] " + errorMsg);
+            LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
+            Main.logUtils.addLog(errorMsg);
+        }
+
+        List<Map<String, Object>> departments = DepartmentManager.getInstance().getAllDepartments();
+        File departmentCsvFile = new File(Main.getAppDataDir(), "departments_export.csv");
+        try (PrintWriter writer = new PrintWriter(new FileWriter(departmentCsvFile))) {
+            writer.println("Abteilung,KontoNummer");
+            for (Map<String, Object> department : departments) {
+                String name = String.valueOf(department.getOrDefault("department", ""));
+                String kontoNumber = String.valueOf(department.getOrDefault("kontoNumber", ""));
+                writer.printf("\"%s\",\"%s\"%n", escapeCSV(name), escapeCSV(kontoNumber));
+            }
+            System.out.println("[SettingsGUI] Abteilungen erfolgreich nach " + departmentCsvFile.getAbsolutePath()
+                    + " exportiert (" + departments.size() + " Einträge)");
+            successCount++;
+        } catch (Exception ex) {
+            String errorMsg = "Fehler beim Exportieren der Abteilungen: " + ex.getMessage();
             System.err.println("[SettingsGUI] " + errorMsg);
             LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
             Main.logUtils.addLog(errorMsg);
@@ -453,6 +476,82 @@ final class SettingsDataTransferService {
                 .display();
         System.out.println(
                 "[SettingsGUI] Bestellungs-Import wurde übersprungen (nicht implementiert aus Sicherheitsgründen)");
+    }
+
+    private static void importDepartmentsFromCsv(File csvFile) {
+        int imported = 0;
+        int errors = 0;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
+            String headerLine = reader.readLine();
+            if (headerLine == null) {
+                new MessageDialog()
+                        .setTitle("Fehler")
+                        .setMessage("Die CSV-Datei ist leer.")
+                        .setMessageType(JOptionPane.ERROR_MESSAGE)
+                        .display();
+                return;
+            }
+
+            DepartmentManager departmentManager = DepartmentManager.getInstance();
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                try {
+                    String[] parts = parseCsvLine(line);
+                    if (parts.length < 2) {
+                        errors++;
+                        continue;
+                    }
+
+                    String departmentName = parts[0];
+                    String kontoNumber = parts[1];
+
+                    if (departmentName == null || departmentName.trim().isEmpty()) {
+                        errors++;
+                        continue;
+                    }
+
+                    if (departmentManager.existsDepartment(departmentName)) {
+                        if (departmentManager.updateDepartment(departmentName, kontoNumber)) {
+                            imported++;
+                        } else {
+                            errors++;
+                        }
+                    } else {
+                        if (departmentManager.insertDepartment(departmentName, kontoNumber)) {
+                            imported++;
+                        } else {
+                            errors++;
+                        }
+                    }
+                } catch (Exception e) {
+                    errors++;
+                    System.err.println("[SettingsGUI] Fehler beim Importieren einer Zeile: " + e.getMessage());
+                }
+            }
+
+            new MessageDialog()
+                    .setTitle("Import Ergebnis")
+                    .setMessage(String.format("<html><b>Abteilungs-Import abgeschlossen</b><br/><br/>" +
+                                    UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
+                                    (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
+                                    "</html>", imported, errors))
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
+
+            System.out.printf("[SettingsGUI] Abteilungs-Import: %d erfolgreich, %d Fehler%n", imported, errors);
+            Main.logUtils.addLog(String.format("Abteilungs-Import: %d erfolgreich, %d Fehler", imported, errors));
+
+        } catch (Exception e) {
+            new MessageDialog()
+                    .setTitle("Fehler")
+                    .setMessage("Fehler beim Importieren: " + e.getMessage())
+                    .setMessageType(JOptionPane.ERROR_MESSAGE)
+                    .display();
+            System.err.println("[SettingsGUI] Fehler beim Importieren der Abteilungen: " + e.getMessage());
+            Main.logUtils.addLog("Fehler beim Importieren der Abteilungen: " + e.getMessage());
+        }
     }
 
     private static String[] parseCsvLine(String line) {
