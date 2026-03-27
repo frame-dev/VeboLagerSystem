@@ -9,7 +9,10 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
+import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -34,6 +37,8 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.createThemeButton;
 @SuppressWarnings({ "SwitchStatementWithTooFewBranches", "DuplicatedCode" })
 public class EditOrderGUI extends JFrame {
 
+    private static final Logger LOGGER = LogManager.getLogger(EditOrderGUI.class);
+
     private static final int PAD = 12;
     private static final int CARD_PAD = 14;
     private static final int RADIUS_HEADER = 20;
@@ -55,6 +60,7 @@ public class EditOrderGUI extends JFrame {
     private final DefaultTableModel tableModel;
     private final JTable articlesTable;
     private final Map<String, Article> articleCache = new HashMap<>();
+    private final List<String> rowOrderKeys = new ArrayList<>();
     private boolean updatingTableModel;
 
     /**
@@ -373,12 +379,12 @@ public class EditOrderGUI extends JFrame {
     private void loadArticles() {
         updatingTableModel = true;
         tableModel.setRowCount(0);
+        rowOrderKeys.clear();
 
         Map<String, Integer> orderedArticles = order.getOrderedArticles();
-        List<Article> articles = new ArrayList<>();
-
         for (Map.Entry<String, Integer> entry : orderedArticles.entrySet()) {
-            String articleNumber = entry.getKey();
+            String orderItemKey = entry.getKey();
+            String articleNumber = ArticleUtils.getOrderItemArticleNumber(orderItemKey);
             Article article = articleCache.get(articleNumber);
             if (article == null) {
                 article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
@@ -386,26 +392,25 @@ public class EditOrderGUI extends JFrame {
                     articleCache.put(articleNumber, article);
                 }
             }
-            if (article != null) {
-                articles.add(article);
+            if (article == null) {
+                continue;
             }
-        }
 
-        for (Article article : articles) {
-            String articleNumber = article.getArticleNumber();
-            int quantity = orderedArticles.getOrDefault(articleNumber, 0);
-            String filling = normalizeFillingValue(order.getArticleFilling(articleNumber));
+            int quantity = entry.getValue();
+            String filling = normalizeFillingValue(order.getArticleFilling(orderItemKey));
             Object[] rowData = {
                     safe(article.getName()),
                     articleNumber,
                     quantity,
-                    ArticleUtils.normalizeMetadataValue(order.getArticleSize(articleNumber)),
+                    ArticleUtils.normalizeMetadataValue(order.getArticleSize(orderItemKey)),
                     filling,
                     formatPrice(resolveUnitPrice(article, filling))
             };
             tableModel.addRow(rowData);
+            rowOrderKeys.add(orderItemKey);
         }
         updatingTableModel = false;
+        LOGGER.info("Loaded {} order rows for order {}", rowOrderKeys.size(), safe(order.getOrderId()));
     }
 
     private void saveChanges() {
@@ -424,6 +429,9 @@ public class EditOrderGUI extends JFrame {
         try {
             tableData = getTableData();
         } catch (IllegalArgumentException ex) {
+            LOGGER.warn("Validation failed while saving order {}: {}", safe(order.getOrderId()), ex.getMessage());
+            OrderLoggingUtils.getInstance().addWarn(safe(order.getOrderId()),
+                    "Bestellung konnte nicht gespeichert werden: " + ex.getMessage());
             new MessageDialog()
                     .setTitle("Ungültige Eingabe")
                     .setMessage(ex.getMessage())
@@ -434,13 +442,16 @@ public class EditOrderGUI extends JFrame {
 
         order.setOrderedArticles(new LinkedHashMap<>(tableData.quantities));
         order.setArticleSizes(new LinkedHashMap<>(tableData.sizes));
+        order.setArticleColors(new LinkedHashMap<>(tableData.colors));
         order.setArticleFillings(new LinkedHashMap<>(tableData.fillings));
-        order.setArticleColors(new LinkedHashMap<>(preserveArticleColors(tableData.quantities)));
 
         OrderManager orderManager = OrderManager.getInstance();
         boolean success = orderManager.updateOrder(order);
 
         if (!success) {
+            LOGGER.error("Failed to update order {}", safe(order.getOrderId()));
+            OrderLoggingUtils.getInstance().addError(safe(order.getOrderId()),
+                    "Fehler beim Speichern der Bestellung");
             new MessageDialog()
                     .setTitle("Fehler")
                     .setMessage(
@@ -456,6 +467,9 @@ public class EditOrderGUI extends JFrame {
                         "<html><b>OK Erfolgreich gespeichert!</b><br/>Die Bestellung wurde aktualisiert.</html>")
                 .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                 .display();
+        LOGGER.info("Updated order {} with {} line items", safe(order.getOrderId()), tableData.quantities.size());
+        OrderLoggingUtils.getInstance().addInfo(safe(order.getOrderId()),
+                "Bestellung aktualisiert (" + tableData.quantities.size() + " Positionen)");
         firePropertyChange("orderUpdated", null, order);
         dispose();
     }
@@ -469,33 +483,48 @@ public class EditOrderGUI extends JFrame {
     public OrderTableData getTableData() {
         Map<String, Integer> quantities = new LinkedHashMap<>();
         Map<String, String> sizes = new LinkedHashMap<>();
+        Map<String, String> colors = new LinkedHashMap<>();
         Map<String, String> fillings = new LinkedHashMap<>();
 
         for (int i = 0; i < tableModel.getRowCount(); i++) {
-            String articleNumber = cellText(i, COL_ARTICLE_NUMBER);
+            String originalOrderKey = getOrderKeyForRow(i);
+            String articleNumber = ArticleUtils.getOrderItemArticleNumber(originalOrderKey);
+            if (articleNumber.isBlank()) {
+                articleNumber = cellText(i, COL_ARTICLE_NUMBER);
+            }
             if (articleNumber.isBlank()) {
                 throw new IllegalArgumentException("Artikelnummer fehlt in Zeile " + (i + 1) + ".");
             }
 
             int quantity = parseQuantityForSave(i);
-            quantities.put(articleNumber, quantity);
-
             String size = ArticleUtils.normalizeMetadataValue(cellText(i, COL_SIZE));
-            if (!size.isBlank()) {
-                sizes.put(articleNumber, size);
-            }
-
             String filling = normalizeFillingValue(cellText(i, COL_FILLING));
             if (!filling.isBlank()) {
                 if (!ArticleUtils.isFillingValid(filling)) {
                     throw new IllegalArgumentException("Ungültige Füllung in Zeile " + (i + 1)
                             + ". Erlaubt sind z.B. \"500 ml\" oder \"1 l\".");
                 }
-                fillings.put(articleNumber, filling);
+            }
+
+            String color = ArticleUtils.normalizeMetadataValue(order.getArticleColor(originalOrderKey));
+            String orderItemKey = ArticleUtils.buildOrderItemKey(articleNumber, size, color, filling);
+            if (orderItemKey.isBlank()) {
+                throw new IllegalArgumentException("Artikelnummer fehlt in Zeile " + (i + 1) + ".");
+            }
+
+            quantities.merge(orderItemKey, quantity, Integer::sum);
+            if (!size.isBlank()) {
+                sizes.put(orderItemKey, size);
+            }
+            if (!color.isBlank()) {
+                colors.put(orderItemKey, color);
+            }
+            if (!filling.isBlank()) {
+                fillings.put(orderItemKey, filling);
             }
         }
 
-        return new OrderTableData(quantities, sizes, fillings);
+        return new OrderTableData(quantities, sizes, colors, fillings);
     }
 
     private void handleTableUpdate(TableModelEvent event) {
@@ -571,17 +600,6 @@ public class EditOrderGUI extends JFrame {
         return quantity;
     }
 
-    private Map<String, String> preserveArticleColors(Map<String, Integer> quantities) {
-        Map<String, String> preservedColors = new LinkedHashMap<>();
-        for (String articleNumber : quantities.keySet()) {
-            String color = ArticleUtils.normalizeMetadataValue(order.getArticleColor(articleNumber));
-            if (!color.isBlank()) {
-                preservedColors.put(articleNumber, color);
-            }
-        }
-        return preservedColors;
-    }
-
     private double resolveUnitPrice(Article article, String filling) {
         try {
             return ArticleUtils.resolveEffectiveSellPrice(article, filling);
@@ -602,6 +620,13 @@ public class EditOrderGUI extends JFrame {
     private String normalizeFillingValue(String filling) {
         String normalized = ArticleUtils.normalizeFilling(filling);
         return normalized == null ? "" : normalized;
+    }
+
+    private String getOrderKeyForRow(int row) {
+        if (row < 0 || row >= rowOrderKeys.size()) {
+            return "";
+        }
+        return rowOrderKeys.get(row);
     }
 
     /**
@@ -627,11 +652,14 @@ public class EditOrderGUI extends JFrame {
     public static final class OrderTableData {
         private final Map<String, Integer> quantities;
         private final Map<String, String> sizes;
+        private final Map<String, String> colors;
         private final Map<String, String> fillings;
 
-        private OrderTableData(Map<String, Integer> quantities, Map<String, String> sizes, Map<String, String> fillings) {
+        private OrderTableData(Map<String, Integer> quantities, Map<String, String> sizes,
+                               Map<String, String> colors, Map<String, String> fillings) {
             this.quantities = quantities;
             this.sizes = sizes;
+            this.colors = colors;
             this.fillings = fillings;
         }
     }

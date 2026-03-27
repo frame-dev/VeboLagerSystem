@@ -34,6 +34,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.math.BigDecimal;
+import java.util.Base64;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -123,6 +124,11 @@ public final class ArticleUtils {
      */
     private static final Pattern RANGE_PATTERN = Pattern.compile(
             "^\\s*(\\d+)\\s*(?:-\\s*(\\d+))?\\s*$");
+
+    private static final String ORDER_ITEM_ARTICLE_PREFIX = "a=";
+    private static final String ORDER_ITEM_SIZE_PREFIX = "|s=";
+    private static final String ORDER_ITEM_COLOR_PREFIX = "|c=";
+    private static final String ORDER_ITEM_FILLING_PREFIX = "|f=";
 
     /**
      * Category names mapped to their corresponding article number ranges.
@@ -225,6 +231,98 @@ public final class ArticleUtils {
         }
 
         return normalized;
+    }
+
+    public static String buildOrderItemKey(String articleNumber, String size, String color, String filling) {
+        String normalizedArticleNumber = normalizeMetadataValue(articleNumber);
+        if (normalizedArticleNumber.isBlank()) {
+            return "";
+        }
+
+        String normalizedSize = normalizeMetadataValue(size);
+        String normalizedColor = normalizeMetadataValue(color);
+        String normalizedFilling = normalizeFilling(filling);
+
+        if (normalizedSize.isBlank() && normalizedColor.isBlank() && normalizedFilling.isBlank()) {
+            return normalizedArticleNumber;
+        }
+
+        return ORDER_ITEM_ARTICLE_PREFIX + encodeOrderItemComponent(normalizedArticleNumber)
+                + ORDER_ITEM_SIZE_PREFIX + encodeOrderItemComponent(normalizedSize)
+                + ORDER_ITEM_COLOR_PREFIX + encodeOrderItemComponent(normalizedColor)
+                + ORDER_ITEM_FILLING_PREFIX + encodeOrderItemComponent(normalizedFilling);
+    }
+
+    public static boolean isCompositeOrderItemKey(String orderItemKey) {
+        if (orderItemKey == null || orderItemKey.isBlank()) {
+            return false;
+        }
+        return orderItemKey.startsWith(ORDER_ITEM_ARTICLE_PREFIX)
+                && orderItemKey.contains(ORDER_ITEM_SIZE_PREFIX)
+                && orderItemKey.contains(ORDER_ITEM_COLOR_PREFIX)
+                && orderItemKey.contains(ORDER_ITEM_FILLING_PREFIX);
+    }
+
+    public static String getOrderItemArticleNumber(String orderItemKey) {
+        if (!isCompositeOrderItemKey(orderItemKey)) {
+            return normalizeMetadataValue(orderItemKey);
+        }
+        return decodeOrderItemComponent(extractOrderItemComponent(orderItemKey, ORDER_ITEM_ARTICLE_PREFIX, ORDER_ITEM_SIZE_PREFIX));
+    }
+
+    public static String getOrderItemSize(String orderItemKey) {
+        if (!isCompositeOrderItemKey(orderItemKey)) {
+            return "";
+        }
+        return normalizeMetadataValue(
+                decodeOrderItemComponent(extractOrderItemComponent(orderItemKey, ORDER_ITEM_SIZE_PREFIX, ORDER_ITEM_COLOR_PREFIX)));
+    }
+
+    public static String getOrderItemColor(String orderItemKey) {
+        if (!isCompositeOrderItemKey(orderItemKey)) {
+            return "";
+        }
+        return normalizeMetadataValue(
+                decodeOrderItemComponent(extractOrderItemComponent(orderItemKey, ORDER_ITEM_COLOR_PREFIX, ORDER_ITEM_FILLING_PREFIX)));
+    }
+
+    public static String getOrderItemFilling(String orderItemKey) {
+        if (!isCompositeOrderItemKey(orderItemKey)) {
+            return "";
+        }
+        return normalizeFilling(
+                decodeOrderItemComponent(extractOrderItemComponent(orderItemKey, ORDER_ITEM_FILLING_PREFIX, null)));
+    }
+
+    private static String extractOrderItemComponent(String orderItemKey, String prefix, String nextPrefix) {
+        int start = orderItemKey.indexOf(prefix);
+        if (start < 0) {
+            return "";
+        }
+        start += prefix.length();
+        int end = nextPrefix == null ? orderItemKey.length() : orderItemKey.indexOf(nextPrefix, start);
+        if (end < 0) {
+            end = orderItemKey.length();
+        }
+        return orderItemKey.substring(start, end);
+    }
+
+    private static String encodeOrderItemComponent(String value) {
+        String normalized = value == null ? "" : value;
+        return Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(normalized.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String decodeOrderItemComponent(String encodedValue) {
+        if (encodedValue == null || encodedValue.isBlank()) {
+            return "";
+        }
+        try {
+            return new String(Base64.getUrlDecoder().decode(encodedValue), StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException ignored) {
+            return "";
+        }
     }
 
     public static boolean isFillingValid(String fillingValue) {

@@ -7,6 +7,8 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.SettingsUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -22,6 +24,8 @@ import java.util.function.Consumer;
  * @author framedev
  */
 public class ConverterGUI extends JFrame {
+
+    private static final Logger LOGGER = LogManager.getLogger(ConverterGUI.class);
 
     private final Article article;
 
@@ -50,6 +54,9 @@ public class ConverterGUI extends JFrame {
     public ConverterGUI(Article article, Consumer<String> fillingConsumer) {
         this.article = article;
         this.fillingConsumer = fillingConsumer;
+        LOGGER.info("Opening ConverterGUI for article '{}' in {} mode",
+                article != null ? article.getArticleNumber() : "none",
+                fillingConsumer != null ? "filling-transfer" : "order-add");
         ThemeManager.getInstance().registerWindow(this);
         ThemeManager.applyUIDefaults();
 
@@ -124,6 +131,7 @@ public class ConverterGUI extends JFrame {
 
     @Override
     public void dispose() {
+        LOGGER.info("Disposing ConverterGUI window");
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
@@ -386,6 +394,7 @@ public class ConverterGUI extends JFrame {
 
     private void addToOrder() {
         if (article == null) {
+            LOGGER.warn("Cannot add converter result because no article is selected");
             new MessageDialog()
                     .setTitle("Fehler")
                     .setMessage("Kein Artikel ausgewählt.")
@@ -399,6 +408,8 @@ public class ConverterGUI extends JFrame {
         String filling = ArticleUtils.normalizeFilling(amount, unit);
 
         if (!ArticleUtils.isFillingValid(filling) || filling.isBlank()) {
+            LOGGER.warn("Rejected invalid filling '{}' for article '{}'", filling,
+                    article.getArticleNumber());
             new MessageDialog()
                     .setTitle("Fehler")
                     .setMessage("Bitte zuerst eine gültige Befüllmenge eingeben.")
@@ -408,12 +419,16 @@ public class ConverterGUI extends JFrame {
         }
 
         if (fillingConsumer != null) {
+            LOGGER.info("Transferred filling '{}' from ConverterGUI for article '{}'", filling,
+                    article.getArticleNumber());
             fillingConsumer.accept(filling);
             dispose();
             return;
         }
 
         ArticleListGUI.addArticle(article, 1, null, filling);
+        LOGGER.info("Added article '{}' with filling '{}' from ConverterGUI to order list",
+                article.getArticleNumber(), filling);
         if (Main.articleListGUI != null) {
             Main.articleListGUI.refreshArticleList();
             Main.articleListGUI.display();
@@ -422,6 +437,7 @@ public class ConverterGUI extends JFrame {
 
     private void calculate() {
         if (article == null) {
+            LOGGER.warn("Cannot calculate filling price because no article is selected");
             new MessageDialog()
                     .setTitle("Fehler")
                     .setMessage("Kein Artikel ausgewählt.")
@@ -457,10 +473,12 @@ public class ConverterGUI extends JFrame {
             // Normalize to 2 decimals for display
             java.math.BigDecimal priceBd = java.math.BigDecimal.valueOf(price)
                     .setScale(2, java.math.RoundingMode.HALF_UP);
+            String unit = liters ? "l" : "ml";
+            LOGGER.info("Calculated filling price for article '{}': {} {} -> {} CHF",
+                    article.getArticleNumber(), txt, unit, priceBd.toPlainString());
 
             resultLabel.setText("Preis: " + formatCHF(priceBd.doubleValue()));
             if (resultMetaLabel != null) {
-                String unit = liters ? "l" : "ml";
                 resultMetaLabel.setText("Menge: " + txt + " " + unit);
             }
 
@@ -471,12 +489,14 @@ public class ConverterGUI extends JFrame {
                 pulseResultPanel();
 
         } catch (NumberFormatException ex) {
+            LOGGER.warn("Invalid filling amount '{}' entered for article '{}'", txt, article.getArticleNumber());
             new MessageDialog()
                     .setTitle("Fehler")
                     .setMessage("Ungültige Eingabe.")
                     .setMessageType(JOptionPane.ERROR_MESSAGE)
                     .display();
         } catch (Exception ex) {
+            LOGGER.error("Failed to calculate filling price for article '{}'", article.getArticleNumber(), ex);
             new MessageDialog()
                     .setTitle("Fehler")
                     .setMessage("Fehler beim Berechnen.")

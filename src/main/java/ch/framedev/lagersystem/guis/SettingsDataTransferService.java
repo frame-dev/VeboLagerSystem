@@ -10,14 +10,18 @@ import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.VendorManager;
+import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import java.io.*;
 import java.util.*;
 
 final class SettingsDataTransferService {
+
+    private static final Logger LOGGER = LogManager.getLogger(SettingsDataTransferService.class);
 
     static final class ExportSummary {
         private final int successCount;
@@ -53,12 +57,15 @@ final class SettingsDataTransferService {
 
         int result = fileChooser.showOpenDialog(null);
         if (result != JFileChooser.APPROVE_OPTION) {
+            LOGGER.info("CSV import cancelled by user");
             System.out.println("[SettingsGUI] Import abgebrochen");
             return;
         }
 
         File selectedFile = fileChooser.getSelectedFile();
         String fileName = selectedFile.getName().toLowerCase();
+        LOGGER.info("Starting CSV import from {}", selectedFile.getAbsolutePath());
+        Main.logUtils.addLog("CSV-Import gestartet: " + selectedFile.getAbsolutePath());
 
         if (fileName.contains("article")) {
             importArticlesFromCsv(selectedFile);
@@ -95,6 +102,8 @@ final class SettingsDataTransferService {
     static ExportSummary exportToCsv() {
         int successCount = 0;
         int totalTables = 5;
+        LOGGER.info("Starting CSV export to {}", Main.getAppDataDir().getAbsolutePath());
+        Main.logUtils.addLog("CSV-Export gestartet: " + Main.getAppDataDir().getAbsolutePath());
 
         List<Article> articles = ArticleManager.getInstance().getAllArticles();
         File csvFile = new File(Main.getAppDataDir(), "articles_export.csv");
@@ -174,11 +183,16 @@ final class SettingsDataTransferService {
             for (Order order : orders) {
                 String articlesStr = order.getOrderedArticles().entrySet().stream()
                         .map(e -> {
-                            String filling = order.getArticleFilling(e.getKey());
-                            if (filling == null || filling.isBlank()) {
-                                return e.getKey() + ":" + e.getValue();
+                            String orderItemKey = e.getKey();
+                            String articleNumber = ArticleUtils.getOrderItemArticleNumber(orderItemKey);
+                            Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+                            String label = article == null
+                                    ? articleNumber
+                                    : order.formatArticleLabel(article, orderItemKey);
+                            if (label == null || label.isBlank()) {
+                                label = articleNumber;
                             }
-                            return e.getKey() + ":" + e.getValue() + " [" + filling + "]";
+                            return articleNumber + ":" + e.getValue() + " [" + label + "]";
                         })
                         .collect(java.util.stream.Collectors.joining(";"));
 
@@ -225,6 +239,8 @@ final class SettingsDataTransferService {
         System.out.println("[SettingsGUI] CSV-Export abgeschlossen: " + successCount + "/" + totalTables
                 + " Tabellen erfolgreich exportiert");
         System.out.println("[SettingsGUI] Dateien gespeichert in: " + Main.getAppDataDir().getAbsolutePath());
+        LOGGER.info("CSV export finished: {}/{} tables exported", successCount, totalTables);
+        Main.logUtils.addLog("CSV-Export abgeschlossen: " + successCount + "/" + totalTables + " Tabellen erfolgreich exportiert");
         return new ExportSummary(successCount, totalTables);
     }
 
@@ -286,6 +302,9 @@ final class SettingsDataTransferService {
                     .display();
 
             System.out.printf("[SettingsGUI] Artikel-Import: %d erfolgreich, %d Fehler%n", imported, errors);
+            LOGGER.info("Article CSV import finished: imported={}, errors={}, file={}",
+                    imported, errors, csvFile.getAbsolutePath());
+            Main.logUtils.addLog(String.format("Artikel-Import: %d erfolgreich, %d Fehler", imported, errors));
 
         } catch (Exception e) {
             new MessageDialog()
@@ -467,6 +486,8 @@ final class SettingsDataTransferService {
     }
 
     private static void importOrdersFromCsv() {
+        LOGGER.info("Order CSV import requested but remains disabled");
+        Main.logUtils.addLog("Bestellungs-Import angefordert, aber deaktiviert.");
         new MessageDialog()
                 .setTitle("Nicht verfügbar")
                 .setMessage("<html><b>Bestellungs-Import nicht verfügbar</b><br/><br/>" +

@@ -8,6 +8,8 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.utils.*;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -35,6 +37,8 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 @SuppressWarnings({ "ALL" })
 public class ArticleGUI extends JFrame {
 
+    private static final Logger LOGGER = LogManager.getLogger(ArticleGUI.class);
+
     public final JTable articleTable;
     // scroll pane reference so we can read viewport width on resize
     private final JScrollPane tableScrollPane;
@@ -60,6 +64,7 @@ public class ArticleGUI extends JFrame {
      */
     public ArticleGUI() {
         ThemeManager.getInstance().registerWindow(this);
+        LOGGER.info("Initializing ArticleGUI window");
 
         setTitle("Artikel Verwaltung");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -163,11 +168,14 @@ public class ArticleGUI extends JFrame {
                         (Double) row[6],
                         (String) row[7]);
                 if (!articleManager.insertArticle(article)) {
+                    LOGGER.warn("Failed to add article '{}' because the insert returned false", article.getArticleNumber());
                     MessageDialog messageDialog = new MessageDialog(
                             "Fehler beim Hinzufügen des Artikels. Möglicherweise existiert die Artikelnummer bereits.",
                             "Fehler", 5000);
                     messageDialog.display();
                 } else {
+                    LOGGER.info("Added article '{}' ({})", article.getArticleNumber(), article.getName());
+                    logUtils.addLog(Level.INFO, "Artikel hinzugefügt: " + article.getArticleNumber() + " - " + article.getName());
                     loadArticles();
                     MessageDialog messageDialog = new MessageDialog(
                             "Artikel erfolgreich hinzugefügt.",
@@ -446,6 +454,7 @@ public class ArticleGUI extends JFrame {
         if (articleLoadWorker != null && !articleLoadWorker.isDone()) {
             articleLoadWorker.cancel(true);
         }
+        LOGGER.info("Disposing ArticleGUI window");
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
@@ -653,8 +662,10 @@ public class ArticleGUI extends JFrame {
                     populateArticles(get());
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
+                    LOGGER.warn("Article loading was interrupted");
                     updateCountLabel();
                 } catch (java.util.concurrent.ExecutionException ex) {
+                    LOGGER.error("Failed to load articles for ArticleGUI", ex);
                     updateCountLabel();
                 }
             }
@@ -684,6 +695,7 @@ public class ArticleGUI extends JFrame {
         }
         isUpdatingTable = false;
         applyCombinedFilters();
+        LOGGER.info("Loaded {} articles into ArticleGUI", articles.size());
     }
 
     private void updateCountLabel() {
@@ -759,6 +771,7 @@ public class ArticleGUI extends JFrame {
     }
 
     private void showInlineEditError(String message, String articleNumber, int modelRow) {
+        LOGGER.warn("Inline edit failed for article '{}': {}", articleNumber, message);
         MessageDialog messageDialog = new MessageDialog(message, "Ungültige Eingabe", 5000);
         messageDialog.display();
         reloadRowFromDb(articleNumber, modelRow);
@@ -777,16 +790,21 @@ public class ArticleGUI extends JFrame {
 
         Article updatedArticle = buildArticleFromDialogRow(updatedRow);
         if (updatedArticle == null) {
+            LOGGER.warn("Rejected update for article '{}' because the dialog returned invalid data", model.getValueAt(modelRow, 0));
             new MessageDialog("Ungültige Artikeldaten. Bitte Eingaben prüfen.", "Fehler", 5000).display();
             reloadRowFromDb(String.valueOf(model.getValueAt(modelRow, 0)), modelRow);
             return;
         }
 
         if (ArticleManager.getInstance().updateArticle(updatedArticle)) {
+            LOGGER.info("Updated article '{}' ({})", updatedArticle.getArticleNumber(), updatedArticle.getName());
+            logUtils.addLog(Level.INFO,
+                    "Artikel aktualisiert: " + updatedArticle.getArticleNumber() + " - " + updatedArticle.getName());
             applyArticleToTableRow(model, modelRow, updatedArticle);
             applyCombinedFilters();
             new MessageDialog("Artikel erfolgreich aktualisiert.", "Erfolg", 5000).display();
         } else {
+            LOGGER.warn("Failed to update article '{}'", updatedArticle.getArticleNumber());
             new MessageDialog("Fehler beim Aktualisieren des Artikels.", "Fehler", 5000).display();
             reloadRowFromDb(String.valueOf(model.getValueAt(modelRow, 0)), modelRow);
         }
@@ -902,9 +920,12 @@ public class ArticleGUI extends JFrame {
             // Only remove from the table if DB deletion succeeded
             model.removeRow(modelRow);
             updateCountLabel();
+            LOGGER.info("Deleted article '{}'", artikelnummer);
+            logUtils.addLog(Level.INFO, "Artikel gelöscht: " + artikelnummer);
             MessageDialog messageDialog = new MessageDialog("Artikel erfolgreich gelöscht.", "Erfolg", 5000);
             messageDialog.display();
         } else {
+            LOGGER.warn("Failed to delete article '{}'", artikelnummer);
             MessageDialog messageDialog = new MessageDialog("Fehler beim Löschen des Artikels aus der Datenbank.",
                     "Fehler", 5000);
             messageDialog.display();
@@ -936,14 +957,22 @@ public class ArticleGUI extends JFrame {
 
         ArticleManager articleManager = ArticleManager.getInstance();
         isUpdatingTable = true;
+        int deletedCount = 0;
         for (int modelRow : modelRows) {
             String artikelnummer = String.valueOf(model.getValueAt(modelRow, 0));
             if (articleManager.deleteArticleByNumber(artikelnummer)) {
                 model.removeRow(modelRow);
+                deletedCount++;
+            } else {
+                LOGGER.warn("Failed to delete article '{}' during bulk delete", artikelnummer);
             }
         }
         isUpdatingTable = false;
         updateCountLabel();
+        LOGGER.info("Bulk deleted {} of {} selected articles", deletedCount, modelRows.size());
+        if (deletedCount > 0) {
+            logUtils.addLog(Level.INFO, "Mehrfachlöschung von Artikeln abgeschlossen: " + deletedCount + " gelöscht");
+        }
     }
 
     private void adjustStockForSelectedArticles() {

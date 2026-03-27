@@ -8,17 +8,18 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.UserManager;
+import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import javax.swing.border.Border;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-
 import static ch.framedev.lagersystem.utils.JFrameUtils.createThemeButton;
 
 /**
@@ -28,6 +29,8 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.createThemeButton;
  * @author framedev
  */
 public class CompleteOrderGUI extends JFrame {
+
+    private static final Logger LOGGER = LogManager.getLogger(CompleteOrderGUI.class);
 
     private JList<OrderListItem> ordersList;
     private DefaultListModel<OrderListItem> listModel;
@@ -289,17 +292,18 @@ public class CompleteOrderGUI extends JFrame {
         articlesTitle.setForeground(ThemeManager.getTextPrimaryColor());
         detailsPanel.add(articlesTitle, gbc);
 
-        List<Article> articles = order.getOrderedArticles().keySet().stream()
-                .map(s -> ArticleManager.getInstance().getArticleByNumber(s))
-                .filter(Objects::nonNull)
-                .toList();
-
-        for (Article article : articles) {
+        for (var entry : order.getOrderedArticles().entrySet()) {
+            String orderItemKey = entry.getKey();
+            String articleNumber = ArticleUtils.getOrderItemArticleNumber(orderItemKey);
+            Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+            if (article == null) {
+                continue;
+            }
             gbc.gridy++;
-            int qty = order.getOrderedArticles().get(article.getArticleNumber());
+            int qty = entry.getValue();
             String articleInfo = String.format("  - %s (%s) - Menge: %d",
-                    safe(order.formatArticleLabel(article)),
-                    safe(article.getArticleNumber()), qty);
+                    safe(order.formatArticleLabel(article, orderItemKey)),
+                    safe(articleNumber), qty);
             JLabel articleLabel = new JLabel(articleInfo);
             articleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
             articleLabel.setForeground(ThemeManager.getTextSecondaryColor());
@@ -355,20 +359,27 @@ public class CompleteOrderGUI extends JFrame {
         if (res != JOptionPane.YES_OPTION)
             return;
 
-        List<Article> articles = selected.getOrderedArticles().keySet().stream()
-                .map(s -> ArticleManager.getInstance().getArticleByNumber(s))
-                .filter(Objects::nonNull)
-                .toList();
-
         List<String> warnings = new ArrayList<>();
         List<String> shortages = new ArrayList<>();
 
-        for (Article article : articles) {
-            if (article == null)
+        java.util.Map<String, Integer> orderedByArticleNumber = new java.util.LinkedHashMap<>();
+        for (var entry : selected.getOrderedArticles().entrySet()) {
+            String articleNumber = ArticleUtils.getOrderItemArticleNumber(entry.getKey());
+            if (articleNumber.isBlank()) {
                 continue;
-            int ordered = selected.getOrderedArticles().get(article.getArticleNumber());
+            }
+            orderedByArticleNumber.merge(articleNumber, Math.max(0, entry.getValue()), Integer::sum);
+        }
+
+        for (var entry : orderedByArticleNumber.entrySet()) {
+            String articleNumber = entry.getKey();
+            Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+            if (article == null) {
+                continue;
+            }
+            int ordered = entry.getValue();
             int stock = article.getStockQuantity();
-            String articleLabel = safe(selected.formatArticleLabel(article));
+            String articleLabel = safe(article.getName());
 
             int willFulfill = Math.min(stock, ordered);
             int missing = Math.max(0, ordered - stock);
@@ -377,7 +388,7 @@ public class CompleteOrderGUI extends JFrame {
                 shortages.add(String.format(
                         "- %s (%s): Bestellt=%d, Lager=%d → Wird geliefert=%d, Fehlmenge=%d",
                         articleLabel,
-                        safe(article.getArticleNumber()),
+                        safe(articleNumber),
                         ordered,
                         stock,
                         willFulfill,
@@ -386,11 +397,11 @@ public class CompleteOrderGUI extends JFrame {
                 int newStockAfterFull = stock - ordered;
                 if (newStockAfterFull < article.getMinStockLevel()) {
                     warnings.add(String.format(
-                            "- %s (%s): Neuer Bestand=%d < Mindestbestand=%d",
-                            articleLabel,
-                            safe(article.getArticleNumber()),
-                            newStockAfterFull,
-                            article.getMinStockLevel()));
+                        "- %s (%s): Neuer Bestand=%d < Mindestbestand=%d",
+                        articleLabel,
+                        safe(articleNumber),
+                        newStockAfterFull,
+                        article.getMinStockLevel()));
                 }
             }
         }
@@ -398,6 +409,10 @@ public class CompleteOrderGUI extends JFrame {
         // ---------- NEW: open PartialOrderGUI instead of immediate partial completion
         // ----------
         if (!shortages.isEmpty()) {
+            LOGGER.warn("Order {} cannot be fully completed due to {} shortage entries",
+                    safe(selected.getOrderId()), shortages.size());
+            OrderLoggingUtils.getInstance().addWarn(safe(selected.getOrderId()),
+                    "Teilbestellung erforderlich: " + shortages.size() + " Artikel mit Fehlmenge.");
             StringBuilder msg = new StringBuilder("<html><b>WARNUNG: Nicht genügend Lagerbestand!</b><br/><br/>");
             msg.append("Folgende Artikel können nicht vollständig geliefert werden:<br/><br/>");
             shortages.forEach(s -> msg.append(s).append("<br/>"));
@@ -415,6 +430,7 @@ public class CompleteOrderGUI extends JFrame {
 
             // Open the new GUI
             PartialOrderGUI gui = new PartialOrderGUI(selected);
+            LOGGER.info("Opening PartialOrderGUI for order {}", safe(selected.getOrderId()));
             gui.setVisible(true);
 
             // After closing partial GUI, refresh list (window listener)
@@ -430,6 +446,8 @@ public class CompleteOrderGUI extends JFrame {
         // -------------------------------------------------------------------------------------
 
         if (!warnings.isEmpty()) {
+            LOGGER.warn("Completing order {} will reduce stock below minimum for {} article(s)",
+                    safe(selected.getOrderId()), warnings.size());
             StringBuilder msg = new StringBuilder(
                     "<html><b>WARNUNG: Mindestbestand wird unterschritten!</b><br/><br/>");
             warnings.forEach(warn -> msg.append(warn).append("<br/>"));
@@ -447,12 +465,15 @@ public class CompleteOrderGUI extends JFrame {
         ArticleManager articleManager = ArticleManager.getInstance();
         boolean allStockUpdated = true;
 
-        for (Article article : articles) {
-            int qty = selected.getOrderedArticles().get(article.getArticleNumber());
-            if (!articleManager.removeFromStock(article.getArticleNumber(), qty)) {
+        for (var entry : orderedByArticleNumber.entrySet()) {
+            String articleNumber = entry.getKey();
+            int qty = Math.max(0, entry.getValue());
+            if (!articleManager.removeFromStock(articleNumber, qty)) {
                 allStockUpdated = false;
-                System.err.println("[CompleteOrderGUI] Fehler beim Reduzieren des Lagerbestands für Artikel: "
-                        + article.getArticleNumber());
+                LOGGER.error("Failed to reduce stock for article {} while completing order {}",
+                        articleNumber, safe(selected.getOrderId()));
+                OrderLoggingUtils.getInstance().addError(safe(selected.getOrderId()),
+                        "Fehler beim Reduzieren des Lagerbestands für Artikel " + articleNumber);
             }
         }
 
@@ -462,12 +483,15 @@ public class CompleteOrderGUI extends JFrame {
         boolean updated = OrderManager.getInstance().updateOrder(selected);
 
         if (updated && allStockUpdated) {
+            LOGGER.info("Completed order {} successfully", safe(selected.getOrderId()));
+            OrderLoggingUtils.getInstance().addInfo(safe(selected.getOrderId()), "Bestellung abgeschlossen");
             new MessageDialog()
                     .setTitle("Erfolg")
                     .setMessage("Die Bestellung wurde erfolgreich abgeschlossen.")
                     .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                     .display();
         } else if (!allStockUpdated) {
+            LOGGER.warn("Order {} marked complete, but some stock updates failed", safe(selected.getOrderId()));
             new MessageDialog()
                     .setTitle("Teilweise erfolgreich")
                     .setMessage("<html><b>Warnung: Teilweise Fehler!</b><br/><br/>" +
@@ -476,6 +500,9 @@ public class CompleteOrderGUI extends JFrame {
                     .setMessageType(JOptionPane.WARNING_MESSAGE)
                     .display();
         } else {
+            LOGGER.error("Failed to update order status for {}", safe(selected.getOrderId()));
+            OrderLoggingUtils.getInstance().addError(safe(selected.getOrderId()),
+                    "Fehler beim Abschließen der Bestellung");
             new MessageDialog()
                     .setTitle("Fehler")
                     .setMessage("Fehler beim Abschließen der Bestellung.")
@@ -548,6 +575,9 @@ public class CompleteOrderGUI extends JFrame {
                     .filter(order -> !"Abgeschlossen".equals(order.getStatus()))
                     .toList();
         } catch (Exception ex) {
+            LOGGER.error("Failed to refresh open orders list", ex);
+            OrderLoggingUtils.getInstance().addError(null,
+                    "Fehler beim Aktualisieren der offenen Bestellungen: " + ex.getMessage());
             currentOrders = null;
         }
 
@@ -561,6 +591,7 @@ public class CompleteOrderGUI extends JFrame {
         if (completeButton != null)
             completeButton.setEnabled(false);
         updateOrderCount();
+        LOGGER.info("Refreshed CompleteOrderGUI list with {} open orders", currentOrders == null ? 0 : currentOrders.size());
     }
 
     private void updateOrderCount() {

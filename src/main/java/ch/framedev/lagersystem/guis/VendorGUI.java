@@ -11,6 +11,9 @@ import ch.framedev.lagersystem.managers.VendorManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -36,6 +39,8 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
  */
 @SuppressWarnings("DuplicatedCode")
 public class VendorGUI extends JFrame {
+
+    private static final Logger LOGGER = LogManager.getLogger(VendorGUI.class);
 
     private static final int NAME_COLUMN_INDEX = 0;
     private static final int CONTACT_COLUMN_INDEX = 1;
@@ -64,6 +69,7 @@ public class VendorGUI extends JFrame {
     public VendorGUI() {
         ThemeManager.getInstance().registerWindow(this);
         ThemeManager.applyUIDefaults();
+        LOGGER.info("Initializing VendorGUI window");
         setTitle("Lieferant Verwaltung");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(900, 560);
@@ -241,6 +247,8 @@ public class VendorGUI extends JFrame {
                 }
 
                 if (VendorManager.getInstance().insertVendor(v)) {
+                    LOGGER.info("Added vendor '{}'", v.getName());
+                    Main.logUtils.addLog(Level.INFO, "Lieferant hinzugefügt: " + v.getName());
                     invalidateVendorsCache();
                     loadVendors(true);
                     new MessageDialog()
@@ -249,6 +257,7 @@ public class VendorGUI extends JFrame {
                             .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                             .display();
                 } else {
+                    LOGGER.warn("Failed to add vendor '{}'", v.getName());
                     new MessageDialog()
                             .setTitle("Fehler")
                             .setMessage("Lieferant bereits vorhanden oder Insert fehlgeschlagen")
@@ -262,6 +271,7 @@ public class VendorGUI extends JFrame {
         deleteVendorButton.addActionListener(e -> deleteSelectedVendor());
 
         refreshButton.addActionListener(e -> {
+            LOGGER.info("Refreshing vendor table");
             invalidateVendorsCache();
             loadVendors(true);
         });
@@ -393,6 +403,7 @@ public class VendorGUI extends JFrame {
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                 } catch (java.util.concurrent.ExecutionException ex) {
+                    LOGGER.error("Failed to load vendors for VendorGUI", ex);
                     // Keep the current table contents if loading fails.
                 }
             }
@@ -415,6 +426,7 @@ public class VendorGUI extends JFrame {
                     v.getMinOrderValue()
             });
         }
+        LOGGER.info("Loaded {} vendors into VendorGUI", vendors.size());
     }
 
     private Object[] showAddVendorDialog() {
@@ -481,6 +493,7 @@ public class VendorGUI extends JFrame {
         if (vendorLoadWorker != null && !vendorLoadWorker.isDone()) {
             vendorLoadWorker.cancel(true);
         }
+        LOGGER.info("Disposing VendorGUI window");
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
@@ -516,6 +529,8 @@ public class VendorGUI extends JFrame {
         }
 
         if (VendorManager.getInstance().updateVendor(vendor)) {
+            LOGGER.info("Updated vendor '{}'", vendor.getName());
+            Main.logUtils.addLog(Level.INFO, "Lieferant aktualisiert: " + vendor.getName());
             invalidateVendorsCache();
             loadVendors(true);
             if (showSuccessDialog) {
@@ -526,6 +541,7 @@ public class VendorGUI extends JFrame {
                         .display();
             }
         } else {
+            LOGGER.warn("Failed to update vendor '{}'", vendor.getName());
             new MessageDialog()
                     .setTitle("Fehler")
                     .setMessage("Fehler beim Aktualisieren des Lieferanten.")
@@ -556,6 +572,8 @@ public class VendorGUI extends JFrame {
 
         if (confirm == JOptionPane.YES_OPTION) {
             if (VendorManager.getInstance().deleteVendor(name)) {
+                LOGGER.info("Deleted vendor '{}'", name);
+                Main.logUtils.addLog(Level.INFO, "Lieferant gelöscht: " + name);
                 invalidateVendorsCache();
                 loadVendors(true);
                 new MessageDialog()
@@ -564,6 +582,7 @@ public class VendorGUI extends JFrame {
                         .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                         .display();
             } else {
+                LOGGER.warn("Failed to delete vendor '{}'", name);
                 new MessageDialog()
                         .setTitle("Fehler")
                         .setMessage("Löschen fehlgeschlagen.")

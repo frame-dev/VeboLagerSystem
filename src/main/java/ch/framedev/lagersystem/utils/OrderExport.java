@@ -3,7 +3,7 @@ package ch.framedev.lagersystem.utils;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.dialogs.MessageDialog;
-import ch.framedev.lagersystem.managers.OrderManager;
+import ch.framedev.lagersystem.managers.ArticleManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -123,6 +124,7 @@ public class OrderExport {
 
     public static void exportOrderToFile(File outputFile, Order order) {
         if (order == null) {
+            LOGGER.warn("PDF export requested without an order");
             new MessageDialog()
                     .setTitle("Keine Bestellung")
                     .setMessage("Keine Bestellung zum Exportieren vorhanden.")
@@ -147,6 +149,9 @@ public class OrderExport {
         String status = order.getStatus() != null ? order.getStatus() : "In Bearbeitung";
 
         if (orderedArticles == null || orderedArticles.isEmpty()) {
+            LOGGER.warn("Skipping PDF export for order {} because it has no articles", orderId);
+            OrderLoggingUtils.getInstance().addWarn(orderId,
+                    "PDF-Export übersprungen: Bestellung enthält keine Artikel.");
             new MessageDialog()
                     .setTitle("Keine Artikel")
                     .setMessage("Diese Bestellung enthält keine Artikel.")
@@ -155,11 +160,15 @@ public class OrderExport {
             return;
         }
 
+        LOGGER.info("Starting PDF export for order {} to {}", orderId, outputFile.getAbsolutePath());
+        OrderLoggingUtils.getInstance().addInfo(orderId,
+                "PDF-Export gestartet: " + outputFile.getAbsolutePath());
+
         try (PDDocument doc = new PDDocument()) {
 
             Fonts fonts = loadFonts(doc);
-            List<Article> articles = OrderManager.getInstance().getOrderArticles(order);
-            if (articles == null || articles.isEmpty()) {
+            List<Map.Entry<String, Integer>> orderItems = new ArrayList<>(orderedArticles.entrySet());
+            if (orderItems.isEmpty()) {
                 new MessageDialog()
                         .setTitle("Keine exportierbaren Artikel")
                         .setMessage("Diese Bestellung enthält keine exportierbaren Artikel.")
@@ -174,7 +183,7 @@ public class OrderExport {
             int pageNumber = 1;
             boolean firstPage = true;
 
-            while (articleIndex < articles.size()) {
+            while (articleIndex < orderItems.size()) {
                 PageState ps = new PageState(new PDPage());
                 doc.addPage(ps.page);
 
@@ -199,15 +208,18 @@ public class OrderExport {
                     TableColumns columns = createTableColumns(pageWidth);
                     ps.y = drawTableHeader(cs, fonts.bold, pageWidth, ps.y, columns);
 
-                    while (articleIndex < articles.size() && ps.y >= MIN_Y_BEFORE_PAGE_BREAK) {
-                        Article article = articles.get(articleIndex);
-
-                        int qty = orderedArticles.getOrDefault(safe(article.getArticleNumber()), 0);
-                        if (qty == 0) {
-                            qty = orderedArticles.getOrDefault(safe(article.getName()), 0);
+                    while (articleIndex < orderItems.size() && ps.y >= MIN_Y_BEFORE_PAGE_BREAK) {
+                        Map.Entry<String, Integer> orderItem = orderItems.get(articleIndex);
+                        String orderItemKey = orderItem.getKey();
+                        String articleNumber = ArticleUtils.getOrderItemArticleNumber(orderItemKey);
+                        Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+                        if (article == null) {
+                            articleIndex++;
+                            continue;
                         }
 
-                        String filling = order.getArticleFilling(article.getArticleNumber());
+                        int qty = Math.max(0, orderItem.getValue());
+                        String filling = order.getArticleFilling(orderItemKey);
                         double unit = ArticleUtils.resolveEffectiveSellPrice(article, filling);
                         double line = unit * qty;
                         total += line;
@@ -218,14 +230,14 @@ public class OrderExport {
                             cs.fill();
                         }
 
-                        drawArticleRow(cs, fonts, order, article, qty, unit, line, ps.y, columns);
+                        drawArticleRow(cs, fonts, order, orderItemKey, article, qty, unit, line, ps.y, columns);
 
                         ps.y -= ROW_HEIGHT;
                         alternateRow = !alternateRow;
                         articleIndex++;
                     }
 
-                    if (articleIndex >= articles.size()) {
+                    if (articleIndex >= orderItems.size()) {
                         ps.y = drawTotals(cs, fonts.bold, pageWidth, ps.y, total);
                     }
 
@@ -237,6 +249,9 @@ public class OrderExport {
             }
 
             doc.save(outputFile);
+            LOGGER.info("PDF export completed for order {} to {}", orderId, outputFile.getAbsolutePath());
+            OrderLoggingUtils.getInstance().addInfo(orderId,
+                    "PDF erfolgreich erstellt: " + outputFile.getAbsolutePath());
 
             new MessageDialog()
                     .setTitle("Erfolg")
@@ -246,6 +261,8 @@ public class OrderExport {
 
         } catch (Exception ex) {
             LOGGER.error("Fehler beim Erstellen des PDF-Exports", ex);
+            OrderLoggingUtils.getInstance().addError(orderId,
+                    "Fehler beim PDF-Export: " + ex.getMessage());
             new MessageDialog()
                     .setTitle("Fehler")
                     .setMessage("Fehler beim Erstellen des PDF-Dokuments:\n" + ex.getMessage())
@@ -341,10 +358,11 @@ public class OrderExport {
         return y - 25f;
     }
 
-    private static void drawArticleRow(PDPageContentStream cs, Fonts fonts, Order order, Article article, int qty,
+    private static void drawArticleRow(PDPageContentStream cs, Fonts fonts, Order order, String orderItemKey,
+                       Article article, int qty,
                        double unitPrice, double lineTotal, float y,
                        TableColumns columns) throws Exception {
-    String articleLabel = truncate(order.formatArticleLabel(article), 34)
+    String articleLabel = truncate(order.formatArticleLabel(article, orderItemKey), 34)
             + " (" + safe(article.getArticleNumber()) + ")";
 
     text(cs, fonts.regular, 9, COLOR_TEXT, columns.articleX(), y - 10, articleLabel);

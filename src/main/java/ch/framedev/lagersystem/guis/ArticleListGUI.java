@@ -5,6 +5,9 @@ import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
+import ch.framedev.lagersystem.utils.OrderLoggingUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import javax.swing.Timer;
@@ -29,6 +32,8 @@ import java.util.function.Supplier;
  * @author framedev
  */
 public class ArticleListGUI extends JFrame {
+
+    private static final Logger LOGGER = LogManager.getLogger(ArticleListGUI.class);
 
     private static Map<Article, Integer> articlesAndQuantity = new HashMap<>();
     private static Map<Article, String> articleAndSize = new HashMap<>();
@@ -506,10 +511,14 @@ public class ArticleListGUI extends JFrame {
                 .displayWithOptions();
 
         if (res == JOptionPane.YES_OPTION) {
+            int removedEntries = articlesAndQuantity.size();
             articlesAndQuantity.clear();
             articleAndSize.clear();
             articleAndColor.clear();
             articleAndFilling.clear();
+            LOGGER.info("Cleared ArticleListGUI with {} staged article entries", removedEntries);
+            OrderLoggingUtils.getInstance().addInfo(null,
+                    "Artikelliste geleert: " + removedEntries + " Einträge entfernt.");
             refreshArticleListPreservingQuery();
         }
     }
@@ -855,26 +864,77 @@ public class ArticleListGUI extends JFrame {
         if (quantity <= 0)
             quantity = 1;
         String normalizedSize = ArticleUtils.normalizeMetadataValue(size);
-        if (!normalizedSize.isBlank()) {
-            ArticleListGUI.articleAndSize.put(article, normalizedSize);
-        } else {
-            ArticleListGUI.articleAndSize.remove(article);
-        }
-
         String normalizedColor = ArticleUtils.normalizeMetadataValue(color);
-        if (!normalizedColor.isBlank()) {
-            ArticleListGUI.articleAndColor.put(article, normalizedColor);
-        } else {
-            ArticleListGUI.articleAndColor.remove(article);
+        String normalizedFilling = ArticleUtils.normalizeFilling(filling);
+        Article targetArticle = findExistingOrderVariant(article, normalizedSize, normalizedColor, normalizedFilling);
+        if (targetArticle == null) {
+            boolean articleAlreadyPresent = articlesAndQuantity.keySet().stream()
+                    .anyMatch(existing -> sameArticleNumber(existing, article));
+            targetArticle = articleAlreadyPresent ? cloneArticle(article) : article;
         }
 
-        articlesAndQuantity.put(article, quantity);
-        String normalizedFilling = ArticleUtils.normalizeFilling(filling);
-        if (ArticleUtils.isFillingValid(normalizedFilling) && !normalizedFilling.isBlank()) {
-            ArticleListGUI.articleAndFilling.put(article, normalizedFilling);
+        if (!normalizedSize.isBlank()) {
+            ArticleListGUI.articleAndSize.put(targetArticle, normalizedSize);
         } else {
-            ArticleListGUI.articleAndFilling.remove(article);
+            ArticleListGUI.articleAndSize.remove(targetArticle);
         }
+
+        if (!normalizedColor.isBlank()) {
+            ArticleListGUI.articleAndColor.put(targetArticle, normalizedColor);
+        } else {
+            ArticleListGUI.articleAndColor.remove(targetArticle);
+        }
+
+        articlesAndQuantity.put(targetArticle, quantity);
+        if (ArticleUtils.isFillingValid(normalizedFilling) && !normalizedFilling.isBlank()) {
+            ArticleListGUI.articleAndFilling.put(targetArticle, normalizedFilling);
+        } else {
+            ArticleListGUI.articleAndFilling.remove(targetArticle);
+        }
+        LOGGER.info("Staged article {} with qty={}, size='{}', color='{}', filling='{}'",
+                article.getArticleNumber(), quantity, normalizedSize, normalizedColor, normalizedFilling);
+        OrderLoggingUtils.getInstance().addInfo(null, "Artikel zur Artikelliste hinzugefügt: "
+                + article.getArticleNumber() + " x" + quantity
+                + formatMetadataSuffix(normalizedSize, normalizedColor, normalizedFilling));
+    }
+
+    private static Article findExistingOrderVariant(Article article, String size, String color, String filling) {
+        for (Article existing : articlesAndQuantity.keySet()) {
+            if (!sameArticleNumber(existing, article)) {
+                continue;
+            }
+            String existingSize = ArticleUtils.normalizeMetadataValue(articleAndSize.get(existing));
+            String existingColor = ArticleUtils.normalizeMetadataValue(articleAndColor.get(existing));
+            String existingFilling = ArticleUtils.normalizeFilling(articleAndFilling.get(existing));
+            if (Objects.equals(existingSize, size)
+                    && Objects.equals(existingColor, color)
+                    && Objects.equals(existingFilling, filling)) {
+                return existing;
+            }
+        }
+        return null;
+    }
+
+    private static boolean sameArticleNumber(Article left, Article right) {
+        if (left == right) {
+            return true;
+        }
+        if (left == null || right == null) {
+            return false;
+        }
+        return Objects.equals(left.getArticleNumber(), right.getArticleNumber());
+    }
+
+    private static Article cloneArticle(Article article) {
+        return new Article(
+                article.getArticleNumber(),
+                article.getName(),
+                article.getDetails(),
+                article.getStockQuantity(),
+                article.getMinStockLevel(),
+                article.getSellPrice(),
+                article.getPurchasePrice(),
+                article.getVendorName());
     }
 
     /**
@@ -886,10 +946,31 @@ public class ArticleListGUI extends JFrame {
     public static void removeArticle(Article article) {
         if (article == null)
             return;
+        String articleNumber = article.getArticleNumber();
+        String size = ArticleUtils.normalizeMetadataValue(articleAndSize.get(article));
+        String color = ArticleUtils.normalizeMetadataValue(articleAndColor.get(article));
+        String filling = ArticleUtils.normalizeFilling(articleAndFilling.get(article));
         articlesAndQuantity.remove(article);
         articleAndSize.remove(article);
         articleAndColor.remove(article);
         articleAndFilling.remove(article);
+        LOGGER.info("Removed staged article {}", articleNumber);
+        OrderLoggingUtils.getInstance().addInfo(null,
+                "Artikel aus Artikelliste entfernt: " + articleNumber + formatMetadataSuffix(size, color, filling));
+    }
+
+    private static String formatMetadataSuffix(String size, String color, String filling) {
+        List<String> parts = new ArrayList<>();
+        if (size != null && !size.isBlank()) {
+            parts.add("Größe=" + size);
+        }
+        if (color != null && !color.isBlank()) {
+            parts.add("Farbe=" + color);
+        }
+        if (filling != null && !filling.isBlank()) {
+            parts.add("Füllung=" + filling);
+        }
+        return parts.isEmpty() ? "" : " [" + String.join(", ", parts) + "]";
     }
 
     // ---------- Renderer / visuals ----------

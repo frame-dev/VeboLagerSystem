@@ -18,6 +18,7 @@ import org.apache.logging.log4j.Logger;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.ArticleUtils;
 
 @SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
 public class OrderManager {
@@ -390,10 +391,12 @@ public class OrderManager {
         Map<String, Integer> orderedArticles = order.getOrderedArticles();
         List<Article> articles = new ArrayList<>();
         for(Map.Entry<String, Integer> entry : orderedArticles.entrySet()) {
+            String articleKey = entry.getKey();
+            String articleNumber = ArticleUtils.getOrderItemArticleNumber(articleKey);
             Article article;
-            article = ArticleManager.getInstance().getArticleByName(entry.getKey());
+            article = ArticleManager.getInstance().getArticleByName(articleNumber);
             if(article == null) {
-                article = ArticleManager.getInstance().getArticleByNumber(entry.getKey());
+                article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
             }
             if (article != null) {
                 articles.add(article);

@@ -3,6 +3,7 @@ package ch.framedev.lagersystem.utils;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.classes.User;
 import ch.framedev.lagersystem.main.Main;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -68,13 +69,37 @@ public class OrderLoggingUtils {
         }
 
         String logEntry = formatEntry(order, user);
+        appendLogEntry(logEntry, Level.INFO, "[ORDER LOG|INFO] " + logEntry.trim());
+    }
 
-        // Serialize only the file append (avoid locking around formatting/UI logging).
-        synchronized (fileLock) {
-            writeLogToFile(logEntry);
+    public void addOrderEvent(String orderId, Level level, String message) {
+        String sanitizedMessage = safe(message).trim();
+        if (sanitizedMessage.isEmpty()) {
+            return;
         }
 
-        Main.logUtils.addLog("[ORDER LOG|INFO] " + logEntry.trim());
+        Level effectiveLevel = level == null ? Level.INFO : level;
+        String logEntry = formatEventEntry(orderId, effectiveLevel, sanitizedMessage);
+        StringBuilder appMessage = new StringBuilder("[ORDER LOG|")
+                .append(effectiveLevel)
+                .append("] ");
+        if (orderId != null && !orderId.isBlank()) {
+            appMessage.append("[").append(orderId).append("] ");
+        }
+        appMessage.append(sanitizedMessage);
+        appendLogEntry(logEntry, effectiveLevel, appMessage.toString());
+    }
+
+    public void addInfo(String orderId, String message) {
+        addOrderEvent(orderId, Level.INFO, message);
+    }
+
+    public void addWarn(String orderId, String message) {
+        addOrderEvent(orderId, Level.WARN, message);
+    }
+
+    public void addError(String orderId, String message) {
+        addOrderEvent(orderId, Level.ERROR, message);
     }
 
     /**
@@ -88,6 +113,20 @@ public class OrderLoggingUtils {
                 safe(user.getName()),
                 safe(order.getOrderId())
         );
+    }
+
+    private String formatEventEntry(String orderId, Level level, String message) {
+        String dateString = DATE_FORMAT.format(LocalDateTime.now());
+        StringBuilder builder = new StringBuilder("Datum: ")
+                .append(dateString)
+                .append(", Level: ")
+                .append(level == null ? Level.INFO : level)
+                .append(", ");
+        if (orderId != null && !orderId.isBlank()) {
+            builder.append("Bestellung: ").append(orderId).append(", ");
+        }
+        builder.append("Ereignis: ").append(message).append(System.lineSeparator());
+        return builder.toString();
     }
 
     /**
@@ -124,6 +163,13 @@ public class OrderLoggingUtils {
             LOGGER.error("Failed to write order log entry to: {}", logFilePath, e);
             Main.logUtils.addLog("[ORDER LOG|ERROR] Failed to write order log entry to: " + logFilePath + " (" + e.getMessage() + ")");
         }
+    }
+
+    private void appendLogEntry(String logEntry, Level level, String appMessage) {
+        synchronized (fileLock) {
+            writeLogToFile(logEntry);
+        }
+        Main.logUtils.addLog(level, appMessage);
     }
 
     /**

@@ -6,8 +6,12 @@ import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import org.jetbrains.annotations.NotNull;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -17,11 +21,14 @@ import java.util.Map;
 
 public class PartialOrderGUI extends JFrame {
 
+    private static final Logger LOGGER = LogManager.getLogger(PartialOrderGUI.class);
+
     private final Order order;
     private final Map<Article, JTextField> quantityFields = new HashMap<>();
 
     public PartialOrderGUI(@NotNull Order order) {
         this.order = order;
+        LOGGER.info("Opening PartialOrderGUI for order {}", order.getOrderId());
         ThemeManager.getInstance().registerWindow(this);
         ThemeManager.applyUIDefaults();
 
@@ -63,9 +70,16 @@ public class PartialOrderGUI extends JFrame {
         scroll.setBorder(null);
         scroll.getViewport().setBackground(card);
 
-        // build list of missing articles
-        order.getOrderedArticles().forEach((articleNr, orderedQty) -> {
+        java.util.Map<String, Integer> orderedByArticleNumber = new java.util.LinkedHashMap<>();
+        order.getOrderedArticles().forEach((orderItemKey, orderedQty) -> {
+            String articleNumber = ArticleUtils.getOrderItemArticleNumber(orderItemKey);
+            if (!articleNumber.isBlank()) {
+                orderedByArticleNumber.merge(articleNumber, orderedQty, Integer::sum);
+            }
+        });
 
+        // build list of missing articles
+        orderedByArticleNumber.forEach((articleNr, orderedQty) -> {
             Article article = ArticleManager.getInstance().getArticleByNumber(articleNr);
             if(article == null) return;
 
@@ -80,7 +94,7 @@ public class PartialOrderGUI extends JFrame {
             row.setBorder(new EmptyBorder(4,0,4,0));
 
             JLabel label = new JLabel(
-                    order.formatArticleLabel(article)
+                    article.getName() + " (" + articleNr + ")"
                             + "  (Fehlmenge: " + missing + ")"
             );
             label.setForeground(ThemeManager.getTextPrimaryColor());
@@ -124,6 +138,8 @@ public class PartialOrderGUI extends JFrame {
     private void applyCompletion() {
 
         ArticleManager articleManager = ArticleManager.getInstance();
+        final int[] restockedArticles = {0};
+        final int[] totalAddedQuantity = {0};
 
         quantityFields.forEach((article, field) -> {
 
@@ -134,13 +150,38 @@ public class PartialOrderGUI extends JFrame {
                 int addQty = Integer.parseInt(txt);
                 if(addQty <= 0) return;
 
-                articleManager.addToStock(article.getArticleNumber(), addQty);
+                if (articleManager.addToStock(article.getArticleNumber(), addQty)) {
+                    LOGGER.info("Restocked article {} by {} while completing partial order {}",
+                            article.getArticleNumber(), addQty, order.getOrderId());
+                    OrderLoggingUtils.getInstance().addInfo(order.getOrderId(),
+                            "Lagerbestand erhöht: " + article.getArticleNumber() + " +" + addQty);
+                    restockedArticles[0]++;
+                    totalAddedQuantity[0] += addQty;
+                } else {
+                    LOGGER.warn("Failed to restock article {} by {} for partial order {}",
+                            article.getArticleNumber(), addQty, order.getOrderId());
+                    OrderLoggingUtils.getInstance().addError(order.getOrderId(),
+                            "Fehler beim Auffüllen des Lagerbestands für Artikel " + article.getArticleNumber());
+                }
 
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+                LOGGER.warn("Ignored invalid partial quantity '{}' for article {} in order {}",
+                        txt, article.getArticleNumber(), order.getOrderId());
+            }
         });
 
         order.setStatus("Abgeschlossen");
-        OrderManager.getInstance().updateOrder(order);
+        boolean updated = OrderManager.getInstance().updateOrder(order);
+        if (updated) {
+            LOGGER.info("Completed partial order {} with {} restocked articles and {} added units",
+                    order.getOrderId(), restockedArticles[0], totalAddedQuantity[0]);
+            OrderLoggingUtils.getInstance().addInfo(order.getOrderId(),
+                    "Teilbestellung abgeschlossen (" + totalAddedQuantity[0] + " Einheiten nachgefüllt)");
+        } else {
+            LOGGER.error("Failed to update partial order {}", order.getOrderId());
+            OrderLoggingUtils.getInstance().addError(order.getOrderId(),
+                    "Fehler beim Abschließen der Teilbestellung");
+        }
 
         new MessageDialog()
                 .setTitle("Bestellung abgeschlossen")

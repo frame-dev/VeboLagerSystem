@@ -182,11 +182,11 @@ public class Order {
         this.articleFillings = articleFillings == null ? new LinkedHashMap<>() : new LinkedHashMap<>(articleFillings);
     }
 
-    public String getArticleFilling(String articleNumber) {
-        if (articleNumber == null || getArticleFillings().isEmpty()) {
+    public String getArticleFilling(String articleKey) {
+        if (articleKey == null || getArticleFillings().isEmpty()) {
             return "";
         }
-        return getArticleFillings().getOrDefault(articleNumber, "");
+        return getArticleFillings().getOrDefault(articleKey, "");
     }
 
     public Map<String, String> getArticleSizes() {
@@ -200,11 +200,11 @@ public class Order {
         this.articleSizes = articleSizes == null ? new LinkedHashMap<>() : new LinkedHashMap<>(articleSizes);
     }
 
-    public String getArticleSize(String articleNumber) {
-        if (articleNumber == null || getArticleSizes().isEmpty()) {
+    public String getArticleSize(String articleKey) {
+        if (articleKey == null || getArticleSizes().isEmpty()) {
             return "";
         }
-        return getArticleSizes().getOrDefault(articleNumber, "");
+        return getArticleSizes().getOrDefault(articleKey, "");
     }
 
     public Map<String, String> getArticleColors() {
@@ -218,22 +218,26 @@ public class Order {
         this.articleColors = articleColors == null ? new LinkedHashMap<>() : new LinkedHashMap<>(articleColors);
     }
 
-    public String getArticleColor(String articleNumber) {
-        if (articleNumber == null || getArticleColors().isEmpty()) {
+    public String getArticleColor(String articleKey) {
+        if (articleKey == null || getArticleColors().isEmpty()) {
             return "";
         }
-        return getArticleColors().getOrDefault(articleNumber, "");
+        return getArticleColors().getOrDefault(articleKey, "");
     }
 
     public String formatArticleLabel(Article article) {
+        return formatArticleLabel(article, article == null ? null : article.getArticleNumber());
+    }
+
+    public String formatArticleLabel(Article article, String articleKey) {
         if (article == null) {
             return "";
         }
 
-        String articleNumber = article.getArticleNumber();
-        String label = ArticleUtils.formatArticleWithFilling(article, getArticleFilling(articleNumber));
-        String size = ArticleUtils.normalizeMetadataValue(getArticleSize(articleNumber));
-        String color = ArticleUtils.normalizeMetadataValue(getArticleColor(articleNumber));
+        String resolvedArticleKey = articleKey == null ? article.getArticleNumber() : articleKey;
+        String label = ArticleUtils.formatArticleWithFilling(article, getArticleFilling(resolvedArticleKey));
+        String size = ArticleUtils.normalizeMetadataValue(getArticleSize(resolvedArticleKey));
+        String color = ArticleUtils.normalizeMetadataValue(getArticleColor(resolvedArticleKey));
 
         if (!size.isBlank()) {
             label += " (" + size + ")";
@@ -365,11 +369,12 @@ public class Order {
         double totalPrice = 0.0;
         ArticleManager articleManager = ArticleManager.getInstance();
         for (Map.Entry<String, Integer> entry : orderedArticles.entrySet()) {
-            String articleNumber = entry.getKey();
+            String articleKey = entry.getKey();
+            String articleNumber = ArticleUtils.getOrderItemArticleNumber(articleKey);
             int quantity = entry.getValue();
             Article article = articleManager.getArticleByNumber(articleNumber);
             if (article != null) {
-                double unitPrice = ArticleUtils.resolveEffectiveSellPrice(article, getArticleFilling(articleNumber));
+                double unitPrice = ArticleUtils.resolveEffectiveSellPrice(article, getArticleFilling(articleKey));
                 totalPrice += unitPrice * quantity;
             }
         }

@@ -4,12 +4,16 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.OrderExport;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import javax.swing.table.*;
@@ -38,6 +42,8 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
  */
 @SuppressWarnings("DuplicatedCode")
 public class OrderGUI extends JFrame {
+
+    private static final Logger LOGGER = LogManager.getLogger(OrderGUI.class);
 
     private final JTable orderTable;
     private final JScrollPane tableScrollPane;
@@ -76,6 +82,7 @@ public class OrderGUI extends JFrame {
         setMinimumSize(new Dimension(980, 560));
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+        LOGGER.info("Initializing OrderGUI window");
 
         // Top area (header + toolbar)
         JPanel topPanel = new JPanel();
@@ -321,6 +328,7 @@ public class OrderGUI extends JFrame {
         this.addComponentListener(resizeListener);
         tableScrollPane.getViewport().addComponentListener(resizeListener);
         SwingUtilities.invokeLater(this::adjustColumnWidths);
+        LOGGER.info("OrderGUI window initialized");
 
     }
 
@@ -329,6 +337,7 @@ public class OrderGUI extends JFrame {
         if (orderLoadWorker != null && !orderLoadWorker.isDone()) {
             orderLoadWorker.cancel(true);
         }
+        LOGGER.info("Disposing OrderGUI window");
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
@@ -339,6 +348,7 @@ public class OrderGUI extends JFrame {
 
     @SuppressWarnings("SameParameterValue")
     private void loadOrders(boolean forceReload) {
+        LOGGER.info("Loading orders (forceReload={})", forceReload);
         String selectedOrderId = getSelectedOrderId();
         int loadGeneration = ++orderLoadGeneration;
         if (orderLoadWorker != null && !orderLoadWorker.isDone()) {
@@ -358,10 +368,15 @@ public class OrderGUI extends JFrame {
                 }
                 try {
                     rebuildTable(get(), selectedOrderId);
+                    LOGGER.info("Loaded {} orders into OrderGUI table", orderTable.getRowCount());
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
+                    LOGGER.warn("Order loading interrupted");
                     updateOrderCount();
                 } catch (java.util.concurrent.ExecutionException ex) {
+                    LOGGER.error("Order loading failed", ex);
+                    OrderLoggingUtils.getInstance().addError(null,
+                            "Fehler beim Laden der Bestellungen: " + ex.getMessage());
                     updateOrderCount();
                 }
             }
@@ -649,6 +664,7 @@ public class OrderGUI extends JFrame {
     private void showOrderDetailsDialog(Order order) {
         if (order == null)
             return;
+        LOGGER.info("Opening order details dialog for {}", order.getOrderId());
         JDialog detailsDialog = new JDialog(this, "Bestelldetails - " + order.getOrderId(), true);
         detailsDialog.setSize(600, 500);
         detailsDialog.setLocationRelativeTo(this);
@@ -658,25 +674,24 @@ public class OrderGUI extends JFrame {
         panel.setBackground(ThemeManager.getCardBackgroundColor());
 
         // Build HTML content
-        List<Article> articles = OrderManager.getInstance().getOrderArticles(order);
         double totalPrice = 0.0;
         StringBuilder articlesHtml = new StringBuilder();
 
-        for (Article a : articles) {
+        for (var entry : order.getOrderedArticles().entrySet()) {
+            String orderItemKey = entry.getKey();
+            String articleNumber = ArticleUtils.getOrderItemArticleNumber(orderItemKey);
+            Article a = ArticleManager.getInstance().getArticleByNumber(articleNumber);
             if (a == null)
                 continue;
-            int quantity = order.getOrderedArticles().getOrDefault(a.getArticleNumber(), 0);
-            if (quantity == 0) {
-                quantity = order.getOrderedArticles().getOrDefault(a.getName(), 0);
-            }
-            String filling = order.getArticleFilling(a.getArticleNumber());
+            int quantity = Math.max(0, entry.getValue());
+            String filling = order.getArticleFilling(orderItemKey);
             double unitPrice = ArticleUtils.resolveEffectiveSellPrice(a, filling);
             double lineTotal = quantity * unitPrice;
             totalPrice += lineTotal;
-            String articleName = order.formatArticleLabel(a);
+            String articleName = order.formatArticleLabel(a, orderItemKey);
 
             articlesHtml.append("<tr>")
-                    .append("<td>").append(escapeHtml(a.getArticleNumber())).append("</td>")
+                    .append("<td>").append(escapeHtml(articleNumber)).append("</td>")
                     .append("<td>").append(escapeHtml(articleName)).append("</td>")
                     .append("<td align='right'>").append(quantity).append("</td>")
                     .append("<td align='right'>").append(String.format(java.util.Locale.ROOT, "%.2f", unitPrice)).append(" CHF</td>")
@@ -710,6 +725,7 @@ public class OrderGUI extends JFrame {
     private void createPDFExport(Order order) {
         if (order == null)
             return;
+        LOGGER.info("Opening PDF export from OrderGUI for {}", order.getOrderId());
         OrderExport.createPDFExport(this, order);
     }
 
@@ -819,6 +835,7 @@ public class OrderGUI extends JFrame {
     }
 
     private void openCreateOrderGui() {
+        LOGGER.info("Opening NewOrderGUI from OrderGUI");
         NewOrderGUI newOrderGUI = new NewOrderGUI();
         newOrderGUI.addPropertyChangeListener("orderCreated", evt -> {
             if (evt.getNewValue() instanceof Order createdOrder) {
@@ -832,6 +849,7 @@ public class OrderGUI extends JFrame {
         if (order == null) {
             return;
         }
+        LOGGER.info("Opening EditOrderGUI for {}", order.getOrderId());
         EditOrderGUI editGui = new EditOrderGUI(order);
         editGui.addPropertyChangeListener("orderUpdated", evt -> {
             if (evt.getNewValue() instanceof Order updatedOrder) {
@@ -842,6 +860,7 @@ public class OrderGUI extends JFrame {
     }
 
     private void openCompleteOrderGui() {
+        LOGGER.info("Opening CompleteOrderGUI from OrderGUI");
         CompleteOrderGUI completeOrderGUI = new CompleteOrderGUI();
         completeOrderGUI.addPropertyChangeListener("orderCompleted", evt -> {
             if (evt.getNewValue() instanceof Order completedOrder) {
@@ -877,21 +896,23 @@ public class OrderGUI extends JFrame {
 
         if (OrderManager.getInstance().deleteOrder(orderId)) {
             removeOrderRow(orderId);
+            LOGGER.info("Deleted order {}", orderId);
             new MessageDialog()
                     .setTitle("Erfolg")
                     .setMessage("Bestellung erfolgreich gelöscht.")
                     .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                     .display();
-            Main.logUtils.addLog(orderId + " wurde gelöscht.");
+            OrderLoggingUtils.getInstance().addInfo(orderId, "Bestellung wurde gelöscht.");
             return;
         }
 
+        LOGGER.warn("Failed to delete order {}", orderId);
         new MessageDialog()
                 .setTitle("Fehler")
                 .setMessage("Löschen fehlgeschlagen.")
                 .setMessageType(JOptionPane.ERROR_MESSAGE)
                 .display();
-        Main.logUtils.addLog(orderId + " konnte nicht gelöscht werden.");
+        OrderLoggingUtils.getInstance().addError(orderId, "Bestellung konnte nicht gelöscht werden.");
     }
 
     private void rebuildTable(List<Order> orders, String selectedOrderId) {

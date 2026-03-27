@@ -8,6 +8,9 @@ import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import javax.swing.table.*;
@@ -33,6 +36,8 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.createSecondaryButton;
 @SuppressWarnings({ "MismatchedQueryAndUpdateOfCollection", "DuplicatedCode" })
 public class ClientGUI extends JFrame {
 
+    private static final Logger LOGGER = LogManager.getLogger(ClientGUI.class);
+
     private final JTable clientTable;
     private final JScrollPane tableScrollPane;
     private final int[] baseColumnWidths = new int[] { 300, 300 };
@@ -54,6 +59,7 @@ public class ClientGUI extends JFrame {
      */
     public ClientGUI() {
         ThemeManager.getInstance().registerWindow(this);
+        LOGGER.info("Initializing ClientGUI window");
 
         setTitle("Kunden Verwaltung");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -355,12 +361,15 @@ public class ClientGUI extends JFrame {
 
             if (confirm == JOptionPane.YES_OPTION) {
                 if (ClientManager.getInstance().deleteClient(name)) {
+                    LOGGER.info("Deleted client '{}'", name);
+                    Main.logUtils.addLog(Level.INFO, "Kunde gelöscht: " + name);
                     loadClients();
                     new MessageDialog()
                             .setTitle("Erfolg")
                             .setMessage("Kunde erfolgreich gelöscht.")
                             .display();
                 } else {
+                    LOGGER.warn("Failed to delete client '{}'", name);
                     new MessageDialog()
                             .setTitle("Fehler")
                             .setMessage("Fehler beim Löschen des Kunden aus der Datenbank.")
@@ -370,6 +379,7 @@ public class ClientGUI extends JFrame {
         });
 
         refreshButton.addActionListener(e -> {
+            LOGGER.info("Refreshing client table");
             loadClients();
         });
 
@@ -390,6 +400,7 @@ public class ClientGUI extends JFrame {
         if (clientLoadWorker != null && !clientLoadWorker.isDone()) {
             clientLoadWorker.cancel(true);
         }
+        LOGGER.info("Disposing ClientGUI window");
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
@@ -443,8 +454,10 @@ public class ClientGUI extends JFrame {
                     populateClients(get());
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
+                    LOGGER.warn("Client loading was interrupted");
                     updateClientCountLabel((TableRowSorter<?>) clientTable.getRowSorter());
                 } catch (java.util.concurrent.ExecutionException ex) {
+                    LOGGER.error("Failed to load clients for ClientGUI", ex);
                     updateClientCountLabel((TableRowSorter<?>) clientTable.getRowSorter());
                 }
             }
@@ -466,6 +479,7 @@ public class ClientGUI extends JFrame {
         }
 
         updateClientCountLabel((TableRowSorter<?>) clientTable.getRowSorter());
+        LOGGER.info("Loaded {} clients into ClientGUI", dbClients.size());
     }
 
     private void updateClientCountLabel(TableRowSorter<?> sorter) {
@@ -529,9 +543,12 @@ public class ClientGUI extends JFrame {
                     .displayWithOptions();
             if (confirm == JOptionPane.YES_OPTION) {
                 if (ClientManager.getInstance().deleteClient(name)) {
+                    LOGGER.info("Deleted client '{}' from context menu", name);
+                    Main.logUtils.addLog(Level.INFO, "Kunde gelöscht: " + name);
                     clients.remove(modelRow);
                     ((DefaultTableModel) clientTable.getModel()).removeRow(modelRow);
                 } else {
+                    LOGGER.warn("Failed to delete client '{}' from context menu", name);
                     new MessageDialog()
                             .setTitle("Fehler")
                             .setMessage("Fehler beim Löschen des Kunden aus der Datenbank.")
@@ -680,6 +697,7 @@ public class ClientGUI extends JFrame {
     }
 
     public static void openForNewClient(JFrame frame, String receiver) {
+        LOGGER.info("Opening add-client dialog for suggested receiver '{}'", receiver);
         ClientDialog.showAddClientDialog(frame, receiver);
     }
 }

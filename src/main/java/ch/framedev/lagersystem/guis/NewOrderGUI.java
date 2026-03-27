@@ -12,8 +12,11 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.OrderExport;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 
 import javax.swing.*;
@@ -41,6 +44,8 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.createThemeButton;
 @SuppressWarnings("DuplicatedCode")
 public class NewOrderGUI extends JFrame {
 
+    private static final Logger LOGGER = LogManager.getLogger(NewOrderGUI.class);
+
     private static final int WINDOW_W = 1500;
     private static final int WINDOW_H = 720;
 
@@ -53,8 +58,9 @@ public class NewOrderGUI extends JFrame {
     private static final int MAX_ARTICLE_COMBO_RESULTS = 300;
 
     private final DefaultTableModel orderTableModel;
-    // track Article -> qty so prices are available
-    private final Map<Article, Integer> orderArticles = new LinkedHashMap<>();
+    // track order-item key -> qty so the same article can exist multiple times with different metadata
+    private final Map<String, Integer> orderArticles = new LinkedHashMap<>();
+    private final Map<String, Article> orderArticlesByKey = new LinkedHashMap<>();
     private final Map<String, String> orderArticleSizes = new LinkedHashMap<>();
     private final Map<String, String> orderArticleColors = new LinkedHashMap<>();
     private final Map<String, String> orderArticleFillings = new LinkedHashMap<>();
@@ -581,6 +587,14 @@ public class NewOrderGUI extends JFrame {
         }
 
         addOrMergeOrderArticle(selected, qty, size, color, normalizedFilling);
+        LOGGER.info("Added article {} to draft order with qty={}, size='{}', color='{}', filling='{}'",
+                selected.getArticleNumber(), qty,
+                getNormalizedOrderMetadata(size),
+                getNormalizedOrderMetadata(color),
+                normalizedFilling);
+        OrderLoggingUtils.getInstance().addInfo(null, "Artikel zur neuen Bestellung hinzugefügt: "
+                + selected.getArticleNumber() + " x" + qty
+                + formatMetadataSuffix(size, color, normalizedFilling));
         rebuildOrderTable();
         updateTotalPrice();
 
@@ -596,81 +610,66 @@ public class NewOrderGUI extends JFrame {
         String normalizedSize = getNormalizedOrderMetadata(size);
         String normalizedColor = getNormalizedOrderMetadata(color);
         String normalizedFilling = getNormalizedOrderFilling(filling);
-        for (Map.Entry<Article, Integer> entry : orderArticles.entrySet()) {
-            if (sameArticle(entry.getKey(), article)) {
-                orderArticles.put(entry.getKey(), entry.getValue() + qty);
-                if (!normalizedSize.isBlank()) {
-                    updateOrderArticleSize(article, normalizedSize);
-                }
-                if (!normalizedColor.isBlank()) {
-                    updateOrderArticleColor(article, normalizedColor);
-                }
-                if (!normalizedFilling.isBlank()) {
-                    updateOrderArticleFilling(article, normalizedFilling);
-                }
-                return;
-            }
+        String orderItemKey = ArticleUtils.buildOrderItemKey(
+                article.getArticleNumber(),
+                normalizedSize,
+                normalizedColor,
+                normalizedFilling);
+        if (orderItemKey.isBlank()) {
+            return;
         }
 
-        orderArticles.put(article, qty);
-        updateOrderArticleSize(article, normalizedSize);
-        updateOrderArticleColor(article, normalizedColor);
-        updateOrderArticleFilling(article, normalizedFilling);
+        orderArticles.merge(orderItemKey, qty, Integer::sum);
+        orderArticlesByKey.put(orderItemKey, article);
+        updateOrderArticleSize(orderItemKey, normalizedSize);
+        updateOrderArticleColor(orderItemKey, normalizedColor);
+        updateOrderArticleFilling(orderItemKey, normalizedFilling);
     }
 
-    private void updateOrderArticleSize(Article article, String size) {
-        updateOrderArticleMetadata(orderArticleSizes, article, size);
+    private void updateOrderArticleSize(String orderItemKey, String size) {
+        updateOrderArticleMetadata(orderArticleSizes, orderItemKey, size);
     }
 
-    private void updateOrderArticleColor(Article article, String color) {
-        updateOrderArticleMetadata(orderArticleColors, article, color);
+    private void updateOrderArticleColor(String orderItemKey, String color) {
+        updateOrderArticleMetadata(orderArticleColors, orderItemKey, color);
     }
 
-    private void updateOrderArticleMetadata(Map<String, String> targetMap, Article article, String value) {
-        if (article == null || article.getArticleNumber() == null) {
+    private void updateOrderArticleMetadata(Map<String, String> targetMap, String orderItemKey, String value) {
+        if (orderItemKey == null || orderItemKey.isBlank()) {
             return;
         }
 
         String normalized = getNormalizedOrderMetadata(value);
         if (normalized.isBlank()) {
-            targetMap.remove(article.getArticleNumber());
+            targetMap.remove(orderItemKey);
         } else {
-            targetMap.put(article.getArticleNumber(), normalized);
+            targetMap.put(orderItemKey, normalized);
         }
     }
 
-    private void updateOrderArticleFilling(Article article, String filling) {
-        if (article == null || article.getArticleNumber() == null) {
+    private void updateOrderArticleFilling(String orderItemKey, String filling) {
+        if (orderItemKey == null || orderItemKey.isBlank()) {
             return;
         }
 
         String normalized = getNormalizedOrderFilling(filling);
         if (normalized.isBlank()) {
-            orderArticleFillings.remove(article.getArticleNumber());
+            orderArticleFillings.remove(orderItemKey);
         } else {
-            orderArticleFillings.put(article.getArticleNumber(), normalized);
+            orderArticleFillings.put(orderItemKey, normalized);
         }
     }
 
-    private String getOrderArticleFilling(Article article) {
-        if (article == null || article.getArticleNumber() == null) {
-            return "";
-        }
-        return ArticleUtils.normalizeFilling(orderArticleFillings.get(article.getArticleNumber()));
+    private String getOrderArticleFilling(String orderItemKey) {
+        return ArticleUtils.normalizeFilling(orderArticleFillings.get(orderItemKey));
     }
 
-    private String getOrderArticleSize(Article article) {
-        if (article == null || article.getArticleNumber() == null) {
-            return "";
-        }
-        return getNormalizedOrderMetadata(orderArticleSizes.get(article.getArticleNumber()));
+    private String getOrderArticleSize(String orderItemKey) {
+        return getNormalizedOrderMetadata(orderArticleSizes.get(orderItemKey));
     }
 
-    private String getOrderArticleColor(Article article) {
-        if (article == null || article.getArticleNumber() == null) {
-            return "";
-        }
-        return getNormalizedOrderMetadata(orderArticleColors.get(article.getArticleNumber()));
+    private String getOrderArticleColor(String orderItemKey) {
+        return getNormalizedOrderMetadata(orderArticleColors.get(orderItemKey));
     }
 
     private boolean sameArticle(Article a, Article b) {
@@ -775,6 +774,8 @@ public class NewOrderGUI extends JFrame {
             return;
         }
         if (!ArticleUtils.canCalculateFillingPrice(selected)) {
+            LOGGER.info("Skipped filling converter for article {} because filling price is not available",
+                    selected.getArticleNumber());
             new MessageDialog()
                     .setTitle("Nicht verfügbar")
                     .setMessage("Für diesen Artikel ist keine Befüllungsberechnung verfügbar.")
@@ -815,52 +816,61 @@ public class NewOrderGUI extends JFrame {
             return;
         }
 
-        Article article = getOrderArticleAtRow(selectedRow);
-        if (article == null) {
+        String orderItemKey = getOrderArticleKeyAtRow(selectedRow);
+        if (orderItemKey == null) {
             return;
         }
 
-        removeOrderArticle(article);
+        Article removedArticle = getOrderArticle(orderItemKey);
+        removeOrderArticle(orderItemKey);
+        if (removedArticle != null) {
+            LOGGER.info("Removed article {} from draft order", removedArticle.getArticleNumber());
+            OrderLoggingUtils.getInstance().addInfo(null, "Artikel aus neuer Bestellung entfernt: "
+                    + removedArticle.getArticleNumber()
+                    + formatMetadataSuffix(
+                    ArticleUtils.getOrderItemSize(orderItemKey),
+                    ArticleUtils.getOrderItemColor(orderItemKey),
+                    ArticleUtils.getOrderItemFilling(orderItemKey)));
+        }
         rebuildOrderTable();
         updateTotalPrice();
     }
 
-    private Article getOrderArticleAtRow(int row) {
+    private String getOrderArticleKeyAtRow(int row) {
         if (row < 0 || row >= orderArticles.size()) {
             return null;
         }
 
         int currentIndex = 0;
-        for (Article article : orderArticles.keySet()) {
+        for (String orderItemKey : orderArticles.keySet()) {
             if (currentIndex == row) {
-                return article;
+                return orderItemKey;
             }
             currentIndex++;
         }
         return null;
     }
 
-    private void removeOrderArticle(Article article) {
-        if (article == null) {
+    private void removeOrderArticle(String orderItemKey) {
+        if (orderItemKey == null) {
             return;
         }
 
-        orderArticles.remove(article);
-        if (article.getArticleNumber() != null) {
-            orderArticleSizes.remove(article.getArticleNumber());
-            orderArticleColors.remove(article.getArticleNumber());
-            orderArticleFillings.remove(article.getArticleNumber());
-        }
+        orderArticles.remove(orderItemKey);
+        orderArticlesByKey.remove(orderItemKey);
+        orderArticleSizes.remove(orderItemKey);
+        orderArticleColors.remove(orderItemKey);
+        orderArticleFillings.remove(orderItemKey);
     }
 
-    private String formatOrderArticleLabel(Article article) {
+    private String formatOrderArticleLabel(String orderItemKey, Article article) {
         if (article == null) {
             return "";
         }
 
-        String label = ArticleUtils.formatArticleWithFilling(article, getOrderArticleFilling(article));
-        String size = getOrderArticleSize(article);
-        String color = getOrderArticleColor(article);
+        String label = ArticleUtils.formatArticleWithFilling(article, getOrderArticleFilling(orderItemKey));
+        String size = getOrderArticleSize(orderItemKey);
+        String color = getOrderArticleColor(orderItemKey);
 
         if (!size.isBlank()) {
             label += " (" + size + ")";
@@ -1140,6 +1150,9 @@ public class NewOrderGUI extends JFrame {
 
         rebuildOrderTable();
         updateTotalPrice();
+        LOGGER.info("Added {} staged article entries from ArticleListGUI to draft order", articlesWithQty.size());
+        OrderLoggingUtils.getInstance().addInfo(null,
+                articlesWithQty.size() + " Artikel aus der Artikelliste zur neuen Bestellung übernommen.");
 
         new MessageDialog()
                 .setTitle("Erfolgreich")
@@ -1153,14 +1166,15 @@ public class NewOrderGUI extends JFrame {
         if (orderArticles.isEmpty()) {
             return;
         }
-        for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
-            Article a = e.getKey();
+        for (Map.Entry<String, Integer> e : orderArticles.entrySet()) {
+            String orderItemKey = e.getKey();
+            Article a = getOrderArticle(orderItemKey);
             if(a == null) continue;
             int qty = e.getValue();
-            double unit = safePrice(a, getOrderArticleFilling(a));
+            double unit = safePrice(a, getOrderArticleFilling(orderItemKey));
             double line = unit * qty;
             orderTableModel.addRow(new Object[]{
-                    formatOrderArticleLabel(a),
+                    formatOrderArticleLabel(orderItemKey, a),
                     qty,
                     String.format("%.2f CHF", unit),
                     String.format("%.2f CHF", line)
@@ -1179,8 +1193,9 @@ public class NewOrderGUI extends JFrame {
 
     private void updateTotalPrice() {
         double total = 0.0;
-        for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
-            total += safePrice(e.getKey(), getOrderArticleFilling(e.getKey())) * e.getValue();
+        for (Map.Entry<String, Integer> e : orderArticles.entrySet()) {
+            Article article = getOrderArticle(e.getKey());
+            total += safePrice(article, getOrderArticleFilling(e.getKey())) * e.getValue();
         }
         totalPriceLabel.setText(String.format("Totalpreis: %.2f CHF", total));
         updateSummaryBar();
@@ -1280,32 +1295,16 @@ public class NewOrderGUI extends JFrame {
             return;
         }
 
-        Map<String, Integer> payload = new LinkedHashMap<>();
-        Map<String, String> sizesPayload = new LinkedHashMap<>();
-        Map<String, String> colorsPayload = new LinkedHashMap<>();
-        Map<String, String> fillingsPayload = new LinkedHashMap<>();
-        for (Map.Entry<Article, Integer> e : orderArticles.entrySet()) {
-            Article article = e.getKey();
-            if (article == null || article.getArticleNumber() == null) {
-                continue;
-            }
-            payload.put(article.getArticleNumber(), e.getValue());
-            String size = getOrderArticleSize(article);
-            if (!size.isBlank()) {
-                sizesPayload.put(article.getArticleNumber(), size);
-            }
-            String color = getOrderArticleColor(article);
-            if (!color.isBlank()) {
-                colorsPayload.put(article.getArticleNumber(), color);
-            }
-            String filling = getOrderArticleFilling(article);
-            if (!filling.isBlank()) {
-                fillingsPayload.put(article.getArticleNumber(), filling);
-            }
-        }
+        Map<String, Integer> payload = new LinkedHashMap<>(orderArticles);
+        Map<String, String> sizesPayload = new LinkedHashMap<>(orderArticleSizes);
+        Map<String, String> colorsPayload = new LinkedHashMap<>(orderArticleColors);
+        Map<String, String> fillingsPayload = new LinkedHashMap<>(orderArticleFillings);
 
         Order createdOrder = createOrder(payload, sizesPayload, colorsPayload, fillingsPayload, receiver, rKonto, sender, sKonto, department);
         if (createdOrder == null) {
+            LOGGER.warn("Failed to create order for receiver='{}', sender='{}', department='{}'", receiver, sender, department);
+            OrderLoggingUtils.getInstance().addWarn(null,
+                    "Bestellung konnte nicht erstellt werden für Empfänger '" + receiver + "'.");
             new MessageDialog()
                     .setTitle("Fehler")
                     .setMessage("Bestellung konnte nicht erstellt werden.")
@@ -1324,6 +1323,9 @@ public class NewOrderGUI extends JFrame {
                         .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                         .display();
             } catch (IOException ex) {
+                LOGGER.error("Failed to export draft order {} to PDF {}", createdOrder.getOrderId(), file.getAbsolutePath(), ex);
+                OrderLoggingUtils.getInstance().addError(createdOrder.getOrderId(),
+                        "Fehler beim PDF-Export der Bestellung: " + ex.getMessage());
                 new MessageDialog()
                         .setTitle("Fehler")
                         .setMessage("Fehler beim Erstellen des PDFs: " + ex.getMessage())
@@ -1337,10 +1339,15 @@ public class NewOrderGUI extends JFrame {
                 .setMessage("Bestellung erstellt.")
                 .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                 .display();
+        LOGGER.info("Created order {} with {} line items for receiver '{}'",
+                createdOrder.getOrderId(), payload.size(), receiver);
+        OrderLoggingUtils.getInstance().addInfo(createdOrder.getOrderId(),
+                "Neue Bestellung erstellt (" + payload.size() + " Positionen)");
 
         firePropertyChange("orderCreated", null, createdOrder);
 
         orderArticles.clear();
+        orderArticlesByKey.clear();
         orderArticleSizes.clear();
         orderArticleColors.clear();
         orderArticleFillings.clear();
@@ -1357,39 +1364,18 @@ public class NewOrderGUI extends JFrame {
     }
 
     private void exportOrderToPDF(File file) throws IOException {
-        OrderExport.exportOrderToFile(file, buildDraftOrderForExport());
+        Order draftOrder = buildDraftOrderForExport();
+        LOGGER.info("Exporting draft order {} to PDF {}", draftOrder.getOrderId(), file.getAbsolutePath());
+        OrderLoggingUtils.getInstance().addInfo(draftOrder.getOrderId(),
+                "PDF-Export für Entwurfsbestellung gestartet: " + file.getAbsolutePath());
+        OrderExport.exportOrderToFile(file, draftOrder);
     }
 
     private Order buildDraftOrderForExport() {
-        Map<String, Integer> payload = new LinkedHashMap<>();
-        Map<String, String> sizesPayload = new LinkedHashMap<>();
-        Map<String, String> colorsPayload = new LinkedHashMap<>();
-        Map<String, String> fillingsPayload = new LinkedHashMap<>();
-
-        for (Map.Entry<Article, Integer> entry : orderArticles.entrySet()) {
-            Article article = entry.getKey();
-            if (article == null || article.getArticleNumber() == null) {
-                continue;
-            }
-
-            String articleNumber = article.getArticleNumber();
-            payload.put(articleNumber, entry.getValue());
-
-            String size = getOrderArticleSize(article);
-            if (!size.isBlank()) {
-                sizesPayload.put(articleNumber, size);
-            }
-
-            String color = getOrderArticleColor(article);
-            if (!color.isBlank()) {
-                colorsPayload.put(articleNumber, color);
-            }
-
-            String filling = getOrderArticleFilling(article);
-            if (!filling.isBlank()) {
-                fillingsPayload.put(articleNumber, filling);
-            }
-        }
+        Map<String, Integer> payload = new LinkedHashMap<>(orderArticles);
+        Map<String, String> sizesPayload = new LinkedHashMap<>(orderArticleSizes);
+        Map<String, String> colorsPayload = new LinkedHashMap<>(orderArticleColors);
+        Map<String, String> fillingsPayload = new LinkedHashMap<>(orderArticleFillings);
 
         String receiver = receiverNameCombobox.getSelectedItem() != null
                 ? receiverNameCombobox.getSelectedItem().toString().trim()
@@ -1584,5 +1570,40 @@ public class NewOrderGUI extends JFrame {
 
     private static String safe(String s) {
         return s == null ? "" : s;
+    }
+
+    private String formatMetadataSuffix(String size, String color, String filling) {
+        String normalizedSize = getNormalizedOrderMetadata(size);
+        String normalizedColor = getNormalizedOrderMetadata(color);
+        String normalizedFilling = getNormalizedOrderFilling(filling);
+        List<String> parts = new ArrayList<>();
+        if (!normalizedSize.isBlank()) {
+            parts.add("Größe=" + normalizedSize);
+        }
+        if (!normalizedColor.isBlank()) {
+            parts.add("Farbe=" + normalizedColor);
+        }
+        if (!normalizedFilling.isBlank()) {
+            parts.add("Füllung=" + normalizedFilling);
+        }
+        return parts.isEmpty() ? "" : " [" + String.join(", ", parts) + "]";
+    }
+
+    private Article getOrderArticle(String orderItemKey) {
+        Article article = orderArticlesByKey.get(orderItemKey);
+        if (article != null) {
+            return article;
+        }
+
+        String articleNumber = ArticleUtils.getOrderItemArticleNumber(orderItemKey);
+        if (articleNumber.isBlank()) {
+            return null;
+        }
+
+        article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+        if (article != null) {
+            orderArticlesByKey.put(orderItemKey, article);
+        }
+        return article;
     }
 }

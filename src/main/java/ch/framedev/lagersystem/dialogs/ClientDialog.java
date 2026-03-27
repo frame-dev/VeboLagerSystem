@@ -1,11 +1,15 @@
 package ch.framedev.lagersystem.dialogs;
 
 import ch.framedev.lagersystem.guis.SettingsGUI;
+import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
 import java.awt.*;
@@ -20,6 +24,9 @@ import java.awt.event.MouseEvent;
  */
 @SuppressWarnings({"ReassignedVariable", "UnusedAssignment"})
 public class ClientDialog {
+
+    private static final Logger LOGGER = LogManager.getLogger(ClientDialog.class);
+
     /**
      * Shared dialog UI builder for add/update client dialogs.
      * Returns an array: [mainContainer, nameField, departmentCombobox]
@@ -99,6 +106,7 @@ public class ClientDialog {
      */
     public static Object[] showAddClientDialog(JFrame frame) {
         if(frame == null) throw new NullPointerException("Frame must not be null");
+        LOGGER.info("Opening add-client dialog");
         ThemeManager.applyUIDefaults();
         final Object[][] holder = new Object[1][];
 
@@ -148,6 +156,7 @@ public class ClientDialog {
 
                 ClientManager clientManager = ClientManager.getInstance();
                 if (!clientManager.insertClient(name, dept)) {
+                    LOGGER.warn("Failed to insert client '{}' with department '{}'", name, dept);
                     new MessageDialog()
                             .setTitle("Fehler")
                             .setMessage("Fehler beim Hinzufügen des Kunden zur Datenbank.")
@@ -157,6 +166,8 @@ public class ClientDialog {
                 return;
                 }
 
+                LOGGER.info("Inserted client '{}' with department '{}'", name, dept);
+                Main.logUtils.addLog(Level.INFO, "Kunde hinzugefügt: " + name + (dept.isBlank() ? "" : " (" + dept + ")"));
                 holder[0] = new Object[]{name, dept};
                 dialog.dispose();
             }
@@ -180,6 +191,7 @@ public class ClientDialog {
 
     public static Object[] showAddClientDialog(JFrame frame, String receiver) {
         if(frame == null) throw new NullPointerException("Frame must not be null");
+        LOGGER.info("Opening add-client dialog with suggested receiver '{}'", receiver);
         ThemeManager.applyUIDefaults();
         final Object[][] holder = new Object[1][];
 
@@ -230,6 +242,7 @@ public class ClientDialog {
 
                 ClientManager clientManager = ClientManager.getInstance();
                 if (!clientManager.insertClient(name, dept)) {
+                    LOGGER.warn("Failed to insert client '{}' with department '{}'", name, dept);
                     new MessageDialog()
                             .setTitle("Fehler")
                             .setMessage("Fehler beim Hinzufügen des Kunden zur Datenbank.")
@@ -239,6 +252,8 @@ public class ClientDialog {
                 return;
                 }
 
+                LOGGER.info("Inserted client '{}' with department '{}'", name, dept);
+                Main.logUtils.addLog(Level.INFO, "Kunde hinzugefügt: " + name + (dept.isBlank() ? "" : " (" + dept + ")"));
                 holder[0] = new Object[]{name, dept};
                 dialog.dispose();
             }
@@ -269,6 +284,7 @@ public class ClientDialog {
     public static Object[] showUpdateClientDialog(JFrame frame, Object[] existing) {
         if(frame == null) throw new IllegalArgumentException("Frame must not be null");
         if(existing == null) throw new IllegalArgumentException("Existing must not be null");
+        LOGGER.info("Opening update-client dialog for '{}'", existing.length > 0 ? existing[0] : "");
         ThemeManager.applyUIDefaults();
         final Object[][] holder = new Object[1][];
 
@@ -306,6 +322,7 @@ public class ClientDialog {
                 ae -> {
                     String name = nameField.getText().trim();
                     if (!originalName.isEmpty() && !name.equals(originalName)) {
+                        LOGGER.warn("Rejected client rename from '{}' to '{}'", originalName, name);
                         new MessageDialog()
                                 .setTitle("Hinweis")
                                 .setMessage("Der Kundenname kann aktuell nicht geändert werden.\nBitte erstellen Sie einen neuen Kunden oder lassen Sie den Namen unverändert.")
@@ -329,6 +346,7 @@ public class ClientDialog {
                     ClientManager clientManager = ClientManager.getInstance();
                     if (!clientManager.existsClient(name)) {
                         if (!clientManager.insertClient(name, dept)) {
+                            LOGGER.warn("Failed to insert missing client '{}' with department '{}' during update dialog", name, dept);
                             new MessageDialog()
                                     .setTitle("Fehler")
                                     .setMessage("Fehler beim Hinzufügen des Kunden zur Datenbank.")
@@ -336,8 +354,12 @@ public class ClientDialog {
                                     .display();
                             return;
                         }
+                        LOGGER.info("Inserted missing client '{}' with department '{}' from update dialog", name, dept);
+                        Main.logUtils.addLog(Level.INFO,
+                                "Kunde hinzugefügt: " + name + (dept.isBlank() ? "" : " (" + dept + ")"));
                     } else {
                         if (!clientManager.updateClient(name, dept)) {
+                            LOGGER.warn("Failed to update client '{}' with department '{}'", name, dept);
                             new MessageDialog()
                                     .setTitle("Fehler")
                                     .setMessage("Fehler beim Aktualisieren des Kunden in der Datenbank.")
@@ -345,6 +367,9 @@ public class ClientDialog {
                                     .display();
                             return;
                         }
+                        LOGGER.info("Updated client '{}' with department '{}'", name, dept);
+                        Main.logUtils.addLog(Level.INFO,
+                                "Kunde aktualisiert: " + name + (dept.isBlank() ? "" : " (" + dept + ")"));
                     }
 
                     holder[0] = new Object[]{name, dept};
