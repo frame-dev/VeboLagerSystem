@@ -14,7 +14,6 @@ import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.Color;
 import java.awt.Component;
 import java.io.File;
@@ -165,23 +164,16 @@ public final class ArticleExporter {
 
             doc.save(fileToSave);
 
-            new MessageDialog()
-                    .setTitle("Export erfolgreich")
-                    .setMessage(UnicodeSymbols.CHECKMARK + " PDF erfolgreich exportiert!\n\n" +
-                            "Datei: " + fileToSave.getName() + "\n" +
-                            "Pfad: " + fileToSave.getParent() + "\n" +
-                            "Artikel: " + numRows + "\n" +
-                            "Seiten: " + currentPage)
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
+            ExportDialogUtils.showExportSuccess(
+                    "Export erfolgreich",
+                    "PDF",
+                    "Datei: " + fileToSave.getName(),
+                    "Pfad: " + fileToSave.getParent(),
+                    "Artikel: " + numRows,
+                    "Seiten: " + currentPage);
 
         } catch (Exception ex) {
-            new MessageDialog()
-                    .setTitle("Fehler beim PDF-Export")
-                    .setMessage(UnicodeSymbols.ERROR + " Fehler beim PDF-Export:\n\n" + ex.getMessage() +
-                            "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.")
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
+            ExportDialogUtils.showExportError("Fehler beim PDF-Export", "PDF-Export", ex);
             LOGGER.error(ex.getMessage(), ex);
         }
     }
@@ -809,21 +801,14 @@ public final class ArticleExporter {
 
             contentStream.close();
             doc.save(fileToSave);
-            new MessageDialog()
-                    .setTitle("Export erfolgreich")
-                    .setMessage(UnicodeSymbols.CHECKMARK + " PDF erfolgreich exportiert!\n\n" +
-                            "Datei: " + fileToSave.getName() + "\n" +
-                            "Pfad: " + fileToSave.getParent() + "\n" +
-                            "Artikel: " + articles.size())
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
+            ExportDialogUtils.showExportSuccess(
+                    "Export erfolgreich",
+                    "PDF",
+                    "Datei: " + fileToSave.getName(),
+                    "Pfad: " + fileToSave.getParent(),
+                    "Artikel: " + articles.size());
         } catch (Exception ex) {
-            new MessageDialog()
-                    .setTitle("Fehler beim PDF-Export")
-                    .setMessage(UnicodeSymbols.ERROR + " Fehler beim PDF-Export:\n\n" + ex.getMessage() +
-                            "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.")
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
+            ExportDialogUtils.showExportError("Fehler beim PDF-Export", "PDF-Export", ex);
         }
     }
 
@@ -1011,61 +996,25 @@ public final class ArticleExporter {
             contentStream.close();
             doc.save(fileToSave);
 
-            new MessageDialog()
-                    .setTitle("PDF Export")
-                    .setMessage(UnicodeSymbols.CHECKMARK + " PDF erfolgreich exportiert:\n\n" +
-                            "Datei: " + fileToSave.getName() + "\n" +
-                            "Pfad: " + fileToSave.getParent() + "\n" +
-                            "Logs: " + logs.size())
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
+            ExportDialogUtils.showExportSuccess(
+                    "PDF Export",
+                    "PDF",
+                    "Datei: " + fileToSave.getName(),
+                    "Pfad: " + fileToSave.getParent(),
+                    "Logs: " + logs.size());
         } catch (Exception ex) {
-            new MessageDialog()
-                    .setTitle("Fehler beim PDF-Export")
-                    .setMessage(UnicodeSymbols.ERROR + " Fehler beim PDF-Export:\n\n" + ex.getMessage() +
-                            "\n\nBitte überprüfen Sie die Schreibrechte und versuchen Sie es erneut.")
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
+            ExportDialogUtils.showExportError("Fehler beim PDF-Export", "PDF-Export", ex);
             LOGGER.error("Could not create PDF-Export {}", ex.getMessage(), ex);
         }
     }
 
     // Helper to choose a save file with extension filter and overwrite confirmation
     private static File chooseSaveFile(Component parent, String defaultFileName) {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("PDF Speichern");
-        fileChooser.setSelectedFile(new File(defaultFileName));
-        fileChooser.setFileFilter(new FileNameExtensionFilter(
-            PDF_EXTENSION.toUpperCase(Locale.ROOT) + " Dateien (*." + PDF_EXTENSION + ")",
-            PDF_EXTENSION
-        ));
-
-        int userSelection = fileChooser.showSaveDialog(parent);
-        if (userSelection != JFileChooser.APPROVE_OPTION) {
-            return null;
-        }
-
-        File selected = fileChooser.getSelectedFile();
-        if (selected == null) {
-            return null;
-        }
-
-        String nameLower = selected.getName().toLowerCase(Locale.ROOT);
-        if (!nameLower.endsWith("." + PDF_EXTENSION)) {
-            selected = new File(selected.getAbsolutePath() + "." + PDF_EXTENSION);
-        }
-
-        if (selected.exists()) {
-            int overwrite = new MessageDialog()
-                    .setTitle("Bestätigen")
-                    .setMessage(UnicodeSymbols.WARNING + " Die Datei existiert bereits. Überschreiben?\n\n" + selected.getName())
-                    .setMessageType(JOptionPane.WARNING_MESSAGE)
-                    .displayWithOptions();
-            if (overwrite != JOptionPane.YES_OPTION) {
-                return null;
-            }
-        }
-
-        return selected;
+        return ExportDialogUtils.chooseSaveFile(
+                parent,
+                "PDF Speichern",
+                defaultFileName,
+                PDF_EXTENSION,
+                PDF_EXTENSION.toUpperCase(Locale.ROOT) + " Dateien (*." + PDF_EXTENSION + ")");
     }
 }

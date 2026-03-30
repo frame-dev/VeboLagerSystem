@@ -6,6 +6,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
+import java.awt.image.BufferedImage;
 import java.net.URL;
 import java.util.Locale;
 
@@ -48,12 +49,17 @@ public class SplashscreenGUI extends JFrame {
     }
 
     private static volatile QualityPreset defaultQualityPreset = QualityPreset.BALANCED;
+    private static volatile Icon cachedLogoIcon;
 
     private static final int ANIMATION_FRAME_DELAY_MS = 16;
-    private static final int WINDOWS_ANIMATION_FRAME_DELAY_MS = 22;
+    private static final int WINDOWS_ANIMATION_FRAME_DELAY_MS = 33;
     private static final double PHASE_SPEED = 5.2;
     private static final int DEFAULT_HEAVY_REPAINT_INTERVAL_FRAMES = 2;
     private static final int WINDOWS_MIN_HEAVY_REPAINT_INTERVAL_FRAMES = 4;
+    private static final int WINDOWS_MIN_PARTICLE_COUNT = 4;
+    private static final int BACKGROUND_CACHE_FRAME_COUNT = 24;
+    private static final int REDUCED_BACKGROUND_CACHE_FRAME_COUNT = 12;
+    private static final double BACKGROUND_CACHE_LOOP_PHASE = Math.PI * 40.0;
     private static final double BASE_FPS = 60.0;
     private static final double MAX_DELTA_SECONDS = 0.05;
     private static final double PROGRESS_LERP_RATE = 0.22;
@@ -81,6 +87,7 @@ public class SplashscreenGUI extends JFrame {
     private final AnimatedProgressBar progressBar;
     private final JLabel statusLabel;
     private final AnimatedLogoLabel logoLabel;
+    private final GlassPanel cardPanel;
 
     private Timer animationTimer;
     private volatile double phase = 0.0;
@@ -96,6 +103,30 @@ public class SplashscreenGUI extends JFrame {
     private int activeParticleCount = QualityPreset.BALANCED.particleCount;
     private QualityPreset qualityPreset;
     private boolean stableSurfaceMode;
+    private boolean reducedAnimationMode;
+    private int lastPadX = -1;
+    private int lastPadY = -1;
+    private int lastTitleSize = -1;
+    private int lastSubtitleSize = -1;
+    private int lastStatusSize = -1;
+    private int lastProgressBarWidth = -1;
+    private int lastProgressBarHeight = -1;
+    private volatile String lastStatusMessage = "";
+    private volatile BufferedImage[] backgroundFrameCache;
+    private volatile int cachedBackgroundWidth = -1;
+    private volatile int cachedBackgroundHeight = -1;
+    private volatile int cachedBackgroundFrameCount = 0;
+    private volatile boolean cachedBackgroundDarkMode;
+    private volatile boolean cachedBackgroundReducedMode;
+    private volatile boolean backgroundCacheBuilding;
+    private volatile long backgroundCacheGeneration;
+    private volatile BufferedImage[] cardFrameCache;
+    private volatile int cachedCardWidth = -1;
+    private volatile int cachedCardHeight = -1;
+    private volatile int cachedCardFrameCount = 0;
+    private volatile boolean cachedCardDarkMode;
+    private volatile boolean cachedCardReducedMode;
+    private volatile boolean cardCacheBuilding;
 
     // Cached theme colors reduce allocations inside paint loops.
     private Color cachedAccentBlue;
@@ -191,6 +222,22 @@ public class SplashscreenGUI extends JFrame {
         return cachedCardTintBottom;
     }
 
+    private record BackgroundFramePalette(
+            Color backgroundTop,
+            Color backgroundMid,
+            Color backgroundBottom,
+            Color glowBlue,
+            Color accentCyan,
+            Color streak1Color) {
+    }
+
+    private record CardFramePalette(
+            Color glowBlue,
+            Color cardTintTop,
+            Color cardTintBottom,
+            boolean darkTheme) {
+    }
+
     /**
      * Creates and initializes the splash screen window.
      *
@@ -218,14 +265,14 @@ public class SplashscreenGUI extends JFrame {
         root.setLayout(new GridBagLayout());
         root.setBorder(BorderFactory.createEmptyBorder(26, 26, 26, 26));
 
-        GlassPanel card = new GlassPanel();
-        card.setLayout(new BorderLayout());
+        cardPanel = new GlassPanel();
+        cardPanel.setLayout(new BorderLayout());
 
         // Inner content panel
         contentPanel = new JPanel();
         contentPanel.setOpaque(false);
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        card.add(contentPanel, BorderLayout.CENTER);
+        cardPanel.add(contentPanel, BorderLayout.CENTER);
 
         // Logo
         logoLabel = new AnimatedLogoLabel(loadLogo());
@@ -277,8 +324,8 @@ public class SplashscreenGUI extends JFrame {
         gbc.weighty = 1.0;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.fill = GridBagConstraints.NONE;
-        root.add(card, gbc);
-        repaintTargets = new JComponent[] { root, card };
+        root.add(cardPanel, gbc);
+        repaintTargets = new JComponent[] { root, cardPanel };
 
         setContentPane(root);
 
@@ -307,6 +354,7 @@ public class SplashscreenGUI extends JFrame {
         updateResponsiveSizing();
 
         initParticles();
+        requestAnimationCacheWarmup();
         startAnimation();
     }
 
@@ -347,6 +395,11 @@ public class SplashscreenGUI extends JFrame {
                     WINDOWS_MIN_HEAVY_REPAINT_INTERVAL_FRAMES);
             particleUpdateIntervalFrames = Math.max(particleUpdateIntervalFrames, 2);
         }
+        if (reducedAnimationMode) {
+            activeParticleCount = Math.min(activeParticleCount, WINDOWS_MIN_PARTICLE_COUNT);
+            heavyRepaintIntervalFrames = Math.max(heavyRepaintIntervalFrames, 6);
+            particleUpdateIntervalFrames = Math.max(particleUpdateIntervalFrames, 3);
+        }
     }
 
     private void applyThemeColors() {
@@ -356,6 +409,8 @@ public class SplashscreenGUI extends JFrame {
         statusLabel.setForeground(cachedTextPrimary);
         progressBar.setForeground(cachedAccentBlue);
         retintParticles();
+        invalidateAnimationCache();
+        requestAnimationCacheWarmup();
         repaint();
     }
 
@@ -411,26 +466,50 @@ public class SplashscreenGUI extends JFrame {
     private void updateResponsiveSizing() {
         int w = Math.max(getWidth(), 1);
         int h = Math.max(getHeight(), 1);
+        boolean layoutChanged = false;
 
         // Inner padding scales with window size (prevents clipping on small windows)
         int padX = clamp((int) (w * 0.15), 52, 170);
         int padY = clamp((int) (h * 0.13), 44, 130);
-        contentPanel.setBorder(BorderFactory.createEmptyBorder(padY, padX, padY, padX));
+        if (padX != lastPadX || padY != lastPadY) {
+            contentPanel.setBorder(BorderFactory.createEmptyBorder(padY, padX, padY, padX));
+            lastPadX = padX;
+            lastPadY = padY;
+            layoutChanged = true;
+        }
 
         // Scale typography a bit
         int titleSize = clamp((int) (w * 0.052), 34, 52);
         int subSize = clamp((int) (w * 0.021), 16, 20);
         int statusSize = clamp((int) (w * 0.019), 14, 18);
 
-        titleLabel.setFont(uiFont(Font.BOLD, titleSize));
-        subtitleLabel.setFont(uiFont(Font.PLAIN, subSize));
-        statusLabel.setFont(uiFont(Font.PLAIN, statusSize));
+        if (titleSize != lastTitleSize) {
+            titleLabel.setFont(uiFont(Font.BOLD, titleSize));
+            lastTitleSize = titleSize;
+            layoutChanged = true;
+        }
+        if (subSize != lastSubtitleSize) {
+            subtitleLabel.setFont(uiFont(Font.PLAIN, subSize));
+            lastSubtitleSize = subSize;
+            layoutChanged = true;
+        }
+        if (statusSize != lastStatusSize) {
+            statusLabel.setFont(uiFont(Font.PLAIN, statusSize));
+            lastStatusSize = statusSize;
+            layoutChanged = true;
+        }
 
         // Progress bar width adapts
         int pbW = clamp((int) (w * 0.50), 300, 600);
         int pbH = clamp((int) (h * 0.038), 20, 28);
-        progressBar.setPreferredSize(new Dimension(pbW, pbH));
-        progressBar.setMaximumSize(new Dimension(pbW, pbH));
+        if (pbW != lastProgressBarWidth || pbH != lastProgressBarHeight) {
+            Dimension progressSize = new Dimension(pbW, pbH);
+            progressBar.setPreferredSize(progressSize);
+            progressBar.setMaximumSize(progressSize);
+            lastProgressBarWidth = pbW;
+            lastProgressBarHeight = pbH;
+            layoutChanged = true;
+        }
 
         long area = (long) w * h;
         int baseHeavy = qualityPreset == null ? defaultQualityPreset.baseHeavyRepaintInterval
@@ -448,8 +527,18 @@ public class SplashscreenGUI extends JFrame {
             particleUpdateIntervalFrames = baseParticle;
         }
 
-        revalidate();
-        repaint();
+        if (reducedAnimationMode) {
+            activeParticleCount = Math.min(activeParticleCount, WINDOWS_MIN_PARTICLE_COUNT);
+            heavyRepaintIntervalFrames = Math.max(heavyRepaintIntervalFrames, 6);
+            particleUpdateIntervalFrames = Math.max(particleUpdateIntervalFrames, 3);
+        }
+
+        if (layoutChanged) {
+            invalidateAnimationCache();
+            requestAnimationCacheWarmup();
+            revalidate();
+            repaint();
+        }
     }
 
     private void configureWindowSurfaceForCurrentPlatform() {
@@ -465,6 +554,7 @@ public class SplashscreenGUI extends JFrame {
         // driver
         // combinations, so keep a stable opaque surface there.
         stableSurfaceMode = isWindows() || !supportsPerPixelTranslucency;
+        reducedAnimationMode = isWindows();
         if (!stableSurfaceMode) {
             setBackground(new Color(0, 0, 0, 0));
             return;
@@ -495,11 +585,19 @@ public class SplashscreenGUI extends JFrame {
      */
     public void updateProgress(int percent, String message) {
         Runnable r = () -> {
-            ensureAnimationRunning();
             int clampedPercent = clamp(percent, 0, 100);
+            boolean progressChanged = targetProgress != clampedPercent;
+            boolean messageChanged = message != null && !message.isBlank() && !message.equals(lastStatusMessage);
+            if (!progressChanged && !messageChanged) {
+                return;
+            }
+
+            ensureAnimationRunning();
             targetProgress = clampedPercent;
-            if (message != null && !message.isBlank())
+            if (messageChanged) {
+                lastStatusMessage = message;
                 statusLabel.setText(message);
+            }
         };
         if (SwingUtilities.isEventDispatchThread())
             r.run();
@@ -543,13 +641,23 @@ public class SplashscreenGUI extends JFrame {
      * @return the logo icon; returns a placeholder icon if the resource is missing
      */
     private static Icon loadLogo() {
-        URL logoUrl = SplashscreenGUI.class.getResource("/logo-small.png");
-        if (logoUrl == null)
-            return new EmptyIcon(96, 96);
+        Icon cached = cachedLogoIcon;
+        if (cached != null) {
+            return cached;
+        }
 
-        ImageIcon icon = new ImageIcon(logoUrl);
-        Image scaled = icon.getImage().getScaledInstance(96, 96, Image.SCALE_SMOOTH);
-        return new ImageIcon(scaled);
+        URL logoUrl = SplashscreenGUI.class.getResource("/logo-small.png");
+        Icon resolvedIcon;
+        if (logoUrl == null) {
+            resolvedIcon = new EmptyIcon(96, 96);
+        } else {
+            ImageIcon icon = new ImageIcon(logoUrl);
+            Image scaled = icon.getImage().getScaledInstance(96, 96, Image.SCALE_SMOOTH);
+            resolvedIcon = new ImageIcon(scaled);
+        }
+
+        cachedLogoIcon = resolvedIcon;
+        return resolvedIcon;
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -565,69 +673,19 @@ public class SplashscreenGUI extends JFrame {
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
-
-                GradientPaint gradientTop = new GradientPaint(
-                        0, 0, backgroundTop(),
-                        0, getHeight() * 0.65f, backgroundMid());
-                GradientPaint gradientBottom = new GradientPaint(
-                        0, getHeight() * 0.35f, backgroundMid(),
-                        0, getHeight(), backgroundBottom());
-
-                g2.setPaint(gradientTop);
-                g2.fillRect(0, 0, getWidth(), getHeight());
-                g2.setPaint(gradientBottom);
-                g2.fillRect(0, 0, getWidth(), getHeight());
-
-                double ph = SplashscreenGUI.this.getPhase();
-                int drift = (int) (Math.sin(ph) * 7);
-                int driftY = (int) (Math.cos(ph * 0.85) * 5);
-
-                // Big soft blobs for depth (premium, less "flat")
-                Color glow = glowBlue();
-                Color cyan = cachedAccentCyan;
-                g2.setColor(new Color(glow.getRed(), glow.getGreen(), glow.getBlue(), 58));
-                g2.fillOval(-240 + drift, -260 + driftY, 660, 660);
-
-                g2.setColor(new Color(cyan.getRed(), cyan.getGreen(), cyan.getBlue(), 34));
-                g2.fillOval(getWidth() - 520 - drift, getHeight() - 440 + driftY, 740, 740);
-
-                // White haze highlights
-                g2.setColor(new Color(255, 255, 255, 110));
-                g2.fillOval(getWidth() - 300 - drift, -60 + driftY, 380, 380);
-
-                g2.setColor(new Color(255, 255, 255, 70));
-                g2.fillOval(drift - 40, getHeight() - 310 + driftY, 360, 360);
-
-                paintAuroraBands(g2);
-                SplashscreenGUI.this.paintLightStreaks(g2);
-                SplashscreenGUI.this.paintParticles(g2);
+                BufferedImage cachedFrame = getCachedBackgroundFrame();
+                if (cachedFrame != null) {
+                    g2.drawImage(cachedFrame, 0, 0, null);
+                } else {
+                    paintAnimatedBackgroundFrame(g2, getWidth(), getHeight(), getPhase(), reducedAnimationMode,
+                            currentBackgroundFramePalette());
+                }
+                if (activeParticleCount > 0) {
+                    SplashscreenGUI.this.paintParticles(g2);
+                }
             } finally {
                 g2.dispose();
             }
-        }
-
-        private void paintAuroraBands(Graphics2D g2) {
-            int w = getWidth();
-            int h = getHeight();
-            if (w <= 0 || h <= 0)
-                return;
-
-            double ph = SplashscreenGUI.this.getPhase();
-            float cx = (float) ((Math.sin(ph * 0.35) * 0.5 + 0.5) * w);
-
-            // Soft "aurora" band (two-pass for richer gradient)
-            GradientPaint aurora = new GradientPaint(
-                    cx - w * 0.55f, 0, new Color(255, 255, 255, 0),
-                    cx + w * 0.55f, h, withAlpha(glowBlue(), 42));
-            g2.setPaint(aurora);
-            g2.fillRect(0, 0, w, h);
-
-            Color cyan = cachedAccentCyan;
-            GradientPaint aurora2 = new GradientPaint(
-                    cx - w * 0.35f, 0, withAlpha(cyan, 0),
-                    cx + w * 0.35f, h, withAlpha(cyan, 26));
-            g2.setPaint(aurora2);
-            g2.fillRect(0, 0, w, h);
         }
     }
 
@@ -659,71 +717,13 @@ public class SplashscreenGUI extends JFrame {
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_DEFAULT);
-
-                int x = SHADOW;
-                int y = SHADOW;
-                int w = width - SHADOW * 2;
-                int h = height - SHADOW * 2;
-                if (w <= 0 || h <= 0)
-                    return;
-
-                int arc = Math.min(ARC, Math.min(w, h));
-                Shape glass = new RoundRectangle2D.Float(x, y, w, h, arc, arc);
-
-                // Shadow (layered, smoother)
-                for (int i = 0; i < SHADOW; i++) {
-                    float a = (float) (0.16 * (1.0 - (i / (double) SHADOW)));
-                    g2.setColor(new Color(0f, 0f, 0f, a));
-                    g2.fillRoundRect(
-                            x + i - SHADOW / 2,
-                            y + i - SHADOW / 2,
-                            w - i + SHADOW,
-                            h - i + SHADOW,
-                            arc + 2, arc + 2);
+                BufferedImage cachedFrame = getCachedCardFrame(width, height);
+                if (cachedFrame != null) {
+                    g2.drawImage(cachedFrame, 0, 0, null);
+                } else {
+                    paintAnimatedGlassCardFrame(g2, width, height, getPhase(), reducedAnimationMode,
+                            currentCardFramePalette(), scale());
                 }
-
-                // Clip for fills
-                g2.setClip(glass);
-
-                // Base frosted glass
-                g2.setColor(cardTintTop());
-                g2.fill(glass);
-
-                // Inner gradient tint (top brighter, bottom slightly blue)
-                GradientPaint inner = new GradientPaint(
-                        x, y, isDarkTheme() ? new Color(255, 255, 255, 34) : new Color(255, 255, 255, 128),
-                        x, y + h, cardTintBottom());
-                g2.setPaint(inner);
-                g2.fill(glass);
-
-                // Subtle vignette for depth
-                GradientPaint vignette = new GradientPaint(
-                        x, y, new Color(0, 0, 0, 0),
-                        x, y + h, new Color(0, 0, 0, 18));
-                g2.setPaint(vignette);
-                g2.fill(glass);
-
-                // Animated sweep highlight
-                double ph = SplashscreenGUI.this.getPhase();
-                float sweepX = (float) (x + ((Math.sin(ph * 0.8) * 0.5 + 0.5) * w));
-                GradientPaint sweep = new GradientPaint(
-                        sweepX - w * 0.70f, y, new Color(255, 255, 255, 0),
-                        sweepX + w * 0.70f, y + h, new Color(255, 255, 255, 60));
-                g2.setPaint(sweep);
-                g2.fill(glass);
-
-                // Reset clip for strokes
-                g2.setClip(null);
-
-                // Border
-                g2.setStroke(new BasicStroke(scale()));
-                g2.setColor(new Color(255, 255, 255, 220));
-                g2.drawRoundRect(x, y, w - 1, h - 1, arc, arc);
-
-                // Inner glow border
-                g2.setColor(withAlpha(glowBlue(), 70));
-                g2.drawRoundRect(x + 2, y + 2, w - 5, h - 5, Math.max(arc - 2, 10), Math.max(arc - 2, 10));
-
             } finally {
                 g2.dispose();
             }
@@ -788,6 +788,7 @@ public class SplashscreenGUI extends JFrame {
             return;
         }
 
+        requestAnimationCacheWarmup();
         lastFrameNanos = -1L;
         frameCounter = 0;
 
@@ -823,7 +824,9 @@ public class SplashscreenGUI extends JFrame {
             }
 
             // Repaint only animated layers/components.
-            logoLabel.repaint();
+            if (!reducedAnimationMode || frameCounter % 2 == 0) {
+                logoLabel.repaint();
+            }
             progressBar.repaint();
             if (frameCounter % heavyRepaintIntervalFrames == 0) {
                 for (JComponent component : repaintTargets) {
@@ -865,6 +868,7 @@ public class SplashscreenGUI extends JFrame {
         if (!isDisplayable()) {
             return;
         }
+        requestAnimationCacheWarmup();
         if (animationTimer == null || !animationTimer.isRunning()) {
             startAnimation();
         }
@@ -944,7 +948,7 @@ public class SplashscreenGUI extends JFrame {
             try {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-                int bob = (int) (Math.sin(SplashscreenGUI.this.getPhase()) * 3);
+                int bob = reducedAnimationMode ? 0 : (int) (Math.sin(SplashscreenGUI.this.getPhase()) * 3);
                 g2.translate(0, bob);
 
                 // Softer glow behind logo (less "disky")
@@ -1019,16 +1023,18 @@ public class SplashscreenGUI extends JFrame {
                     g2.fillRoundRect(x, y, fillW, h, arc, arc);
 
                     // specular sweep
-                    double ph = SplashscreenGUI.this.getPhase();
-                    float sweepX = (float) (x + ((Math.sin(ph * 0.9) * 0.5 + 0.5) * fillW));
-                    GradientPaint sweep = new GradientPaint(
-                            sweepX - fillW * 0.55f, y, new Color(255, 255, 255, 0),
-                            sweepX + fillW * 0.55f, y + h, new Color(255, 255, 255, 120));
-                    Shape oldClip = g2.getClip();
-                    g2.setClip(new RoundRectangle2D.Float(x, y, fillW, h, arc, arc));
-                    g2.setPaint(sweep);
-                    g2.fillRect(x, y, fillW, h);
-                    g2.setClip(oldClip);
+                    if (!reducedAnimationMode) {
+                        double ph = SplashscreenGUI.this.getPhase();
+                        float sweepX = (float) (x + ((Math.sin(ph * 0.9) * 0.5 + 0.5) * fillW));
+                        GradientPaint sweep = new GradientPaint(
+                                sweepX - fillW * 0.55f, y, new Color(255, 255, 255, 0),
+                                sweepX + fillW * 0.55f, y + h, new Color(255, 255, 255, 120));
+                        Shape oldClip = g2.getClip();
+                        g2.setClip(new RoundRectangle2D.Float(x, y, fillW, h, arc, arc));
+                        g2.setPaint(sweep);
+                        g2.fillRect(x, y, fillW, h);
+                        g2.setClip(oldClip);
+                    }
                 }
 
                 // Border
@@ -1132,25 +1138,372 @@ public class SplashscreenGUI extends JFrame {
     // Light streaks
     // ---------------------------------------------------------------------------------------------
 
-    private void paintLightStreaks(Graphics2D g2) {
-        double ph = getPhase();
-        int w = getWidth();
-        int h = getHeight();
+    private BackgroundFramePalette currentBackgroundFramePalette() {
+        return new BackgroundFramePalette(
+                backgroundTop(),
+                backgroundMid(),
+                backgroundBottom(),
+                glowBlue(),
+                cachedAccentCyan,
+                cachedStreak1Color);
+    }
 
-        float x1 = (float) ((Math.sin(ph * 0.6) * 0.5 + 0.5) * w);
-        float x2 = (float) ((Math.cos(ph * 0.5) * 0.5 + 0.5) * w);
+    private CardFramePalette currentCardFramePalette() {
+        return new CardFramePalette(
+                glowBlue(),
+                cardTintTop(),
+                cardTintBottom(),
+                isDarkTheme());
+    }
+
+    private void invalidateAnimationCache() {
+        backgroundCacheGeneration++;
+        backgroundFrameCache = null;
+        cachedBackgroundWidth = -1;
+        cachedBackgroundHeight = -1;
+        cachedBackgroundFrameCount = 0;
+        cachedBackgroundDarkMode = false;
+        cachedBackgroundReducedMode = false;
+        backgroundCacheBuilding = false;
+        cardFrameCache = null;
+        cachedCardWidth = -1;
+        cachedCardHeight = -1;
+        cachedCardFrameCount = 0;
+        cachedCardDarkMode = false;
+        cachedCardReducedMode = false;
+        cardCacheBuilding = false;
+    }
+
+    private void requestAnimationCacheWarmup() {
+        int width = Math.max(getWidth(), 0);
+        int height = Math.max(getHeight(), 0);
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        boolean dark = isDarkTheme();
+        boolean reduced = reducedAnimationMode;
+        int frameCount = reduced ? REDUCED_BACKGROUND_CACHE_FRAME_COUNT : BACKGROUND_CACHE_FRAME_COUNT;
+        BufferedImage[] cache = backgroundFrameCache;
+        if (cache != null
+                && cachedBackgroundWidth == width
+                && cachedBackgroundHeight == height
+                && cachedBackgroundFrameCount == frameCount
+                && cachedBackgroundDarkMode == dark
+                && cachedBackgroundReducedMode == reduced) {
+            return;
+        }
+
+        synchronized (this) {
+            cache = backgroundFrameCache;
+            if (cache != null
+                    && cachedBackgroundWidth == width
+                    && cachedBackgroundHeight == height
+                    && cachedBackgroundFrameCount == frameCount
+                    && cachedBackgroundDarkMode == dark
+                    && cachedBackgroundReducedMode == reduced) {
+                return;
+            }
+            if (backgroundCacheBuilding) {
+                return;
+            }
+            backgroundCacheBuilding = true;
+        }
+
+        long generation = backgroundCacheGeneration;
+        BackgroundFramePalette palette = currentBackgroundFramePalette();
+        Thread cacheThread = new Thread(() -> buildAnimationCache(width, height, frameCount, reduced, dark, generation, palette),
+                "Splashscreen-background-cache");
+        cacheThread.setDaemon(true);
+        cacheThread.start();
+        int cardWidth = Math.max(cardPanel.getWidth(), 0);
+        int cardHeight = Math.max(cardPanel.getHeight(), 0);
+        if (cardWidth > 0 && cardHeight > 0) {
+            requestCardAnimationCacheWarmup(cardWidth, cardHeight, frameCount, reduced, dark, generation);
+        }
+    }
+
+    private void buildAnimationCache(int width,
+            int height,
+            int frameCount,
+            boolean reducedMode,
+            boolean darkMode,
+            long generation,
+            BackgroundFramePalette palette) {
+        BufferedImage[] frames = new BufferedImage[frameCount];
+        for (int i = 0; i < frameCount; i++) {
+            double phaseValue = (BACKGROUND_CACHE_LOOP_PHASE * i) / frameCount;
+            BufferedImage frame = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2 = frame.createGraphics();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
+                paintAnimatedBackgroundFrame(g2, width, height, phaseValue, reducedMode, palette);
+            } finally {
+                g2.dispose();
+            }
+            frames[i] = frame;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            if (generation == backgroundCacheGeneration
+                    && width == getWidth()
+                    && height == getHeight()
+                    && darkMode == isDarkTheme()
+                    && reducedMode == reducedAnimationMode) {
+                backgroundFrameCache = frames;
+                cachedBackgroundWidth = width;
+                cachedBackgroundHeight = height;
+                cachedBackgroundFrameCount = frameCount;
+                cachedBackgroundDarkMode = darkMode;
+                cachedBackgroundReducedMode = reducedMode;
+                repaint();
+            }
+            backgroundCacheBuilding = false;
+        });
+    }
+
+    private BufferedImage getCachedBackgroundFrame() {
+        BufferedImage[] cache = backgroundFrameCache;
+        if (cache == null || cache.length == 0) {
+            return null;
+        }
+
+        double normalizedPhase = getPhase() % BACKGROUND_CACHE_LOOP_PHASE;
+        if (normalizedPhase < 0.0) {
+            normalizedPhase += BACKGROUND_CACHE_LOOP_PHASE;
+        }
+        int index = (int) Math.floor((normalizedPhase / BACKGROUND_CACHE_LOOP_PHASE) * cache.length);
+        return cache[Math.min(Math.max(index, 0), cache.length - 1)];
+    }
+
+    private void requestCardAnimationCacheWarmup(int width, int height, int frameCount, boolean reduced, boolean dark,
+            long generation) {
+        synchronized (this) {
+            if (cardFrameCache != null
+                    && cachedCardWidth == width
+                    && cachedCardHeight == height
+                    && cachedCardFrameCount == frameCount
+                    && cachedCardDarkMode == dark
+                    && cachedCardReducedMode == reduced) {
+                return;
+            }
+            if (cardCacheBuilding) {
+                return;
+            }
+            cardCacheBuilding = true;
+        }
+
+        CardFramePalette palette = currentCardFramePalette();
+        Thread cacheThread = new Thread(
+                () -> buildCardAnimationCache(width, height, frameCount, reduced, dark, generation, palette),
+                "Splashscreen-card-cache");
+        cacheThread.setDaemon(true);
+        cacheThread.start();
+    }
+
+    private void buildCardAnimationCache(int width,
+            int height,
+            int frameCount,
+            boolean reducedMode,
+            boolean darkMode,
+            long generation,
+            CardFramePalette palette) {
+        BufferedImage[] frames = new BufferedImage[frameCount];
+        for (int i = 0; i < frameCount; i++) {
+            double phaseValue = (BACKGROUND_CACHE_LOOP_PHASE * i) / frameCount;
+            BufferedImage frame = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g2 = frame.createGraphics();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_DEFAULT);
+                paintAnimatedGlassCardFrame(g2, width, height, phaseValue, reducedMode, palette, GlassPanel.STROKE);
+            } finally {
+                g2.dispose();
+            }
+            frames[i] = frame;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            if (generation == backgroundCacheGeneration
+                    && width == getWidth()
+                    && height == getHeight()
+                    && darkMode == isDarkTheme()
+                    && reducedMode == reducedAnimationMode) {
+                cardFrameCache = frames;
+                cachedCardWidth = width;
+                cachedCardHeight = height;
+                cachedCardFrameCount = frameCount;
+                cachedCardDarkMode = darkMode;
+                cachedCardReducedMode = reducedMode;
+                repaint();
+            }
+            cardCacheBuilding = false;
+        });
+    }
+
+    private BufferedImage getCachedCardFrame(int width, int height) {
+        BufferedImage[] cache = cardFrameCache;
+        if (cache == null || cache.length == 0 || width != cachedCardWidth || height != cachedCardHeight) {
+            return null;
+        }
+
+        double normalizedPhase = getPhase() % BACKGROUND_CACHE_LOOP_PHASE;
+        if (normalizedPhase < 0.0) {
+            normalizedPhase += BACKGROUND_CACHE_LOOP_PHASE;
+        }
+        int index = (int) Math.floor((normalizedPhase / BACKGROUND_CACHE_LOOP_PHASE) * cache.length);
+        return cache[Math.min(Math.max(index, 0), cache.length - 1)];
+    }
+
+    private void paintAnimatedBackgroundFrame(Graphics2D g2,
+            int width,
+            int height,
+            double phaseValue,
+            boolean reducedMode,
+            BackgroundFramePalette palette) {
+        if (width <= 0 || height <= 0 || palette == null) {
+            return;
+        }
+
+        GradientPaint gradientTop = new GradientPaint(
+                0, 0, palette.backgroundTop(),
+                0, height * 0.65f, palette.backgroundMid());
+        GradientPaint gradientBottom = new GradientPaint(
+                0, height * 0.35f, palette.backgroundMid(),
+                0, height, palette.backgroundBottom());
+
+        g2.setPaint(gradientTop);
+        g2.fillRect(0, 0, width, height);
+        g2.setPaint(gradientBottom);
+        g2.fillRect(0, 0, width, height);
+
+        int drift = reducedMode ? 0 : (int) (Math.sin(phaseValue) * 7);
+        int driftY = reducedMode ? 0 : (int) (Math.cos(phaseValue * 0.85) * 5);
+
+        Color glow = palette.glowBlue();
+        Color cyan = palette.accentCyan();
+        g2.setColor(new Color(glow.getRed(), glow.getGreen(), glow.getBlue(), 58));
+        g2.fillOval(-240 + drift, -260 + driftY, 660, 660);
+
+        g2.setColor(new Color(cyan.getRed(), cyan.getGreen(), cyan.getBlue(), 34));
+        g2.fillOval(width - 520 - drift, height - 440 + driftY, 740, 740);
+
+        g2.setColor(new Color(255, 255, 255, 110));
+        g2.fillOval(width - 300 - drift, -60 + driftY, 380, 380);
+
+        g2.setColor(new Color(255, 255, 255, 70));
+        g2.fillOval(drift - 40, height - 310 + driftY, 360, 360);
+
+        if (!reducedMode) {
+            paintAuroraBands(g2, width, height, phaseValue, palette);
+            paintLightStreaks(g2, width, height, phaseValue, palette);
+        }
+    }
+
+    private void paintAnimatedGlassCardFrame(Graphics2D g2,
+            int width,
+            int height,
+            double phaseValue,
+            boolean reducedMode,
+            CardFramePalette palette,
+            float strokeScale) {
+        if (width <= 0 || height <= 0 || palette == null) {
+            return;
+        }
+
+        int x = GlassPanel.SHADOW;
+        int y = GlassPanel.SHADOW;
+        int w = width - GlassPanel.SHADOW * 2;
+        int h = height - GlassPanel.SHADOW * 2;
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+
+        int arc = Math.min(GlassPanel.ARC, Math.min(w, h));
+        Shape glass = new RoundRectangle2D.Float(x, y, w, h, arc, arc);
+
+        int shadowLayers = reducedMode ? 6 : GlassPanel.SHADOW;
+        for (int i = 0; i < shadowLayers; i++) {
+            float a = (float) (0.16 * (1.0 - (i / (double) GlassPanel.SHADOW)));
+            g2.setColor(new Color(0f, 0f, 0f, a));
+            g2.fillRoundRect(
+                    x + i - GlassPanel.SHADOW / 2,
+                    y + i - GlassPanel.SHADOW / 2,
+                    w - i + GlassPanel.SHADOW,
+                    h - i + GlassPanel.SHADOW,
+                    arc + 2, arc + 2);
+        }
+
+        g2.setClip(glass);
+        g2.setColor(palette.cardTintTop());
+        g2.fill(glass);
+
+        GradientPaint inner = new GradientPaint(
+                x, y, palette.darkTheme() ? new Color(255, 255, 255, 34) : new Color(255, 255, 255, 128),
+                x, y + h, palette.cardTintBottom());
+        g2.setPaint(inner);
+        g2.fill(glass);
+
+        GradientPaint vignette = new GradientPaint(
+                x, y, new Color(0, 0, 0, 0),
+                x, y + h, new Color(0, 0, 0, 18));
+        g2.setPaint(vignette);
+        g2.fill(glass);
+
+        if (!reducedMode) {
+            float sweepX = (float) (x + ((Math.sin(phaseValue * 0.8) * 0.5 + 0.5) * w));
+            GradientPaint sweep = new GradientPaint(
+                    sweepX - w * 0.70f, y, new Color(255, 255, 255, 0),
+                    sweepX + w * 0.70f, y + h, new Color(255, 255, 255, 60));
+            g2.setPaint(sweep);
+            g2.fill(glass);
+        }
+
+        g2.setClip(null);
+        g2.setStroke(new BasicStroke(strokeScale));
+        g2.setColor(new Color(255, 255, 255, 220));
+        g2.drawRoundRect(x, y, w - 1, h - 1, arc, arc);
+
+        g2.setColor(withAlpha(palette.glowBlue(), 70));
+        g2.drawRoundRect(x + 2, y + 2, w - 5, h - 5, Math.max(arc - 2, 10), Math.max(arc - 2, 10));
+    }
+
+    private void paintAuroraBands(Graphics2D g2, int width, int height, double phaseValue, BackgroundFramePalette palette) {
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        float cx = (float) ((Math.sin(phaseValue * 0.35) * 0.5 + 0.5) * width);
+
+        GradientPaint aurora = new GradientPaint(
+                cx - width * 0.55f, 0, new Color(255, 255, 255, 0),
+                cx + width * 0.55f, height, withAlpha(palette.glowBlue(), 42));
+        g2.setPaint(aurora);
+        g2.fillRect(0, 0, width, height);
+
+        GradientPaint aurora2 = new GradientPaint(
+                cx - width * 0.35f, 0, withAlpha(palette.accentCyan(), 0),
+                cx + width * 0.35f, height, withAlpha(palette.accentCyan(), 26));
+        g2.setPaint(aurora2);
+        g2.fillRect(0, 0, width, height);
+    }
+
+    private void paintLightStreaks(Graphics2D g2, int width, int height, double phaseValue, BackgroundFramePalette palette) {
+        float x1 = (float) ((Math.sin(phaseValue * 0.6) * 0.5 + 0.5) * width);
+        float x2 = (float) ((Math.cos(phaseValue * 0.5) * 0.5 + 0.5) * width);
 
         GradientPaint streak1 = new GradientPaint(
-                x1 - w * 0.34f, 0, new Color(255, 255, 255, 0),
-                x1 + w * 0.34f, h, cachedStreak1Color);
+                x1 - width * 0.34f, 0, new Color(255, 255, 255, 0),
+                x1 + width * 0.34f, height, palette.streak1Color());
         g2.setPaint(streak1);
-        g2.fillRect(0, 0, w, h);
+        g2.fillRect(0, 0, width, height);
 
         GradientPaint streak2 = new GradientPaint(
-                x2 - w * 0.38f, 0, withAlpha(glowBlue(), 0),
-                x2 + w * 0.38f, h, withAlpha(glowBlue(), 46));
+                x2 - width * 0.38f, 0, withAlpha(palette.glowBlue(), 0),
+                x2 + width * 0.38f, height, withAlpha(palette.glowBlue(), 46));
         g2.setPaint(streak2);
-        g2.fillRect(0, 0, w, h);
+        g2.fillRect(0, 0, width, height);
     }
 
     private static Color withAlpha(Color base, int alpha) {

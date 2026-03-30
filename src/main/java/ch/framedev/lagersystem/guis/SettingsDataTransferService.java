@@ -3,7 +3,6 @@ package ch.framedev.lagersystem.guis;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.classes.Vendor;
-import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.ClientManager;
@@ -11,7 +10,6 @@ import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.VendorManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
-import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -249,13 +247,7 @@ final class SettingsDataTransferService {
         int errors = 0;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
-            String headerLine = reader.readLine();
-            if (headerLine == null) {
-                new MessageDialog()
-                        .setTitle("Fehler")
-                        .setMessage("Die CSV-Datei ist leer.")
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
+            if (!skipHeader(reader)) {
                 return;
             }
 
@@ -292,28 +284,14 @@ final class SettingsDataTransferService {
                 }
             }
 
-            new MessageDialog()
-                    .setTitle("Import Ergebnis")
-                    .setMessage(String.format("<html><b>Artikel-Import abgeschlossen</b><br/><br/>" +
-                                    UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
-                                    (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
-                                    "</html>", imported, errors))
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
+            SettingsCsvFeedbackService.showImportResult("Artikel", imported, errors);
 
-            System.out.printf("[SettingsGUI] Artikel-Import: %d erfolgreich, %d Fehler%n", imported, errors);
             LOGGER.info("Article CSV import finished: imported={}, errors={}, file={}",
                     imported, errors, csvFile.getAbsolutePath());
-            Main.logUtils.addLog(String.format("Artikel-Import: %d erfolgreich, %d Fehler", imported, errors));
+            logImportSummary("Artikel", imported, errors);
 
         } catch (Exception e) {
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Importieren: " + e.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            System.err.println("[SettingsGUI] Fehler beim Importieren der Artikel: " + e.getMessage());
-            Main.logUtils.addLog(String.format("Fehler beim Importieren der Artikel: %s", e.getMessage()));
+            logImportFailure("Artikel", e);
         }
     }
 
@@ -335,13 +313,7 @@ final class SettingsDataTransferService {
         int errors = 0;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
-            String headerLine = reader.readLine();
-            if (headerLine == null) {
-                new MessageDialog()
-                        .setTitle("Fehler")
-                        .setMessage("Die CSV-Datei ist leer.")
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
+            if (!skipHeader(reader)) {
                 return;
             }
 
@@ -387,28 +359,12 @@ final class SettingsDataTransferService {
                 }
             }
 
-            new MessageDialog()
-                    .setMessage(
-                            String.format("<html><b>Lieferanten-Import abgeschlossen</b><br/><br/>" +
-                                            UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
-                                            (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
-                                            "</html>", imported, errors))
-                    .setTitle("Import Ergebnis")
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
+            SettingsCsvFeedbackService.showImportResult("Lieferanten", imported, errors);
 
-            System.out.printf("[SettingsGUI] Lieferanten-Import: %d erfolgreich, %d Fehler%n", imported, errors);
-            String logMessage = String.format("Lieferanten-Import: %d erfolgreich, %d Fehler", imported, errors);
-            Main.logUtils.addLog(logMessage);
+            logImportSummary("Lieferanten", imported, errors);
 
         } catch (Exception e) {
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Importieren: " + e.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            System.err.println("[SettingsGUI] Fehler beim Importieren der Lieferanten: " + e.getMessage());
-            Main.logUtils.addLog("Fehler beim Importieren der Lieferanten: " + e.getMessage());
+            logImportFailure("Lieferanten", e);
         }
     }
 
@@ -417,13 +373,7 @@ final class SettingsDataTransferService {
         int errors = 0;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
-            String headerLine = reader.readLine();
-            if (headerLine == null) {
-                new MessageDialog()
-                        .setTitle("Fehler")
-                        .setMessage("Die CSV-Datei ist leer.")
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
+            if (!skipHeader(reader)) {
                 Main.logUtils.addLog("Die CSV-Datei ist leer.");
                 return;
             }
@@ -461,40 +411,23 @@ final class SettingsDataTransferService {
                 }
             }
 
-            new MessageDialog()
-                    .setTitle("Import Ergebnis")
-                    .setMessage(String.format("<html><b>Kunden-Import abgeschlossen</b><br/><br/>" +
-                                    UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
-                                    (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
-                                    "</html>", imported, errors))
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
+            SettingsCsvFeedbackService.showImportResult("Kunden", imported, errors);
 
-            System.out.printf("[SettingsGUI] Kunden-Import: %d erfolgreich, %d Fehler%n", imported, errors);
-            String logMessage = String.format("Kunden-Import: %d erfolgreich, %d Fehler", imported, errors);
-            Main.logUtils.addLog(logMessage);
+            logImportSummary("Kunden", imported, errors);
 
         } catch (Exception e) {
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Importieren: " + e.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            System.err.println("[SettingsGUI] Fehler beim Importieren der Kunden: " + e.getMessage());
-            Main.logUtils.addLog("Fehler beim Importieren der Kunden: " + e.getMessage());
+            logImportFailure("Kunden", e);
         }
     }
 
     private static void importOrdersFromCsv() {
         LOGGER.info("Order CSV import requested but remains disabled");
         Main.logUtils.addLog("Bestellungs-Import angefordert, aber deaktiviert.");
-        new MessageDialog()
-                .setTitle("Nicht verfügbar")
-                .setMessage("<html><b>Bestellungs-Import nicht verfügbar</b><br/><br/>" +
+        SettingsCsvFeedbackService.showImportUnavailable(
+                "Nicht verfügbar",
+                "<html><b>Bestellungs-Import nicht verfügbar</b><br/><br/>" +
                         "Der Import von Bestellungen ist aus Sicherheitsgründen deaktiviert.<br/>" +
-                        "Bestellungen sollten nur über die normale Bestellfunktion erstellt werden.</html>")
-                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                .display();
+                        "Bestellungen sollten nur über die normale Bestellfunktion erstellt werden.</html>");
         System.out.println(
                 "[SettingsGUI] Bestellungs-Import wurde übersprungen (nicht implementiert aus Sicherheitsgründen)");
     }
@@ -504,13 +437,7 @@ final class SettingsDataTransferService {
         int errors = 0;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(csvFile))) {
-            String headerLine = reader.readLine();
-            if (headerLine == null) {
-                new MessageDialog()
-                        .setTitle("Fehler")
-                        .setMessage("Die CSV-Datei ist leer.")
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
+            if (!skipHeader(reader)) {
                 return;
             }
 
@@ -552,27 +479,29 @@ final class SettingsDataTransferService {
                 }
             }
 
-            new MessageDialog()
-                    .setTitle("Import Ergebnis")
-                    .setMessage(String.format("<html><b>Abteilungs-Import abgeschlossen</b><br/><br/>" +
-                                    UnicodeSymbols.CHECKMARK + " Importiert/Aktualisiert: %d<br/>" +
-                                    (errors > 0 ? UnicodeSymbols.ERROR + " Fehler: %d<br/>" : "") +
-                                    "</html>", imported, errors))
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
+            SettingsCsvFeedbackService.showImportResult("Abteilungen", imported, errors);
 
-            System.out.printf("[SettingsGUI] Abteilungs-Import: %d erfolgreich, %d Fehler%n", imported, errors);
-            Main.logUtils.addLog(String.format("Abteilungs-Import: %d erfolgreich, %d Fehler", imported, errors));
+            logImportSummary("Abteilungen", imported, errors);
 
         } catch (Exception e) {
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Importieren: " + e.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
-            System.err.println("[SettingsGUI] Fehler beim Importieren der Abteilungen: " + e.getMessage());
-            Main.logUtils.addLog("Fehler beim Importieren der Abteilungen: " + e.getMessage());
+            logImportFailure("Abteilungen", e);
         }
+    }
+
+    private static boolean skipHeader(BufferedReader reader) throws IOException {
+        return SettingsCsvFeedbackService.ensureCsvHasHeader(reader.readLine());
+    }
+
+    private static void logImportSummary(String entityLabel, int imported, int errors) {
+        String message = String.format("%s-Import: %d erfolgreich, %d Fehler", entityLabel, imported, errors);
+        System.out.printf("[SettingsGUI] %s%n", message);
+        Main.logUtils.addLog(message);
+    }
+
+    private static void logImportFailure(String entityLabel, Exception exception) {
+        SettingsCsvFeedbackService.showImportError(entityLabel, exception.getMessage());
+        System.err.println("[SettingsGUI] Fehler beim Importieren der " + entityLabel + ": " + exception.getMessage());
+        Main.logUtils.addLog("Fehler beim Importieren der " + entityLabel + ": " + exception.getMessage());
     }
 
     private static String[] parseCsvLine(String line) {

@@ -2,6 +2,7 @@ package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
+import ch.framedev.lagersystem.managers.SchedulerManager;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.utils.JFrameUtils;
@@ -45,6 +46,7 @@ public class MainGUI extends JFrame {
     private static final String EMBEDDED_CONTENT_PROPERTY = "embeddedContent";
     private static final String EMBEDDED_SHORTCUT_ACTION_PREFIX = "main.embedded.shortcut.";
     private static final int DASHBOARD_CARD_RADIUS = 18;
+    private static final int HEADER_CLOCK_UPDATE_INTERVAL_MS = 10_000;
 
     private static final class EmbeddedShortcut {
         private final int tabIndex;
@@ -110,6 +112,13 @@ public class MainGUI extends JFrame {
 
     private JTabbedPane tabbedPane;
     private final Map<KeyStroke, EmbeddedShortcutBinding> embeddedShortcutBindings = new LinkedHashMap<>();
+    private final SimpleDateFormat headerDateFormat = new SimpleDateFormat("dd. MMMM", Locale.GERMAN);
+    private final SimpleDateFormat headerTimeFormat = new SimpleDateFormat("HH:mm", Locale.GERMAN);
+    private final SimpleDateFormat headerWarningTimeFormat = new SimpleDateFormat("HH:mm", Locale.GERMAN);
+    private JLabel headerDateValueLabel;
+    private JLabel headerTimeValueLabel;
+    private JLabel headerWarningCheckLabel;
+    private Timer headerClockTimer;
 
     /**
      * IMPORTANT: These are the actual content frames for each tab. We keep them as
@@ -179,12 +188,14 @@ public class MainGUI extends JFrame {
 
         setContentPane(mainPanel);
         installGlobalShortcuts();
+        startHeaderClock();
         logger.info("MainGUI window initialized");
     }
 
     @Override
     public void dispose() {
         logger.info("Disposing MainGUI window");
+        stopHeaderClock();
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
     }
@@ -511,11 +522,6 @@ public class MainGUI extends JFrame {
             true,
             e -> openConverterForSelection());
 
-        JLabel dateLabel = new JLabel(new SimpleDateFormat("dd. MMMM yyyy", Locale.GERMAN).format(new Date()));
-        dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        dateLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
-        dateLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
-
         JPanel quickActionsCard = createHeaderCard(new FlowLayout(FlowLayout.LEFT, 8, 0));
         quickActionsCard.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
@@ -529,14 +535,51 @@ public class MainGUI extends JFrame {
 
         JPanel dateCard = createHeaderCard(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         dateCard.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        JLabel calendarLabel = new JLabel(UnicodeSymbols.CALENDAR + " " + dateLabel.getText());
-        calendarLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        calendarLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
-        dateCard.add(calendarLabel);
+        JLabel calendarIconLabel = new JLabel(UnicodeSymbols.CALENDAR);
+        calendarIconLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        calendarIconLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
+        dateCard.add(calendarIconLabel);
+
+        headerDateValueLabel = new JLabel();
+        headerDateValueLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        headerDateValueLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
+        dateCard.add(headerDateValueLabel);
+
+        JLabel separatorLabel = new JLabel("•");
+        separatorLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        separatorLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 180));
+        dateCard.add(separatorLabel);
+
+        JLabel clockIconLabel = new JLabel(UnicodeSymbols.CLOCK);
+        clockIconLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        clockIconLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
+        dateCard.add(clockIconLabel);
+
+        headerTimeValueLabel = new JLabel();
+        headerTimeValueLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        headerTimeValueLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
+        dateCard.add(headerTimeValueLabel);
+        updateHeaderDateTime();
+
+        JPanel warningCard = createHeaderCard(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        warningCard.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
+        JLabel warningIconLabel = new JLabel(UnicodeSymbols.WARNING);
+        warningIconLabel.setFont(getEmojiCapableFont(SettingsGUI.getFontByName(Font.PLAIN, 12)));
+        warningIconLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
+        warningCard.add(warningIconLabel);
+
+        headerWarningCheckLabel = new JLabel();
+        headerWarningCheckLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        headerWarningCheckLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
+        warningCard.add(headerWarningCheckLabel);
+        updateHeaderWarningSchedule();
 
         rightPanel.add(quickActionsCard);
         rightPanel.add(Box.createVerticalStrut(6));
         rightPanel.add(dateCard);
+        rightPanel.add(Box.createVerticalStrut(6));
+        rightPanel.add(warningCard);
 
         return rightPanel;
     }
@@ -837,6 +880,88 @@ public class MainGUI extends JFrame {
                 BorderFactory.createLineBorder(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 70), 1, true),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)));
         return panel;
+    }
+
+    private void startHeaderClock() {
+        stopHeaderClock();
+        headerClockTimer = new Timer(HEADER_CLOCK_UPDATE_INTERVAL_MS, e -> updateHeaderDateTime());
+        headerClockTimer.setInitialDelay(0);
+        headerClockTimer.start();
+    }
+
+    private void stopHeaderClock() {
+        if (headerClockTimer != null) {
+            headerClockTimer.stop();
+            headerClockTimer = null;
+        }
+    }
+
+    private void updateHeaderDateTime() {
+        Date now = new Date();
+        if (headerDateValueLabel != null) {
+            headerDateValueLabel.setText(headerDateFormat.format(now));
+        }
+        if (headerTimeValueLabel != null) {
+            headerTimeValueLabel.setText(headerTimeFormat.format(now));
+        }
+        updateHeaderWarningSchedule();
+    }
+
+    private void updateHeaderWarningSchedule() {
+        if (headerWarningCheckLabel == null) {
+            return;
+        }
+
+        if (!isWarningDisplayEnabled()) {
+            headerWarningCheckLabel.setText("Warnpruefung aus");
+            return;
+        }
+
+        long nextWarningCheckMillis = SchedulerManager.getInstance().getNextWarningDisplayAtMillis();
+        if (nextWarningCheckMillis <= 0L) {
+            long fallbackMillis = getConfiguredWarningDisplayIntervalMillis();
+            if (fallbackMillis > 0L) {
+                nextWarningCheckMillis = System.currentTimeMillis() + fallbackMillis;
+            }
+        }
+
+        if (nextWarningCheckMillis > 0L) {
+            headerWarningCheckLabel.setText("Naechste Warnpruefung " + headerWarningTimeFormat.format(new Date(nextWarningCheckMillis)));
+        } else {
+            headerWarningCheckLabel.setText("Warnpruefung wird vorbereitet");
+        }
+    }
+
+    private boolean isWarningDisplayEnabled() {
+        if (Main.settings == null) {
+            return true;
+        }
+
+        String configured = Main.settings.getProperty("enable_hourly_warnings");
+        if (configured != null) {
+            return Boolean.parseBoolean(configured);
+        }
+
+        String legacyConfigured = Main.settings.getProperty("enable_houtly_warnings");
+        return legacyConfigured == null || Boolean.parseBoolean(legacyConfigured);
+    }
+
+    private long getConfiguredWarningDisplayIntervalMillis() {
+        if (Main.settings == null) {
+            return 60L * 60L * 1000L;
+        }
+
+        String rawInterval = Main.settings.getProperty("warning_display_interval");
+        if (rawInterval == null || rawInterval.isBlank()) {
+            return 60L * 60L * 1000L;
+        }
+
+        try {
+            long hours = Long.parseLong(rawInterval.trim());
+            return hours > 0L ? hours * 60L * 60L * 1000L : 60L * 60L * 1000L;
+        } catch (NumberFormatException ignored) {
+            return 60L * 60L * 1000L;
+        }
     }
 
     private JLabel createHeaderBadge(String text, boolean highlighted) {

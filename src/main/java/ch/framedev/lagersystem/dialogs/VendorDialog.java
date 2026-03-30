@@ -387,39 +387,11 @@ public class VendorDialog {
      * Creates a styled text field for vendor dialogs with blue focus effect
      */
     private static JTextField createStyledTextField() {
-        JTextField field = new JTextField(30);
-        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        field.setBackground(ThemeManager.getInputBackgroundColor());
-        field.setForeground(ThemeManager.getTextPrimaryColor());
-        field.setCaretColor(ThemeManager.getAccentColor());
-
-        Color normalBorder = ThemeManager.getBorderColor();
-        Color focusBorder = ThemeManager.getAccentColor();
-
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(normalBorder, 1, true),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(focusBorder, 2, true),
-                        BorderFactory.createEmptyBorder(9, 11, 9, 11)
-                ));
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(normalBorder, 1, true),
-                        BorderFactory.createEmptyBorder(10, 12, 10, 12)
-                ));
-            }
-        });
-
-        return field;
+        return DialogFieldStylingService.createTextField(
+                30,
+                ThemeManager.getBorderColor(),
+                ThemeManager.getAccentColor(),
+                new Insets(10, 12, 10, 12));
     }
 
     private static JFormattedTextField createMoneyField() {
@@ -434,36 +406,11 @@ public class VendorDialog {
 
         JFormattedTextField field = new JFormattedTextField(formatter);
         field.setColumns(10);
-        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        field.setBackground(ThemeManager.getInputBackgroundColor());
-        field.setForeground(ThemeManager.getTextPrimaryColor());
-        field.setCaretColor(ThemeManager.getAccentColor());
-
-        Color normalBorder = ThemeManager.getBorderColor();
-        Color focusBorder = ThemeManager.getAccentColor();
-
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(normalBorder, 1, true),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(focusBorder, 2, true),
-                        BorderFactory.createEmptyBorder(9, 11, 9, 11)
-                ));
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(normalBorder, 1, true),
-                        BorderFactory.createEmptyBorder(10, 12, 10, 12)
-                ));
-            }
-        });
+        DialogFieldStylingService.styleTextComponent(
+                field,
+                ThemeManager.getBorderColor(),
+                ThemeManager.getAccentColor(),
+                new Insets(10, 12, 10, 12));
 
         return field;
     }

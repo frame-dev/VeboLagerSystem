@@ -86,41 +86,25 @@ public class OrderGUI extends JFrame {
         LOGGER.info("Initializing OrderGUI window");
 
         // Top area (header + toolbar)
-        JPanel topPanel = new JPanel();
-        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
-        topPanel.setBackground(ThemeManager.getBackgroundColor());
-        topPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 8, 12));
+        JPanel topPanel = JFrameUtils.createVerticalContainer(
+                ThemeManager.getBackgroundColor(),
+                new Insets(12, 12, 8, 12));
 
-        JFrameUtils.RoundedPanel headerCard = null;
+        JPanel headerWrapper = null;
         boolean disableHeader = Main.settings.getProperty("disable_header") != null
                 && Main.settings.getProperty("disable_header").equalsIgnoreCase("true");
         if (!disableHeader) {
-
-            // Header card
-            headerCard = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-            headerCard.setLayout(new BorderLayout());
-            headerCard.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                    BorderFactory.createEmptyBorder(14, 18, 14, 18)));
-
-            JLabel titleLabel = new JLabel(UnicodeSymbols.PACKAGE + " Bestellungen Verwaltung");
-            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-            titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
-            JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Bestellungen verwalten, filtern und exportieren");
-            subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-            subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
-
-            JPanel titleBox = new JPanel();
-            titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
-            titleBox.setOpaque(false);
-            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            titleBox.add(titleLabel);
-            titleBox.add(Box.createVerticalStrut(4));
-            titleBox.add(subtitleLabel);
-
-            headerCard.add(titleBox, BorderLayout.WEST);
+            headerWrapper = JFrameUtils.createHeaderWrapper(
+                    "Bestellungen Verwaltung",
+                    "Bestellungen verwalten, filtern und exportieren",
+                    UnicodeSymbols.PACKAGE + " ",
+                    UnicodeSymbols.INFO + " ",
+                    22,
+                    12,
+                    4,
+                    20,
+                    new Insets(14, 18, 14, 18),
+                    null);
         }
 
         // Toolbar card
@@ -153,10 +137,9 @@ public class OrderGUI extends JFrame {
         toolbarCard.add(completeOrderButton);
         toolbarCard.add(refreshButton);
 
-        if (headerCard != null) {
-            headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        if (headerWrapper != null) {
             toolbarCard.setAlignmentX(Component.LEFT_ALIGNMENT);
-            topPanel.add(headerCard);
+            topPanel.add(headerWrapper);
             topPanel.add(Box.createVerticalStrut(10));
         }
         topPanel.add(toolbarCard);

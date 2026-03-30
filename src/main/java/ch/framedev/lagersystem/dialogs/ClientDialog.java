@@ -578,39 +578,11 @@ public class ClientDialog {
     }
 
     private static JTextField createTextField() {
-        JTextField field = new JTextField(35);
-        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        field.setBackground(ThemeManager.getInputBackgroundColor());
-        field.setForeground(ThemeManager.getTextPrimaryColor());
-        field.setCaretColor(ThemeManager.getAccentColor());
-
-        Color normalBorder = ThemeManager.getInputBorderColor();
-        Color focusBorder = ThemeManager.getInputFocusBorderColor();
-
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(normalBorder, 1, true),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)
-        ));
-
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(focusBorder, 2, true),
-                        BorderFactory.createEmptyBorder(11, 13, 11, 13)
-                ));
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(normalBorder, 1, true),
-                        BorderFactory.createEmptyBorder(12, 14, 12, 14)
-                ));
-            }
-        });
-
-        return field;
+        return DialogFieldStylingService.createTextField(
+                35,
+                ThemeManager.getInputBorderColor(),
+                ThemeManager.getInputFocusBorderColor(),
+                new Insets(12, 14, 12, 14));
     }
 
     // Removed unused button creation methods

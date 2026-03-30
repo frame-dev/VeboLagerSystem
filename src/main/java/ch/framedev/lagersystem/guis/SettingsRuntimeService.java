@@ -1,6 +1,5 @@
 package ch.framedev.lagersystem.guis;
 
-import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.SchedulerManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
@@ -56,15 +55,13 @@ final class SettingsRuntimeService {
                 ThemeManager.setDarkMode(darkMode);
                 System.out.println("[SettingsGUI] Theme geaendert zu: " + (darkMode ? "Dark Mode" : "Light Mode"));
 
-                int restart = new MessageDialog()
-                        .setTitle("Neustart empfohlen")
-                        .setMessage("<html>Das Theme wurde geändert.<br/><br/>" +
+                int restart = SettingsDialogService.showYesNo(
+                        "Neustart empfohlen",
+                        "<html>Das Theme wurde geändert.<br/><br/>" +
                                 "Es wird empfohlen, das Programm neu zu starten,<br/>" +
                                 "damit das Theme vollständig angewendet wird.<br/><br/>" +
-                                "Möchten Sie jetzt neu starten?</html>")
-                        .setMessageType(JOptionPane.QUESTION_MESSAGE)
-                        .setOptionType(JOptionPane.YES_NO_OPTION)
-                        .displayWithOptions();
+                                "Möchten Sie jetzt neu starten?</html>",
+                        JOptionPane.QUESTION_MESSAGE);
 
                 if (restart == JOptionPane.YES_OPTION) {
                     System.exit(0);

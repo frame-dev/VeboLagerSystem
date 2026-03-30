@@ -262,36 +262,19 @@ public class LogsGUI extends JFrame {
             return null;
         }
 
-        JFrameUtils.RoundedPanel headerPanel = new JFrameUtils.RoundedPanel(ThemeManager.getCardBackgroundColor(), 20);
-        headerPanel.setLayout(new BorderLayout());
-        headerPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(11, 14, 11, 14)
-        ));
-        headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel titleLabel = new JLabel(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");
-        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
-        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
-        JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Protokolle durchsuchen, filtern und exportieren");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
-        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
-
-        JPanel headerText = new JPanel();
-        headerText.setOpaque(false);
-        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-        headerText.add(titleLabel);
-        headerText.add(Box.createVerticalStrut(3));
-        headerText.add(subtitleLabel);
-
-        headerPanel.add(headerText, BorderLayout.WEST);
-        headerPanel.add(buildHeaderActionsPanel(), BorderLayout.EAST);
+        JPanel wrapper = JFrameUtils.createHeaderWrapper(
+                "Logs Übersicht",
+                "Protokolle durchsuchen, filtern und exportieren",
+                UnicodeSymbols.CLIPBOARD + " ",
+                UnicodeSymbols.INFO + " ",
+                20,
+                11,
+                3,
+                20,
+                new Insets(11, 14, 11, 14),
+                buildHeaderActionsPanel());
+        JComponent headerPanel = (JComponent) (wrapper.getComponentCount() > 0 ? wrapper.getComponent(0) : wrapper);
         installWindowDrag(headerPanel);
-
-        JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setOpaque(false);
-        wrapper.add(headerPanel, BorderLayout.CENTER);
         return wrapper;
     }
 

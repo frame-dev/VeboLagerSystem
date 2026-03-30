@@ -9,7 +9,10 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -61,6 +64,13 @@ import ch.framedev.simplejavautils.SimpleJavaUtils;
  */
 @SuppressWarnings("SameParameterValue")
 public class Main {
+
+    private enum CommandMode {
+        DESKTOP,
+        SERVER,
+        FORCE_IMPORT,
+        FORCE_CREATE_QR
+    }
 
     private Main() {
         // Private constructor to prevent instantiation of this utility class
@@ -127,29 +137,111 @@ public class Main {
      * @param args command-line arguments (not used in this application)
      */
     public static void main(String[] args) {
-        // Check if application should start in server mode based on command-line
-        // arguments
-        if (args.length > 0 && args[0].equalsIgnoreCase("server")) {
-            System.out.println("Starte Server-Modus...");
-            try {
-                ScanServer.main(args);
-            } catch (Exception e) {
-                logger.error("Fehler im Server-Modus: {}", e.getMessage(), e);
-                logUtils.addLog("Fehler im Server-Modus: " + e.getMessage());
-            }
+        if (runCommandMode(args)) {
             return;
         }
+
+        startDesktopApplication();
+    }
+
+    private static boolean runCommandMode(String[] args) {
+        CommandMode commandMode = resolveCommandMode(args);
+        switch (commandMode) {
+            case SERVER -> runServerMode(args);
+            case FORCE_IMPORT -> forceImportData();
+            case FORCE_CREATE_QR -> createQrCodesForAllArticles();
+            case DESKTOP -> {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static CommandMode resolveCommandMode(String[] args) {
+        if (args.length == 0) {
+            return CommandMode.DESKTOP;
+        }
+
+        String mode = args[0];
+        if ("server".equalsIgnoreCase(mode)) {
+            return CommandMode.SERVER;
+        }
+        if ("force-import".equalsIgnoreCase(mode)) {
+            return CommandMode.FORCE_IMPORT;
+        }
+        if ("force-create-qr".equalsIgnoreCase(mode)) {
+            return CommandMode.FORCE_CREATE_QR;
+        }
+        return CommandMode.DESKTOP;
+    }
+
+    private static void createQrCodesForAllArticles() {
+        runCliOperation(
+                "Starte erzwungenes Erstellen von QR-Codes für alle Artikel...",
+                "Fehler beim erzwungenen Erstellen der QR-Codes",
+                () -> {
+            initializeCliDataAccess();
+                    generateQrCodesAndLog();
+            System.out.println("QR-Codes für alle Artikel erstellt.");
+                });
+    }
+
+    public static void forceImportData() {
+        runCliOperation(
+                "Starte erzwungenen Datenimport...",
+                "Fehler beim erzwungenen Datenimport",
+                () -> {
+            initializeCliDataAccess();
+            deleteImportedItemsList();
+            importInitialData(null);
+            initializeDefaultUser();
+            System.out.println("Datenimport abgeschlossen.");
+                });
+    }
+
+    private static void deleteImportedItemsList() {
+        if (!ImportUtils.deleteImportFile()) {
+            logger.warn("Konnte die Liste der importierten Items nicht löschen. Möglicherweise existiert sie nicht oder es gibt Berechtigungsprobleme.");
+        } else {
+            logger.info("Liste der importierten Items erfolgreich gelöscht.");
+        }
+        resetFirstStartSettingIfNeeded();
+    }
+
+    private static void initializeCliDataAccess() {
+        printStartupInfo();
+        ensureAppDataDirectory();
+        loadSettings();
+        initializeDatabase();
+    }
+
+    private static void runCliOperation(String startMessage, String errorMessage, Runnable action) {
+        System.out.println(startMessage);
         try {
-            // Initialize application
+            action.run();
+        } catch (Exception e) {
+            handleCriticalStartupError(errorMessage, e);
+            System.exit(1);
+        }
+    }
+
+    private static void runServerMode(String[] args) {
+        System.out.println("Starte Server-Modus...");
+        try {
+            ScanServer.main(args);
+        } catch (Exception e) {
+            logger.error("Fehler im Server-Modus: {}", e.getMessage(), e);
+            logUtils.addLog("Fehler im Server-Modus: " + e.getMessage());
+        }
+    }
+
+    private static void startDesktopApplication() {
+        try {
             printStartupInfo();
-            // Start the Splashscreen and initialization in the background
             SplashscreenGUI splashscreen = createAndShowSplashscreen();
             startInitializationWithSplashscreen(splashscreen);
-
         } catch (Exception e) {
-            logger.error("Fehler beim Starten der Anwendung: {}", e.getMessage(), e);
-            logUtils.addLog("Kritischer Fehler: " + e.getMessage());
-            logUtils.addLog("Stack trace: " + getStackTraceAsString(e));
+            handleCriticalStartupError("Fehler beim Starten der Anwendung", e);
             System.exit(1);
         }
     }
@@ -204,30 +296,35 @@ public class Main {
      * Initialize application settings and database
      */
     private static void initializeApplication(ProgressListener progressListener) {
-        // Setup for initialization steps with progress updates
         updateProgress(progressListener, 3, "Starte Initialisierung...");
-        updateProgress(progressListener, 4, "Prüfe Datenverzeichnis...");
-        ensureAppDataDirectory();
-        updateProgress(progressListener, 5, "Datenverzeichnis bereit...");
-        updateProgress(progressListener, 6, "Lade Einstellungen...");
-        loadSettings();
-        updateProgress(progressListener, 7, "Einstellungen geladen...");
-        updateProgress(progressListener, 8, "Initialisiere Theme...");
-        initializeTheme();
-        updateProgress(progressListener, 9, "Theme gesetzt...");
+        runProgressStep(progressListener, 4, "Prüfe Datenverzeichnis...", Main::ensureAppDataDirectory,
+                5, "Datenverzeichnis bereit...");
+        runProgressStep(progressListener, 6, "Lade Einstellungen...", Main::loadSettings,
+                7, "Einstellungen geladen...");
+        runProgressStep(progressListener, 8, "Initialisiere Theme...", Main::initializeTheme,
+                9, "Theme gesetzt...");
         updateProgress(progressListener, 10, "Überprüfen ob mit Internet verbunden...");
-        updateProgress(progressListener, 11, "Initialisiere Datenbank...");
-        initializeDatabase();
-        applyLookAndFeelFromSettings();
-        updateProgress(progressListener, 12, "Datenbank initialisiert...");
-        updateProgress(progressListener, 17, "Prüfe auf Updates (asynchron)...");
-        startUpdateCheckAsync();
-        updateProgress(progressListener, 19, "Update-Prüfung gestartet...");
-        updateProgress(progressListener, 20, "Lade Icons...");
-        loadApplicationIcons();
-        updateProgress(progressListener, 25, "Icons geladen...");
+        runProgressStep(progressListener, 11, "Initialisiere Datenbank...", () -> {
+            initializeDatabase();
+            applyLookAndFeelFromSettings();
+        }, 12, "Datenbank initialisiert...");
+        runProgressStep(progressListener, 17, "Prüfe auf Updates (asynchron)...", Main::startUpdateCheckAsync,
+                19, "Update-Prüfung gestartet...");
+        runProgressStep(progressListener, 20, "Lade Icons...", Main::loadApplicationIcons,
+                25, "Icons geladen...");
         handleFirstStartIfNeeded(progressListener);
         updateProgress(progressListener, 96, "Abschluss der Initialisierung...");
+    }
+
+    private static void runProgressStep(ProgressListener progressListener,
+            int beforePercent,
+            String beforeMessage,
+            Runnable action,
+            int afterPercent,
+            String afterMessage) {
+        updateProgress(progressListener, beforePercent, beforeMessage);
+        action.run();
+        updateProgress(progressListener, afterPercent, afterMessage);
     }
 
     /**
@@ -243,15 +340,14 @@ public class Main {
      *                         initialization
      */
     private static void handleFirstStartIfNeeded(ProgressListener progressListener) {
-        String firstTimeSetting = settings.getProperty("first-time");
-        if (firstTimeSetting != null && firstTimeSetting.equalsIgnoreCase("true")) {
+        if (isFirstStartAlreadyHandled()) {
             return;
         }
 
-        settings.setProperty("first-time", "true");
+        markFirstStartHandled();
         updateProgress(progressListener, 54, "Erster Start...");
 
-        boolean loadFromFiles = askForInitialDataImport(progressListener);
+        boolean loadFromFiles = askForInitialDataImport();
         settings.setProperty("load-from-files", String.valueOf(loadFromFiles));
         settings.save();
 
@@ -272,6 +368,25 @@ public class Main {
         logger.info("Initial data import completed.");
     }
 
+    private static boolean isFirstStartAlreadyHandled() {
+        String firstTimeSetting = settings.getProperty("first-time");
+        return firstTimeSetting != null && firstTimeSetting.equalsIgnoreCase("true");
+    }
+
+    private static void markFirstStartHandled() {
+        settings.setProperty("first-time", "true");
+    }
+
+    private static void resetFirstStartSettingIfNeeded() {
+        if (!isFirstStartAlreadyHandled()) {
+            return;
+        }
+
+        settings.setProperty("first-time", "false");
+        settings.save();
+        logger.info("Einstellung 'first-time' zurückgesetzt auf false.");
+    }
+
     /**
      * Import QR code data by asking the user if they want to create QR codes for
      * all articles. If the user agrees, it generates QR codes for each article and
@@ -282,18 +397,23 @@ public class Main {
      *                         creation
      */
     private static void importQrData(ProgressListener progressListener) {
-        int resultQr = showConfirmDialogOnEdt(
+        if (showConfirmDialogOnEdt(
                 "QR-Codes Erstellen?",
                 "QR-Codes",
-                null);
-        if (resultQr == JOptionPane.YES_OPTION) {
-            updateProgress(progressListener, 82, "Erstelle QR-Codes...");
-            logger.info("QR-Codes werden erstellt...");
-            List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
-            for (File qrCodeFile : qrCodeFiles) {
-                logger.info("QR-Code erstellt: {}", qrCodeFile.getAbsolutePath());
-            }
-            logger.info("QR-Codes erstellt.");
+                null) != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        updateProgress(progressListener, 82, "Erstelle QR-Codes...");
+        logger.info("QR-Codes werden erstellt...");
+        generateQrCodesAndLog();
+        logger.info("QR-Codes erstellt.");
+    }
+
+    private static void generateQrCodesAndLog() {
+        List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
+        for (File qrCodeFile : qrCodeFiles) {
+            logger.info("QR-Code erstellt: {}", qrCodeFile.getAbsolutePath());
         }
     }
 
@@ -308,16 +428,11 @@ public class Main {
      *                         confirmation dialog
      * @return true if the user chooses to import initial data, false otherwise
      */
-    private static boolean askForInitialDataImport(ProgressListener progressListener) {
-        int result = showConfirmDialogOnEdt(
+    private static boolean askForInitialDataImport() {
+        return showConfirmDialogOnEdt(
                 "Willkommen zum VEBO Lagersystem!\nMöchten Sie die anfänglichen Daten jetzt importieren?",
                 "Erster Start",
-                iconSmall);
-
-        if (result != JOptionPane.YES_OPTION) {
-            return false;
-        }
-        return true;
+                iconSmall) == JOptionPane.YES_OPTION;
     }
 
     private static void startUpdateCheckAsync() {
@@ -379,9 +494,8 @@ public class Main {
             logger.error(msg);
             logUtils.addLog(msg);
             throw new RuntimeException(msg);
-        } else {
-            logger.info("Anwendungsdatenverzeichnis bereit: {}", appDataDir.getAbsolutePath());
         }
+        logger.info("Anwendungsdatenverzeichnis bereit: {}", appDataDir.getAbsolutePath());
     }
 
     /**
@@ -400,16 +514,18 @@ public class Main {
      */
     private static void importInitialData(ProgressListener progressListener) {
         ImportUtils importUtils = ImportUtils.getInstance();
-        java.util.Set<String> importedItems = new java.util.HashSet<>(ImportUtils.getImportedItems());
+        HashSet<String> importedItems = new HashSet<>(ImportUtils.getImportedItems());
+        List<String> newlyImportedItems = new ArrayList<>();
 
         updateProgress(progressListener, 76, "Importiere Artikel...");
-        importArticles(importUtils, importedItems);
+        importArticles(importUtils, importedItems, newlyImportedItems);
         updateProgress(progressListener, 80, "Importiere Lieferanten...");
-        importVendors(importUtils, importedItems);
+        importVendors(importUtils, importedItems, newlyImportedItems);
         updateProgress(progressListener, 83, "Importiere Abteilungen...");
-        importDepartments(importUtils, importedItems);
+        importDepartments(importUtils, importedItems, newlyImportedItems);
         updateProgress(progressListener, 86, "Importiere Kunden...");
-        importClients(importUtils, importedItems);
+        importClients(importUtils, importedItems, newlyImportedItems);
+        persistImportedItems(newlyImportedItems);
 
         System.out.println("✓ Alle Daten importiert");
     }
@@ -417,7 +533,9 @@ public class Main {
     /**
      * Import articles from inventory file
      */
-    private static void importArticles(ImportUtils importUtils, java.util.Set<String> importedItems) {
+    private static void importArticles(ImportUtils importUtils,
+            java.util.Set<String> importedItems,
+            List<String> newlyImportedItems) {
         ArticleManager articleManager = ArticleManager.getInstance();
         List<Map<String, Object>> data = importUtils.loadInventoryFile();
 
@@ -426,7 +544,7 @@ public class Main {
 
         for (Map<String, Object> itemData : data) {
             Article article = createArticleFromMap(itemData);
-            processArticleImport(articleManager, article, result, importedItems);
+            processArticleImport(articleManager, article, result, importedItems, newlyImportedItems);
         }
 
         result.printSummary();
@@ -435,8 +553,11 @@ public class Main {
     /**
      * Process single article import
      */
-    private static void processArticleImport(ArticleManager articleManager, Article article, ImportResult result,
-            java.util.Set<String> importedItems) {
+    private static void processArticleImport(ArticleManager articleManager,
+            Article article,
+            ImportResult result,
+            java.util.Set<String> importedItems,
+            List<String> newlyImportedItems) {
         if (importedItems.contains(article.getArticleNumber())) {
             result.incrementSkipped();
             return;
@@ -445,7 +566,7 @@ public class Main {
         if (articleManager.insertArticle(article)) {
             result.incrementImported();
             importedItems.add(article.getArticleNumber());
-            ImportUtils.addToList(article.getArticleNumber());
+            newlyImportedItems.add(article.getArticleNumber());
             logUtils.addLog("Importierter Artikel: " + article.getName() + " (" + article.getArticleNumber() + ")");
         } else {
             result.incrementSkipped();
@@ -512,7 +633,9 @@ public class Main {
     /**
      * Import vendors from vendor file
      */
-    private static void importVendors(ImportUtils importUtils, java.util.Set<String> importedItems) {
+    private static void importVendors(ImportUtils importUtils,
+            java.util.Set<String> importedItems,
+            List<String> newlyImportedItems) {
         VendorManager vendorManager = VendorManager.getInstance();
         List<Map<String, Object>> vendorData = importUtils.loadVendorList();
 
@@ -520,7 +643,7 @@ public class Main {
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : vendorData) {
-            processVendorImport(vendorManager, itemData, result, importedItems);
+            processVendorImport(vendorManager, itemData, result, importedItems, newlyImportedItems);
         }
 
         result.printSummary();
@@ -530,7 +653,7 @@ public class Main {
      * Process single vendor import
      */
     private static void processVendorImport(VendorManager vendorManager, Map<String, Object> itemData,
-            ImportResult result, java.util.Set<String> importedItems) {
+            ImportResult result, java.util.Set<String> importedItems, List<String> newlyImportedItems) {
         String vendorName = getString(itemData, "name");
 
         if (vendorName.isBlank()) {
@@ -563,7 +686,7 @@ public class Main {
         if (success) {
             result.incrementImported();
             importedItems.add(vendorName);
-            ImportUtils.addToList(vendorName);
+            newlyImportedItems.add(vendorName);
             logUtils.addLog("Importierter Lieferant: " + vendorName);
         } else {
             result.incrementSkipped();
@@ -574,7 +697,9 @@ public class Main {
     /**
      * Import departments from departments file
      */
-    private static void importDepartments(ImportUtils importUtils, java.util.Set<String> importedItems) {
+    private static void importDepartments(ImportUtils importUtils,
+            java.util.Set<String> importedItems,
+            List<String> newlyImportedItems) {
         DepartmentManager departmentManager = DepartmentManager.getInstance();
         List<Map<String, Object>> departmentData = importUtils.loadDepartmentsList();
 
@@ -582,7 +707,7 @@ public class Main {
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : departmentData) {
-            processDepartmentImport(departmentManager, itemData, result, importedItems);
+            processDepartmentImport(departmentManager, itemData, result, importedItems, newlyImportedItems);
         }
 
         result.printSummary();
@@ -592,7 +717,7 @@ public class Main {
      * Process single department import
      */
     private static void processDepartmentImport(DepartmentManager departmentManager, Map<String, Object> itemData,
-            ImportResult result, java.util.Set<String> importedItems) {
+            ImportResult result, java.util.Set<String> importedItems, List<String> newlyImportedItems) {
         String departmentName = getString(itemData, "department");
         String kontoNumber = getString(itemData, "kontoNumber");
 
@@ -604,7 +729,7 @@ public class Main {
         if (departmentManager.insertDepartment(departmentName, kontoNumber)) {
             result.incrementImported();
             importedItems.add(departmentName);
-            ImportUtils.addToList(departmentName);
+            newlyImportedItems.add(departmentName);
             logUtils.addLog("Importierte Abteilung: " + departmentName);
         } else {
             result.incrementSkipped();
@@ -615,7 +740,9 @@ public class Main {
     /**
      * Import clients from clients file
      */
-    private static void importClients(ImportUtils importUtils, java.util.Set<String> importedItems) {
+    private static void importClients(ImportUtils importUtils,
+            java.util.Set<String> importedItems,
+            List<String> newlyImportedItems) {
         ClientManager clientManager = ClientManager.getInstance();
         List<Map<String, Object>> clientData = importUtils.loadClientsList();
 
@@ -623,7 +750,7 @@ public class Main {
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : clientData) {
-            processClientImport(clientManager, itemData, result, importedItems);
+            processClientImport(clientManager, itemData, result, importedItems, newlyImportedItems);
         }
 
         result.printSummary();
@@ -633,7 +760,7 @@ public class Main {
      * Process single client import
      */
     private static void processClientImport(ClientManager clientManager, Map<String, Object> itemData,
-            ImportResult result, java.util.Set<String> importedItems) {
+            ImportResult result, java.util.Set<String> importedItems, List<String> newlyImportedItems) {
         String firstLastName = getString(itemData, "firstLastName");
         String department = getString(itemData, "department");
 
@@ -645,11 +772,29 @@ public class Main {
         if (clientManager.insertClient(firstLastName, department)) {
             result.incrementImported();
             importedItems.add(firstLastName);
-            ImportUtils.addToList(firstLastName);
+            newlyImportedItems.add(firstLastName);
             logUtils.addLog("Importierter Kunde: " + firstLastName);
         } else {
             result.incrementSkipped();
             logUtils.addLog("Fehler beim Importieren des Kunden: " + firstLastName);
+        }
+    }
+
+    private static void persistImportedItems(List<String> newlyImportedItems) {
+        if (newlyImportedItems == null || newlyImportedItems.isEmpty()) {
+            return;
+        }
+
+        Path importFile = Path.of(getAppDataDir().getAbsolutePath(), "imported_items.txt");
+        try {
+            Files.write(
+                    importFile,
+                    newlyImportedItems,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND);
+        } catch (IOException e) {
+            logUtils.addLog("Fehler beim Schreiben von imported_items.txt: " + e.getMessage());
+            logger.error("Failed to persist imported items", e);
         }
     }
 
@@ -879,24 +1024,37 @@ public class Main {
     private static void loadSettings() {
         File settingsFile = ensureSettingsFile();
         settings = new Settings("settings.properties", Main.class, settingsFile);
-        if (!settings.contains("first-time")) {
-            settings.setProperty("first-time", "false");
-            settings.save();
-        }
+        initializeDefaultSettings();
         System.out.println("✓ Einstellungen geladen");
 
         applyThemeSettings();
         applyTableFontSettings();
         loadGitHubToken();
+        ensureCategoriesFileExists();
+    }
+
+    private static void initializeDefaultSettings() {
+        if (settings.contains("first-time")) {
+            return;
+        }
+
+        settings.setProperty("first-time", "false");
+        settings.save();
+    }
+
+    private static void ensureCategoriesFileExists() {
+        File targetFile = new File(getAppDataDir(), "categories.json");
+        if (targetFile.exists()) {
+            return;
+        }
+
         SimpleJavaUtils utils = new SimpleJavaUtils();
         try {
-            if (!new File(getAppDataDir(), "categories.json").exists()) {
-                Files.copy(utils.getFromResourceFile("categories.json", Main.class).toPath(),
-                        new File(getAppDataDir(), "categories.json").toPath(),
-                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            }
+            Files.copy(utils.getFromResourceFile("categories.json", Main.class).toPath(),
+                    targetFile.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Konnte categories.json nicht initialisieren", e);
         }
     }
 
@@ -1225,7 +1383,11 @@ public class Main {
     }
 
     private static void startInitializationWithSplashscreen(SplashscreenGUI splashscreen) {
-        SwingWorker<Void, ProgressUpdate> worker = new SwingWorker<>() {
+        createInitializationWorker(splashscreen).execute();
+    }
+
+    private static SwingWorker<Void, ProgressUpdate> createInitializationWorker(SplashscreenGUI splashscreen) {
+        return new SwingWorker<>() {
             private Exception initException;
 
             @Override
@@ -1243,39 +1405,45 @@ public class Main {
 
             @Override
             protected void process(List<ProgressUpdate> chunks) {
-                if (chunks.isEmpty()) {
-                    return;
-                }
-                for (ProgressUpdate update : chunks) {
-                    splashscreen.updateProgress(update.percent(), update.message());
-                }
+                updateSplashscreenProgress(splashscreen, chunks);
             }
 
             @Override
             protected void done() {
                 if (initException != null) {
-                    logger.error("Fehler beim Starten der Anwendung: {}", initException.getMessage(), initException);
-                    logUtils.addLog("Kritischer Fehler: " + initException.getMessage());
-                    logUtils.addLog("Stack trace: " + getStackTraceAsString(initException));
-                    splashscreen.close();
-                    JOptionPane.showMessageDialog(
-                            null,
-                            "Die Anwendung konnte nicht gestartet werden.\nDetails: " + initException.getMessage(),
-                            "Startfehler",
-                            JOptionPane.ERROR_MESSAGE);
-                    System.exit(1);
+                    handleInitializationFailure(splashscreen, initException);
                     return;
                 }
 
-                splashscreen.updateProgress(100, "Starte Hauptfenster...");
-                splashscreen.close();
-                ImportUtils.loadSeparatedArticles();
-
-                // Launch GUI
-                launchGUI();
+                finishInitialization(splashscreen);
             }
         };
-        worker.execute();
+    }
+
+    private static void updateSplashscreenProgress(SplashscreenGUI splashscreen, List<ProgressUpdate> chunks) {
+        if (chunks == null || chunks.isEmpty()) {
+            return;
+        }
+        ProgressUpdate latestUpdate = chunks.getLast();
+        splashscreen.updateProgress(latestUpdate.percent(), latestUpdate.message());
+    }
+
+    private static void handleInitializationFailure(SplashscreenGUI splashscreen, Exception initException) {
+        handleCriticalStartupError("Fehler beim Starten der Anwendung", initException);
+        splashscreen.close();
+        JOptionPane.showMessageDialog(
+                null,
+                "Die Anwendung konnte nicht gestartet werden.\nDetails: " + initException.getMessage(),
+                "Startfehler",
+                JOptionPane.ERROR_MESSAGE);
+        System.exit(1);
+    }
+
+    private static void finishInitialization(SplashscreenGUI splashscreen) {
+        splashscreen.updateProgress(100, "Starte Hauptfenster...");
+        splashscreen.close();
+        ImportUtils.loadSeparatedArticles();
+        launchGUI();
     }
 
     private static void checkForUpdatesOnce() {
@@ -1311,5 +1479,11 @@ public class Main {
     private static void logSplashProgress(int percent, String message) {
         String safeMessage = message == null ? "" : message;
         System.out.println("[Splash] " + percent + "% - " + safeMessage);
+    }
+
+    private static void handleCriticalStartupError(String message, Exception e) {
+        logger.error("{}: {}", message, e.getMessage(), e);
+        logUtils.addLog(message + ": " + e.getMessage());
+        logUtils.addLog("Stack trace: " + getStackTraceAsString(e));
     }
 }

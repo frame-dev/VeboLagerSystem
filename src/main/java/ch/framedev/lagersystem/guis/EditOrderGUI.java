@@ -83,37 +83,21 @@ public class EditOrderGUI extends JFrame {
         setLayout(new BorderLayout(0, 0));
 
         // Top area (VendorGUI style: header card + toolbar card)
-        JPanel topPanel = new JPanel();
-        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
-        topPanel.setBackground(ThemeManager.getBackgroundColor());
-        topPanel.setBorder(BorderFactory.createEmptyBorder(PAD, PAD, 8, PAD));
+        JPanel topPanel = JFrameUtils.createVerticalContainer(
+                ThemeManager.getBackgroundColor(),
+                new Insets(PAD, PAD, 8, PAD));
 
-        // Header card
-        RoundedPanel headerCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), RADIUS_HEADER);
-        headerCard.setLayout(new BorderLayout());
-        headerCard.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(14, 18, 14, 18)));
-
-        JLabel titleLabel = new JLabel(UnicodeSymbols.EDIT + " Bestellung Bearbeiten");
-        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
-
-        JLabel subtitleLabel = new JLabel(
-                UnicodeSymbols.INFO + " Empfänger/Absender, Abteilung sowie Menge, Größe und Füllung anpassen");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
-
-        JPanel titleBox = new JPanel();
-        titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
-        titleBox.setOpaque(false);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        titleBox.add(titleLabel);
-        titleBox.add(Box.createVerticalStrut(4));
-        titleBox.add(subtitleLabel);
-
-        headerCard.add(titleBox, BorderLayout.WEST);
+        JPanel headerCard = JFrameUtils.createHeaderWrapper(
+                "Bestellung Bearbeiten",
+                "Empfänger/Absender, Abteilung sowie Menge, Größe und Füllung anpassen",
+                UnicodeSymbols.EDIT + " ",
+                UnicodeSymbols.INFO + " ",
+                22,
+                12,
+                4,
+                RADIUS_HEADER,
+                new Insets(14, 18, 14, 18),
+                null);
 
         // Toolbar card
         RoundedPanel toolbarCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), RADIUS_CARD);

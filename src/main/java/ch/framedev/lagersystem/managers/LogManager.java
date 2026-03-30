@@ -104,6 +104,25 @@ public class LogManager {
         }
     }
 
+    private Log readLog(ResultSet rs) throws SQLException {
+        return new Log(
+                rs.getInt("id"),
+                rs.getString("timestamp"),
+                rs.getString("level"),
+                rs.getString("message")
+        );
+    }
+
+    private List<Log> collectLogs(ResultSet rs) throws SQLException {
+        List<Log> logs = new ArrayList<>();
+        while (rs.next()) {
+            Log log = readLog(rs);
+            logs.add(log);
+            cache.put(log.id, log);
+        }
+        return logs;
+    }
+
     /**
      * Creates a log entry in the database. After successful insertion, it
      * invalidates relevant caches to ensure that subsequent reads reflect the
@@ -166,16 +185,7 @@ public class LogManager {
         List<Log> logs = new ArrayList<>();
 
         try (ResultSet rs = databaseManager.executeQuery(sql)) {
-            while (rs.next()) {
-                Log l = new Log(
-                        rs.getInt("id"),
-                        rs.getString("timestamp"),
-                        rs.getString("level"),
-                        rs.getString("message")
-                );
-                logs.add(l);
-                cache.put(l.id, l);
-            }
+            logs = collectLogs(rs);
             allLogsCache = Collections.unmodifiableList(logs);
             allLogsCacheTime = System.currentTimeMillis();
         } catch (SQLException e) {
@@ -209,24 +219,13 @@ public class LogManager {
         // For this case, query DB directly (counts are cached elsewhere)
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS
                 + " WHERE level = ? ORDER BY id DESC;";
-        List<Log> logs = new ArrayList<>();
-
         try (ResultSet rs = databaseManager.executePreparedQuery(sql, new Object[]{level.name()})) {
-            while (rs.next()) {
-                Log l = new Log(
-                        rs.getInt("id"),
-                        rs.getString("timestamp"),
-                        rs.getString("level"),
-                        rs.getString("message")
-                );
-                logs.add(l);
-                cache.put(l.id, l);
-            }
+            return collectLogs(rs);
         } catch (Exception e) {
             logger.error("Error retrieving logs by level: {}", e.getMessage(), e);
         }
 
-        return logs;
+        return List.of();
     }
 
     /**
@@ -259,45 +258,22 @@ public class LogManager {
 
             String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS
                     + " WHERE epochMillis BETWEEN ? AND ? ORDER BY id DESC;";
-            List<Log> logs = new ArrayList<>();
-
             try (ResultSet rs = databaseManager.executePreparedQuery(sql, new Object[]{startMillis, endMillis})) {
-                while (rs.next()) {
-                    Log l = new Log(
-                            rs.getInt("id"),
-                            rs.getString("timestamp"),
-                            rs.getString("level"),
-                            rs.getString("message")
-                    );
-                    logs.add(l);
-                    cache.put(l.id, l);
-                }
+                return collectLogs(rs);
             }
-            return logs;
         } catch (SQLException ignored) {
             // Fall back to the legacy timestamp string comparison.
         }
 
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS
                 + " WHERE timestamp BETWEEN ? AND ? ORDER BY id DESC;";
-        List<Log> logs = new ArrayList<>();
-
         try (ResultSet rs = databaseManager.executePreparedQuery(sql, new Object[]{startDate, endDate})) {
-            while (rs.next()) {
-                Log l = new Log(
-                        rs.getInt("id"),
-                        rs.getString("timestamp"),
-                        rs.getString("level"),
-                        rs.getString("message")
-                );
-                logs.add(l);
-                cache.put(l.id, l);
-            }
+            return collectLogs(rs);
         } catch (Exception e) {
             logger.error("Error retrieving logs by date range: {}", e.getMessage(), e);
         }
 
-        return logs;
+        return List.of();
     }
 
     /**
@@ -318,24 +294,13 @@ public class LogManager {
         }
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS
                 + " WHERE message LIKE ? ORDER BY id DESC;";
-        List<Log> logs = new ArrayList<>();
-
         try (ResultSet rs = databaseManager.executePreparedQuery(sql, new Object[]{"%" + searchTerm + "%"})) {
-            while (rs.next()) {
-                Log l = new Log(
-                        rs.getInt("id"),
-                        rs.getString("timestamp"),
-                        rs.getString("level"),
-                        rs.getString("message")
-                );
-                logs.add(l);
-                cache.put(l.id, l);
-            }
+            return collectLogs(rs);
         } catch (Exception e) {
             logger.error("Error searching logs: {}", e.getMessage(), e);
         }
 
-        return logs;
+        return List.of();
     }
 
     /**
@@ -366,12 +331,7 @@ public class LogManager {
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS + " WHERE id = ?;";
         try (ResultSet rs = databaseManager.executePreparedQuery(sql, new Object[]{id})) {
             if (rs.next()) {
-                Log l = new Log(
-                        rs.getInt("id"),
-                        rs.getString("timestamp"),
-                        rs.getString("level"),
-                        rs.getString("message")
-                );
+                Log l = readLog(rs);
                 cache.put(id, l);
                 return l;
             }

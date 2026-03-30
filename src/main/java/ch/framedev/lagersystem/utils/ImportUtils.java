@@ -569,5 +569,22 @@ public class ImportUtils {
         }
         Main.logUtils.addLog("Inserted " + inserted + " separated articles and deleted " + deleted
                 + " stale separated articles in database");
+    
+    }
+    public static boolean deleteImportFile() {
+        File file = new File(Main.getAppDataDir(), "imported_items.txt");
+        if (file.exists()) {
+            if (file.delete()) {
+                Main.logUtils.addLog("Deleted imported_items.txt successfully");
+                return true;
+            } else {
+                Main.logUtils.addLog("Failed to delete imported_items.txt");
+                LOGGER.error("Failed to delete imported_items.txt");
+                return false;
+            }
+        } else {
+            Main.logUtils.addLog("imported_items.txt does not exist, no need to delete");
+            return true;
+        }
     }
 }

@@ -88,10 +88,9 @@ public class NotesGUI extends JFrame {
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(ThemeManager.getBackgroundColor());
 
-        JPanel topContainer = new JPanel();
-        topContainer.setBackground(ThemeManager.getBackgroundColor());
-        topContainer.setLayout(new BoxLayout(topContainer, BoxLayout.Y_AXIS));
-        topContainer.setBorder(BorderFactory.createEmptyBorder(14, 14, 10, 14));
+        JPanel topContainer = JFrameUtils.createVerticalContainer(
+                ThemeManager.getBackgroundColor(),
+                new Insets(14, 14, 10, 14));
 
         JPanel headerWrapper = createHeaderWrapper();
         if (headerWrapper != null) {
@@ -142,37 +141,17 @@ public class NotesGUI extends JFrame {
             return null;
         }
 
-        RoundedPanel header = createCardPanel(20);
-        header.setLayout(new BorderLayout());
-        header.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(14, 18, 14, 18)));
-        header.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel title = new JLabel(UnicodeSymbols.MEMO + " Notizen");
-        title.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
-        title.setForeground(ThemeManager.getTextPrimaryColor());
-
-        JLabel subtitle = new JLabel(UnicodeSymbols.INFO + " Persönliche Notizen verwalten und durchsuchen");
-        subtitle.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-        subtitle.setForeground(ThemeManager.getTextSecondaryColor());
-
-        JPanel titleBox = new JPanel();
-        titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
-        titleBox.setOpaque(false);
-        title.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        titleBox.add(title);
-        titleBox.add(Box.createVerticalStrut(4));
-        titleBox.add(subtitle);
-
-        header.add(titleBox, BorderLayout.WEST);
-
-        JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setOpaque(false);
-        wrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-        wrapper.add(header, BorderLayout.CENTER);
-        return wrapper;
+        return JFrameUtils.createHeaderWrapper(
+                "Notizen",
+                "Persönliche Notizen verwalten und durchsuchen",
+                UnicodeSymbols.MEMO + " ",
+                UnicodeSymbols.INFO + " ",
+                22,
+                12,
+                4,
+                20,
+                new Insets(14, 18, 14, 18),
+                null);
     }
 
     private JPanel createToolbarCard() {

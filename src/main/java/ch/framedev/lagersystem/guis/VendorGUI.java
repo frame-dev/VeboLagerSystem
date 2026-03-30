@@ -295,14 +295,7 @@ public class VendorGUI extends JFrame {
         subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        JPanel headerText = new JPanel();
-        headerText.setOpaque(false);
-        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerText.add(titleLabel);
-        headerText.add(Box.createVerticalStrut(4));
-        headerText.add(subtitleLabel);
+        JPanel headerText = JFrameUtils.createHeaderTextPanel(titleLabel, subtitleLabel, 4);
 
         styleCountBadge(vendorCountLabel);
         vendorCountLabel.setText("Lieferanten werden geladen...");
@@ -963,12 +956,7 @@ public class VendorGUI extends JFrame {
         styleCountBadge(countBadge);
         countBadge.setText("Angezeigt: " + entries.size() + " / " + entries.size());
 
-        JPanel headerText = new JPanel();
-        headerText.setOpaque(false);
-        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-        headerText.add(titleLabel);
-        headerText.add(Box.createVerticalStrut(3));
-        headerText.add(subtitleLabel);
+        JPanel headerText = JFrameUtils.createHeaderTextPanel(titleLabel, subtitleLabel, 3);
 
         headerPanel.add(headerText, BorderLayout.WEST);
         headerPanel.add(countBadge, BorderLayout.EAST);

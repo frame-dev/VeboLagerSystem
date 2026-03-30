@@ -1,7 +1,5 @@
 package ch.framedev.lagersystem.guis;
 
-import ch.framedev.lagersystem.dialogs.MessageDialog;
-
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
@@ -31,21 +29,17 @@ final class SettingsProfileService {
         try (FileOutputStream out = new FileOutputStream(file)) {
             Properties props = collector.get();
             props.store(out, "VEBO Lagersystem Einstellungen");
-            new MessageDialog()
-                    .setTitle("Export erfolgreich")
-                    .setMessage("<html><b>Einstellungen exportiert!</b><br/><br/>" +
+            SettingsDialogService.showInfo(
+                    "Export erfolgreich",
+                    "<html><b>Einstellungen exportiert!</b><br/><br/>" +
                             "Die Einstellungen wurden erfolgreich exportiert:<br/>" +
-                            file.getAbsolutePath() + "</html>")
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
+                            file.getAbsolutePath() + "</html>");
         } catch (IOException ex) {
-            new MessageDialog()
-                    .setTitle("Export fehlgeschlagen")
-                    .setMessage("<html><b>Fehler beim Export!</b><br/><br/>" +
+            SettingsDialogService.showError(
+                    "Export fehlgeschlagen",
+                    "<html><b>Fehler beim Export!</b><br/><br/>" +
                             "Die Einstellungen konnten nicht exportiert werden:<br/>" +
-                            ex.getMessage() + "</html>")
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
+                            ex.getMessage() + "</html>");
         }
     }
 
@@ -66,21 +60,17 @@ final class SettingsProfileService {
             Properties props = new Properties();
             props.load(in);
             applier.accept(props);
-            new MessageDialog()
-                    .setTitle("Import erfolgreich")
-                    .setMessage("<html><b>Einstellungen importiert!</b><br/><br/>" +
+            SettingsDialogService.showInfo(
+                    "Import erfolgreich",
+                    "<html><b>Einstellungen importiert!</b><br/><br/>" +
                             "Die Einstellungen wurden erfolgreich importiert.<br/>" +
-                            "Bitte speichern, um sie zu übernehmen.</html>")
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
+                            "Bitte speichern, um sie zu übernehmen.</html>");
         } catch (IOException ex) {
-            new MessageDialog()
-                    .setTitle("Import fehlgeschlagen")
-                    .setMessage("<html><b>Fehler beim Import!</b><br/><br/>" +
+            SettingsDialogService.showError(
+                    "Import fehlgeschlagen",
+                    "<html><b>Fehler beim Import!</b><br/><br/>" +
                             "Die Einstellungen konnten nicht importiert werden:<br/>" +
-                            ex.getMessage() + "</html>")
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
+                            ex.getMessage() + "</html>");
         }
     }
 

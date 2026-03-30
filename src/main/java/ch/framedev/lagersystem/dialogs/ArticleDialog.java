@@ -469,40 +469,11 @@ public class ArticleDialog {
      * Creates a styled text field for dialog forms with blue focus effect
      */
     private static JTextField createDialogTextField() {
-        JTextField field = new JTextField(25);
-        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        field.setBackground(ThemeManager.getInputBackgroundColor());
-        field.setForeground(ThemeManager.getTextPrimaryColor());
-        field.setCaretColor(ThemeManager.getAccentColor());
-
-        Color normalBorder = ThemeManager.getBorderColor();
-        Color focusBorder = ThemeManager.getAccentColor();
-
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(normalBorder, 1, true),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-
-        // Blue focus effect
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(focusBorder, 2, true),
-                        BorderFactory.createEmptyBorder(9, 11, 9, 11)
-                ));
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(normalBorder, 1, true),
-                        BorderFactory.createEmptyBorder(10, 12, 10, 12)
-                ));
-            }
-        });
-
-        return field;
+        return DialogFieldStylingService.createTextField(
+                25,
+                ThemeManager.getBorderColor(),
+                ThemeManager.getAccentColor(),
+                new Insets(10, 12, 10, 12));
     }
 
     private record StockSpinnersResult(JPanel panel, JSpinner lagerSpinner, JSpinner mindestSpinner) {}
@@ -631,33 +602,11 @@ public class ArticleDialog {
         JFormattedTextField field = new JFormattedTextField(formatter);
         field.setColumns(10);
         field.setValue(Math.max(0.0, initialValue));
-        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-        field.setBackground(ThemeManager.getInputBackgroundColor());
-        field.setForeground(ThemeManager.getTextPrimaryColor());
-        field.setCaretColor(ThemeManager.getAccentColor());
-        field.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(normalBorder, 1, true),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
-
-        // Blue focus effect
-        field.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(focusBorder, 2, true),
-                        BorderFactory.createEmptyBorder(9, 11, 9, 11)
-                ));
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(normalBorder, 1, true),
-                        BorderFactory.createEmptyBorder(10, 12, 10, 12)
-                ));
-            }
-        });
+        DialogFieldStylingService.styleTextComponent(
+                field,
+                normalBorder,
+                focusBorder,
+                new Insets(10, 12, 10, 12));
 
         panel.add(field, BorderLayout.CENTER);
 

@@ -15,7 +15,6 @@ import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.Color;
 import java.io.File;
 import java.io.InputStream;
@@ -91,32 +90,14 @@ public class OrderExport {
         }
 
         // Choose save location
-        JFileChooser fc = new JFileChooser();
-        fc.setDialogTitle("Bestellung als PDF speichern");
-        fc.setFileFilter(new FileNameExtensionFilter("PDF (*.pdf)", "pdf"));
-        fc.setAcceptAllFileFilterUsed(true);
-        fc.setSelectedFile(new File(System.getProperty("user.home"), "order_" + safe(order.getOrderId()) + ".pdf"));
-
-        int result = fc.showSaveDialog(frame);
-        if (result != JFileChooser.APPROVE_OPTION) {
+        File outputFile = ExportDialogUtils.chooseSaveFile(
+                frame,
+                "Bestellung als PDF speichern",
+                new File(System.getProperty("user.home"), "order_" + safe(order.getOrderId()) + ".pdf").getPath(),
+                "pdf",
+                "PDF (*.pdf)");
+        if (outputFile == null) {
             return;
-        }
-
-        File chosen = fc.getSelectedFile();
-        File outputFile = ensurePdfExtension(chosen);
-
-        // Confirm overwrite
-        if (outputFile.exists()) {
-            int overwrite = new MessageDialog()
-                    .setTitle("Bestätigen")
-                    .setMessage("Die Datei existiert bereits. Überschreiben?\n" + outputFile.getAbsolutePath())
-                    .setMessageType(JOptionPane.WARNING_MESSAGE)
-                    .setOptions(new String[]{"Ja", "Nein"})
-                    .displayWithOptions();
-
-            if (overwrite != JOptionPane.YES_OPTION) {
-                return;
-            }
         }
 
         exportOrderToFile(outputFile, order);
@@ -136,7 +117,7 @@ public class OrderExport {
             throw new IllegalArgumentException("Output file cannot be null");
         }
 
-        outputFile = ensurePdfExtension(outputFile);
+        outputFile = ExportDialogUtils.ensureExtension(outputFile, "pdf");
 
         String orderId = safe(order.getOrderId());
         Map<String, Integer> orderedArticles = order.getOrderedArticles();
@@ -253,21 +234,13 @@ public class OrderExport {
             OrderLoggingUtils.getInstance().addInfo(orderId,
                     "PDF erfolgreich erstellt: " + outputFile.getAbsolutePath());
 
-            new MessageDialog()
-                    .setTitle("Erfolg")
-                    .setMessage("PDF erfolgreich erstellt:\n" + outputFile.getAbsolutePath())
-                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                    .display();
+            ExportDialogUtils.showExportSuccess("Erfolg", "PDF", outputFile.getAbsolutePath());
 
         } catch (Exception ex) {
             LOGGER.error("Fehler beim Erstellen des PDF-Exports", ex);
             OrderLoggingUtils.getInstance().addError(orderId,
                     "Fehler beim PDF-Export: " + ex.getMessage());
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Erstellen des PDF-Dokuments:\n" + ex.getMessage())
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
+            ExportDialogUtils.showExportError("Fehler", "Erstellen des PDF-Dokuments", ex);
         }
     }
 
@@ -457,14 +430,6 @@ public class OrderExport {
 
     private static String safe(Object value) {
         return value == null ? "" : value.toString();
-    }
-
-    private static File ensurePdfExtension(File file) {
-        String name = file.getName();
-        if (!name.toLowerCase(Locale.ROOT).endsWith(".pdf")) {
-            return new File(file.getParentFile(), name + ".pdf");
-        }
-        return file;
     }
 
     /**

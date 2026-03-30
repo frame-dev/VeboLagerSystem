@@ -214,14 +214,7 @@ public class SupplierOrderGUI extends JFrame {
         subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        JPanel headerText = new JPanel();
-        headerText.setOpaque(false);
-        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerText.add(titleLabel);
-        headerText.add(Box.createVerticalStrut(4));
-        headerText.add(subtitleLabel);
+        JPanel headerText = JFrameUtils.createHeaderTextPanel(titleLabel, subtitleLabel, 4);
 
         headerCard.add(headerText, BorderLayout.WEST);
 

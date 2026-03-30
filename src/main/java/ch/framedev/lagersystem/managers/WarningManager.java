@@ -333,6 +333,15 @@ public class WarningManager {
         invalidateAllWarningsCache();
     }
 
+    /**
+     * Clears cached warning data and eagerly reloads the current warnings from the
+     * database.
+     */
+    public void forceReloadWarnings() {
+        clearCache();
+        getAllWarnings();
+    }
+
     private static boolean parseDbBoolean(String value) {
         return Boolean.parseBoolean(value);
     }

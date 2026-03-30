@@ -48,6 +48,7 @@ public class SchedulerManager {
     private ScheduledFuture<?> warningDisplayTask;
     private ScheduledFuture<?> autoImportTask;
     private final WarningManager warningManager = WarningManager.getInstance();
+    private volatile long nextWarningDisplayAtMillis = -1L;
 
     /**
      * Ensures that scheduling calls are serialized.
@@ -100,6 +101,17 @@ public class SchedulerManager {
         if (task != null && !task.isCancelled()) {
             task.cancel(false);
         }
+    }
+
+    private void updateNextWarningDisplayAt(long interval, TimeUnit unit) {
+        if (interval <= 0 || unit == null) {
+            nextWarningDisplayAtMillis = -1L;
+            return;
+        }
+        long delayMillis = unit.toMillis(interval);
+        nextWarningDisplayAtMillis = delayMillis > 0
+                ? System.currentTimeMillis() + delayMillis
+                : -1L;
     }
 
     private SchedulerManager() {
@@ -185,19 +197,33 @@ public class SchedulerManager {
     private void executorScheduleWarningDisplay(long interval, TimeUnit unit) {
         if (interval <= 0 || unit == null) {
             LOGGER.warn("Ignoring warning display scheduling due to invalid arguments: interval={}, unit={}", interval, unit);
+            nextWarningDisplayAtMillis = -1L;
             return;
         }
         synchronized (scheduleLock) {
             ensureExecutor();
             cancelTask(warningDisplayTask);
             warningDisplayTask = executor.scheduleAtFixedRate(
-                    this::displayPendingWarnings,
+                    () -> runScheduledWarningDisplay(interval, unit),
                     interval, // first run after one interval
                     interval,
                     unit
             );
+            updateNextWarningDisplayAt(interval, unit);
         }
         LOGGER.info("Warning display started (interval: {} {})", interval, unit.toString().toLowerCase());
+    }
+
+    private void runScheduledWarningDisplay(long interval, TimeUnit unit) {
+        try {
+            displayPendingWarnings();
+        } finally {
+            updateNextWarningDisplayAt(interval, unit);
+        }
+    }
+
+    public long getNextWarningDisplayAtMillis() {
+        return nextWarningDisplayAtMillis;
     }
 
     /**
@@ -356,6 +382,7 @@ public class SchedulerManager {
             stockCheckTask = null;
             warningDisplayTask = null;
             autoImportTask = null;
+            nextWarningDisplayAtMillis = -1L;
         }
     }
 

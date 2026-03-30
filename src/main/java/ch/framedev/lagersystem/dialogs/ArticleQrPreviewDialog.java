@@ -4,6 +4,7 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.guis.SettingsGUI;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
+import ch.framedev.lagersystem.utils.ExportDialogUtils;
 import ch.framedev.lagersystem.utils.QRCodeGenerator;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
@@ -57,14 +58,7 @@ public final class ArticleQrPreviewDialog {
         subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        JPanel headerText = new JPanel();
-        headerText.setOpaque(false);
-        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerText.add(titleLabel);
-        headerText.add(Box.createVerticalStrut(4));
-        headerText.add(subtitleLabel);
+        JPanel headerText = JFrameUtils.createHeaderTextPanel(titleLabel, subtitleLabel, 4);
 
         JButton closeBtn = createHeaderCloseButton(onClose);
 
@@ -261,28 +255,14 @@ public final class ArticleQrPreviewDialog {
                 return;
             }
 
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setDialogTitle("PDF Speichern");
-            fileChooser.setSelectedFile(new File("QR_Codes_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf"));
-
-            int userSelection = fileChooser.showSaveDialog(parent);
-            if (userSelection != JFileChooser.APPROVE_OPTION) {
+            File fileToSave = ExportDialogUtils.chooseSaveFile(
+                    parent,
+                    "PDF Speichern",
+                    "QR_Codes_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf",
+                    "pdf",
+                    "PDF (*.pdf)");
+            if (fileToSave == null) {
                 return;
-            }
-
-            File fileToSave = fileChooser.getSelectedFile();
-            if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
-                fileToSave = new File(fileToSave.getAbsolutePath() + ".pdf");
-            }
-            if (fileToSave.exists()) {
-                int overwrite = new MessageDialog()
-                    .setTitle("Datei überschreiben")
-                    .setMessage("Die Datei existiert bereits. Überschreiben?")
-                    .setMessageType(JOptionPane.WARNING_MESSAGE)
-                    .displayWithOptions();
-                if (overwrite != JOptionPane.YES_OPTION) {
-                    return;
-                }
             }
 
             // UI feedback
@@ -314,20 +294,15 @@ public final class ArticleQrPreviewDialog {
                     dialog.setCursor(Cursor.getDefaultCursor());
 
                     if (error != null) {
-                        new MessageDialog()
-                                .setTitle("Fehler beim PDF-Export")
-                                .setMessage("Fehler beim PDF-Export: " + error.getMessage())
-                                .setMessageType(JOptionPane.ERROR_MESSAGE)
-                                .display();
+                        ExportDialogUtils.showExportError("Fehler beim PDF-Export", "PDF-Export", error);
 
                         infoLabel.setText(UnicodeSymbols.CLOSE + " Fehler beim Export");
                         return;
                     }
-                    new MessageDialog()
-                            .setTitle("PDF erfolgreich exportiert")
-                            .setMessage("PDF erfolgreich exportiert:\n" + finalFileToSave.getAbsolutePath())
-                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                            .display();
+                    ExportDialogUtils.showExportSuccess(
+                            "PDF erfolgreich exportiert",
+                            "PDF",
+                            finalFileToSave.getAbsolutePath());
                     infoLabel.setText(UnicodeSymbols.CHECKMARK + " PDF exportiert: " + finalFileToSave.getName());
                 }
             }.execute();

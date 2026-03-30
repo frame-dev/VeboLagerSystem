@@ -105,6 +105,15 @@ public class ArticleManager {
         }
     }
 
+    /**
+     * Clears the in-memory caches and eagerly reloads the current article list from
+     * the database.
+     */
+    public void forceReloadArticles() {
+        invalidateAllCaches();
+        getAllArticles();
+    }
+
     private void createTable() {
         String sql = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_ARTICLES + " (" +
                 "articleNumber TEXT," +

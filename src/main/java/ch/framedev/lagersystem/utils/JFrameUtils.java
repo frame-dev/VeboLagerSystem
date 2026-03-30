@@ -70,6 +70,86 @@ public class JFrameUtils {
     }
 
     /**
+     * Creates a left-aligned vertical title/subtitle stack for header cards.
+     *
+     * @param titleLabel    header title label
+     * @param subtitleLabel header subtitle label
+     * @param spacing       vertical spacing between title and subtitle
+     * @return configured header text panel
+     */
+    public static JPanel createHeaderTextPanel(JLabel titleLabel, JLabel subtitleLabel, int spacing) {
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+
+        if (titleLabel != null) {
+            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            headerText.add(titleLabel);
+        }
+        if (subtitleLabel != null) {
+            subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            if (titleLabel != null && spacing > 0) {
+                headerText.add(Box.createVerticalStrut(spacing));
+            }
+            headerText.add(subtitleLabel);
+        }
+        return headerText;
+    }
+
+    public static RoundedPanel createHeaderCard(int radius, Insets padding) {
+        Insets resolvedPadding = padding == null ? new Insets(14, 18, 14, 18) : padding;
+        RoundedPanel headerCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), radius);
+        headerCard.setLayout(new BorderLayout());
+        headerCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(
+                        resolvedPadding.top,
+                        resolvedPadding.left,
+                        resolvedPadding.bottom,
+                        resolvedPadding.right)));
+        headerCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return headerCard;
+    }
+
+    public static JPanel createHeaderWrapper(String titleText, String subtitleText, String titlePrefix, String subtitlePrefix,
+                                             int titleSize, int subtitleSize, int spacing, int radius,
+                                             Insets padding, JComponent trailingComponent) {
+        JLabel titleLabel = new JLabel((titlePrefix == null ? "" : titlePrefix) + titleText);
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, titleSize));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JLabel subtitleLabel = new JLabel((subtitlePrefix == null ? "" : subtitlePrefix) + subtitleText);
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, subtitleSize));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        RoundedPanel headerCard = createHeaderCard(radius, padding);
+        headerCard.add(createHeaderTextPanel(titleLabel, subtitleLabel, spacing), BorderLayout.WEST);
+        if (trailingComponent != null) {
+            headerCard.add(trailingComponent, BorderLayout.EAST);
+        }
+
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        wrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
+        wrapper.add(headerCard, BorderLayout.CENTER);
+        return wrapper;
+    }
+
+    public static JPanel createVerticalContainer(Color background, Insets padding) {
+        JPanel panel = new JPanel();
+        panel.setBackground(background);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        if (padding != null) {
+            panel.setBorder(BorderFactory.createEmptyBorder(
+                    padding.top,
+                    padding.left,
+                    padding.bottom,
+                    padding.right));
+        }
+        return panel;
+    }
+
+    /**
      * Dynamically adjusts the column widths of a JTable based on the available width of its enclosing JScrollPane and a set of base column widths.
      * @param table The JTable whose columns should be adjusted
      * @param tableScrollPane The JScrollPane that contains the JTable, used to determine available width
