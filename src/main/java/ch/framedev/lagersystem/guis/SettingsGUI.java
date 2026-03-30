@@ -7,6 +7,7 @@ import ch.framedev.lagersystem.managers.*;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.ArticleUtils.CategoryRange;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.SettingsUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.LogManager;
@@ -109,6 +110,7 @@ public class SettingsGUI extends JFrame {
     private Color selectedAccentColor;
     private Color selectedHeaderColor;
     private Color selectedButtonColor;
+    private Point dragStartPoint;
 
     private static final int DEFAULT_STOCK_CHECK_INTERVAL = 30;
     private static final int DEFAULT_WARNING_INTERVAL = 1;
@@ -345,12 +347,14 @@ public class SettingsGUI extends JFrame {
     private void initFrame() {
         ThemeManager.getInstance().registerWindow(this);
         ThemeManager.applyUIDefaults();
+        setUndecorated(true);
         setTitle("Einstellungen");
         setSize(1200, 850);
         setMinimumSize(new Dimension(1100, 760));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+        getRootPane().setBorder(BorderFactory.createLineBorder(getSoftGlassBorder(), 1, true));
 
         // Set window icon if available
         if (Main.iconSmall != null) {
@@ -389,6 +393,8 @@ public class SettingsGUI extends JFrame {
         headerText.add(subtitleLabel);
 
         headerCard.add(headerText, BorderLayout.WEST);
+        headerCard.add(createHeaderActionsPanel(), BorderLayout.EAST);
+        installWindowDrag(headerCard);
 
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setOpaque(false);
@@ -398,6 +404,82 @@ public class SettingsGUI extends JFrame {
         // (removed setMaximumSize line)
 
         return wrapper;
+    }
+
+    private JPanel createHeaderActionsPanel() {
+        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        actionsPanel.setOpaque(false);
+
+        JButton closeButton = createHeaderCloseButton();
+        closeButton.addActionListener(e -> dispose());
+        actionsPanel.add(closeButton);
+
+        return actionsPanel;
+    }
+
+    private JButton createHeaderCloseButton() {
+        JButton button = new JButton(UnicodeSymbols.CLOSE + " Schließen");
+        button.setFont(getFontByName(Font.BOLD, 13));
+        button.setForeground(getReadableTextColor(ThemeManager.getDangerColor()));
+        button.setBackground(ThemeManager.getDangerColor());
+        button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(adjustColor(ThemeManager.getDangerColor(), -0.18f), 1, true),
+                BorderFactory.createEmptyBorder(10, 14, 10, 14)));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setToolTipText("Schließt das Einstellungsfenster");
+
+        Color baseBg = ThemeManager.getDangerColor();
+        Color hoverBg = adjustColor(baseBg, -0.08f);
+        Color pressedBg = adjustColor(baseBg, -0.16f);
+
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(hoverBg);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(baseBg);
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                button.setBackground(pressedBg);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                button.setBackground(button.contains(e.getPoint()) ? hoverBg : baseBg);
+            }
+        });
+
+        return button;
+    }
+
+    private void installWindowDrag(JComponent target) {
+        if (target == null) {
+            return;
+        }
+
+        target.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                dragStartPoint = e.getPoint();
+            }
+        });
+        target.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (dragStartPoint == null) {
+                    return;
+                }
+                Point screenPoint = e.getLocationOnScreen();
+                setLocation(screenPoint.x - dragStartPoint.x, screenPoint.y - dragStartPoint.y);
+            }
+        });
     }
 
     private JPanel createContentWrapper() {
@@ -488,7 +570,7 @@ public class SettingsGUI extends JFrame {
             }
         });
 
-        JButton clearSearchButton = new JButton("✕");
+        JButton clearSearchButton = new JButton(UnicodeSymbols.CLEAR);
         clearSearchButton.setToolTipText("Suche löschen");
         clearSearchButton.setFont(getFontByName(Font.BOLD, 12));
         clearSearchButton.setForeground(ThemeManager.getTextSecondaryColor());
@@ -613,7 +695,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private JPanel createBottomButtonPanel() {
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 18, 18));
+        JPanel buttonPanel = createWrapButtonPanel(FlowLayout.RIGHT, 12, 12);
         buttonPanel.setBackground(ThemeManager.getCardBackgroundColor());
         buttonPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()));
 
@@ -653,12 +735,24 @@ public class SettingsGUI extends JFrame {
                 settingsSearchField.selectAll();
             }
         });
+        settingsSearchField.setToolTipText(KeyboardShortcutUtils.withShortcutHint(
+                settingsSearchField.getToolTipText(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_F, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx())));
 
         im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeSettings");
         am.put("closeSettings", new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 dispose();
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()),
+                "saveSettings");
+        am.put("saveSettings", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                saveSettings();
             }
         });
     }
@@ -811,10 +905,7 @@ public class SettingsGUI extends JFrame {
         categoryInfoLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Top actions row
-        JPanel categoryActions = new JPanel();
-        categoryActions.setLayout(new BoxLayout(categoryActions, BoxLayout.X_AXIS));
-        categoryActions.setOpaque(false);
-        categoryActions.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel categoryActions = createWrapButtonPanel(FlowLayout.LEFT, 8, 8);
         JButton categorySettingsFileButton = createStyledButton(UnicodeSymbols.FOLDER + " Kategorien-Datei öffnen", ThemeManager.getSecondaryColor());
         categorySettingsFileButton.setToolTipText("Öffnet categories.json im Standard-Editor");
         categorySettingsFileButton.addActionListener(e -> openCategorySettingsFile());
@@ -830,7 +921,6 @@ public class SettingsGUI extends JFrame {
                     .display();
         });
         categoryActions.add(categorySettingsFileButton);
-        categoryActions.add(Box.createHorizontalStrut(8));
         categoryActions.add(reloadCategoriesButton);
         categoryCard.add(categoryInfoLabel);
         categoryCard.add(Box.createVerticalStrut(10));
@@ -1518,10 +1608,7 @@ public class SettingsGUI extends JFrame {
         serverCard.add(Box.createVerticalStrut(10));
 
         // Actions row
-        JPanel serverActions = new JPanel();
-        serverActions.setLayout(new BoxLayout(serverActions, BoxLayout.X_AXIS));
-        serverActions.setOpaque(false);
-        serverActions.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel serverActions = createWrapButtonPanel(FlowLayout.LEFT, 8, 8);
         JButton openUrlButton = createStyledButton(UnicodeSymbols.GLOBE + " Öffnen", ThemeManager.getSecondaryColor());
         openUrlButton.setToolTipText("Öffnet die URL im Browser");
         JButton copyUrlButton = createStyledButton(UnicodeSymbols.CLIPBOARD + " Kopieren", ThemeManager.getAccentColor());
@@ -1529,9 +1616,7 @@ public class SettingsGUI extends JFrame {
         JButton testUrlButton = createStyledButton(UnicodeSymbols.BULB + " Prüfen", ThemeManager.getSuccessColor());
         testUrlButton.setToolTipText("Prüft, ob die URL syntaktisch gültig ist");
         serverActions.add(openUrlButton);
-        serverActions.add(Box.createHorizontalStrut(8));
         serverActions.add(copyUrlButton);
-        serverActions.add(Box.createHorizontalStrut(8));
         serverActions.add(testUrlButton);
         serverCard.add(serverActions);
         serverCard.add(Box.createVerticalStrut(14));
@@ -1695,10 +1780,7 @@ public class SettingsGUI extends JFrame {
         dbCard.add(Box.createVerticalStrut(15));
 
         // Button row: Clear database
-        JPanel dbButtonRow = new JPanel();
-        dbButtonRow.setLayout(new BoxLayout(dbButtonRow, BoxLayout.X_AXIS));
-        dbButtonRow.setOpaque(false);
-        dbButtonRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel dbButtonRow = createWrapButtonPanel(FlowLayout.LEFT, 8, 8);
         JButton clearDatabaseButton = createStyledButton(UnicodeSymbols.TRASH + " Datenbank Bereinigen",
             ThemeManager.getDangerColor());
         clearDatabaseButton.addActionListener(e -> clearDatabase());
@@ -1723,10 +1805,7 @@ public class SettingsGUI extends JFrame {
         dbCard.add(Box.createVerticalStrut(14));
 
         // Button row: Delete selected table
-        JPanel deleteTableButtonPanel = new JPanel();
-        deleteTableButtonPanel.setLayout(new BoxLayout(deleteTableButtonPanel, BoxLayout.X_AXIS));
-        deleteTableButtonPanel.setOpaque(false);
-        deleteTableButtonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel deleteTableButtonPanel = createWrapButtonPanel(FlowLayout.LEFT, 8, 8);
         JButton deleteSelectedTableButton = createStyledButton(UnicodeSymbols.TRASH + " Ausgewählte Tabelle Löschen",
             ThemeManager.getWarningColor());
         deleteSelectedTableButton.addActionListener(e -> {
@@ -1788,7 +1867,7 @@ public class SettingsGUI extends JFrame {
 
         // Card: Import & Export
         JPanel importExportCard = SettingsUtils.createSectionPanel(
-            UnicodeSymbols.ARROW_UP + UnicodeSymbols.ARROW_DOWN + "️ Import & Export",
+            UnicodeSymbols.ARROW_UP + " " + UnicodeSymbols.ARROW_DOWN + " Import/Export",
             "Datenimport und -export Funktionen",
             null);
         importExportCard.setBorder(BorderFactory.createCompoundBorder(
@@ -1854,7 +1933,7 @@ public class SettingsGUI extends JFrame {
                 } else {
                     new MessageDialog()
                         .setTitle("Export erfolgreich")
-                        .setMessage("<html><b>OK Export erfolgreich!</b><br/><br/>" +
+                        .setMessage("<html><b>" + UnicodeSymbols.CHECKMARK + " Export erfolgreich!</b><br/><br/>" +
                             "Alle Tabellen wurden erfolgreich exportiert.<br/>" +
                             "Speicherort: <br/>" +
                             Main.getAppDataDir().getAbsolutePath() + "</html>")
@@ -1864,7 +1943,7 @@ public class SettingsGUI extends JFrame {
             } catch (Exception ex) {
                 new MessageDialog()
                     .setTitle("Fehler beim Export")
-                    .setMessage("<html><b>X Fehler beim Export!</b><br/><br/>" +
+                    .setMessage("<html><b>" + UnicodeSymbols.ERROR + " Fehler beim Export!</b><br/><br/>" +
                         ex.getMessage() + "</html>")
                     .setMessageType(JOptionPane.ERROR_MESSAGE)
                     .display();
@@ -2101,7 +2180,7 @@ public class SettingsGUI extends JFrame {
                 "Prüft auf neue Alpha-Versionen (experimentell)",
                 "alpha"));
         updateRow2.add(createUpdateChannelButton(
-                "🧪 Testing-Updates",
+                UnicodeSymbols.TEST_TUBE + " Testing-Updates",
                 ThemeManager.getAccentColor(),
                 "Prüft auf neue Testing-Versionen (Entwicklung)",
                 "testing"));
@@ -2126,7 +2205,7 @@ public class SettingsGUI extends JFrame {
         JLabel copyrightLabel = SettingsUtils.createStyledLabel(
                 logger,
                 fontComboBox,
-                "© 2026 VEBO Oensingen. Alle Rechte vorbehalten.",
+                UnicodeSymbols.COPYRIGHT + " 2026 VEBO Oensingen. Alle Rechte vorbehalten.",
                 11,
                 Font.PLAIN,
                 ThemeManager.getTextSecondaryColor());
@@ -2176,17 +2255,14 @@ public class SettingsGUI extends JFrame {
     }
 
     private JPanel createAboutButtonRow() {
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        row.setOpaque(false);
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 55));
-        row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return row;
+        return createWrapButtonPanel(FlowLayout.LEFT, 10, 8);
     }
 
     private JButton createUpdateChannelButton(String text, Color color, String tooltip, String channel) {
         JButton button = createStyledButton(text, color);
         button.setToolTipText(tooltip);
-        button.setPreferredSize(new Dimension(180, 40));
+        Dimension preferred = button.getPreferredSize();
+        button.setPreferredSize(new Dimension(Math.max(190, preferred.width), Math.max(46, preferred.height)));
         button.setAlignmentX(Component.LEFT_ALIGNMENT);
         button.addActionListener(e -> checkForUpdates(channel));
         return button;
@@ -2275,6 +2351,14 @@ public class SettingsGUI extends JFrame {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(ThemeManager.getBackgroundColor());
         panel.setBorder(BorderFactory.createEmptyBorder(22, 26, 22, 26));
+        return panel;
+    }
+
+    private JPanel createWrapButtonPanel(int alignment, int hgap, int vgap) {
+        JPanel panel = new JPanel(new WrapLayout(alignment, hgap, vgap));
+        panel.setOpaque(false);
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         return panel;
     }
 
@@ -2453,7 +2537,7 @@ public class SettingsGUI extends JFrame {
     }
 
     private JButton createHeaderActionButton() {
-        JButton button = new JButton("Zuruecksetzen");
+        JButton button = new JButton(UnicodeSymbols.REFRESH + " Zurücksetzen");
         styleSecondaryActionButton(button);
         return button;
     }
@@ -2636,9 +2720,10 @@ public class SettingsGUI extends JFrame {
         button.setFont(getFontByName(Font.BOLD, 14));
         button.setForeground(getReadableTextColor(baseBg));
         button.setBackground(baseBg);
+        button.setIconTextGap(8);
         Border normalBorder = BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(adjustColor(baseBg, -0.18f), 1, true),
-            BorderFactory.createEmptyBorder(14, 28, 14, 28));
+            BorderFactory.createEmptyBorder(12, 20, 12, 20));
         button.setBorder(normalBorder);
         button.setFocusPainted(false);
         button.setOpaque(true);
@@ -2646,17 +2731,20 @@ public class SettingsGUI extends JFrame {
         button.setContentAreaFilled(true);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.putClientProperty("theme.button.custom", Boolean.TRUE);
+        button.setMargin(new Insets(0, 0, 0, 0));
 
         // Set consistent height
+        Dimension preferredSize = button.getPreferredSize();
         button.setPreferredSize(new Dimension(
-                button.getPreferredSize().width,
-                48));
+                Math.max(160, preferredSize.width),
+                46));
+        button.setMinimumSize(new Dimension(120, 46));
 
         Color hoverBg = adjustColor(baseBg, -0.08f);
         Color pressedBg = adjustColor(baseBg, -0.16f);
         Border hoverBorder = BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(adjustColor(hoverBg, -0.12f), 1, true),
-                BorderFactory.createEmptyBorder(14, 28, 14, 28));
+                BorderFactory.createEmptyBorder(12, 20, 12, 20));
 
         button.addMouseListener(new MouseAdapter() {
             @Override
@@ -2687,6 +2775,91 @@ public class SettingsGUI extends JFrame {
         });
 
         return button;
+    }
+
+    private static final class WrapLayout extends FlowLayout {
+
+        private WrapLayout(int align, int hgap, int vgap) {
+            super(align, hgap, vgap);
+        }
+
+        @Override
+        public Dimension preferredLayoutSize(Container target) {
+            return layoutSize(target, true);
+        }
+
+        @Override
+        public Dimension minimumLayoutSize(Container target) {
+            Dimension minimum = layoutSize(target, false);
+            minimum.width -= getHgap() + 1;
+            return minimum;
+        }
+
+        private Dimension layoutSize(Container target, boolean preferred) {
+            synchronized (target.getTreeLock()) {
+                int targetWidth = target.getWidth();
+                Container container = target;
+
+                while (targetWidth == 0 && container.getParent() != null) {
+                    container = container.getParent();
+                    targetWidth = container.getWidth();
+                }
+
+                if (targetWidth <= 0) {
+                    targetWidth = Integer.MAX_VALUE;
+                }
+
+                Insets insets = target.getInsets();
+                int horizontalInsetsAndGap = insets.left + insets.right + (getHgap() * 2);
+                int maxWidth = targetWidth - horizontalInsetsAndGap;
+
+                Dimension dim = new Dimension(0, 0);
+                int rowWidth = 0;
+                int rowHeight = 0;
+
+                int componentCount = target.getComponentCount();
+                for (int i = 0; i < componentCount; i++) {
+                    Component component = target.getComponent(i);
+                    if (!component.isVisible()) {
+                        continue;
+                    }
+
+                    Dimension componentSize = preferred ? component.getPreferredSize() : component.getMinimumSize();
+
+                    if (rowWidth + componentSize.width > maxWidth) {
+                        addRow(dim, rowWidth, rowHeight);
+                        rowWidth = 0;
+                        rowHeight = 0;
+                    }
+
+                    if (rowWidth != 0) {
+                        rowWidth += getHgap();
+                    }
+                    rowWidth += componentSize.width;
+                    rowHeight = Math.max(rowHeight, componentSize.height);
+                }
+
+                addRow(dim, rowWidth, rowHeight);
+
+                dim.width += horizontalInsetsAndGap;
+                dim.height += insets.top + insets.bottom + (getVgap() * 2);
+
+                Container scrollPane = SwingUtilities.getAncestorOfClass(JScrollPane.class, target);
+                if (scrollPane != null && target.isValid()) {
+                    dim.width -= getHgap() + 1;
+                }
+
+                return dim;
+            }
+        }
+
+        private void addRow(Dimension dimension, int rowWidth, int rowHeight) {
+            dimension.width = Math.max(dimension.width, rowWidth);
+            if (dimension.height > 0) {
+                dimension.height += getVgap();
+            }
+            dimension.height += rowHeight;
+        }
     }
 
     private Color adjustColor(Color color, float factor) {

@@ -10,18 +10,22 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.VendorManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.*;
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -260,6 +264,7 @@ public class VendorGUI extends JFrame {
         };
         this.addComponentListener(resizeListener);
         tableScrollPane.getViewport().addComponentListener(resizeListener);
+        installKeyboardShortcuts(searchField, addVendorButton, editVendorButton, deleteVendorButton, refreshButton, clearBtn);
         SwingUtilities.invokeLater(this::adjustColumnWidths);
     }
 
@@ -369,7 +374,7 @@ public class VendorGUI extends JFrame {
         footer.setOpaque(false);
         footer.setBorder(BorderFactory.createEmptyBorder(6, 2, 0, 2));
 
-        JLabel hintLabel = new JLabel("Doppelklick oder Rechtsklick zum Bearbeiten");
+        JLabel hintLabel = new JLabel("Doppelklick zum Bearbeiten • Artikelspalte zeigt alle Einträge");
         hintLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         hintLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
@@ -485,14 +490,18 @@ public class VendorGUI extends JFrame {
 
     private void setupTableInteractions() {
         JPopupMenu popup = new JPopupMenu();
+        JMenuItem showArticles = new JMenuItem(UnicodeSymbols.PACKAGE + " Artikel anzeigen");
         JMenuItem edit = new JMenuItem(UnicodeSymbols.CODE + " Bearbeiten");
         JMenuItem del = new JMenuItem(UnicodeSymbols.TRASH + " Löschen");
+        popup.add(showArticles);
         popup.add(edit);
         popup.add(del);
 
+        showArticles.setToolTipText("Alle verknüpften Artikel dieses Lieferanten anzeigen");
         edit.setToolTipText("Ausgewählten Lieferanten bearbeiten");
         del.setToolTipText("Ausgewählten Lieferanten löschen");
 
+        showArticles.addActionListener(e -> showSelectedVendorArticles());
         edit.addActionListener(e -> editSelectedVendor(false));
         del.addActionListener(e -> deleteSelectedVendor());
 
@@ -501,11 +510,16 @@ public class VendorGUI extends JFrame {
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
                     int row = vendorTable.rowAtPoint(e.getPoint());
+                    int column = vendorTable.columnAtPoint(e.getPoint());
                     if (row == -1) {
                         return;
                     }
                     vendorTable.setRowSelectionInterval(row, row);
-                    editSelectedVendor(false);
+                    if (column == ARTICLES_COLUMN_INDEX) {
+                        showSelectedVendorArticles();
+                    } else {
+                        editSelectedVendor(false);
+                    }
                 }
             }
 
@@ -524,6 +538,8 @@ public class VendorGUI extends JFrame {
                     int row = vendorTable.rowAtPoint(e.getPoint());
                     if (row != -1) {
                         vendorTable.setRowSelectionInterval(row, row);
+                        Vendor vendor = getVendorForModelRow(vendorTable.convertRowIndexToModel(row));
+                        showArticles.setEnabled(vendor != null && !getSuppliedArticleDisplayEntries(vendor).isEmpty());
                         popup.show(e.getComponent(), e.getX(), e.getY());
                     }
                 }
@@ -539,6 +555,32 @@ public class VendorGUI extends JFrame {
         LOGGER.info("Disposing VendorGUI window");
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
+    }
+
+    private void installKeyboardShortcuts(JTextField searchField, JButton addVendorButton, JButton editVendorButton,
+                                          JButton deleteVendorButton, JButton refreshButton, JButton clearButton) {
+        JRootPane rootPane = getRootPane();
+        KeyboardShortcutUtils.addTooltipHint(searchField, KeyboardShortcutUtils.menuKey(KeyEvent.VK_F));
+        KeyboardShortcutUtils.addTooltipHint(addVendorButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_N));
+        KeyboardShortcutUtils.addTooltipHint(editVendorButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_E));
+        KeyboardShortcutUtils.addTooltipHint(deleteVendorButton, KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
+        KeyboardShortcutUtils.addTooltipHint(refreshButton, KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0));
+        KeyboardShortcutUtils.addTooltipHint(clearButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_L));
+        KeyboardShortcutUtils.registerClose(this);
+        KeyboardShortcutUtils.registerFocus(rootPane, "vendors.focusSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_F), searchField);
+        KeyboardShortcutUtils.registerButton(rootPane, "vendors.add",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_N), addVendorButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "vendors.edit",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_E), editVendorButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "vendors.delete",
+                KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), deleteVendorButton, true);
+        KeyboardShortcutUtils.registerButton(rootPane, "vendors.refresh",
+                KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), refreshButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "vendors.clearSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_L), clearButton);
+        KeyboardShortcutUtils.register(rootPane, "vendors.showArticles",
+                KeyboardShortcutUtils.menuShiftKey(KeyEvent.VK_A), this::showSelectedVendorArticles);
     }
 
     private void editSelectedVendor(boolean showSuccessDialog) {
@@ -639,7 +681,7 @@ public class VendorGUI extends JFrame {
         DefaultTableModel model = getModel();
         vendorTable.setModel(model);
 
-        vendorTable.setRowHeight(26);
+        vendorTable.setRowHeight(38);
         vendorTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         vendorTable.getTableHeader().setReorderingAllowed(false);
         vendorTable.setShowGrid(true);
@@ -684,9 +726,12 @@ public class VendorGUI extends JFrame {
                                                            boolean hasFocus, int row, int column) {
                 JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 applyTableColors(label, isSelected, row);
-                if (!isSelected) {
-                    label.setForeground(ThemeManager.getTextSecondaryColor());
-                }
+                label.setVerticalAlignment(SwingConstants.CENTER);
+                label.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
+                label.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
+                int modelRow = table.convertRowIndexToModel(row);
+                Vendor vendor = getVendorForModelRow(modelRow);
+                label.setText(buildArticlesCellText(vendor, value, isSelected));
                 return label;
             }
         };
@@ -862,14 +907,246 @@ public class VendorGUI extends JFrame {
                 .display();
     }
 
+    private void showSelectedVendorArticles() {
+        int selectedRow = vendorTable.getSelectedRow();
+        if (selectedRow < 0) {
+            new MessageDialog()
+                    .setTitle("Keine Auswahl")
+                    .setMessage("Bitte wählen Sie einen Lieferanten aus.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
+            return;
+        }
+
+        int modelRow = vendorTable.convertRowIndexToModel(selectedRow);
+        Vendor vendor = getVendorForModelRow(modelRow);
+        if (vendor == null) {
+            showVendorNotFoundMessage();
+            return;
+        }
+
+        showVendorArticlesDialog(vendor);
+    }
+
+    private void showVendorArticlesDialog(Vendor vendor) {
+        List<String> entries = new ArrayList<>(getSuppliedArticleDisplayEntries(vendor));
+        if (entries.isEmpty()) {
+            new MessageDialog()
+                    .setTitle("Keine Artikel")
+                    .setMessage("Für diesen Lieferanten sind keine Artikel hinterlegt.")
+                    .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                    .display();
+            return;
+        }
+
+        JDialog dialog = new JDialog(this, UnicodeSymbols.PACKAGE + " Gelieferte Artikel", true);
+        dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        dialog.setLayout(new BorderLayout(10, 10));
+        dialog.getContentPane().setBackground(ThemeManager.getBackgroundColor());
+
+        RoundedPanel headerPanel = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        headerPanel.setLayout(new BorderLayout(10, 6));
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(12, 14, 12, 14)
+        ));
+
+        JLabel titleLabel = new JLabel(UnicodeSymbols.PACKAGE + " " + safeStr(vendor.getName()));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JLabel subtitleLabel = new JLabel(entries.size() + " verknüpfte Artikel");
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        JLabel countBadge = new JLabel();
+        styleCountBadge(countBadge);
+        countBadge.setText("Angezeigt: " + entries.size() + " / " + entries.size());
+
+        JPanel headerText = new JPanel();
+        headerText.setOpaque(false);
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+        headerText.add(titleLabel);
+        headerText.add(Box.createVerticalStrut(3));
+        headerText.add(subtitleLabel);
+
+        headerPanel.add(headerText, BorderLayout.WEST);
+        headerPanel.add(countBadge, BorderLayout.EAST);
+
+        JTextField searchField = new JTextField(22);
+        styleTextField(searchField);
+        searchField.setToolTipText("Artikelnummer oder Namen filtern");
+
+        JButton clearSearchButton = createSecondaryButton(UnicodeSymbols.CLEAR + " Leeren");
+
+        RoundedPanel filterCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 16);
+        filterCard.setLayout(new BorderLayout(8, 0));
+        filterCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)
+        ));
+
+        JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Artikel filtern");
+        searchLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JPanel searchLeftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        searchLeftPanel.setOpaque(false);
+        searchLeftPanel.add(searchLabel);
+        searchLeftPanel.add(searchField);
+
+        JPanel searchRightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        searchRightPanel.setOpaque(false);
+        searchRightPanel.add(clearSearchButton);
+
+        filterCard.add(searchLeftPanel, BorderLayout.WEST);
+        filterCard.add(searchRightPanel, BorderLayout.EAST);
+
+        DefaultListModel<String> listModel = new DefaultListModel<>();
+        Runnable refreshList = () -> {
+            listModel.clear();
+            String query = safeStr(searchField.getText()).trim().toLowerCase();
+            for (String entry : entries) {
+                if (query.isEmpty() || entry.toLowerCase().contains(query)) {
+                    listModel.addElement(entry);
+                }
+            }
+            countBadge.setText("Angezeigt: " + listModel.size() + " / " + entries.size());
+        };
+        refreshList.run();
+
+        JList<String> articleList = new JList<>(listModel);
+        articleList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        articleList.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+        articleList.setBackground(ThemeManager.getCardBackgroundColor());
+        articleList.setForeground(ThemeManager.getTextPrimaryColor());
+        articleList.setFixedCellHeight(42);
+        articleList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                String text = safeStr(value);
+                String number = text;
+                String details = "";
+                int splitIndex = text.indexOf(" (");
+                if (splitIndex > 0 && text.endsWith(")")) {
+                    number = text.substring(0, splitIndex).trim();
+                    details = text.substring(splitIndex + 1).trim();
+                }
+                label.setText(details.isBlank()
+                        ? "<html><b>" + escapeHtml(number) + "</b></html>"
+                        : "<html><b>" + escapeHtml(number) + "</b><br><font color='" +
+                        toHtmlColor(isSelected ? ThemeManager.getTextOnPrimaryColor() : ThemeManager.getTextSecondaryColor()) +
+                        "'>" + escapeHtml(details) + "</font></html>");
+                label.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+                if (!isSelected) {
+                    label.setBackground(index % 2 == 0
+                            ? ThemeManager.getTableRowEvenColor()
+                            : ThemeManager.getTableRowOddColor());
+                    label.setForeground(ThemeManager.getTextPrimaryColor());
+                } else {
+                    label.setBackground(ThemeManager.getTableSelectionColor());
+                    label.setForeground(ThemeManager.getTextOnPrimaryColor());
+                }
+                return label;
+            }
+        });
+        articleList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                    copyArticleListSelection(articleList.getSelectedValue());
+                }
+            }
+        });
+
+        JScrollPane scrollPane = new JScrollPane(articleList);
+        scrollPane.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1));
+        scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
+
+        JLabel helperLabel = new JLabel("Doppelklick kopiert einen Eintrag");
+        helperLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        helperLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        JButton copySelectedButton = createSecondaryButton(UnicodeSymbols.COPY + " Auswahl kopieren");
+        copySelectedButton.addActionListener(e -> copyArticleListSelection(articleList.getSelectedValue()));
+
+        JButton copyAllButton = createSecondaryButton(UnicodeSymbols.DOCUMENT + " Alle kopieren");
+        copyAllButton.addActionListener(e -> copyArticleListSelection(String.join(System.lineSeparator(), entries)));
+
+        JButton closeButton = createSecondaryButton(UnicodeSymbols.CLOSE + " Schließen");
+        closeButton.addActionListener(e -> dialog.dispose());
+
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.setOpaque(false);
+        bottomPanel.add(helperLabel, BorderLayout.WEST);
+
+        JPanel bottomButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        bottomButtons.setOpaque(false);
+        bottomButtons.add(copySelectedButton);
+        bottomButtons.add(copyAllButton);
+        bottomButtons.add(closeButton);
+        bottomPanel.add(bottomButtons, BorderLayout.EAST);
+
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                refreshList.run();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                refreshList.run();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                refreshList.run();
+            }
+        });
+        clearSearchButton.addActionListener(e -> searchField.setText(""));
+        searchField.addActionListener(e -> refreshList.run());
+        searchField.registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_FOCUSED
+        );
+
+        JPanel contentPanel = new JPanel(new BorderLayout(0, 10));
+        contentPanel.setBackground(ThemeManager.getBackgroundColor());
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        contentPanel.add(headerPanel, BorderLayout.NORTH);
+        JPanel centerPanel = new JPanel(new BorderLayout(0, 8));
+        centerPanel.setOpaque(false);
+        centerPanel.add(filterCard, BorderLayout.NORTH);
+        centerPanel.add(scrollPane, BorderLayout.CENTER);
+        contentPanel.add(centerPanel, BorderLayout.CENTER);
+        contentPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+        dialog.setContentPane(contentPanel);
+        dialog.getRootPane().setDefaultButton(closeButton);
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+        dialog.setSize(620, 500);
+        dialog.setMinimumSize(new Dimension(500, 360));
+        dialog.setLocationRelativeTo(this);
+        SwingUtilities.invokeLater(searchField::requestFocusInWindow);
+        dialog.setVisible(true);
+    }
+
     private String formatSuppliedArticlesPreview(Vendor vendor) {
         List<String> displayEntries = getSuppliedArticleDisplayEntries(vendor);
         if (displayEntries.isEmpty()) {
             return "Keine Artikel";
         }
 
+        String summary = displayEntries.size() + " Artikel";
         if (displayEntries.size() <= ARTICLE_PREVIEW_LIMIT) {
-            return String.join(", ", displayEntries);
+            return summary + " • " + String.join(", ", displayEntries);
         }
 
         List<String> preview = new ArrayList<>();
@@ -877,7 +1154,36 @@ public class VendorGUI extends JFrame {
             preview.add(displayEntries.get(i));
         }
         int remaining = displayEntries.size() - ARTICLE_PREVIEW_LIMIT;
-        return String.join(", ", preview) + " +" + remaining + " weitere";
+        return summary + " • " + String.join(", ", preview) + " +" + remaining;
+    }
+
+    private String buildArticlesCellText(Vendor vendor, Object value, boolean isSelected) {
+        List<String> displayEntries = getSuppliedArticleDisplayEntries(vendor);
+        if (displayEntries.isEmpty()) {
+            String fallback = safeStr(value).trim();
+            if (fallback.isEmpty()) {
+                fallback = "Keine Artikel";
+            }
+            return fallback;
+        }
+
+        String summary = displayEntries.size() + " " + (displayEntries.size() == 1 ? "Artikel" : "Artikel");
+        String preview;
+        if (displayEntries.size() <= ARTICLE_PREVIEW_LIMIT) {
+            preview = String.join(", ", displayEntries);
+        } else {
+            List<String> previewEntries = new ArrayList<>();
+            for (int i = 0; i < ARTICLE_PREVIEW_LIMIT; i++) {
+                previewEntries.add(displayEntries.get(i));
+            }
+            preview = String.join(", ", previewEntries) + " +" + (displayEntries.size() - ARTICLE_PREVIEW_LIMIT);
+        }
+
+        String previewColor = isSelected
+                ? toHtmlColor(ThemeManager.getTextOnPrimaryColor())
+                : toHtmlColor(ThemeManager.getTextSecondaryColor());
+        return "<html><b>" + escapeHtml(summary) + "</b><br><font color='" + previewColor + "'>"
+                + escapeHtml(preview) + "</font></html>";
     }
 
     private String getVendorToolTip(Vendor vendor, int modelColumn) {
@@ -905,9 +1211,9 @@ public class VendorGUI extends JFrame {
             return "Keine verknüpften Artikel";
         }
 
-        StringBuilder builder = new StringBuilder("<html><b>Gelieferte Artikel</b><br>");
+        StringBuilder builder = new StringBuilder("<html><b>Gelieferte Artikel</b> (" + displayEntries.size() + ")<br><br>");
         for (String entry : displayEntries) {
-            builder.append(escapeHtml(entry)).append("<br>");
+            builder.append("&#8226; ").append(escapeHtml(entry)).append("<br>");
         }
         builder.append("</html>");
         return builder.toString();
@@ -991,5 +1297,24 @@ public class VendorGUI extends JFrame {
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;");
+    }
+
+    private void copyArticleListSelection(String text) {
+        String value = safeStr(text).trim();
+        if (value.isEmpty()) {
+            new MessageDialog()
+                    .setTitle("Keine Auswahl")
+                    .setMessage("Bitte wählen Sie einen Artikeleintrag aus.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
+            return;
+        }
+
+        Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(value), null);
+    }
+
+    private static String toHtmlColor(Color color) {
+        Color resolved = color == null ? Color.BLACK : color;
+        return String.format("#%02x%02x%02x", resolved.getRed(), resolved.getGreen(), resolved.getBlue());
     }
 }

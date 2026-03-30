@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import ch.framedev.lagersystem.utils.VendorOrderLogging;
 import org.apache.logging.log4j.LogManager;
@@ -165,9 +166,29 @@ public class SupplierOrderGUI extends JFrame {
         configureInteractions();
         loadFromFile();
         refreshTable();
+        installKeyboardShortcuts(refreshButton);
     }
 
     private record OrderItem(String articleNumber, String name, String vendor, int quantity, int stock, String addedAt) {
+    }
+
+    private void installKeyboardShortcuts(JButton refreshButton) {
+        JRootPane rootPane = getRootPane();
+        KeyboardShortcutUtils.addTooltipHint(searchField, KeyboardShortcutUtils.menuKey(KeyEvent.VK_F));
+        KeyboardShortcutUtils.addTooltipHint(removeButton, KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
+        KeyboardShortcutUtils.addTooltipHint(saveButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_S));
+        KeyboardShortcutUtils.addTooltipHint(refreshButton, KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0));
+        KeyboardShortcutUtils.registerClose(this);
+        KeyboardShortcutUtils.registerFocus(rootPane, "supplierOrders.focusSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_F), searchField);
+        KeyboardShortcutUtils.registerButton(rootPane, "supplierOrders.remove",
+                KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), removeButton, true);
+        KeyboardShortcutUtils.registerButton(rootPane, "supplierOrders.save",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_S), saveButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "supplierOrders.refresh",
+                KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), refreshButton);
+        KeyboardShortcutUtils.register(rootPane, "supplierOrders.clearSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_L), this::clearSearch);
     }
 
     private JPanel createHeaderPanel() {
@@ -687,7 +708,7 @@ public class SupplierOrderGUI extends JFrame {
         }
     }
 
-    private LocalDateTime parseAddedAt(String addedAt) {
+    private static LocalDateTime parseAddedAt(String addedAt) {
         if (addedAt == null || addedAt.isBlank()) {
             return LocalDateTime.MIN;
         }
@@ -787,6 +808,34 @@ public class SupplierOrderGUI extends JFrame {
                 .replace(">", "&gt;");
     }
 
+    private static OrderItem parseOrderLine(String line) {
+        if (line == null || line.isBlank()) {
+            return null;
+        }
+
+        String[] parts = line.split(Pattern.quote(FILE_SEPARATOR), -1);
+        if (parts.length < 6) {
+            return null;
+        }
+
+        return new OrderItem(
+                parts[0],
+                parts[1],
+                parts[2],
+                safeInt(parts[3]),
+                safeInt(parts[4]),
+                parts[5]
+        );
+    }
+
+    private static String formatAddedAtForDisplay(String addedAt) {
+        LocalDateTime parsed = parseAddedAt(addedAt);
+        if (parsed.equals(LocalDateTime.MIN)) {
+            return safeText(addedAt).isBlank() ? "-" : safeText(addedAt);
+        }
+        return DISPLAY_DATE_FORMAT.format(parsed);
+    }
+
     public static List<String> getAllSupplierOrders() {
         List<String> orders = new ArrayList<>();
         ensureOrderFileExists();
@@ -798,6 +847,33 @@ public class SupplierOrderGUI extends JFrame {
             Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler beim Lesen der Lieferanten-Bestelldatei: " + e.getMessage());
         }
         return orders;
+    }
+
+    public static List<String> getAllSupplierOrdersForDisplay() {
+        List<OrderItem> items = new ArrayList<>();
+        for (String line : getAllSupplierOrders()) {
+            OrderItem item = parseOrderLine(line);
+            if (item != null) {
+                items.add(item);
+            }
+        }
+
+        items.sort((first, second) -> parseAddedAt(second.addedAt()).compareTo(parseAddedAt(first.addedAt())));
+
+        List<String> displayLines = new ArrayList<>();
+        if (items.isEmpty()) {
+            displayLines.add("Keine Lieferanten-Bestellungen vorhanden.");
+            return displayLines;
+        }
+
+        for (OrderItem item : items) {
+            displayLines.add("--- " + safeText(item.articleNumber()) + " • " + defaultIfBlank(item.name(), "Unbenannter Artikel") + " ---");
+            displayLines.add("Lieferant: " + defaultIfBlank(item.vendor(), "Kein Lieferant"));
+            displayLines.add("Bestellmenge: " + item.quantity() + " | Lagerbestand: " + item.stock());
+            displayLines.add("Hinzugefügt: " + formatAddedAtForDisplay(item.addedAt()));
+        }
+
+        return displayLines;
     }
 
     public static SupplierOrderGUI getInstance() {

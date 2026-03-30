@@ -8,6 +8,7 @@ import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import org.jetbrains.annotations.NotNull;
 import org.apache.logging.log4j.LogManager;
@@ -127,12 +128,20 @@ public class PartialOrderGUI extends JFrame {
         buttons.add(finish);
 
         root.add(buttons, BorderLayout.SOUTH);
+        installKeyboardShortcuts(finish);
     }
 
     @Override
     public void dispose() {
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
+    }
+
+    private void installKeyboardShortcuts(JButton finishButton) {
+        KeyboardShortcutUtils.addTooltipHint(finishButton, KeyboardShortcutUtils.menuKey(java.awt.event.KeyEvent.VK_S));
+        KeyboardShortcutUtils.registerClose(this);
+        KeyboardShortcutUtils.registerButton(getRootPane(), "partialOrder.finish",
+                KeyboardShortcutUtils.menuKey(java.awt.event.KeyEvent.VK_S), finishButton);
     }
 
     private void applyCompletion() {

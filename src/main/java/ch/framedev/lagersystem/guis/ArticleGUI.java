@@ -446,6 +446,7 @@ public class ArticleGUI extends JFrame {
         this.addComponentListener(resizeListener);
         tableScrollPane.getViewport().addComponentListener(resizeListener);
 
+        installKeyboardShortcuts(addArticleButton, editArticleButton, deleteArticleButton, refreshBtn, clearBtn);
         SwingUtilities.invokeLater(() -> adjustColumnWidths(articleTable, tableScrollPane, baseColumnWidths));
     }
 
@@ -457,6 +458,30 @@ public class ArticleGUI extends JFrame {
         LOGGER.info("Disposing ArticleGUI window");
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
+    }
+
+    private void installKeyboardShortcuts(JButton addArticleButton, JButton editArticleButton,
+                                          JButton deleteArticleButton, JButton refreshButton, JButton clearButton) {
+        JRootPane rootPane = getRootPane();
+        KeyboardShortcutUtils.addTooltipHint(searchField, KeyboardShortcutUtils.menuKey(KeyEvent.VK_F));
+        KeyboardShortcutUtils.addTooltipHint(addArticleButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_N));
+        KeyboardShortcutUtils.addTooltipHint(editArticleButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_E));
+        KeyboardShortcutUtils.addTooltipHint(deleteArticleButton, KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
+        KeyboardShortcutUtils.addTooltipHint(refreshButton, KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0));
+        KeyboardShortcutUtils.addTooltipHint(clearButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_L));
+        KeyboardShortcutUtils.registerClose(this);
+        KeyboardShortcutUtils.registerFocus(rootPane, "articles.focusSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_F), searchField);
+        KeyboardShortcutUtils.registerButton(rootPane, "articles.add",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_N), addArticleButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "articles.edit",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_E), editArticleButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "articles.delete",
+                KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), deleteArticleButton, true);
+        KeyboardShortcutUtils.registerButton(rootPane, "articles.refresh",
+                KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), refreshButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "articles.clearSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_L), clearButton);
     }
 
     private Object[] showUpdateArticleDialog(Object[] existingData) {
@@ -1194,8 +1219,8 @@ public class ArticleGUI extends JFrame {
 
                     String picked = null;
 
-                    if(ArticleManager.getInstance().hasSeperateArticles(article.getArticleNumber())) {
-                        List<String> variants = ArticleManager.getInstance().getAllDetailsForArticleNumber(article.getArticleNumber());
+                    List<String> variants = ArticleUtils.getCurrentSeparatedDetails(article);
+                    if(!variants.isEmpty()) {
                         String message = "Wählen Sie die Variante für \"" + article.getName() + "\":";
                         String[] options = variants.toArray(new String[0]);
                         int choice = new MessageDialog()
@@ -1303,7 +1328,7 @@ public class ArticleGUI extends JFrame {
     }
 
     private void showSeparatedArticlesDialog() {
-        List<SeperateArticle> separatedArticles = ArticleManager.getInstance().getAllSeperateArticles();
+        List<SeperateArticle> separatedArticles = getCurrentSeparatedArticles();
         if (separatedArticles == null || separatedArticles.isEmpty()) {
             new MessageDialog()
                     .setTitle("Keine getrennten Artikel")
@@ -1335,7 +1360,7 @@ public class ArticleGUI extends JFrame {
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-        JLabel subtitleLabel = new JLabel(separatedArticles.size() + " Einträge aus der Datenbank");
+        JLabel subtitleLabel = new JLabel(separatedArticles.size() + " aktuelle Varianten");
         subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
@@ -1432,6 +1457,20 @@ public class ArticleGUI extends JFrame {
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_IN_FOCUSED_WINDOW);
         dialog.setVisible(true);
+    }
+
+    private List<SeperateArticle> getCurrentSeparatedArticles() {
+        List<SeperateArticle> separatedArticles = new ArrayList<>();
+        for (Article article : ArticleManager.getInstance().getAllArticles()) {
+            if (article == null || article.getArticleNumber() == null || article.getArticleNumber().isBlank()) {
+                continue;
+            }
+            if (!ArticleUtils.isArticleSeparated(article.getArticleNumber())) {
+                continue;
+            }
+            separatedArticles.addAll(ArticleUtils.newSeperatedArticles(article.getArticleNumber()));
+        }
+        return separatedArticles;
     }
 
     private void applyAdvancedFilters() {

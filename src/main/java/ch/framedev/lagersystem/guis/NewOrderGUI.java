@@ -12,6 +12,7 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.OrderExport;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -381,6 +382,7 @@ public class NewOrderGUI extends JFrame {
         rebuildArticleComboModel("");
 
         updateSummaryBar();
+        installKeyboardShortcuts(addArticlesBtn, exportPdfBtn, removeArticleBtn, createOrderBtn);
     }
 
     // ---------------------------------------------------------------------
@@ -554,6 +556,29 @@ public class NewOrderGUI extends JFrame {
         updateInlineMetadataChoices();
 
         return panel;
+    }
+
+    private void installKeyboardShortcuts(JButton addArticlesButton, JButton exportPdfButton,
+                                          JButton removeArticleButton, JButton createOrderButton) {
+        JRootPane rootPane = getRootPane();
+        KeyboardShortcutUtils.addTooltipHint(articleSearchField, KeyboardShortcutUtils.menuKey(KeyEvent.VK_F));
+        KeyboardShortcutUtils.addTooltipHint(addArticlesButton, KeyboardShortcutUtils.menuShiftKey(KeyEvent.VK_A));
+        KeyboardShortcutUtils.addTooltipHint(removeArticleButton, KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
+        KeyboardShortcutUtils.addTooltipHint(exportPdfButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_P));
+        KeyboardShortcutUtils.addTooltipHint(createOrderButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_S));
+        KeyboardShortcutUtils.registerClose(this);
+        KeyboardShortcutUtils.registerFocus(rootPane, "newOrder.focusArticleSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_F), articleSearchField);
+        KeyboardShortcutUtils.registerButton(rootPane, "newOrder.addFromList",
+                KeyboardShortcutUtils.menuShiftKey(KeyEvent.VK_A), addArticlesButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "newOrder.removeArticle",
+                KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), removeArticleButton, true);
+        KeyboardShortcutUtils.registerButton(rootPane, "newOrder.exportPdf",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_P), exportPdfButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "newOrder.create",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_S), createOrderButton);
+        KeyboardShortcutUtils.register(rootPane, "newOrder.help",
+                KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0), this::showHelpDialog);
     }
 
     private void addSelectedInlineArticle() {
@@ -1406,6 +1431,7 @@ public class NewOrderGUI extends JFrame {
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("Bestellung");
         JMenuItem help = new JMenuItem("Hilfe");
+        help.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
         help.addActionListener(e -> showHelpDialog());
         menu.add(help);
         menuBar.add(menu);

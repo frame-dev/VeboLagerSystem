@@ -966,6 +966,14 @@ public class NotesGUI extends JFrame {
                 setupList();
             }
         });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "notes.close");
+        am.put("notes.close", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                dispose();
+            }
+        });
     }
 
     /**

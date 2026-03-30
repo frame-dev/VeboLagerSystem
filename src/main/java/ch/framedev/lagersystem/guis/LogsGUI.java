@@ -5,6 +5,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleExporter;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -21,8 +22,10 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -62,8 +65,13 @@ public class LogsGUI extends JFrame {
     private final JLabel resultsBadgeLabel = new JLabel();
     private final JLabel filterStateLabel = new JLabel("Keine Filter aktiv");
     private final JLabel viewerTitleLabel = new JLabel(UnicodeSymbols.DOCUMENT + " Log-Ausgabe");
+    private final JLabel totalStatsLabel = new JLabel();
+    private final JLabel infoStatsLabel = new JLabel();
+    private final JLabel warnStatsLabel = new JLabel();
+    private final JLabel errorStatsLabel = new JLabel();
     private final JCheckBox autoRefreshCheckBox = new JCheckBox("Auto-Refresh");
     private final Timer autoRefreshTimer;
+    private Point dragStartPoint;
 
     private final JButton orderLogsButton;
     private final JButton supplierLogsButton;
@@ -87,15 +95,17 @@ public class LogsGUI extends JFrame {
         ThemeManager.applyUIDefaults();
 
         setTitle(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");
-        setSize(980, 680);
-        setMinimumSize(new Dimension(900, 580));
+        setUndecorated(true);
+        setSize(940, 640);
+        setMinimumSize(new Dimension(860, 540));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+        getRootPane().setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true));
 
-        JPanel mainPanel = new JPanel(new BorderLayout(0, 10));
+        JPanel mainPanel = new JPanel(new BorderLayout(0, 8));
         mainPanel.setBackground(ThemeManager.getBackgroundColor());
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         add(mainPanel, BorderLayout.CENTER);
 
         JPanel topContainer = new JPanel();
@@ -105,7 +115,7 @@ public class LogsGUI extends JFrame {
         JPanel headerWrapper = createHeaderPanel();
         if (headerWrapper != null) {
             topContainer.add(headerWrapper);
-            topContainer.add(Box.createVerticalStrut(10));
+            topContainer.add(Box.createVerticalStrut(8));
         }
 
         orderLogsButton = createCategoryButton(UnicodeSymbols.PACKAGE + " Bestellungs-Protokolle",
@@ -114,39 +124,59 @@ public class LogsGUI extends JFrame {
         supplierLogsButton = createCategoryButton(UnicodeSymbols.TRUCK + " Lieferanten-Protokolle",
                 ThemeManager.getAccentColor(),
                 LogCategory.SUPPLIER);
-        supplierOrderLogsButton = createCategoryButton(UnicodeSymbols.DOCUMENT + " Lieferanten-Bestellungs-Protokolle",
+        supplierOrderLogsButton = createCategoryButton(UnicodeSymbols.DOCUMENT + " Lieferanten-Bestellungen",
                 ThemeManager.getWarningColor(),
                 LogCategory.SUPPLIER_ORDER);
         allLogsButton = createCategoryButton(UnicodeSymbols.CLIPBOARD + " Alle Protokolle",
                 ThemeManager.getPrimaryColor(),
                 LogCategory.ALL);
 
-        JPanel categoryCard = createCardPanel(18, new BorderLayout(10, 10));
+        JPanel categoryCard = createCardPanel(16, new BorderLayout(8, 8));
         categoryCard.add(buildCategoryPanel(), BorderLayout.CENTER);
         topContainer.add(categoryCard);
-        topContainer.add(Box.createVerticalStrut(10));
+        topContainer.add(Box.createVerticalStrut(8));
 
-        clearLogsButton = JFrameUtils.createThemeButton(UnicodeSymbols.TRASH + " Logs löschen", ThemeManager.getErrorColor());
+        clearLogsButton = prepareActionButton(
+                JFrameUtils.createThemeButton(UnicodeSymbols.TRASH + " Logs löschen", ThemeManager.getErrorColor()),
+                140,
+                38
+        );
         clearLogsButton.setToolTipText("Aktuelle Log-Kategorie löschen");
         clearLogsButton.addActionListener(e -> clearCurrentLogs());
 
-        JButton refreshButton = JFrameUtils.createSecondaryButton(UnicodeSymbols.REFRESH + " Aktualisieren");
+        JButton refreshButton = prepareActionButton(
+                JFrameUtils.createSecondaryButton(UnicodeSymbols.REFRESH + " Aktualisieren"),
+                136,
+                38
+        );
         refreshButton.setToolTipText("Logs neu laden");
         refreshButton.addActionListener(e -> refreshCurrentLogs());
 
-        JButton exportPdfButton = JFrameUtils.createSecondaryButton(UnicodeSymbols.DOCUMENT + " PDF Export");
+        JButton exportPdfButton = prepareActionButton(
+                JFrameUtils.createSecondaryButton(UnicodeSymbols.DOCUMENT + " PDF"),
+                112,
+                38
+        );
         exportPdfButton.setToolTipText("Gefilterte Logs als PDF exportieren");
         exportPdfButton.addActionListener(e -> exportLogsToPdf(filteredLogs));
 
-        JButton exportCsvButton = JFrameUtils.createSecondaryButton(UnicodeSymbols.DOWNLOAD + " CSV Export");
+        JButton exportCsvButton = prepareActionButton(
+                JFrameUtils.createSecondaryButton(UnicodeSymbols.DOWNLOAD + " CSV"),
+                112,
+                38
+        );
         exportCsvButton.setToolTipText("Gefilterte Logs als CSV exportieren");
         exportCsvButton.addActionListener(e -> exportLogsToCsv(filteredLogs));
 
-        JButton clearFilterButton = JFrameUtils.createSecondaryButton(UnicodeSymbols.CLEAR + " Filter leeren");
+        JButton clearFilterButton = prepareActionButton(
+                JFrameUtils.createSecondaryButton(UnicodeSymbols.CLEAR + " Filter leeren"),
+                136,
+                38
+        );
         clearFilterButton.setToolTipText("Such- und Datumsfilter zurücksetzen");
         clearFilterButton.addActionListener(e -> clearFilters());
 
-        JPanel controlsCard = createCardPanel(18, new BorderLayout(10, 10));
+        JPanel controlsCard = createCardPanel(16, new BorderLayout(8, 8));
         controlsCard.add(buildFilterPanel(), BorderLayout.CENTER);
         controlsCard.add(buildActionPanel(autoRefreshCheckBox, lastUpdatedLabel, refreshButton, exportPdfButton, exportCsvButton, clearLogsButton, clearFilterButton), BorderLayout.SOUTH);
         topContainer.add(controlsCard);
@@ -175,9 +205,17 @@ public class LogsGUI extends JFrame {
         styleBadge(lastUpdatedLabel);
         styleBadge(filterStateLabel);
         filterStateLabel.setBackground(ThemeManager.getInputBackgroundColor());
+        styleStatBadge(totalStatsLabel, ThemeManager.getPrimaryColor());
+        styleStatBadge(infoStatsLabel, ThemeManager.getInfoColor());
+        styleStatBadge(warnStatsLabel, ThemeManager.getWarningColor());
+        styleStatBadge(errorStatsLabel, ThemeManager.getErrorColor());
         viewerTitleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
         viewerTitleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        searchField.putClientProperty("JTextField.placeholderText", "Logs durchsuchen");
+        fromDateField.putClientProperty("JTextField.placeholderText", "dd.MM.yyyy");
+        toDateField.putClientProperty("JTextField.placeholderText", "dd.MM.yyyy");
 
+        installKeyboardShortcuts(refreshButton, exportPdfButton, exportCsvButton, clearFilterButton);
         setCategory(LogCategory.ORDER);
     }
 
@@ -186,6 +224,35 @@ public class LogsGUI extends JFrame {
         autoRefreshTimer.stop();
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
+    }
+
+    private void installKeyboardShortcuts(JButton refreshButton, JButton exportPdfButton,
+                                          JButton exportCsvButton, JButton clearFilterButton) {
+        JRootPane rootPane = getRootPane();
+        KeyboardShortcutUtils.addTooltipHint(searchField, KeyboardShortcutUtils.menuKey(KeyEvent.VK_F));
+        KeyboardShortcutUtils.addTooltipHint(refreshButton, KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0));
+        KeyboardShortcutUtils.addTooltipHint(clearFilterButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_L));
+        KeyboardShortcutUtils.addTooltipHint(exportPdfButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_P));
+        KeyboardShortcutUtils.addTooltipHint(exportCsvButton, KeyboardShortcutUtils.menuShiftKey(KeyEvent.VK_C));
+        KeyboardShortcutUtils.registerClose(this);
+        KeyboardShortcutUtils.registerFocus(rootPane, "logs.focusSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_F), searchField);
+        KeyboardShortcutUtils.registerButton(rootPane, "logs.refresh",
+                KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), refreshButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "logs.clearFilters",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_L), clearFilterButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "logs.exportPdf",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_P), exportPdfButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "logs.exportCsv",
+                KeyboardShortcutUtils.menuShiftKey(KeyEvent.VK_C), exportCsvButton);
+        KeyboardShortcutUtils.register(rootPane, "logs.categoryOrder",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_1), () -> setCategory(LogCategory.ORDER));
+        KeyboardShortcutUtils.register(rootPane, "logs.categorySupplier",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_2), () -> setCategory(LogCategory.SUPPLIER));
+        KeyboardShortcutUtils.register(rootPane, "logs.categorySupplierOrders",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_3), () -> setCategory(LogCategory.SUPPLIER_ORDER));
+        KeyboardShortcutUtils.register(rootPane, "logs.categoryAll",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_4), () -> setCategory(LogCategory.ALL));
     }
 
     private JPanel createHeaderPanel() {
@@ -199,26 +266,28 @@ public class LogsGUI extends JFrame {
         headerPanel.setLayout(new BorderLayout());
         headerPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(14, 18, 14, 18)
+                BorderFactory.createEmptyBorder(11, 14, 11, 14)
         ));
         headerPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel titleLabel = new JLabel(UnicodeSymbols.CLIPBOARD + " Logs Übersicht");
-        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
         JLabel subtitleLabel = new JLabel(UnicodeSymbols.INFO + " Protokolle durchsuchen, filtern und exportieren");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
         subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
         JPanel headerText = new JPanel();
         headerText.setOpaque(false);
         headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
         headerText.add(titleLabel);
-        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(Box.createVerticalStrut(3));
         headerText.add(subtitleLabel);
 
         headerPanel.add(headerText, BorderLayout.WEST);
+        headerPanel.add(buildHeaderActionsPanel(), BorderLayout.EAST);
+        installWindowDrag(headerPanel);
 
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setOpaque(false);
@@ -226,81 +295,103 @@ public class LogsGUI extends JFrame {
         return wrapper;
     }
 
+    private JPanel buildHeaderActionsPanel() {
+        JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        actionsPanel.setOpaque(false);
+        actionsPanel.add(createHeaderChip(UnicodeSymbols.BULB + " Filter & Export", ThemeManager.getSurfaceColor()));
+        actionsPanel.add(createHeaderCloseButton());
+        return actionsPanel;
+    }
+
     private JPanel buildCategoryPanel() {
-        JPanel categoryPanel = new JPanel(new BorderLayout(10, 10));
+        JPanel categoryPanel = new JPanel(new BorderLayout(10, 8));
         categoryPanel.setOpaque(false);
 
-        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        buttonRow.setOpaque(false);
+        JLabel categoryTitle = new JLabel(UnicodeSymbols.CLIPBOARD + " Protokollquellen");
+        categoryTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        categoryTitle.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JLabel categoryHint = new JLabel("Zwischen Quellen wechseln, um Bestellungen, Lieferanten oder alle Dateien gesammelt zu prüfen.");
+        categoryHint.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
+        categoryHint.setForeground(ThemeManager.getTextSecondaryColor());
+
+        JPanel textPanel = new JPanel();
+        textPanel.setOpaque(false);
+        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+        textPanel.add(categoryTitle);
+        textPanel.add(Box.createVerticalStrut(3));
+        textPanel.add(categoryHint);
+
+        JPanel buttonRow = createWrapPanel(FlowLayout.LEFT, 8, 6);
         buttonRow.add(orderLogsButton);
         buttonRow.add(supplierLogsButton);
         buttonRow.add(supplierOrderLogsButton);
         buttonRow.add(allLogsButton);
 
-        JScrollPane buttonScrollPane = new JScrollPane(
-                buttonRow,
-                ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER,
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED
-        );
-        buttonScrollPane.setBorder(BorderFactory.createEmptyBorder());
-        buttonScrollPane.setOpaque(false);
-        buttonScrollPane.getViewport().setOpaque(false);
-        buttonScrollPane.getHorizontalScrollBar().setUnitIncrement(16);
-
-        JPanel badgeRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel badgeRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         badgeRow.setOpaque(false);
         badgeRow.add(categoryBadgeLabel);
         badgeRow.add(resultsBadgeLabel);
 
-        categoryPanel.add(buttonScrollPane, BorderLayout.CENTER);
+        categoryPanel.add(textPanel, BorderLayout.WEST);
+        categoryPanel.add(buttonRow, BorderLayout.CENTER);
         categoryPanel.add(badgeRow, BorderLayout.EAST);
         return categoryPanel;
     }
 
     private JPanel buildFilterPanel() {
-        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JPanel filterPanel = new JPanel(new BorderLayout(10, 8));
         filterPanel.setOpaque(false);
-
-        JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche:");
-        styleLabel(searchLabel, Font.BOLD, ThemeManager.getTextPrimaryColor());
-
-        JLabel fromLabel = new JLabel("Von:");
-        styleLabel(fromLabel, Font.PLAIN, ThemeManager.getTextPrimaryColor());
-
-        JLabel toLabel = new JLabel("Bis:");
-        styleLabel(toLabel, Font.PLAIN, ThemeManager.getTextPrimaryColor());
 
         styleTextField(searchField);
         styleTextField(fromDateField);
         styleTextField(toDateField);
+        searchField.setColumns(18);
+        fromDateField.setColumns(9);
+        toDateField.setColumns(9);
 
         searchField.setToolTipText("Textsuche in Logs");
         fromDateField.setToolTipText("Format: dd.MM.yyyy");
         toDateField.setToolTipText("Format: dd.MM.yyyy");
 
-        filterPanel.add(searchLabel);
-        filterPanel.add(searchField);
-        filterPanel.add(fromLabel);
-        filterPanel.add(fromDateField);
-        filterPanel.add(toLabel);
-        filterPanel.add(toDateField);
+        JLabel filterTitle = new JLabel(UnicodeSymbols.FILTER + " Filter");
+        filterTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        filterTitle.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JLabel filterHint = new JLabel("Suche nach Begriffen und schränke Ergebnisse optional per Datum ein.");
+        filterHint.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
+        filterHint.setForeground(ThemeManager.getTextSecondaryColor());
+
+        JPanel introPanel = new JPanel();
+        introPanel.setOpaque(false);
+        introPanel.setLayout(new BoxLayout(introPanel, BoxLayout.Y_AXIS));
+        introPanel.add(filterTitle);
+        introPanel.add(Box.createVerticalStrut(3));
+        introPanel.add(filterHint);
+
+        JPanel fieldsPanel = createWrapPanel(FlowLayout.LEFT, 8, 6);
+        fieldsPanel.add(buildInputGroup(UnicodeSymbols.SEARCH + " Suche", searchField));
+        fieldsPanel.add(buildInputGroup(UnicodeSymbols.CALENDAR + " Von", fromDateField));
+        fieldsPanel.add(buildInputGroup(UnicodeSymbols.CALENDAR + " Bis", toDateField));
+
+        filterPanel.add(introPanel, BorderLayout.WEST);
+        filterPanel.add(fieldsPanel, BorderLayout.CENTER);
         return filterPanel;
     }
 
     private JPanel buildActionPanel(JCheckBox autoRefresh, JLabel updatedLabel, JButton refreshButton,
                                     JButton exportPdfButton, JButton exportCsvButton, JButton clearButton,
                                     JButton clearFilterButton) {
-        JPanel actionPanel = new JPanel(new BorderLayout(10, 10));
+        JPanel actionPanel = new JPanel(new BorderLayout(8, 8));
         actionPanel.setOpaque(false);
-        actionPanel.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+        actionPanel.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
 
-        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel infoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         infoPanel.setOpaque(false);
         infoPanel.add(autoRefresh);
         infoPanel.add(updatedLabel);
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        buttonPanel.setOpaque(false);
+        JPanel buttonPanel = createWrapPanel(FlowLayout.RIGHT, 6, 6);
         buttonPanel.add(refreshButton);
         buttonPanel.add(clearFilterButton);
         buttonPanel.add(exportPdfButton);
@@ -313,14 +404,14 @@ public class LogsGUI extends JFrame {
     }
 
     private JPanel buildContentCard() {
-        JPanel contentCard = createCardPanel(18, new BorderLayout());
+        JPanel contentCard = createCardPanel(16, new BorderLayout());
         contentCard.add(buildViewerHeader(), BorderLayout.NORTH);
 
         logTextPane.setEditable(false);
-        logTextPane.setFont(SettingsGUI.getFontByName(Font.PLAIN, 15));
+        logTextPane.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
         logTextPane.setBackground(ThemeManager.getInputBackgroundColor());
         logTextPane.setForeground(ThemeManager.getTextPrimaryColor());
-        logTextPane.setBorder(BorderFactory.createEmptyBorder(16, 18, 16, 18));
+        logTextPane.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
 
         JScrollPane scrollPane = new JScrollPane(logTextPane,
                 ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
@@ -336,28 +427,53 @@ public class LogsGUI extends JFrame {
     }
 
     private JPanel buildViewerHeader() {
-        JPanel headerPanel = new JPanel(new BorderLayout(10, 10));
+        JPanel headerPanel = new JPanel(new BorderLayout(8, 8));
         headerPanel.setOpaque(false);
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
 
         JLabel helperLabel = new JLabel("Rechtsklick zum Kopieren • Datum: dd.MM.yyyy");
-        helperLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        helperLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
         helperLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
         JPanel leftPanel = new JPanel();
         leftPanel.setOpaque(false);
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
         leftPanel.add(viewerTitleLabel);
-        leftPanel.add(Box.createVerticalStrut(3));
+        leftPanel.add(Box.createVerticalStrut(2));
         leftPanel.add(helperLabel);
 
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         rightPanel.setOpaque(false);
         rightPanel.add(filterStateLabel);
 
+        JPanel statsPanel = createWrapPanel(FlowLayout.LEFT, 6, 6);
+        statsPanel.add(totalStatsLabel);
+        statsPanel.add(infoStatsLabel);
+        statsPanel.add(warnStatsLabel);
+        statsPanel.add(errorStatsLabel);
+
         headerPanel.add(leftPanel, BorderLayout.WEST);
         headerPanel.add(rightPanel, BorderLayout.EAST);
+        headerPanel.add(statsPanel, BorderLayout.SOUTH);
         return headerPanel;
+    }
+
+    private JPanel buildInputGroup(String title, JTextField field) {
+        JPanel group = new JPanel();
+        group.setOpaque(false);
+        group.setLayout(new BoxLayout(group, BoxLayout.Y_AXIS));
+
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 11));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        field.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        group.add(titleLabel);
+        group.add(Box.createVerticalStrut(3));
+        group.add(field);
+        return group;
     }
 
     private JPanel createCardPanel(int radius, LayoutManager layout) {
@@ -365,15 +481,18 @@ public class LogsGUI extends JFrame {
         panel.setLayout(layout);
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12)
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
         return panel;
     }
 
     private JButton createCategoryButton(String text, Color color, LogCategory category) {
         JButton button = JFrameUtils.createThemeButton(text, color);
-        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
         button.setToolTipText(text);
+        button.setPreferredSize(new Dimension(Math.max(180, button.getPreferredSize().width), 38));
+        button.putClientProperty("logs.baseColor", color);
+        button.putClientProperty("logs.category", category);
         button.addActionListener(e -> setCategory(category));
         return button;
     }
@@ -418,20 +537,43 @@ public class LogsGUI extends JFrame {
     }
 
     private void updateCategoryButtons() {
-        orderLogsButton.setEnabled(currentCategory != LogCategory.ORDER);
-        supplierLogsButton.setEnabled(currentCategory != LogCategory.SUPPLIER);
-        supplierOrderLogsButton.setEnabled(currentCategory != LogCategory.SUPPLIER_ORDER);
-        allLogsButton.setEnabled(currentCategory != LogCategory.ALL);
+        updateCategoryButtonState(orderLogsButton, LogCategory.ORDER);
+        updateCategoryButtonState(supplierLogsButton, LogCategory.SUPPLIER);
+        updateCategoryButtonState(supplierOrderLogsButton, LogCategory.SUPPLIER_ORDER);
+        updateCategoryButtonState(allLogsButton, LogCategory.ALL);
         clearLogsButton.setEnabled(currentCategory != LogCategory.ALL);
-        categoryBadgeLabel.setText("Kategorie: " + getCategoryDisplayName(currentCategory));
+        categoryBadgeLabel.setText(UnicodeSymbols.TAG + " " + getCategoryDisplayName(currentCategory));
         viewerTitleLabel.setText(UnicodeSymbols.DOCUMENT + " " + getCategoryDisplayName(currentCategory));
+    }
+
+    private void updateCategoryButtonState(JButton button, LogCategory category) {
+        if (button == null || category == null) {
+            return;
+        }
+
+        Color baseColor = (Color) button.getClientProperty("logs.baseColor");
+        if (baseColor == null) {
+            baseColor = ThemeManager.getAccentColor();
+        }
+
+        boolean selected = currentCategory == category;
+        button.setEnabled(true);
+        button.setCursor(Cursor.getPredefinedCursor(selected ? Cursor.DEFAULT_CURSOR : Cursor.HAND_CURSOR));
+        JFrameUtils.applyButtonPalette(button, selected ? baseColor : mixColors(baseColor, ThemeManager.getSurfaceColor(), 0.18f));
+        button.setForeground(selected
+                ? getReadableTextColor(baseColor)
+                : ThemeManager.getTextPrimaryColor());
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(selected ? ThemeManager.getAccentColor() : mixColors(baseColor, Color.BLACK, 0.15f),
+                        selected ? 2 : 1, true),
+                BorderFactory.createEmptyBorder(selected ? 7 : 8, 14, selected ? 7 : 8, 14)));
     }
 
     private String getCategoryDisplayName(LogCategory category) {
         return switch (category) {
             case ORDER -> "Bestellungs-Protokolle";
             case SUPPLIER -> "Lieferanten-Protokolle";
-            case SUPPLIER_ORDER -> "Lieferanten-Bestellungs-Protokolle";
+            case SUPPLIER_ORDER -> "Lieferanten-Bestellungen";
             case ALL -> "Alle Protokolle";
         };
     }
@@ -450,7 +592,6 @@ public class LogsGUI extends JFrame {
     private List<String> loadAllLogs() {
         File orderLogFile = new File(new File(Main.getAppDataDir(), "logs"), "bestellung.log");
         File vendorOrderFile = new File(new File(Main.getAppDataDir(), "logs"), "vendorOrder.log");
-        File supplierOrderFile = new File(Main.getAppDataDir(), "supplier_orders.txt");
 
         List<String> allLogs = new ArrayList<>();
         List<Path> mainLogFiles = getMainApplicationLogFiles();
@@ -467,7 +608,7 @@ public class LogsGUI extends JFrame {
 
         appendLogFileSection(allLogs, orderLogFile, "--- Bestellungs-Protokolle ---");
         appendLogFileSection(allLogs, vendorOrderFile, "--- Lieferanten-Protokolle ---");
-        appendLogFileSection(allLogs, supplierOrderFile, "--- Lieferanten-Bestellungs-Protokolle ---");
+        appendLogSection(allLogs, SupplierOrderGUI.getAllSupplierOrdersForDisplay(), "--- Lieferanten-Bestellungen ---");
 
         return allLogs;
     }
@@ -481,6 +622,14 @@ public class LogsGUI extends JFrame {
             target.addAll(Files.readAllLines(logFile.toPath(), StandardCharsets.UTF_8));
         } catch (IOException ignored) {
         }
+    }
+
+    private void appendLogSection(List<String> target, List<String> sectionLines, String title) {
+        if (sectionLines == null || sectionLines.isEmpty()) {
+            return;
+        }
+        target.add(title);
+        target.addAll(sectionLines);
     }
 
     private List<Path> getMainApplicationLogFiles() {
@@ -515,7 +664,7 @@ public class LogsGUI extends JFrame {
 
     private List<String> loadSupplierOrderLogs() {
         supplierOrderLogs.clear();
-        supplierOrderLogs.addAll(SupplierOrderGUI.getAllSupplierOrders());
+        supplierOrderLogs.addAll(SupplierOrderGUI.getAllSupplierOrdersForDisplay());
         return new ArrayList<>(supplierOrderLogs);
     }
 
@@ -548,9 +697,35 @@ public class LogsGUI extends JFrame {
         }
 
         filteredLogs = result;
-        resultsBadgeLabel.setText("Treffer: " + filteredLogs.size() + " / " + currentLogs.size());
+        resultsBadgeLabel.setText(UnicodeSymbols.SEARCH + " Treffer: " + filteredLogs.size() + " / " + currentLogs.size());
         filterStateLabel.setText(buildFilterSummary(query, fromDate, toDate));
+        updateStats(filteredLogs);
         renderLogs(filteredLogs);
+    }
+
+    private void updateStats(List<String> logs) {
+        int total = logs == null ? 0 : logs.size();
+        int info = 0;
+        int warn = 0;
+        int error = 0;
+
+        if (logs != null) {
+            for (String line : logs) {
+                String styleName = resolveStyleName(line);
+                if ("info".equals(styleName)) {
+                    info++;
+                } else if ("warn".equals(styleName)) {
+                    warn++;
+                } else if ("error".equals(styleName)) {
+                    error++;
+                }
+            }
+        }
+
+        totalStatsLabel.setText(UnicodeSymbols.CLIPBOARD + " Gesamt: " + total);
+        infoStatsLabel.setText(UnicodeSymbols.INFO + " Info: " + info);
+        warnStatsLabel.setText(UnicodeSymbols.WARNING + " Warnungen: " + warn);
+        errorStatsLabel.setText(UnicodeSymbols.ERROR + " Fehler: " + error);
     }
 
     private String buildFilterSummary(String query, LocalDate fromDate, LocalDate toDate) {
@@ -614,6 +789,8 @@ public class LogsGUI extends JFrame {
         StyleConstants.setFontFamily(style, logTextPane.getFont().getFamily());
         StyleConstants.setFontSize(style, logTextPane.getFont().getSize());
         StyleConstants.setForeground(style, ThemeManager.getTextPrimaryColor());
+        StyleConstants.setSpaceAbove(style, 1.5f);
+        StyleConstants.setSpaceBelow(style, 1.5f);
 
         switch (styleName) {
             case "info" -> StyleConstants.setForeground(style, ThemeManager.getInfoColor());
@@ -621,6 +798,7 @@ public class LogsGUI extends JFrame {
             case "error" -> StyleConstants.setForeground(style, ThemeManager.getErrorColor());
             case "section" -> {
                 StyleConstants.setBold(style, true);
+                StyleConstants.setFontSize(style, logTextPane.getFont().getSize() + 1);
                 StyleConstants.setForeground(style, ThemeManager.getAccentColor());
             }
             case "muted" -> StyleConstants.setForeground(style, ThemeManager.getTextSecondaryColor());
@@ -638,6 +816,9 @@ public class LogsGUI extends JFrame {
             return "section";
         }
         if (line.startsWith("[Datei]")) {
+            return "muted";
+        }
+        if (line.startsWith("Lieferant:") || line.startsWith("Hinzugefügt:")) {
             return "muted";
         }
 
@@ -834,23 +1015,177 @@ public class LogsGUI extends JFrame {
     }
 
     private void styleTextField(JTextField field) {
-        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         JFrameUtils.styleTextField(field);
     }
 
-    private void styleLabel(JLabel label, int style, Color color) {
-        label.setFont(SettingsGUI.getFontByName(style, 12));
-        label.setForeground(color);
-    }
-
     private void styleBadge(JLabel label) {
-        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 11));
         label.setForeground(ThemeManager.getTextPrimaryColor());
         label.setOpaque(true);
         label.setBackground(ThemeManager.getSurfaceColor());
         label.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
         ));
+    }
+
+    private void styleStatBadge(JLabel label, Color baseColor) {
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 11));
+        label.setForeground(getReadableTextColor(baseColor));
+        label.setOpaque(true);
+        label.setBackground(mixColors(baseColor, ThemeManager.getCardBackgroundColor(), 0.18f));
+        label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(mixColors(baseColor, Color.BLACK, 0.18f), 1, true),
+                BorderFactory.createEmptyBorder(5, 8, 5, 8)
+        ));
+    }
+
+    private JPanel createWrapPanel(int alignment, int hgap, int vgap) {
+        JPanel panel = new JPanel(new WrapLayout(alignment, hgap, vgap));
+        panel.setOpaque(false);
+        return panel;
+    }
+
+    private JLabel createHeaderChip(String text, Color background) {
+        JLabel label = new JLabel(text);
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 11));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        label.setOpaque(true);
+        label.setBackground(background);
+        label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+        return label;
+    }
+
+    private JButton prepareActionButton(JButton button, int minWidth, int height) {
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        Dimension preferredSize = button.getPreferredSize();
+        button.setPreferredSize(new Dimension(Math.max(minWidth, preferredSize.width), height));
+        return button;
+    }
+
+    private Color getReadableTextColor(Color bg) {
+        if (bg == null) {
+            return ThemeManager.getTextPrimaryColor();
+        }
+        double luminance = (0.2126 * bg.getRed() + 0.7152 * bg.getGreen() + 0.0722 * bg.getBlue()) / 255.0;
+        return luminance > 0.6 ? new Color(20, 20, 20) : Color.WHITE;
+    }
+
+    private Color mixColors(Color base, Color mix, double ratio) {
+        if (base == null) {
+            return mix == null ? ThemeManager.getCardBackgroundColor() : mix;
+        }
+        if (mix == null) {
+            return base;
+        }
+        double clamped = Math.max(0d, Math.min(1d, ratio));
+        int red = (int) Math.round(base.getRed() * (1d - clamped) + mix.getRed() * clamped);
+        int green = (int) Math.round(base.getGreen() * (1d - clamped) + mix.getGreen() * clamped);
+        int blue = (int) Math.round(base.getBlue() * (1d - clamped) + mix.getBlue() * clamped);
+        return new Color(red, green, blue);
+    }
+
+    private JButton createHeaderCloseButton() {
+        JButton button = JFrameUtils.createThemeButton(UnicodeSymbols.CLOSE + " Schließen", ThemeManager.getErrorColor());
+        prepareActionButton(button, 128, 38);
+        button.setToolTipText("Schließt das Logfenster");
+        button.addActionListener(e -> dispose());
+        return button;
+    }
+
+    private void installWindowDrag(JComponent target) {
+        target.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                dragStartPoint = e.getPoint();
+            }
+        });
+        target.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                if (dragStartPoint == null) {
+                    return;
+                }
+                Point screenPoint = e.getLocationOnScreen();
+                setLocation(screenPoint.x - dragStartPoint.x, screenPoint.y - dragStartPoint.y);
+            }
+        });
+    }
+
+    private static final class WrapLayout extends FlowLayout {
+
+        private WrapLayout(int align, int hgap, int vgap) {
+            super(align, hgap, vgap);
+        }
+
+        @Override
+        public Dimension preferredLayoutSize(Container target) {
+            return layoutSize(target, true);
+        }
+
+        @Override
+        public Dimension minimumLayoutSize(Container target) {
+            Dimension minimum = layoutSize(target, false);
+            minimum.width -= getHgap() + 1;
+            return minimum;
+        }
+
+        private Dimension layoutSize(Container target, boolean preferred) {
+            synchronized (target.getTreeLock()) {
+                int targetWidth = target.getWidth();
+                Container container = target;
+
+                while (targetWidth == 0 && container.getParent() != null) {
+                    container = container.getParent();
+                    targetWidth = container.getWidth();
+                }
+
+                if (targetWidth <= 0) {
+                    targetWidth = Integer.MAX_VALUE;
+                }
+
+                Insets insets = target.getInsets();
+                int maxWidth = targetWidth - (insets.left + insets.right + getHgap() * 2);
+
+                Dimension dimension = new Dimension(0, 0);
+                int rowWidth = 0;
+                int rowHeight = 0;
+
+                for (Component component : target.getComponents()) {
+                    if (!component.isVisible()) {
+                        continue;
+                    }
+
+                    Dimension componentSize = preferred ? component.getPreferredSize() : component.getMinimumSize();
+                    if (rowWidth + componentSize.width > maxWidth) {
+                        addRow(dimension, rowWidth, rowHeight);
+                        rowWidth = 0;
+                        rowHeight = 0;
+                    }
+
+                    if (rowWidth != 0) {
+                        rowWidth += getHgap();
+                    }
+                    rowWidth += componentSize.width;
+                    rowHeight = Math.max(rowHeight, componentSize.height);
+                }
+
+                addRow(dimension, rowWidth, rowHeight);
+                dimension.width += insets.left + insets.right + getHgap() * 2;
+                dimension.height += insets.top + insets.bottom + getVgap() * 2;
+                return dimension;
+            }
+        }
+
+        private void addRow(Dimension dimension, int rowWidth, int rowHeight) {
+            dimension.width = Math.max(dimension.width, rowWidth);
+            if (dimension.height > 0) {
+                dimension.height += getVgap();
+            }
+            dimension.height += rowHeight;
+        }
     }
 }

@@ -328,6 +328,8 @@ public final class UnicodeSymbols {
     public static final String DOCUMENT = getSymbol("DOC", "\u2630", "\uD83D\uDCC4");
     /** A clipboard icon. Unicode: U+D83D U+DCCB. */
     public static final String CLIPBOARD = getSymbol("CLIP", "\u2630", "\uD83D\uDCCB");
+    /** A copy icon, preferring overlapping pages/squares when supported. */
+    public static final String COPY = getSymbol("COPY", "\u29C9", "\u2398", "\uD83D\uDCC4");
     /** A chart or graph icon. Unicode: U+D83D U+DCCA. */
     public static final String CHART = getSymbol("CHRT", "\u2263", "\uD83D\uDCCA");
     /** A money bag or currency symbol. Unicode: U+D83D U+DCB0. */

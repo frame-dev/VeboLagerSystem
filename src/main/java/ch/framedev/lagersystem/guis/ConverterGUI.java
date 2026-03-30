@@ -6,6 +6,7 @@ import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.SettingsUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -101,12 +102,7 @@ public class ConverterGUI extends JFrame {
         // Make Enter trigger the primary action when possible
         if (getRootPane() != null) {
             getRootPane().setDefaultButton(calcButton);
-
-            // ESC closes the window
-            getRootPane().registerKeyboardAction(
-                    e -> dispose(),
-                    KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
-                    JComponent.WHEN_IN_FOCUSED_WINDOW);
+            installKeyboardShortcuts();
         }
 
         // Disable interaction when no article is provided
@@ -127,6 +123,16 @@ public class ConverterGUI extends JFrame {
                 amountField.selectAll();
             }
         });
+    }
+
+    private void installKeyboardShortcuts() {
+        KeyboardShortcutUtils.addTooltipHint(calcButton, KeyboardShortcutUtils.menuKey(java.awt.event.KeyEvent.VK_ENTER));
+        KeyboardShortcutUtils.addTooltipHint(addToOrder, KeyboardShortcutUtils.menuShiftKey(java.awt.event.KeyEvent.VK_A));
+        KeyboardShortcutUtils.registerClose(this);
+        KeyboardShortcutUtils.registerButton(getRootPane(), "converter.calculate",
+                KeyboardShortcutUtils.menuKey(java.awt.event.KeyEvent.VK_ENTER), calcButton);
+        KeyboardShortcutUtils.registerButton(getRootPane(), "converter.addToOrder",
+                KeyboardShortcutUtils.menuShiftKey(java.awt.event.KeyEvent.VK_A), addToOrder);
     }
 
     @Override

@@ -51,8 +51,12 @@ import ch.framedev.simplejavautils.SimpleJavaUtils;
 
 /**
  * Main entry point for VEBO Lagersystem application.
- * Handles initialization, data import, and GUI startup.
- *
+ * Handles initialization, data import, and GUI startup or Server starting based
+ * on command-line arguments. Provides utility methods for accessing application
+ * data directory and loading settings.
+ * GUI is only supported on desktop platforms. For server mode, run with
+ * "server" argument to start ScanServer (can run in CLI).
+ * 
  * @author FrameDev
  */
 @SuppressWarnings("SameParameterValue")
@@ -123,8 +127,9 @@ public class Main {
      * @param args command-line arguments (not used in this application)
      */
     public static void main(String[] args) {
-        // Check if application should start in server mode based on command-line arguments
-        if(args.length > 0 && args[0].equalsIgnoreCase("server")) {
+        // Check if application should start in server mode based on command-line
+        // arguments
+        if (args.length > 0 && args[0].equalsIgnoreCase("server")) {
             System.out.println("Starte Server-Modus...");
             try {
                 ScanServer.main(args);
@@ -225,6 +230,18 @@ public class Main {
         updateProgress(progressListener, 96, "Abschluss der Initialisierung...");
     }
 
+    /**
+     * Handle first start logic, including asking user about initial data import and
+     * performing the import if needed. This method checks the "first-time" setting
+     * to determine if it's the first run of the application, and if so, it prompts
+     * the user to import initial data. If the user agrees, it proceeds to import
+     * articles, vendors, departments, clients, and optionally creates QR codes. It
+     * also initializes a default user for the application. Progress updates are
+     * sent to the provided listener throughout the process.
+     * 
+     * @param progressListener Listener to receive progress updates during
+     *                         initialization
+     */
     private static void handleFirstStartIfNeeded(ProgressListener progressListener) {
         String firstTimeSetting = settings.getProperty("first-time");
         if (firstTimeSetting != null && firstTimeSetting.equalsIgnoreCase("true")) {
@@ -246,12 +263,51 @@ public class Main {
         updateProgress(progressListener, 72, "Importiere Startdaten...");
         importInitialData(progressListener);
         updateProgress(progressListener, 80, "Startdaten importiert...");
+        updateProgress(progressListener, 81, "QR-Code Abfrage...");
+        importQrData(progressListener);
+        updateProgress(progressListener, 85, "QR-Code Abfrage abgeschlossen.");
         updateProgress(progressListener, 88, "Erstelle Standard-Benutzer...");
         initializeDefaultUser();
         updateProgress(progressListener, 90, "Standard-Benutzer erstellt...");
         logger.info("Initial data import completed.");
     }
 
+    /**
+     * Import QR code data by asking the user if they want to create QR codes for
+     * all articles. If the user agrees, it generates QR codes for each article and
+     * logs the results. Progress updates are sent to the provided listener
+     * throughout the process.
+     * 
+     * @param progressListener Listener to receive progress updates during QR code
+     *                         creation
+     */
+    private static void importQrData(ProgressListener progressListener) {
+        int resultQr = showConfirmDialogOnEdt(
+                "QR-Codes Erstellen?",
+                "QR-Codes",
+                null);
+        if (resultQr == JOptionPane.YES_OPTION) {
+            updateProgress(progressListener, 82, "Erstelle QR-Codes...");
+            logger.info("QR-Codes werden erstellt...");
+            List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
+            for (File qrCodeFile : qrCodeFiles) {
+                logger.info("QR-Code erstellt: {}", qrCodeFile.getAbsolutePath());
+            }
+            logger.info("QR-Codes erstellt.");
+        }
+    }
+
+    /**
+     * Show a confirmation dialog on the Event Dispatch Thread (EDT) and return the
+     * user's response. This method ensures that the dialog is displayed on the EDT,
+     * which is necessary for thread safety in Swing applications. It takes the
+     * message, title, and icon for the dialog as parameters and returns the result
+     * of the user's choice.
+     * 
+     * @param progressListener Listener to receive progress updates during the
+     *                         confirmation dialog
+     * @return true if the user chooses to import initial data, false otherwise
+     */
     private static boolean askForInitialDataImport(ProgressListener progressListener) {
         int result = showConfirmDialogOnEdt(
                 "Willkommen zum VEBO Lagersystem!\nMöchten Sie die anfänglichen Daten jetzt importieren?",
@@ -261,22 +317,6 @@ public class Main {
         if (result != JOptionPane.YES_OPTION) {
             return false;
         }
-
-        updateProgress(progressListener, 62, "QR-Code Abfrage...");
-        int resultQr = showConfirmDialogOnEdt(
-                "QR-Codes Erstellen?",
-                "QR-Codes",
-                null);
-        if (resultQr == JOptionPane.YES_OPTION) {
-            updateProgress(progressListener, 68, "Erstelle QR-Codes...");
-            logger.info("QR-Codes werden erstellt...");
-            List<File> qrCodeFiles = QRCodeUtils.createQrCodes(ArticleManager.getInstance().getAllArticles());
-            for (File qrCodeFile : qrCodeFiles) {
-                logger.info("QR-Code erstellt: {}", qrCodeFile.getAbsolutePath());
-            }
-            logger.info("QR-Codes erstellt.");
-        }
-        updateProgress(progressListener, 63, "QR-Code Abfrage abgeschlossen.");
         return true;
     }
 
@@ -757,7 +797,8 @@ public class Main {
                 LogUtils.DEFAULT_LOG_RETENTION_DAYS);
 
         if (fileCleanup.failedFileCount() > 0) {
-            cleanupMessage += " " + fileCleanup.failedFileCount() + " Protokolldatei(en) konnten nicht geloescht werden.";
+            cleanupMessage += " " + fileCleanup.failedFileCount()
+                    + " Protokolldatei(en) konnten nicht geloescht werden.";
         }
 
         logger.info(cleanupMessage);
@@ -1155,7 +1196,8 @@ public class Main {
         if (progressListener != null) {
             progressListener.onProgress(percent, message);
         }
-        // Keep progress pacing sleep, but never block the EDT so splash animations stay fluid.
+        // Keep progress pacing sleep, but never block the EDT so splash animations stay
+        // fluid.
         if (!SwingUtilities.isEventDispatchThread()) {
             sleepQuietly();
         }

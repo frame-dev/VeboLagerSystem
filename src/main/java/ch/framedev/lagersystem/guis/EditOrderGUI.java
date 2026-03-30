@@ -9,6 +9,7 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils.RoundedPanel;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.LogManager;
@@ -268,16 +269,20 @@ public class EditOrderGUI extends JFrame {
         // Load articles
         loadArticles();
 
-        getRootPane().registerKeyboardAction(
-                e -> dispose(),
-                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
-                JComponent.WHEN_IN_FOCUSED_WINDOW);
+        installKeyboardShortcuts(saveButtonTop);
     }
 
     @Override
     public void dispose() {
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
+    }
+
+    private void installKeyboardShortcuts(JButton saveButton) {
+        KeyboardShortcutUtils.addTooltipHint(saveButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_S));
+        KeyboardShortcutUtils.registerClose(this);
+        KeyboardShortcutUtils.registerButton(getRootPane(), "editOrder.save",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_S), saveButton);
     }
 
     private void applyTableTheme(JTable table) {

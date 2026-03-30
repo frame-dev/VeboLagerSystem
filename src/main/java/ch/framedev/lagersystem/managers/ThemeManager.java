@@ -1,5 +1,10 @@
 package ch.framedev.lagersystem.managers;
 
+import com.formdev.flatlaf.FlatDarculaLaf;
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatIntelliJLaf;
+import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
@@ -9,6 +14,7 @@ import java.awt.Window;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -18,6 +24,8 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
@@ -66,7 +74,11 @@ public class ThemeManager {
             METAL("Metal", "javax.swing.plaf.metal.MetalLookAndFeel"),
             NIMBUS("Nimbus", "javax.swing.plaf.nimbus.NimbusLookAndFeel"),
             MOTIF("Motif", "com.sun.java.swing.plaf.motif.MotifLookAndFeel"),
-            GTK("GTK+", "com.sun.java.swing.plaf.gtk.GTKLookAndFeel");
+            GTK("GTK+", "com.sun.java.swing.plaf.gtk.GTKLookAndFeel"),
+            FLAT_LIGHT("FlatLaf Light", FlatLightLaf.class.getName()),
+            FLAT_DARK("FlatLaf Dark", FlatDarkLaf.class.getName()),
+            FLAT_INTELLIJ("FlatLaf IntelliJ", FlatIntelliJLaf.class.getName()),
+            FLAT_DARCULA("FlatLaf Darcula", FlatDarculaLaf.class.getName());
 
             public final String displayName;
             public final String className;
@@ -80,11 +92,13 @@ public class ThemeManager {
          * Set the LookAndFeel by option. Falls back to system if not available.
          */
         public static void setLookAndFeel(LookAndFeelOption option) {
+            registerAdditionalLookAndFeels();
             if (option == null) {
                 setSystemLookAndFeelSafely();
                 return;
             }
             try {
+                configureWindowDecorations(option.className);
                 UIManager.setLookAndFeel(option.className);
                 logger.info("Set LookAndFeel: {} ({})", option.displayName, option.className);
             } catch (Exception e) {
@@ -98,9 +112,11 @@ public class ThemeManager {
          */
         public static void setLookAndFeel(String name) {
             try {
+                registerAdditionalLookAndFeels();
                 String normalized = name == null ? "" : name.trim();
                 for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                     if (info.getName().equalsIgnoreCase(normalized)) {
+                        configureWindowDecorations(info.getClassName());
                         UIManager.setLookAndFeel(info.getClassName());
                         logger.info("Set LookAndFeel: {} ({})", info.getName(), info.getClassName());
                         return;
@@ -116,25 +132,39 @@ public class ThemeManager {
 
         private static void setSystemLookAndFeelSafely() {
             try {
+                configureWindowDecorations(UIManager.getSystemLookAndFeelClassName());
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception ex) {
                 logger.error("Could not set system LookAndFeel", ex);
             }
         }
 
+        private static void configureWindowDecorations(String lookAndFeelClassName) {
+            boolean flatLaf = lookAndFeelClassName != null
+                    && lookAndFeelClassName.startsWith("com.formdev.flatlaf.");
+            boolean useNativeWindowDecorations = flatLaf && OS_NAME.contains("win")
+                    && FlatLaf.supportsNativeWindowDecorations();
+            JFrame.setDefaultLookAndFeelDecorated(flatLaf && !OS_NAME.contains("win"));
+            JDialog.setDefaultLookAndFeelDecorated(flatLaf && !OS_NAME.contains("win"));
+            FlatLaf.setUseNativeWindowDecorations(useNativeWindowDecorations);
+        }
+
         /**
          * Log all installed LookAndFeels for debugging.
          */
         public static void logAvailableLookAndFeels() {
+            registerAdditionalLookAndFeels();
             for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                 logger.info("Available LookAndFeel: {} ({})", info.getName(), info.getClassName());
             }
         }
     private static final Logger logger = LogManager.getLogger(ThemeManager.class);
     private static final String OS_NAME = System.getProperty("os.name", "").toLowerCase(java.util.Locale.ROOT);
+    private static volatile boolean additionalLookAndFeelsRegistered;
     // Set the system LookAndFeel for native appearance, but keep custom theming
     static {
         try {
+            registerAdditionalLookAndFeels();
             // Use system L&F for native controls (Windows, macOS, Linux)
             setLookAndFeel(LookAndFeelOption.METAL);
         } catch (Exception e) {
@@ -148,11 +178,40 @@ public class ThemeManager {
     }
 
     public static List<String> getAllLookAndFeels() {
-        List<String> lafNames = new ArrayList<>();
+        registerAdditionalLookAndFeels();
+        LinkedHashSet<String> lafNames = new LinkedHashSet<>();
         for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
             lafNames.add(info.getName());
         }
-        return lafNames;
+        return new ArrayList<>(lafNames);
+    }
+
+    private static void registerAdditionalLookAndFeels() {
+        if (additionalLookAndFeelsRegistered) {
+            return;
+        }
+        synchronized (ThemeManager.class) {
+            if (additionalLookAndFeelsRegistered) {
+                return;
+            }
+
+            installLookAndFeelIfMissing(LookAndFeelOption.FLAT_LIGHT.displayName, LookAndFeelOption.FLAT_LIGHT.className);
+            installLookAndFeelIfMissing(LookAndFeelOption.FLAT_DARK.displayName, LookAndFeelOption.FLAT_DARK.className);
+            installLookAndFeelIfMissing(LookAndFeelOption.FLAT_INTELLIJ.displayName, LookAndFeelOption.FLAT_INTELLIJ.className);
+            installLookAndFeelIfMissing(LookAndFeelOption.FLAT_DARCULA.displayName, LookAndFeelOption.FLAT_DARCULA.className);
+
+            additionalLookAndFeelsRegistered = true;
+        }
+    }
+
+    private static void installLookAndFeelIfMissing(String displayName, String className) {
+        for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+            if (info.getName().equalsIgnoreCase(displayName) || info.getClassName().equals(className)) {
+                return;
+            }
+        }
+        UIManager.installLookAndFeel(new UIManager.LookAndFeelInfo(displayName, className));
+        logger.info("Registered LookAndFeel: {} ({})", displayName, className);
     }
 
     private static volatile ThemeManager instance;
@@ -883,6 +942,8 @@ public class ThemeManager {
         d.put("OptionPane.messageForeground", new ColorUIResource(fg));
         d.put("OptionPane.foreground", new ColorUIResource(fg));
 
+        applyWindowsTitleBarDefaults(d);
+
         // ---------- Fonts (emoji-safe on Windows/macOS) ----------
         if (isWindowsOrMac()) {
             String[] fontKeys = {
@@ -1021,6 +1082,23 @@ public class ThemeManager {
         d.put("ScrollBar.minimumThumbSize", new java.awt.Dimension(30, 30));
         d.put("ScrollBar.maximumThumbSize", new java.awt.Dimension(100, 100));
         d.put("ScrollBar.opaque", Boolean.TRUE);
+    }
+
+    private static void applyWindowsTitleBarDefaults(UIDefaults defaults) {
+        if (!(UIManager.getLookAndFeel() instanceof FlatLaf) || !isWindows()) {
+            return;
+        }
+
+        // Prefer native Windows caption buttons and keep FlatLaf's fallback title pane compact.
+        defaults.put("TitlePane.useWindowDecorations", Boolean.FALSE);
+        defaults.put("TitlePane.buttonSize", new java.awt.Dimension(34, 24));
+        defaults.put("TitlePane.buttonMinimumWidth", 24);
+        defaults.put("TitlePane.buttonMaximizedHeight", 20);
+        defaults.put("TitlePane.buttonSymbolHeight", 8);
+        defaults.put("TitlePane.buttonsGap", 0);
+        defaults.put("TitlePane.buttonsMargins", new Insets(0, 0, 0, 0));
+        defaults.put("TitlePane.small.buttonSize", new java.awt.Dimension(28, 18));
+        defaults.put("TitlePane.small.buttonSymbolHeight", 7);
     }
 
     private static Font withEmojiFallback(Font font) {

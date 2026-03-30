@@ -5,19 +5,29 @@ import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.function.Supplier;
 
 import static ch.framedev.lagersystem.utils.JFrameUtils.getSelectedArticles;
@@ -33,6 +43,35 @@ public class MainGUI extends JFrame {
     private static final Logger logger = LogManager.getLogger(MainGUI.class);
     private static final String TAB_LOADED_PROPERTY = "loaded";
     private static final String EMBEDDED_CONTENT_PROPERTY = "embeddedContent";
+    private static final String EMBEDDED_SHORTCUT_ACTION_PREFIX = "main.embedded.shortcut.";
+    private static final int DASHBOARD_CARD_RADIUS = 18;
+
+    private static final class EmbeddedShortcut {
+        private final int tabIndex;
+        private final JFrame frame;
+        private final Object actionKey;
+
+        private EmbeddedShortcut(int tabIndex, JFrame frame, Object actionKey) {
+            this.tabIndex = tabIndex;
+            this.frame = frame;
+            this.actionKey = actionKey;
+        }
+    }
+
+    private static final class EmbeddedShortcutBinding {
+        @SuppressWarnings("unused")
+        private final Object fallbackActionKey;
+        private final Action fallbackAction;
+        @SuppressWarnings("unused")
+        private final String dispatcherActionId;
+        private final List<EmbeddedShortcut> shortcuts = new ArrayList<>();
+
+        private EmbeddedShortcutBinding(Object fallbackActionKey, Action fallbackAction, String dispatcherActionId) {
+            this.fallbackActionKey = fallbackActionKey;
+            this.fallbackAction = fallbackAction;
+            this.dispatcherActionId = dispatcherActionId;
+        }
+    }
 
     private static final class TabContentWrapper extends JPanel {
         private Dimension stablePreferredSize;
@@ -40,7 +79,11 @@ public class MainGUI extends JFrame {
         private TabContentWrapper() {
             super(new BorderLayout());
             setBackground(ThemeManager.getBackgroundColor());
-            setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createEmptyBorder(8, 10, 10, 10),
+                    BorderFactory.createCompoundBorder(
+                            BorderFactory.createLineBorder(ThemeManager.withAlpha(ThemeManager.getBorderColor(), 180), 1, true),
+                            BorderFactory.createEmptyBorder(4, 4, 4, 4))));
         }
 
         @Override
@@ -66,6 +109,7 @@ public class MainGUI extends JFrame {
     }
 
     private JTabbedPane tabbedPane;
+    private final Map<KeyStroke, EmbeddedShortcutBinding> embeddedShortcutBindings = new LinkedHashMap<>();
 
     /**
      * IMPORTANT: These are the actual content frames for each tab. We keep them as
@@ -134,6 +178,7 @@ public class MainGUI extends JFrame {
         mainPanel.add(footerPanel, BorderLayout.SOUTH);
 
         setContentPane(mainPanel);
+        installGlobalShortcuts();
         logger.info("MainGUI window initialized");
     }
 
@@ -240,26 +285,137 @@ public class MainGUI extends JFrame {
         }
         frame.setVisible(false);
         frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        syncEmbeddedShortcuts(tabIndex, frame);
         wrapper.add(extractEmbeddedTabContent(frame), BorderLayout.CENTER);
         wrapper.revalidate();
         wrapper.repaint();
         logger.debug("Loaded tab content for tab {}", tabIndex);
     }
 
+    private void syncEmbeddedShortcuts(int tabIndex, JFrame frame) {
+        removeEmbeddedShortcutsForTab(tabIndex);
+        if (frame == null || frame.getRootPane() == null) {
+            return;
+        }
+
+        InputMap inputMap = frame.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        if (inputMap == null) {
+            return;
+        }
+
+        KeyStroke[] keys = inputMap.allKeys();
+        if (keys == null) {
+            return;
+        }
+
+        for (KeyStroke keyStroke : keys) {
+            if (keyStroke == null || isIgnoredEmbeddedShortcut(keyStroke)) {
+                continue;
+            }
+
+            Object actionKey = inputMap.get(keyStroke);
+            if (actionKey == null) {
+                continue;
+            }
+
+            EmbeddedShortcutBinding binding = embeddedShortcutBindings.computeIfAbsent(
+                    keyStroke,
+                    this::createEmbeddedShortcutBinding);
+            binding.shortcuts.add(new EmbeddedShortcut(tabIndex, frame, actionKey));
+        }
+    }
+
+    private EmbeddedShortcutBinding createEmbeddedShortcutBinding(KeyStroke keyStroke) {
+        JRootPane rootPane = getRootPane();
+        InputMap inputMap = rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap actionMap = rootPane.getActionMap();
+        Object fallbackActionKey = inputMap.get(keyStroke);
+        Action fallbackAction = fallbackActionKey == null ? null : actionMap.get(fallbackActionKey);
+        String dispatcherActionId = EMBEDDED_SHORTCUT_ACTION_PREFIX + embeddedShortcutBindings.size();
+
+        inputMap.put(keyStroke, dispatcherActionId);
+        actionMap.put(dispatcherActionId, new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (!dispatchEmbeddedShortcut(keyStroke, e)) {
+                    EmbeddedShortcutBinding currentBinding = embeddedShortcutBindings.get(keyStroke);
+                    if (currentBinding != null && currentBinding.fallbackAction != null) {
+                        currentBinding.fallbackAction.actionPerformed(e);
+                    }
+                }
+            }
+        });
+
+        return new EmbeddedShortcutBinding(fallbackActionKey, fallbackAction, dispatcherActionId);
+    }
+
+    private boolean dispatchEmbeddedShortcut(KeyStroke keyStroke, java.awt.event.ActionEvent event) {
+        EmbeddedShortcutBinding binding = embeddedShortcutBindings.get(keyStroke);
+        if (binding == null || binding.shortcuts.isEmpty()) {
+            return false;
+        }
+
+        int selectedTabIndex = tabbedPane == null ? -1 : tabbedPane.getSelectedIndex();
+        for (int i = binding.shortcuts.size() - 1; i >= 0; i--) {
+            EmbeddedShortcut shortcut = binding.shortcuts.get(i);
+            if (shortcut.tabIndex != selectedTabIndex || shortcut.frame == null || shortcut.frame.getRootPane() == null) {
+                continue;
+            }
+
+            Action action = shortcut.frame.getRootPane().getActionMap().get(shortcut.actionKey);
+            if (action == null || !action.isEnabled()) {
+                continue;
+            }
+
+            action.actionPerformed(new java.awt.event.ActionEvent(
+                    shortcut.frame,
+                    java.awt.event.ActionEvent.ACTION_PERFORMED,
+                    String.valueOf(shortcut.actionKey)
+            ));
+            return true;
+        }
+        return false;
+    }
+
+    private void removeEmbeddedShortcutsForTab(int tabIndex) {
+        for (EmbeddedShortcutBinding binding : embeddedShortcutBindings.values()) {
+            binding.shortcuts.removeIf(shortcut -> shortcut.tabIndex == tabIndex);
+        }
+    }
+
+    private boolean isIgnoredEmbeddedShortcut(KeyStroke keyStroke) {
+        return keyStroke.getKeyCode() == KeyEvent.VK_ESCAPE && keyStroke.getModifiers() == 0;
+    }
+
+    private void reapplyEmbeddedShortcuts() {
+        if (articleGUI != null) {
+            syncEmbeddedShortcuts(0, articleGUI);
+        }
+        if (vendorGUI != null) {
+            syncEmbeddedShortcuts(1, vendorGUI);
+        }
+        if (orderGUI != null) {
+            syncEmbeddedShortcuts(2, orderGUI);
+        }
+        if (clientGUI != null) {
+            syncEmbeddedShortcuts(3, clientGUI);
+        }
+        if (supplierOrderGUI != null) {
+            syncEmbeddedShortcuts(4, supplierOrderGUI);
+        }
+        if (logsGUI != null) {
+            syncEmbeddedShortcuts(5, logsGUI);
+        }
+    }
+
     /**
      * Creates the header panel with title, subtitle, settings button, and date
      */
     private JPanel createHeaderPanel() {
-        // Create gradient background panel
         JFrameUtils.GradientPanel headerPanel = getGradientPanel();
-
-        // Left side: Title and subtitle
-        JPanel headerTextPanel = createHeaderTextPanel();
-        headerPanel.add(headerTextPanel, BorderLayout.WEST);
-
-        // Right side: Settings button and date
-        JPanel rightPanel = createHeaderRightPanel();
-        headerPanel.add(rightPanel, BorderLayout.EAST);
+        headerPanel.add(createHeaderTextPanel(), BorderLayout.WEST);
+        headerPanel.add(createHeaderRightPanel(), BorderLayout.EAST);
+        headerPanel.add(createHeaderMetaStrip(), BorderLayout.SOUTH);
 
         return headerPanel;
     }
@@ -268,10 +424,10 @@ public class MainGUI extends JFrame {
         JFrameUtils.GradientPanel headerPanel = new JFrameUtils.GradientPanel(
                 ThemeManager.getHeaderBackgroundColor(),
                 ThemeManager.getHeaderGradientColor());
-        headerPanel.setLayout(new BorderLayout(24, 16));
+        headerPanel.setLayout(new BorderLayout(18, 12));
         headerPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(0, 0, 0, 30)),
-                BorderFactory.createEmptyBorder(24, 28, 24, 28)));
+                BorderFactory.createEmptyBorder(16, 20, 12, 20)));
         return headerPanel;
     }
 
@@ -279,47 +435,47 @@ public class MainGUI extends JFrame {
      * Creates the left side of the header with title and subtitle
      */
     private JPanel createHeaderTextPanel() {
-        JPanel headerTextPanel = new JPanel();
-        headerTextPanel.setLayout(new BoxLayout(headerTextPanel, BoxLayout.Y_AXIS));
+        JPanel headerTextPanel = new JPanel(new BorderLayout(12, 0));
         headerTextPanel.setOpaque(false);
 
-        // Add icon + title in horizontal layout
-        JPanel titleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        titleRow.setOpaque(false);
-
-        Font headerIconFont = SettingsGUI.getFontByName(Font.BOLD, 42);
+        Font headerIconFont = SettingsGUI.getFontByName(Font.BOLD, 34);
         JLabel iconLabel = new JLabel(UnicodeSymbols.safeSymbol(UnicodeSymbols.PACKAGE, "PKG", headerIconFont));
         iconLabel.setFont(getEmojiCapableFont(headerIconFont));
         iconLabel.setForeground(ThemeManager.getTitleTextColor());
-        titleRow.add(iconLabel);
+        iconLabel.setVerticalAlignment(SwingConstants.TOP);
+        iconLabel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+        headerTextPanel.add(iconLabel, BorderLayout.WEST);
+
+        JPanel copyPanel = new JPanel();
+        copyPanel.setLayout(new BoxLayout(copyPanel, BoxLayout.Y_AXIS));
+        copyPanel.setOpaque(false);
+
+        JLabel dashboardBadge = createHeaderBadge(UnicodeSymbols.BULB + " Desktop-Dashboard", false);
+        dashboardBadge.setAlignmentX(Component.LEFT_ALIGNMENT);
+        copyPanel.add(dashboardBadge);
+        copyPanel.add(Box.createVerticalStrut(6));
 
         JLabel titleLabel = new JLabel("VEBO Lagersystem");
-        Font titleFont = SettingsGUI.getFontByName(Font.BOLD, 52);
-        titleLabel.setFont(titleFont);
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 40));
         titleLabel.setForeground(ThemeManager.getTitleTextColor());
-        titleRow.add(titleLabel);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        copyPanel.add(titleLabel);
+        copyPanel.add(Box.createVerticalStrut(2));
 
-        titleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        headerTextPanel.add(titleRow);
-
-        headerTextPanel.add(Box.createVerticalStrut(2));
-
-        // Subtitle aligned with the "V" in "VEBO" (after icon)
-        JLabel subtitleLabel = new JLabel("Zentrale Verwaltung für Artikel, Bestellungen und Lieferanten");
-        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 15));
+        JLabel subtitleLabel = new JLabel("Zentrale Verwaltung fuer Artikel, Bestellungen und Lieferanten");
+        subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         subtitleLabel.setForeground(ThemeManager.getSubTitleTextColor());
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        copyPanel.add(subtitleLabel);
+        copyPanel.add(Box.createVerticalStrut(6));
 
-        // Create wrapper with FlowLayout matching the title row
-        JPanel subtitleRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        subtitleRow.setOpaque(false);
-        subtitleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel statusLabel = new JLabel("Direkte Schnellaktionen und eingebettete Arbeitsbereiche.");
+        statusLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        statusLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 210));
+        statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        copyPanel.add(statusLabel);
 
-        // Add invisible spacer matching icon width (approximately 42px + 10px gap =
-        // 52px)
-        subtitleRow.add(Box.createHorizontalStrut(12));
-        subtitleRow.add(subtitleLabel);
-
-        headerTextPanel.add(subtitleRow);
+        headerTextPanel.add(copyPanel, BorderLayout.CENTER);
 
         return headerTextPanel;
     }
@@ -332,57 +488,107 @@ public class MainGUI extends JFrame {
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         rightPanel.setOpaque(false);
 
-        Font headerButtonFont = SettingsGUI.getFontByName(Font.BOLD, 12);
+        Font headerButtonFont = SettingsGUI.getFontByName(Font.BOLD, 13);
         JButton settingsButton = createHeaderActionButton(
             UnicodeSymbols.safeSymbol(UnicodeSymbols.BETTER_GEAR, "CFG", headerButtonFont) + " Einstellungen",
-            "Einstellungen des Programms öffnen",
+            KeyboardShortcutUtils.withShortcutHint("Einstellungen des Programms öffnen",
+                    KeyboardShortcutUtils.menuKey(KeyEvent.VK_COMMA)),
+            false,
             e -> settingsGUI = showOrCreateWindow(settingsGUI, SettingsGUI::new));
 
         JButton notesButton = createHeaderActionButton(
             UnicodeSymbols.safeSymbol(UnicodeSymbols.CLIPBOARD, "CLIP", headerButtonFont) + " Notizen",
-            "Persönliche Notizen verwalten",
+            KeyboardShortcutUtils.withShortcutHint("Persönliche Notizen verwalten",
+                    KeyboardShortcutUtils.menuShiftKey(KeyEvent.VK_N)),
+            false,
             e -> notesGUI = showOrCreateWindow(notesGUI, NotesGUI::new));
 
         JButton converterButton = createHeaderActionButton(
             UnicodeSymbols.safeSymbol(UnicodeSymbols.CALCULATOR, "CALC", headerButtonFont)
-                + " Einheitenrechner/Befüllungshilfe",
-            "Einheitenrechner und Befüllungshilfe öffnen",
+                + " Rechner",
+            KeyboardShortcutUtils.withShortcutHint("Einheitenrechner und Befüllungshilfe öffnen",
+                    KeyboardShortcutUtils.menuShiftKey(KeyEvent.VK_C)),
+            true,
             e -> openConverterForSelection());
 
-        JLabel dateLabel = new JLabel(new SimpleDateFormat("EEEE, dd. MMMM yyyy", Locale.GERMAN).format(new Date()));
-        dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
+        JLabel dateLabel = new JLabel(new SimpleDateFormat("dd. MMMM yyyy", Locale.GERMAN).format(new Date()));
+        dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         dateLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
         dateLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        JPanel buttonGrid = new JPanel(new GridLayout(0, 2, 8, 8));
-        buttonGrid.setOpaque(false);
-        buttonGrid.add(converterButton);
-        buttonGrid.add(notesButton);
-        buttonGrid.add(settingsButton);
+        JPanel quickActionsCard = createHeaderCard(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        quickActionsCard.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        buttonRow.setOpaque(false);
-        buttonRow.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        buttonRow.add(buttonGrid);
+        JLabel quickActionsLabel = new JLabel("Schnellzugriff");
+        quickActionsLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 11));
+        quickActionsLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
+        quickActionsCard.add(quickActionsLabel);
+        quickActionsCard.add(converterButton);
+        quickActionsCard.add(notesButton);
+        quickActionsCard.add(settingsButton);
 
-        JPanel dateRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        dateRow.setOpaque(false);
-        dateRow.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        dateRow.add(dateLabel);
+        JPanel dateCard = createHeaderCard(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        dateCard.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        JLabel calendarLabel = new JLabel(UnicodeSymbols.CALENDAR + " " + dateLabel.getText());
+        calendarLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        calendarLabel.setForeground(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 220));
+        dateCard.add(calendarLabel);
 
-        rightPanel.add(buttonRow);
-        rightPanel.add(Box.createVerticalStrut(8));
-        rightPanel.add(dateRow);
+        rightPanel.add(quickActionsCard);
+        rightPanel.add(Box.createVerticalStrut(6));
+        rightPanel.add(dateCard);
 
         return rightPanel;
     }
 
-    private JButton createHeaderActionButton(String text, String tooltip, java.awt.event.ActionListener listener) {
+    private JPanel createHeaderMetaStrip() {
+        JPanel metaStrip = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        metaStrip.setOpaque(false);
+        metaStrip.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+        metaStrip.add(createHeaderBadge(UnicodeSymbols.TAG + " 6 Arbeitsbereiche", false));
+        metaStrip.add(createHeaderBadge(UnicodeSymbols.DOCUMENT + " "
+                + KeyboardShortcutUtils.formatKeyStroke(KeyboardShortcutUtils.menuKey(KeyEvent.VK_1)) + "-"
+                + KeyboardShortcutUtils.formatKeyStroke(KeyboardShortcutUtils.menuKey(KeyEvent.VK_6)), false));
+        metaStrip.add(createHeaderBadge(UnicodeSymbols.CLOCK + " F1 fuer Hilfe", false));
+        return metaStrip;
+    }
+
+    private void installGlobalShortcuts() {
+        JRootPane rootPane = getRootPane();
+        KeyboardShortcutUtils.register(rootPane, "main.settings",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_COMMA),
+                () -> settingsGUI = showOrCreateWindow(settingsGUI, SettingsGUI::new));
+        KeyboardShortcutUtils.register(rootPane, "main.notes",
+                KeyboardShortcutUtils.menuShiftKey(KeyEvent.VK_N),
+                () -> notesGUI = showOrCreateWindow(notesGUI, NotesGUI::new));
+        KeyboardShortcutUtils.register(rootPane, "main.converter",
+                KeyboardShortcutUtils.menuShiftKey(KeyEvent.VK_C),
+                this::openConverterForSelection);
+        KeyboardShortcutUtils.register(rootPane, "main.help",
+                KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0),
+                this::showHelp);
+
+        for (int tabIndex = 0; tabIndex < 6; tabIndex++) {
+            final int selectedTabIndex = tabIndex;
+            KeyboardShortcutUtils.register(rootPane, "main.tab." + tabIndex,
+                    KeyboardShortcutUtils.menuKey(KeyEvent.VK_1 + tabIndex),
+                    () -> tabbedPane.setSelectedIndex(selectedTabIndex));
+        }
+
+        reapplyEmbeddedShortcuts();
+    }
+
+    private JButton createHeaderActionButton(String text, String tooltip, boolean primary,
+                                             java.awt.event.ActionListener listener) {
         JButton button = new JButton(text);
-        styleHeaderButton(button);
+        styleHeaderButton(button, primary);
         button.setToolTipText(tooltip);
         button.addActionListener(listener);
         button.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        Dimension preferredSize = button.getPreferredSize();
+        int minWidth = primary ? 150 : 138;
+        int minHeight = 40;
+        button.setPreferredSize(new Dimension(Math.max(minWidth, preferredSize.width), Math.max(minHeight, preferredSize.height)));
         return button;
     }
 
@@ -426,30 +632,23 @@ public class MainGUI extends JFrame {
         int fontSizeTab = getTabFontSize();
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         tabbedPane.setFont(getEmojiCapableFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 3)));
+        tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 
-        // Use larger font for bigger tabs
-        // tabbedPane.setFont(SettingsGUI.getFontByName(Font.BOLD, fontSizeTab + 2));
         tabbedPane.setBackground(ThemeManager.getBackgroundColor());
         tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
-
-        // Enhanced padding and border for modern look with bigger tabs
         tabbedPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(8, 15, 8, 15),
+                BorderFactory.createEmptyBorder(8, 12, 6, 12),
                 BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                        BorderFactory.createLineBorder(ThemeManager.withAlpha(ThemeManager.getBorderColor(), 170), 1, true),
                         BorderFactory.createEmptyBorder(2, 2, 2, 2))));
 
-        // Add tabs
         addTabs();
 
-        // Apply theme-safe tab backgrounds and styling
         applyTabBackgrounds();
         applyTabStyling();
 
-        // Setup lazy loading
         setupLazyLoading();
 
-        // Load the first tab immediately
         loadTabContent(0, articleWrapper);
         articleWrapper.putClientProperty(TAB_LOADED_PROPERTY, Boolean.TRUE);
         setJMenuBar(createMenuBar());
@@ -480,17 +679,19 @@ public class MainGUI extends JFrame {
         String tabTruck = UnicodeSymbols.safeSymbol(UnicodeSymbols.TRUCK, "TRK", tabFont);
         String tabClipboard = UnicodeSymbols.safeSymbol(UnicodeSymbols.CLIPBOARD, "CLIP", tabFont);
         String tabPeople = UnicodeSymbols.safeSymbol(UnicodeSymbols.PEOPLE, "USERS", tabFont);
-        // Add extra spacing for bigger, more prominent tabs
-        tabbedPane.addTab("<html>   " + tabPackage + "  Artikel   </html>", null, articleWrapper, "Artikelverwaltung");
-        tabbedPane.addTab("<html>   " + tabTruck + "  Lieferanten   </html>", null, vendorWrapper,
-                "Lieferantenverwaltung");
-        tabbedPane.addTab("<html>   " + tabClipboard + "  Bestellungen   </html>", null, orderWrapper,
-                "Bestellungsverwaltung");
-        tabbedPane.addTab("<html>   " + tabPeople + "  Kunden   </html>", null, clientWrapper, "Kundenverwaltung");
-        tabbedPane.addTab("<html>   " + tabTruck + tabPackage + "  Lieferantenbestellungen   </html>", null,
-                supplierOrderWrapper, "Lieferantenbestellungen verwalten");
-        tabbedPane.addTab("<html>   " + tabClipboard + " Protokolle   </html>", null, logsWrapper,
-                "Systemprotokolle anzeigen");
+        addDashboardTab("Artikel", tabPackage, articleWrapper, "Artikelverwaltung", 0);
+        addDashboardTab("Lieferanten", tabTruck, vendorWrapper, "Lieferantenverwaltung", 1);
+        addDashboardTab("Bestellungen", tabClipboard, orderWrapper, "Bestellungsverwaltung", 2);
+        addDashboardTab("Kunden", tabPeople, clientWrapper, "Kundenverwaltung", 3);
+        addDashboardTab("Lieferantenbestellungen", tabTruck + " " + tabPackage, supplierOrderWrapper,
+                "Lieferantenbestellungen verwalten", 4);
+        addDashboardTab("Protokolle", tabClipboard, logsWrapper, "Systemprotokolle anzeigen", 5);
+    }
+
+    private void addDashboardTab(String title, String icon, JPanel content, String tooltip, int index) {
+        tabbedPane.addTab(title, null, content, tooltip);
+        tabbedPane.setTabComponentAt(index,
+                createTabComponent(icon, title, KeyboardShortcutUtils.menuKey(KeyEvent.VK_1 + index)));
     }
 
     /**
@@ -508,6 +709,7 @@ public class MainGUI extends JFrame {
             tabbedPane.setBackgroundAt(i, selected ? selectedBg : unselectedBg);
             tabbedPane.setForegroundAt(i,
                     selected ? ThemeManager.getTextPrimaryColor() : ThemeManager.getTextSecondaryColor());
+            updateTabComponentColors(i, selected);
         }
     }
 
@@ -515,17 +717,14 @@ public class MainGUI extends JFrame {
      * Applies modern styling to tab UI (padding, borders, shadows)
      */
     private void applyTabStyling() {
-        // Set component background for better visual separation
         tabbedPane.setOpaque(true);
-
-        // Enhanced border with a rounded appearance
         tabbedPane.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                        BorderFactory.createEmptyBorder(4, 4, 4, 4)),
+                        BorderFactory.createLineBorder(ThemeManager.withAlpha(ThemeManager.getBorderColor(), 175), 1, true),
+                        BorderFactory.createEmptyBorder(3, 3, 3, 3)),
                 BorderFactory.createLineBorder(
-                        ThemeManager.adjustColor(ThemeManager.getBorderColor(), ThemeManager.isDarkMode() ? 20 : -10),
-                        1)));
+                        ThemeManager.adjustColor(ThemeManager.getBorderColor(), ThemeManager.isDarkMode() ? 16 : -8),
+                        1, true)));
     }
 
     /**
@@ -550,17 +749,26 @@ public class MainGUI extends JFrame {
      * Creates the footer panel with copyright information
      */
     private JPanel createFooterPanel() {
-        JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        footerPanel.setBackground(ThemeManager.getBackgroundColor());
+        JPanel footerPanel = new JPanel(new BorderLayout(12, 0));
+        footerPanel.setBackground(ThemeManager.getSurfaceColor());
         footerPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.getBorderColor()),
-                BorderFactory.createEmptyBorder(12, 0, 12, 0)));
+                BorderFactory.createMatteBorder(1, 0, 0, 0, ThemeManager.withAlpha(ThemeManager.getBorderColor(), 170)),
+                BorderFactory.createEmptyBorder(6, 12, 6, 12)));
 
         JLabel footerLabel = new JLabel(
-                "© 2026 VEBO Lagersystem | Entwickelt von Darryl Huber | Version " + Main.VERSION);
-        footerLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
+                UnicodeSymbols.CALENDAR + " 2026 VEBO Lagersystem  |  Entwickelt von Darryl Huber  |  Version " + Main.VERSION);
+        footerLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 10));
         footerLabel.setForeground(ThemeManager.getTextSecondaryColor());
-        footerPanel.add(footerLabel);
+        footerPanel.add(footerLabel, BorderLayout.WEST);
+
+        JPanel footerBadges = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        footerBadges.setOpaque(false);
+        footerBadges.add(createFooterBadge(UnicodeSymbols.TAG + " "
+                + KeyboardShortcutUtils.formatKeyStroke(KeyboardShortcutUtils.menuKey(KeyEvent.VK_1)) + "-"
+                + KeyboardShortcutUtils.formatKeyStroke(KeyboardShortcutUtils.menuKey(KeyEvent.VK_6))));
+        footerBadges.add(createFooterBadge(UnicodeSymbols.BETTER_GEAR + " "
+                + KeyboardShortcutUtils.formatKeyStroke(KeyboardShortcutUtils.menuKey(KeyEvent.VK_COMMA))));
+        footerPanel.add(footerBadges, BorderLayout.EAST);
 
         return footerPanel;
     }
@@ -568,12 +776,17 @@ public class MainGUI extends JFrame {
     /**
      * Styles a header button with theme colors and hover effects
      */
-    private void styleHeaderButton(JButton button) {
-        Color base = ThemeManager.getAccentColor();
+    private void styleHeaderButton(JButton button, boolean primary) {
+        Color base = primary
+                ? ThemeManager.getAccentColor()
+                : ThemeManager.adjustColor(ThemeManager.getHeaderBackgroundColor(), ThemeManager.isDarkMode() ? 18 : 34);
         Color hover = ThemeManager.getButtonHoverColor(base);
         Color pressed = ThemeManager.getButtonPressedColor(base);
+        Color borderColor = primary
+                ? ThemeManager.adjustColor(base, ThemeManager.isDarkMode() ? -18 : -28)
+                : ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 110);
 
-        button.setFont(getEmojiCapableFont(SettingsGUI.getFontByName(Font.BOLD, 12)));
+        button.setFont(getEmojiCapableFont(SettingsGUI.getFontByName(Font.BOLD, 13)));
         button.setForeground(ThemeManager.getTextOnPrimaryColor());
         button.setBackground(base);
         button.setOpaque(true);
@@ -582,24 +795,25 @@ public class MainGUI extends JFrame {
         button.setFocusPainted(false);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         button.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(base.darker(), 1),
-                BorderFactory.createEmptyBorder(10, 20, 10, 20)));
+                BorderFactory.createLineBorder(borderColor, 1, true),
+                BorderFactory.createEmptyBorder(8, 15, 8, 15)));
+        button.setMargin(new Insets(0, 0, 0, 0));
 
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent evt) {
                 button.setBackground(hover);
                 button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(hover.darker(), 2),
-                        BorderFactory.createEmptyBorder(8, 18, 8, 18)));
+                        BorderFactory.createLineBorder(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 150), 1, true),
+                        BorderFactory.createEmptyBorder(8, 15, 8, 15)));
             }
 
             @Override
             public void mouseExited(MouseEvent evt) {
                 button.setBackground(base);
                 button.setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createLineBorder(base.darker(), 1),
-                        BorderFactory.createEmptyBorder(10, 20, 10, 20)));
+                        BorderFactory.createLineBorder(borderColor, 1, true),
+                        BorderFactory.createEmptyBorder(8, 15, 8, 15)));
             }
 
             @Override
@@ -612,6 +826,99 @@ public class MainGUI extends JFrame {
                 button.setBackground(button.contains(evt.getPoint()) ? hover : base);
             }
         });
+    }
+
+    private JPanel createHeaderCard(LayoutManager layout) {
+        JFrameUtils.RoundedPanel panel = new JFrameUtils.RoundedPanel(
+                ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), ThemeManager.isDarkMode() ? 16 : 32),
+                DASHBOARD_CARD_RADIUS);
+        panel.setLayout(layout);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 70), 1, true),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+        return panel;
+    }
+
+    private JLabel createHeaderBadge(String text, boolean highlighted) {
+        JLabel label = new JLabel(text);
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 10));
+        label.setForeground(ThemeManager.getTextOnPrimaryColor());
+        label.setOpaque(true);
+        label.setBackground(highlighted
+                ? ThemeManager.withAlpha(ThemeManager.getAccentColor(), 170)
+                : ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), ThemeManager.isDarkMode() ? 18 : 32));
+        label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.withAlpha(ThemeManager.getTextOnPrimaryColor(), 85), 1, true),
+                BorderFactory.createEmptyBorder(3, 8, 3, 8)));
+        return label;
+    }
+
+    private JPanel createTabComponent(String icon, String title, KeyStroke shortcut) {
+        JPanel tabPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        tabPanel.setOpaque(true);
+        tabPanel.setBorder(BorderFactory.createEmptyBorder(5, 8, 5, 8));
+
+        JLabel iconLabel = new JLabel(icon == null ? "" : icon);
+        iconLabel.setFont(getEmojiCapableFont(SettingsGUI.getFontByName(Font.BOLD, 13)));
+
+        JLabel titleLabel = new JLabel(title == null ? "" : title);
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+
+        JLabel shortcutLabel = new JLabel("(" + KeyboardShortcutUtils.formatKeyStroke(shortcut) + ")");
+        shortcutLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 10));
+
+        tabPanel.putClientProperty("main.tab.iconLabel", iconLabel);
+        tabPanel.putClientProperty("main.tab.titleLabel", titleLabel);
+        tabPanel.putClientProperty("main.tab.shortcutLabel", shortcutLabel);
+
+        tabPanel.add(iconLabel);
+        tabPanel.add(titleLabel);
+        tabPanel.add(shortcutLabel);
+        return tabPanel;
+    }
+
+    private void updateTabComponentColors(int tabIndex, boolean selected) {
+        Component tabComponent = tabbedPane.getTabComponentAt(tabIndex);
+        if (!(tabComponent instanceof JPanel panel)) {
+            return;
+        }
+
+        Color background = selected
+                ? ThemeManager.withAlpha(ThemeManager.getAccentColor(), ThemeManager.isDarkMode() ? 90 : 55)
+                : ThemeManager.getSurfaceColor();
+        panel.setBackground(background);
+
+        JLabel iconLabel = (JLabel) panel.getClientProperty("main.tab.iconLabel");
+        JLabel titleLabel = (JLabel) panel.getClientProperty("main.tab.titleLabel");
+        JLabel shortcutLabel = (JLabel) panel.getClientProperty("main.tab.shortcutLabel");
+
+        if (iconLabel != null) {
+            iconLabel.setForeground(selected
+                    ? ThemeManager.getAccentColor()
+                    : ThemeManager.getTextSecondaryColor());
+        }
+        if (titleLabel != null) {
+            titleLabel.setForeground(selected
+                    ? ThemeManager.getTextPrimaryColor()
+                    : ThemeManager.getTextPrimaryColor());
+        }
+        if (shortcutLabel != null) {
+            shortcutLabel.setForeground(selected
+                    ? ThemeManager.adjustColor(ThemeManager.getAccentColor(), ThemeManager.isDarkMode() ? 45 : -10)
+                    : ThemeManager.getTextSecondaryColor());
+        }
+    }
+
+    private JLabel createFooterBadge(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(SettingsGUI.getFontByName(Font.PLAIN, 10));
+        label.setForeground(ThemeManager.getTextSecondaryColor());
+        label.setOpaque(true);
+        label.setBackground(ThemeManager.getCardBackgroundColor());
+        label.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.withAlpha(ThemeManager.getBorderColor(), 170), 1, true),
+                BorderFactory.createEmptyBorder(2, 6, 2, 6)));
+        return label;
     }
 
     private static Font getEmojiCapableFont(Font baseFont) {
@@ -661,8 +968,10 @@ public class MainGUI extends JFrame {
 
         JMenu helpMenu = new JMenu("Hilfe");
         JMenuItem settingsMenuItem = new JMenuItem("Einstellungen");
+        settingsMenuItem.setAccelerator(KeyboardShortcutUtils.menuKey(KeyEvent.VK_COMMA));
         settingsMenuItem.addActionListener(e -> settingsGUI = showOrCreateWindow(settingsGUI, SettingsGUI::new));
         JMenuItem useHelpMenuItem = new JMenuItem("Hilfe zur Anwendung");
+        useHelpMenuItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, 0));
         useHelpMenuItem.addActionListener(e -> showHelp());
 
         helpMenu.add(settingsMenuItem);
@@ -684,26 +993,27 @@ public class MainGUI extends JFrame {
 
     public void showHelp() {
         try {
-            java.net.URI helpUri = null;
-            java.net.URL res = getClass().getResource("/help.html");
-            if (res != null) {
-                helpUri = res.toURI();
-            } else {
-                java.nio.file.Path p = java.nio.file.Paths.get("web", "help.html");
-                if (java.nio.file.Files.exists(p)) {
-                    helpUri = p.toAbsolutePath().toUri();
-                }
+            Path helpFile = resolveHelpFile();
+            if (helpFile == null || !Files.exists(helpFile)) {
+                logger.warn("Help file not found");
+                new MessageDialog()
+                        .setTitle("Hilfe")
+                        .setMessage("Hilfe konnte nicht geöffnet werden (help.html nicht gefunden).")
+                        .setMessageType(JOptionPane.WARNING_MESSAGE)
+                        .display();
+                return;
             }
-            if (helpUri != null && java.awt.Desktop.isDesktopSupported()
-                    && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE)) {
-                java.awt.Desktop.getDesktop().browse(helpUri);
+
+            java.net.URI helpUri = helpFile.toUri();
+            if (openHelpUri(helpUri, helpFile)) {
                 logger.info("Help opened: {}", helpUri);
                 return;
             }
-            logger.warn("Help file not found or browse not supported");
+
+            logger.warn("Help file found but could not be opened: {}", helpFile);
             new MessageDialog()
                     .setTitle("Hilfe")
-                    .setMessage("Hilfe konnte nicht geöffnet werden (help.html nicht gefunden oder Browse nicht unterstützt).")
+                    .setMessage("Hilfe konnte nicht geöffnet werden. Datei: " + helpFile.toAbsolutePath())
                     .setMessageType(JOptionPane.WARNING_MESSAGE)
                     .display();
         } catch (Exception e) {
@@ -713,6 +1023,79 @@ public class MainGUI extends JFrame {
                     .setMessage("Hilfe konnte nicht geöffnet werden: " + e.getMessage())
                     .setMessageType(JOptionPane.ERROR_MESSAGE)
                     .display();
+        }
+    }
+
+    private Path resolveHelpFile() throws IOException {
+        Path webHelpPath = Path.of("web", "help.html");
+        if (Files.exists(webHelpPath)) {
+            return webHelpPath.toAbsolutePath();
+        }
+
+        try (InputStream inputStream = getClass().getResourceAsStream("/help.html")) {
+            if (inputStream == null) {
+                return null;
+            }
+
+            Path tempFile = Files.createTempFile("vebo-help-", ".html");
+            Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING);
+            tempFile.toFile().deleteOnExit();
+            return tempFile;
+        }
+    }
+
+    private boolean openHelpUri(java.net.URI helpUri, Path helpFile) {
+        if (helpUri == null) {
+            return false;
+        }
+
+        if (Desktop.isDesktopSupported()) {
+            Desktop desktop = Desktop.getDesktop();
+            try {
+                if (desktop.isSupported(Desktop.Action.BROWSE)) {
+                    desktop.browse(helpUri);
+                    return true;
+                }
+            } catch (Exception ex) {
+                logger.warn("Desktop browse failed for help URI: {}", helpUri, ex);
+            }
+
+            try {
+                if (helpFile != null && desktop.isSupported(Desktop.Action.OPEN)) {
+                    desktop.open(helpFile.toFile());
+                    return true;
+                }
+            } catch (Exception ex) {
+                logger.warn("Desktop open failed for help file: {}", helpFile, ex);
+            }
+        }
+
+        return openHelpUriWithSystemCommand(helpUri);
+    }
+
+    private boolean openHelpUriWithSystemCommand(java.net.URI helpUri) {
+        if (helpUri == null) {
+            return false;
+        }
+
+        String uri = helpUri.toString();
+        String osName = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+        List<String> command;
+
+        if (osName.contains("win")) {
+            command = List.of("cmd", "/c", "start", "", uri);
+        } else if (osName.contains("mac")) {
+            command = List.of("open", uri);
+        } else {
+            command = List.of("xdg-open", uri);
+        }
+
+        try {
+            new ProcessBuilder(command).start();
+            return true;
+        } catch (IOException ex) {
+            logger.warn("System help open command failed: {}", command, ex);
+            return false;
         }
     }
 

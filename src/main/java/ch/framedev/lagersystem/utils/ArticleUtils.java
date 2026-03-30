@@ -771,9 +771,8 @@ public final class ArticleUtils {
 
             String picked = null;
 
-            if (ArticleManager.getInstance().hasSeperateArticles(article.getArticleNumber())) {
-                List<String> variants = ArticleManager.getInstance()
-                        .getAllDetailsForArticleNumber(article.getArticleNumber());
+            List<String> variants = getCurrentSeparatedDetails(article);
+            if (!variants.isEmpty()) {
                 String message = "Wählen Sie die Variante für \"" + article.getName() + "\":";
                 String[] options = variants.toArray(new String[0]);
                 int choice = new MessageDialog()
@@ -934,6 +933,25 @@ public final class ArticleUtils {
         }
 
         return values.isEmpty() ? List.of() : new ArrayList<>(values);
+    }
+
+    public static List<String> getCurrentSeparatedDetails(Article article) {
+        if (article == null || article.getArticleNumber() == null || article.getArticleNumber().isBlank()) {
+            return List.of();
+        }
+        if (!isArticleSeparated(article.getArticleNumber())) {
+            return List.of();
+        }
+
+        List<String> details = new ArrayList<>();
+        for (SeperateArticle separatedArticle : newSeperatedArticles(article.getArticleNumber())) {
+            if (separatedArticle == null || separatedArticle.getOtherDetails() == null
+                    || separatedArticle.getOtherDetails().isBlank()) {
+                continue;
+            }
+            details.add(separatedArticle.getOtherDetails());
+        }
+        return details.isEmpty() ? List.of() : details;
     }
 
     public static boolean isArticleSeparated(String articleNumber) {

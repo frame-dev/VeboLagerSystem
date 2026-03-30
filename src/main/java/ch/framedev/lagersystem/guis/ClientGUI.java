@@ -7,6 +7,7 @@ import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -130,7 +131,7 @@ public class ClientGUI extends JFrame {
 
         // Combo used as filter
         filterDepartmentCombobox = new JComboBox<>();
-        filterDepartmentCombobox.setPreferredSize(new Dimension(240, 40));
+        filterDepartmentCombobox.setPreferredSize(new Dimension(240, 45));
         filterDepartmentCombobox.addItem(ALL_DEPARTMENTS_LABEL);
         fillDepartmentList(filterDepartmentCombobox, true);
         styleComboBox(filterDepartmentCombobox);
@@ -392,6 +393,7 @@ public class ClientGUI extends JFrame {
         };
         this.addComponentListener(resizeListener);
         tableScrollPane.getViewport().addComponentListener(resizeListener);
+        installKeyboardShortcuts(searchField, addClientButton, editClientButton, deleteClientButton, refreshButton, clearBtn);
         SwingUtilities.invokeLater(this::adjustColumnWidths);
     }
 
@@ -403,6 +405,30 @@ public class ClientGUI extends JFrame {
         LOGGER.info("Disposing ClientGUI window");
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
+    }
+
+    private void installKeyboardShortcuts(JTextField searchField, JButton addClientButton, JButton editClientButton,
+                                          JButton deleteClientButton, JButton refreshButton, JButton clearButton) {
+        JRootPane rootPane = getRootPane();
+        KeyboardShortcutUtils.addTooltipHint(searchField, KeyboardShortcutUtils.menuKey(KeyEvent.VK_F));
+        KeyboardShortcutUtils.addTooltipHint(addClientButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_N));
+        KeyboardShortcutUtils.addTooltipHint(editClientButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_E));
+        KeyboardShortcutUtils.addTooltipHint(deleteClientButton, KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
+        KeyboardShortcutUtils.addTooltipHint(refreshButton, KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0));
+        KeyboardShortcutUtils.addTooltipHint(clearButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_L));
+        KeyboardShortcutUtils.registerClose(this);
+        KeyboardShortcutUtils.registerFocus(rootPane, "clients.focusSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_F), searchField);
+        KeyboardShortcutUtils.registerButton(rootPane, "clients.add",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_N), addClientButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "clients.edit",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_E), editClientButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "clients.delete",
+                KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), deleteClientButton, true);
+        KeyboardShortcutUtils.registerButton(rootPane, "clients.refresh",
+                KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), refreshButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "clients.clearSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_L), clearButton);
     }
 
     private void fillDepartmentList(JComboBox<String> target, boolean skipFirstItem) {

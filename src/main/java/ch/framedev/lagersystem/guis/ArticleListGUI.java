@@ -444,6 +444,22 @@ public class ArticleListGUI extends JFrame {
                 handleClearAll(e);
             }
         });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), "refreshList");
+        am.put("refreshList", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                refreshArticleListPreservingQuery();
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeWindow");
+        am.put("closeWindow", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dispose();
+            }
+        });
     }
 
     private void clearSearch() {

@@ -10,6 +10,7 @@ import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.managers.UserManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 import org.apache.logging.log4j.LogManager;
@@ -202,12 +203,23 @@ public class CompleteOrderGUI extends JFrame {
         add(bottomPanel, BorderLayout.SOUTH);
 
         attachListeners();
+        installKeyboardShortcuts();
     }
 
     @Override
     public void dispose() {
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
+    }
+
+    private void installKeyboardShortcuts() {
+        KeyboardShortcutUtils.addTooltipHint(refreshButton, KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F5, 0));
+        KeyboardShortcutUtils.addTooltipHint(completeButton, KeyboardShortcutUtils.menuShiftKey(java.awt.event.KeyEvent.VK_C));
+        KeyboardShortcutUtils.registerClose(this);
+        KeyboardShortcutUtils.registerButton(getRootPane(), "completeOrder.refresh",
+                KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F5, 0), refreshButton);
+        KeyboardShortcutUtils.registerButton(getRootPane(), "completeOrder.finish",
+                KeyboardShortcutUtils.menuShiftKey(java.awt.event.KeyEvent.VK_C), completeButton);
     }
 
     private void attachListeners() {

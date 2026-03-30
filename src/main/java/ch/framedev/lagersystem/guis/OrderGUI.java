@@ -9,6 +9,7 @@ import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 import ch.framedev.lagersystem.utils.JFrameUtils;
+import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
 import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.OrderExport;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
@@ -327,6 +328,7 @@ public class OrderGUI extends JFrame {
         };
         this.addComponentListener(resizeListener);
         tableScrollPane.getViewport().addComponentListener(resizeListener);
+        installKeyboardShortcuts(newOrderButton, editOrderButton, deleteOrderButton, completeOrderButton, refreshButton, clearBtn);
         SwingUtilities.invokeLater(this::adjustColumnWidths);
         LOGGER.info("OrderGUI window initialized");
 
@@ -340,6 +342,33 @@ public class OrderGUI extends JFrame {
         LOGGER.info("Disposing OrderGUI window");
         ThemeManager.getInstance().unregisterWindow(this);
         super.dispose();
+    }
+
+    private void installKeyboardShortcuts(JButton newOrderButton, JButton editOrderButton, JButton deleteOrderButton,
+                                          JButton completeOrderButton, JButton refreshButton, JButton clearButton) {
+        JRootPane rootPane = getRootPane();
+        KeyboardShortcutUtils.addTooltipHint(searchField, KeyboardShortcutUtils.menuKey(KeyEvent.VK_F));
+        KeyboardShortcutUtils.addTooltipHint(newOrderButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_N));
+        KeyboardShortcutUtils.addTooltipHint(editOrderButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_E));
+        KeyboardShortcutUtils.addTooltipHint(deleteOrderButton, KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
+        KeyboardShortcutUtils.addTooltipHint(completeOrderButton, KeyboardShortcutUtils.menuShiftKey(KeyEvent.VK_C));
+        KeyboardShortcutUtils.addTooltipHint(refreshButton, KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0));
+        KeyboardShortcutUtils.addTooltipHint(clearButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_L));
+        KeyboardShortcutUtils.registerClose(this);
+        KeyboardShortcutUtils.registerFocus(rootPane, "orders.focusSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_F), searchField);
+        KeyboardShortcutUtils.registerButton(rootPane, "orders.new",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_N), newOrderButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "orders.edit",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_E), editOrderButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "orders.delete",
+                KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), deleteOrderButton, true);
+        KeyboardShortcutUtils.registerButton(rootPane, "orders.complete",
+                KeyboardShortcutUtils.menuShiftKey(KeyEvent.VK_C), completeOrderButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "orders.refresh",
+                KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), refreshButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "orders.clearSearch",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_L), clearButton);
     }
 
     private void loadOrders() {

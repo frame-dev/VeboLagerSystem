@@ -245,23 +245,24 @@ public final class ArticleExporter {
 
     private static void drawText(PDPageContentStream cs, PDFont font, float fontSize, Color color,
                                  float x, float y, String text) throws IOException {
+        String value = sanitizeForFont(text, font);
         cs.beginText();
         setFillColor(cs, color);
         cs.setFont(font, fontSize);
         cs.newLineAtOffset(x, y);
-        cs.showText(text == null ? "" : text);
+        cs.showText(value);
         cs.endText();
     }
 
     private static void drawRightAlignedText(PDPageContentStream cs, PDFont font, float fontSize, Color color,
                                              float rightX, float y, String text) throws IOException {
-        String value = text == null ? "" : text;
+        String value = sanitizeForFont(text, font);
         float textWidth = font.getStringWidth(value) / 1000f * fontSize;
         drawText(cs, font, fontSize, color, rightX - textWidth, y, value);
     }
 
     private static String fitText(String text, PDFont font, float fontSize, float maxWidth) throws IOException {
-        String value = text == null ? "" : text;
+        String value = sanitizeForFont(text, font);
         if (maxWidth <= 0f) {
             return "";
         }
@@ -326,6 +327,26 @@ public final class ArticleExporter {
             int cp = text.codePointAt(i);
             if (cp <= 255) {
                 sb.appendCodePoint(cp);
+            }
+            i += Character.charCount(cp);
+        }
+        return sb.toString();
+    }
+
+    private static String sanitizeForFont(String text, PDFont font) {
+        if (text == null || text.isEmpty() || font == null) {
+            return text == null ? "" : text;
+        }
+
+        StringBuilder sb = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); ) {
+            int cp = text.codePointAt(i);
+            String glyph = new String(Character.toChars(cp));
+            try {
+                font.encode(glyph);
+                sb.append(glyph);
+            } catch (IllegalArgumentException | IOException ignored) {
+                // Skip glyphs the active PDF font cannot encode.
             }
             i += Character.charCount(cp);
         }
