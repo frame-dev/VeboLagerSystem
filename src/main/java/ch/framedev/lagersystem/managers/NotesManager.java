@@ -158,7 +158,11 @@ public class NotesManager {
      */
     public boolean deleteNote(String title) {
         String t = normalizeTitle(title);
-        if(!normalizeTextNotNull(title)) return false;
+        if (t == null) return false;
+        if (!exists(t)) {
+            Main.logUtils.addLog("Notiz mit Titel '" + t + "' existiert nicht.");
+            return false;
+        }
         String sql = "DELETE FROM " + TABLE + " WHERE title = ?;";
         boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{t});
         if (result) {
