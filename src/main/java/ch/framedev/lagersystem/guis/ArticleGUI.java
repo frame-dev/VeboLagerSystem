@@ -23,6 +23,7 @@ import java.io.*;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static ch.framedev.lagersystem.main.Main.articleListGUI;
 import static ch.framedev.lagersystem.main.Main.logUtils;
@@ -1333,18 +1334,45 @@ public class ArticleGUI extends JFrame {
 
         ThemeManager.applyUIDefaults();
 
+        JDialog dialog = createSeparatedArticlesDialog();
+        JPanel root = createSeparatedDialogRoot();
+        DefaultTableModel model = createSeparatedArticlesTableModel(separatedArticles);
+        JTable table = new JTable(model);
+        configureSeparatedArticlesTable(table);
+        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
+        table.setRowSorter(sorter);
+
+        SeparatedDialogUi ui = createSeparatedDialogUi(table);
+
+        root.add(createSeparatedHeaderCard(separatedArticles), BorderLayout.NORTH);
+        root.add(createSeparatedContentSplit(table, ui), BorderLayout.CENTER);
+        root.add(createSeparatedFooter(dialog, ui.closeButton()), BorderLayout.SOUTH);
+
+        bindSeparatedDialogInteractions(table, sorter, ui);
+        initializeSeparatedDialogSelection(table, ui);
+        configureSeparatedDialog(dialog, root, ui.closeButton());
+        dialog.setVisible(true);
+    }
+
+    private JDialog createSeparatedArticlesDialog() {
         JDialog dialog = new JDialog(this, UnicodeSymbols.CLIPBOARD + " Getrennte Artikel", true);
-        dialog.setSize(820, 560);
-        dialog.setMinimumSize(new Dimension(720, 460));
+        dialog.setSize(980, 680);
+        dialog.setMinimumSize(new Dimension(840, 560));
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout(0, 0));
+        return dialog;
+    }
 
+    private JPanel createSeparatedDialogRoot() {
         JPanel root = new JPanel(new BorderLayout(0, 12));
         root.setBackground(ThemeManager.getBackgroundColor());
-        root.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        root.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        return root;
+    }
 
+    private RoundedPanel createSeparatedHeaderCard(List<SeperateArticle> separatedArticles) {
         RoundedPanel headerCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
-        headerCard.setLayout(new BorderLayout(0, 6));
+        headerCard.setLayout(new BorderLayout(16, 8));
         headerCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
                 BorderFactory.createEmptyBorder(16, 18, 16, 18)));
@@ -1353,16 +1381,208 @@ public class ArticleGUI extends JFrame {
         titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 20));
         titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
 
-        JLabel subtitleLabel = new JLabel(separatedArticles.size() + " aktuelle Varianten");
+        JLabel subtitleLabel = new JLabel("Varianten sauber durchsuchen, vergleichen und komplett lesen");
         subtitleLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
         subtitleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        JPanel headerText = JFrameUtils.createHeaderTextPanel(titleLabel, subtitleLabel, 4);
-        headerCard.add(headerText, BorderLayout.CENTER);
+        headerCard.add(JFrameUtils.createHeaderTextPanel(titleLabel, subtitleLabel, 4), BorderLayout.CENTER);
+        headerCard.add(createSeparatedStatsPanel(separatedArticles), BorderLayout.EAST);
+        return headerCard;
+    }
 
-        DefaultTableModel model = new DefaultTableModel(new Object[] {
-                "Index", "Artikelnummer", "Zusatzdetails"
-        }, 0) {
+    private JPanel createSeparatedStatsPanel(List<SeperateArticle> separatedArticles) {
+        Set<String> uniqueArticleNumbers = new LinkedHashSet<>();
+        for (SeperateArticle separatedArticle : separatedArticles) {
+            if (separatedArticle != null && separatedArticle.getArticleNumber() != null) {
+                uniqueArticleNumbers.add(separatedArticle.getArticleNumber());
+            }
+        }
+
+        JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        statsPanel.setOpaque(false);
+        statsPanel.add(createSeparatedSummaryPill(String.valueOf(separatedArticles.size()), "Varianten"));
+        statsPanel.add(createSeparatedSummaryPill(String.valueOf(uniqueArticleNumbers.size()), "Artikel"));
+        return statsPanel;
+    }
+
+    private SeparatedDialogUi createSeparatedDialogUi(JTable table) {
+        JTextField searchField = new JTextField(24);
+        styleTextField(searchField);
+        searchField.setToolTipText("Sucht nach Artikelnummer, Index oder Zusatzdetail");
+
+        JLabel filteredCountLabel = new JLabel();
+        filteredCountLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        filteredCountLabel.setForeground(ThemeManager.getTextSecondaryColor());
+        updateSeparatedFilteredCount(filteredCountLabel, table);
+
+        JTextArea detailsArea = new JTextArea();
+        detailsArea.setEditable(false);
+        detailsArea.setLineWrap(true);
+        detailsArea.setWrapStyleWord(true);
+        detailsArea.setOpaque(false);
+        detailsArea.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        detailsArea.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
+        detailsArea.setForeground(ThemeManager.getTextPrimaryColor());
+        detailsArea.setText("Wählen Sie links eine Variante aus, um die vollständigen Zusatzdetails zu lesen.");
+
+        JLabel selectedIndexValue = createSeparatedDetailValueLabel("Keine Auswahl");
+        JLabel selectedArticleValue = createSeparatedDetailValueLabel("Keine Auswahl");
+        JButton closeButton = createSecondaryButton(UnicodeSymbols.CLEAR + " Schließen");
+
+        return new SeparatedDialogUi(searchField, filteredCountLabel, detailsArea, selectedIndexValue, selectedArticleValue, closeButton);
+    }
+
+    private JSplitPane createSeparatedContentSplit(JTable table, SeparatedDialogUi ui) {
+        JSplitPane contentSplit = new JSplitPane(
+                JSplitPane.VERTICAL_SPLIT,
+                createSeparatedTableCard(table, ui),
+                createSeparatedDetailsCard(ui)
+        );
+        contentSplit.setResizeWeight(0.68);
+        contentSplit.setBorder(BorderFactory.createEmptyBorder());
+        contentSplit.setOpaque(false);
+        contentSplit.setDividerSize(10);
+        contentSplit.setContinuousLayout(true);
+        return contentSplit;
+    }
+
+    private RoundedPanel createSeparatedTableCard(JTable table, SeparatedDialogUi ui) {
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(6, 6, 6, 6)));
+        scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
+
+        RoundedPanel tableCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        tableCard.setLayout(new BorderLayout(0, 12));
+        tableCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
+        tableCard.add(createSeparatedSearchRow(ui.searchField(), ui.filteredCountLabel()), BorderLayout.NORTH);
+        tableCard.add(scrollPane, BorderLayout.CENTER);
+        return tableCard;
+    }
+
+    private JPanel createSeparatedSearchRow(JTextField searchField, JLabel filteredCountLabel) {
+        JPanel searchRow = new JPanel(new BorderLayout(12, 0));
+        searchRow.setOpaque(false);
+
+        JPanel searchFieldPanel = new JPanel(new BorderLayout(8, 0));
+        searchFieldPanel.setOpaque(false);
+
+        JLabel searchLabel = new JLabel(UnicodeSymbols.SEARCH + " Suche");
+        searchLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        searchLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        searchFieldPanel.add(searchLabel, BorderLayout.WEST);
+        searchFieldPanel.add(searchField, BorderLayout.CENTER);
+
+        searchRow.add(searchFieldPanel, BorderLayout.CENTER);
+        searchRow.add(filteredCountLabel, BorderLayout.EAST);
+        return searchRow;
+    }
+
+    private RoundedPanel createSeparatedDetailsCard(SeparatedDialogUi ui) {
+        RoundedPanel detailsCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
+        detailsCard.setLayout(new BorderLayout(0, 12));
+        detailsCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(14, 16, 14, 16)));
+
+        JScrollPane detailsScrollPane = new JScrollPane(ui.detailsArea());
+        detailsScrollPane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
+        detailsScrollPane.getViewport().setOpaque(false);
+        detailsScrollPane.setOpaque(false);
+
+        detailsCard.add(createSeparatedDetailsTop(ui.selectedIndexValue(), ui.selectedArticleValue()), BorderLayout.NORTH);
+        detailsCard.add(detailsScrollPane, BorderLayout.CENTER);
+        return detailsCard;
+    }
+
+    private JPanel createSeparatedDetailsTop(JLabel selectedIndexValue, JLabel selectedArticleValue) {
+        JLabel detailsTitle = new JLabel(UnicodeSymbols.INFO + " Variantendetails");
+        detailsTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 15));
+        detailsTitle.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JLabel detailsSubtitle = new JLabel("Vollständige Zusatzinformation der ausgewählten getrennten Variante");
+        detailsSubtitle.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        detailsSubtitle.setForeground(ThemeManager.getTextSecondaryColor());
+
+        JPanel metaPanel = new JPanel(new GridLayout(1, 2, 12, 0));
+        metaPanel.setOpaque(false);
+        metaPanel.add(createSeparatedInfoBlock("Index", selectedIndexValue));
+        metaPanel.add(createSeparatedInfoBlock("Artikelnummer", selectedArticleValue));
+
+        JPanel detailsTop = new JPanel(new BorderLayout(0, 12));
+        detailsTop.setOpaque(false);
+        detailsTop.add(JFrameUtils.createHeaderTextPanel(detailsTitle, detailsSubtitle, 4), BorderLayout.NORTH);
+        detailsTop.add(metaPanel, BorderLayout.CENTER);
+        return detailsTop;
+    }
+
+    private JPanel createSeparatedFooter(JDialog dialog, JButton closeButton) {
+        closeButton.addActionListener(e -> dialog.dispose());
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        footer.setOpaque(false);
+        footer.add(closeButton);
+        return footer;
+    }
+
+    private void bindSeparatedDialogInteractions(JTable table, TableRowSorter<DefaultTableModel> sorter, SeparatedDialogUi ui) {
+        ui.searchField().getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                applySeparatedArticlesFilter(ui.searchField(), sorter, table, ui.filteredCountLabel());
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                applySeparatedArticlesFilter(ui.searchField(), sorter, table, ui.filteredCountLabel());
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                applySeparatedArticlesFilter(ui.searchField(), sorter, table, ui.filteredCountLabel());
+            }
+        });
+
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                updateSeparatedDetailsPanel(table, ui.selectedIndexValue(), ui.selectedArticleValue(), ui.detailsArea());
+            }
+        });
+    }
+
+    private void initializeSeparatedDialogSelection(JTable table, SeparatedDialogUi ui) {
+        if (table.getRowCount() > 0) {
+            table.setRowSelectionInterval(0, 0);
+            updateSeparatedDetailsPanel(table, ui.selectedIndexValue(), ui.selectedArticleValue(), ui.detailsArea());
+        }
+    }
+
+    private void configureSeparatedDialog(JDialog dialog, JPanel root, JButton closeButton) {
+        dialog.setContentPane(root);
+        dialog.getRootPane().setDefaultButton(closeButton);
+        dialog.getRootPane().registerKeyboardAction(
+                e -> dialog.dispose(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW);
+    }
+
+    private record SeparatedDialogUi(
+            JTextField searchField,
+            JLabel filteredCountLabel,
+            JTextArea detailsArea,
+            JLabel selectedIndexValue,
+            JLabel selectedArticleValue,
+            JButton closeButton
+    ) {
+    }
+
+    private DefaultTableModel createSeparatedArticlesTableModel(List<SeperateArticle> separatedArticles) {
+        DefaultTableModel model = new DefaultTableModel(new Object[]{"Nr.", "Artikelnummer", "Variante"}, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -1378,19 +1598,22 @@ public class ArticleGUI extends JFrame {
             if (separatedArticle == null) {
                 continue;
             }
-            model.addRow(new Object[] {
+            model.addRow(new Object[]{
                     separatedArticle.getIndex(),
                     separatedArticle.getArticleNumber(),
                     separatedArticle.getOtherDetails()
             });
         }
+        return model;
+    }
 
-        JTable table = new JTable(model);
-        table.setRowHeight(28);
+    private void configureSeparatedArticlesTable(JTable table) {
+        table.setRowHeight(42);
         table.setFillsViewportHeight(true);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        table.setAutoCreateRowSorter(true);
         table.getTableHeader().setReorderingAllowed(false);
+        table.setShowVerticalLines(false);
+        table.setIntercellSpacing(new Dimension(0, 6));
         table.setFont(SettingsGUI.getFontByName(Font.PLAIN, SettingsGUI.TABLE_FONT_SIZE));
         table.setBackground(ThemeManager.getCardBackgroundColor());
         table.setForeground(ThemeManager.getTextPrimaryColor());
@@ -1402,47 +1625,203 @@ public class ArticleGUI extends JFrame {
         header.setBackground(ThemeManager.getTableHeaderBackground());
         header.setForeground(ThemeManager.getTableHeaderForeground());
         header.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        header.setPreferredSize(new Dimension(header.getPreferredSize().width, 34));
 
         TableColumnModel columnModel = table.getColumnModel();
         columnModel.getColumn(0).setPreferredWidth(90);
+        columnModel.getColumn(0).setMaxWidth(90);
         columnModel.getColumn(1).setPreferredWidth(180);
-        columnModel.getColumn(2).setPreferredWidth(480);
+        columnModel.getColumn(2).setPreferredWidth(520);
 
-        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
-        columnModel.getColumn(0).setCellRenderer(centerRenderer);
-        columnModel.getColumn(1).setCellRenderer(centerRenderer);
+        columnModel.getColumn(0).setCellRenderer(createSeparatedIndexRenderer());
+        columnModel.getColumn(1).setCellRenderer(createSeparatedArticleRenderer());
+        columnModel.getColumn(2).setCellRenderer(createSeparatedDetailsRenderer());
+    }
 
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createCompoundBorder(
+    private DefaultTableCellRenderer createSeparatedIndexRenderer() {
+        return new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
+                                                           int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                label.setHorizontalAlignment(SwingConstants.CENTER);
+                label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+                label.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
+                label.setOpaque(true);
+                if (isSelected) {
+                    label.setBackground(ThemeManager.getSelectionBackgroundColor());
+                    label.setForeground(ThemeManager.getSelectionForegroundColor());
+                } else {
+                    label.setBackground(row % 2 == 0 ? ThemeManager.getCardBackgroundColor() : getSeparatedSurfaceColor());
+                    label.setForeground(ThemeManager.getTextPrimaryColor());
+                }
+                return label;
+            }
+        };
+    }
+
+    private DefaultTableCellRenderer createSeparatedArticleRenderer() {
+        return new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
+                                                           int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                label.setFont(SettingsGUI.getFontByName(Font.BOLD, 13));
+                label.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+                label.setOpaque(true);
+                if (isSelected) {
+                    label.setBackground(ThemeManager.getSelectionBackgroundColor());
+                    label.setForeground(ThemeManager.getSelectionForegroundColor());
+                } else {
+                    label.setBackground(row % 2 == 0 ? ThemeManager.getCardBackgroundColor() : getSeparatedSurfaceColor());
+                    label.setForeground(ThemeManager.getTextPrimaryColor());
+                }
+                return label;
+            }
+        };
+    }
+
+    private DefaultTableCellRenderer createSeparatedDetailsRenderer() {
+        return new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
+                                                           int row, int column) {
+                JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                String details = value == null ? "" : value.toString().trim();
+                String preview = details.length() > 90 ? details.substring(0, 87) + "..." : details;
+                label.setText("<html><div style='padding:4px 0;'><span style='font-weight:600;'>Variante</span><br>" +
+                        escapeSeparatedHtml(preview) + "</div></html>");
+                label.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+                label.setVerticalAlignment(SwingConstants.CENTER);
+                label.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+                label.setOpaque(true);
+                if (isSelected) {
+                    label.setBackground(ThemeManager.getSelectionBackgroundColor());
+                    label.setForeground(ThemeManager.getSelectionForegroundColor());
+                } else {
+                    label.setBackground(row % 2 == 0 ? ThemeManager.getCardBackgroundColor() : getSeparatedSurfaceColor());
+                    label.setForeground(ThemeManager.getTextPrimaryColor());
+                }
+                label.setToolTipText(details.isBlank() ? "Keine Zusatzdetails vorhanden" : details);
+                return label;
+            }
+        };
+    }
+
+    private JPanel createSeparatedSummaryPill(String value, String label) {
+        RoundedPanel pill = new RoundedPanel(getSeparatedSurfaceColor(), 14);
+        pill.setLayout(new BoxLayout(pill, BoxLayout.Y_AXIS));
+        pill.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
-        scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
+                BorderFactory.createEmptyBorder(8, 14, 8, 14)));
 
-        RoundedPanel tableCard = new RoundedPanel(ThemeManager.getCardBackgroundColor(), 18);
-        tableCard.setLayout(new BorderLayout());
-        tableCard.setBorder(BorderFactory.createCompoundBorder(
+        JLabel valueLabel = new JLabel(value);
+        valueLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        valueLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
+        valueLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JLabel labelLabel = new JLabel(label);
+        labelLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        labelLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 11));
+        labelLabel.setForeground(ThemeManager.getTextSecondaryColor());
+
+        pill.add(valueLabel);
+        pill.add(Box.createVerticalStrut(2));
+        pill.add(labelLabel);
+        return pill;
+    }
+
+    private JPanel createSeparatedInfoBlock(String title, JLabel valueLabel) {
+        RoundedPanel panel = new RoundedPanel(getSeparatedSurfaceColor(), 14);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1),
-                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
-        tableCard.add(scrollPane, BorderLayout.CENTER);
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
 
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        footer.setOpaque(false);
-        JButton closeButton = createSecondaryButton(UnicodeSymbols.CLEAR + " Schließen");
-        closeButton.addActionListener(e -> dialog.dispose());
-        footer.add(closeButton);
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 11));
+        titleLabel.setForeground(ThemeManager.getTextSecondaryColor());
 
-        root.add(headerCard, BorderLayout.NORTH);
-        root.add(tableCard, BorderLayout.CENTER);
-        root.add(footer, BorderLayout.SOUTH);
+        valueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        dialog.setContentPane(root);
-        dialog.getRootPane().setDefaultButton(closeButton);
-        dialog.getRootPane().registerKeyboardAction(
-                e -> dialog.dispose(),
-                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
-                JComponent.WHEN_IN_FOCUSED_WINDOW);
-        dialog.setVisible(true);
+        panel.add(titleLabel);
+        panel.add(Box.createVerticalStrut(4));
+        panel.add(valueLabel);
+        return panel;
+    }
+
+    private JLabel createSeparatedDetailValueLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+        return label;
+    }
+
+    private void applySeparatedArticlesFilter(JTextField searchField, TableRowSorter<DefaultTableModel> sorter,
+                                              JTable table, JLabel filteredCountLabel) {
+        String query = searchField == null ? "" : searchField.getText().trim();
+        if (query.isEmpty()) {
+            sorter.setRowFilter(null);
+        } else {
+            sorter.setRowFilter(RowFilter.regexFilter("(?i)" + Pattern.quote(query), 0, 1, 2));
+        }
+        updateSeparatedFilteredCount(filteredCountLabel, table);
+        if (table.getRowCount() > 0) {
+            table.setRowSelectionInterval(0, 0);
+        }
+    }
+
+    private void updateSeparatedFilteredCount(JLabel filteredCountLabel, JTable table) {
+        if (filteredCountLabel == null || table == null) {
+            return;
+        }
+        filteredCountLabel.setText(table.getRowCount() + " sichtbar");
+    }
+
+    private void updateSeparatedDetailsPanel(JTable table, JLabel selectedIndexValue, JLabel selectedArticleValue,
+                                             JTextArea detailsArea) {
+        if (table == null || selectedIndexValue == null || selectedArticleValue == null || detailsArea == null) {
+            return;
+        }
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow < 0) {
+            selectedIndexValue.setText("Keine Auswahl");
+            selectedArticleValue.setText("Keine Auswahl");
+            detailsArea.setText("Wählen Sie links eine Variante aus, um die vollständigen Zusatzdetails zu lesen.");
+            return;
+        }
+
+        int modelRow = table.convertRowIndexToModel(selectedRow);
+        Object indexValue = table.getModel().getValueAt(modelRow, 0);
+        Object articleValue = table.getModel().getValueAt(modelRow, 1);
+        Object detailsValue = table.getModel().getValueAt(modelRow, 2);
+
+        selectedIndexValue.setText(String.valueOf(indexValue));
+        selectedArticleValue.setText(String.valueOf(articleValue));
+        detailsArea.setText(detailsValue == null || detailsValue.toString().isBlank()
+                ? "Keine Zusatzdetails vorhanden."
+                : detailsValue.toString().trim());
+        detailsArea.setCaretPosition(0);
+    }
+
+    private String escapeSeparatedHtml(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
+    }
+
+    private Color getSeparatedSurfaceColor() {
+        Color card = ThemeManager.getCardBackgroundColor();
+        Color background = ThemeManager.getBackgroundColor();
+        int red = Math.round(card.getRed() * 0.86f + background.getRed() * 0.14f);
+        int green = Math.round(card.getGreen() * 0.86f + background.getGreen() * 0.14f);
+        int blue = Math.round(card.getBlue() * 0.86f + background.getBlue() * 0.14f);
+        return new Color(red, green, blue);
     }
 
     private List<SeperateArticle> getCurrentSeparatedArticles() {
