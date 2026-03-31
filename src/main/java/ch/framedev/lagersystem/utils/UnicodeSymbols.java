@@ -11,6 +11,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.swing.UIManager;
 
+import org.apache.logging.log4j.Level;
+
+import ch.framedev.lagersystem.main.Main;
+
 /**
  * Provides a set of cross-platform symbols (Unicode and emoji) for use in Swing UIs.
  * This class ensures consistent display on Windows, macOS, and Linux by detecting font support
@@ -89,6 +93,8 @@ public final class UnicodeSymbols {
             Font uiFont = UIManager.getFont("Label.font");
             if (uiFont != null) {
                 return uiFont;
+            } else {
+                Main.logUtils.addLog(Level.ERROR, "UI Font konnte nicht gefunden werden.");
             }
         } catch (Exception ignored) {
             // Fall back to a logical font.

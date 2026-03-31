@@ -6,6 +6,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -54,7 +56,7 @@ public class QRCodeUtils {
         if (!directory.exists()) {
             if (!directory.mkdirs()) {
                 logger.error("Could not create directory for QR codes: {}", directory.getAbsolutePath());
-                Main.logUtils.addLog("Konnte Verzeichnis für QR-Codes nicht erstellen: " + directory.getAbsolutePath());
+                Main.logUtils.addLog(Level.ERROR, "Konnte Verzeichnis für QR-Codes nicht erstellen: " + directory.getAbsolutePath());
             }
         }
         List<File> qrCodeFiles = new ArrayList<>();
@@ -62,6 +64,7 @@ public class QRCodeUtils {
             String data = article.getQrCodeData();
             if (data == null || data.isBlank()) {
                 logger.warn("Skipping QR code generation for article {} because QR data is empty", article.getArticleNumber());
+                Main.logUtils.addLog(Level.WARN, "QR-Daten für Artikel " + article.getArticleNumber() + " sind leer. QR-Code wird übersprungen.");
                 continue;
             }
             // Encode data for URL safety
@@ -70,7 +73,7 @@ public class QRCodeUtils {
                 encodedData = URLEncoder.encode(data, StandardCharsets.UTF_8);
             } catch (Exception ex) {
                 logger.error("Error encoding QR data for article: {}", article.getArticleNumber(), ex);
-                Main.logUtils.addLog("Fehler beim Kodieren der QR-Daten für Artikel: " + article.getArticleNumber() + " - " + ex.getMessage());
+                Main.logUtils.addLog(Level.ERROR, "Fehler beim Kodieren der QR-Daten für Artikel: " + article.getArticleNumber() + " - " + ex.getMessage());
                 continue;
             }
             String url = resolveScanSubmitUrl(Main.settings.getProperty("server_url")) + "?data=" + encodedData;
@@ -79,7 +82,7 @@ public class QRCodeUtils {
                 qrCodeFiles.add(qrCodeFile);
             } catch (Exception e) {
                 logger.error("Error generating QR code for article: {}", article.getArticleNumber(), e);
-                Main.logUtils.addLog("Fehler beim Generieren des QR-Codes für Artikel: " + article.getArticleNumber() + " - " + e.getMessage());
+                Main.logUtils.addLog(Level.ERROR, "Fehler beim Generieren des QR-Codes für Artikel: " + article.getArticleNumber() + " - " + e.getMessage());
             }
         }
         return qrCodeFiles;
@@ -101,7 +104,7 @@ public class QRCodeUtils {
             }
         } catch (Exception e) {
             logger.warn("Could not ensure QR store exists at {}: {}", STORE.getAbsolutePath(), e.getMessage());
-            Main.logUtils.addLog("Konnte QR-Store nicht initialisieren: " + e.getMessage());
+            Main.logUtils.addLog(Level.ERROR, "Konnte QR-Store nicht initialisieren: " + e.getMessage());
         }
     }
 
@@ -115,7 +118,7 @@ public class QRCodeUtils {
             return arr != null ? arr : new JsonArray();
         } catch (Exception e) {
             logger.warn("Failed to read QR store ({}): {}", STORE.getAbsolutePath(), e.getMessage());
-            Main.logUtils.addLog("Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
+            Main.logUtils.addLog(Level.ERROR, "Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
             return new JsonArray();
         }
     }
@@ -149,19 +152,20 @@ public class QRCodeUtils {
                             JsonObject obj = e.getAsJsonObject();
                             Map<String, Object> map = GSON.fromJson(GSON.toJson(obj), Map.class);
                             mapList.add(map);
+                            Main.logUtils.addLog(Level.INFO, "QR-Code-Daten von der Webseite abgerufen: " + map.toString());
                         }
                     }
                 }
             } else {
                 logger.error("Failed to fetch QR code data. HTTP response code: {}", responseCode);
-                Main.logUtils.addLog("Fehler beim Abrufen der QR-Code-Daten. HTTP-Antwortcode: " + responseCode);
+                Main.logUtils.addLog(Level.ERROR, "Fehler beim Abrufen der QR-Code-Daten. HTTP-Antwortcode: " + responseCode);
             }
         } catch (IOException e) {
             logger.error("Error while fetching QR code data from website", e);
-            Main.logUtils.addLog("Fehler beim Abrufen der QR-Code-Daten von der Webseite: " + e.getMessage());
+            Main.logUtils.addLog(Level.ERROR, "Fehler beim Abrufen der QR-Code-Daten von der Webseite: " + e.getMessage());
         } catch (URISyntaxException e) {
             logger.error("Invalid server URL syntax: {}", urlString, e);
-            Main.logUtils.addLog("Ungültige URL-Syntax: " + e.getMessage());
+            Main.logUtils.addLog(Level.ERROR, "Ungültige URL-Syntax: " + e.getMessage());
         } finally {
             if (connection != null) {
                 connection.disconnect();
@@ -226,6 +230,8 @@ public class QRCodeUtils {
             JsonObject obj = e.getAsJsonObject();
             if (obj.has("data") && !obj.get("data").isJsonNull()) {
                 dataList.add(obj.get("data").getAsString());
+            } else {
+                Main.logUtils.addLog(Level.ERROR, "QR-Code hat keinen (data) Eintrag.");
             }
         }
         return dataList;
@@ -259,6 +265,8 @@ public class QRCodeUtils {
                 JsonObject obj = last.getAsJsonObject();
                 if (obj.has("data") && !obj.get("data").isJsonNull()) {
                     return obj.get("data").getAsString();
+                } else {
+                    Main.logUtils.addLog(Level.ERROR, "Der neueste QR-Code hat keinen (data) Eintrag.");
                 }
             }
         }
@@ -304,7 +312,7 @@ public class QRCodeUtils {
             Files.writeString(STORE.toPath(), "[]", StandardCharsets.UTF_8);
         } catch (IOException e) {
             logger.error("Could not clear stored QR codes: {}", e.getMessage(), e);
-            Main.logUtils.addLog("Konnte gespeicherte QR-Codes nicht löschen: " + e.getMessage());
+            Main.logUtils.addLog(Level.ERROR, "Konnte gespeicherte QR-Codes nicht löschen: " + e.getMessage());
         }
     }
 }

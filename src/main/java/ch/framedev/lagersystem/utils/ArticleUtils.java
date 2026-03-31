@@ -55,8 +55,13 @@ import java.util.regex.Pattern;
 public final class ArticleUtils {
 
     private static final Logger LOGGER = LogManager.getLogger(ArticleUtils.class);
+    private static final Gson GSON = new Gson();
+    private static final Gson PRETTY_GSON = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
+    private static final java.lang.reflect.Type CATEGORY_LIST_TYPE = new TypeToken<List<Map<String, String>>>() {
+    }.getType();
 
     private static final String UNKNOWN_CATEGORY = "Unbekannt";
+    private static final String CATEGORIES_FILE_NAME = "categories.json";
     private static final Object CATEGORY_LOCK = new Object();
     private static volatile boolean categoriesLoaded;
 
@@ -420,64 +425,75 @@ public final class ArticleUtils {
         return decimal.toPlainString().replace('.', ',');
     }
 
+    private static File getCategoriesFile() {
+        return new File(Main.getAppDataDir(), CATEGORIES_FILE_NAME);
+    }
+
+    private static void setLoadedCategories(Map<String, CategoryRange> loadedCategories) {
+        categories = loadedCategories;
+        categoriesLoaded = true;
+    }
+
+    private static List<Map<String, String>> readCategoryEntries(File file) throws Exception {
+        try (InputStream is = new FileInputStream(file);
+             InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+            List<Map<String, String>> categoryList = GSON.fromJson(reader, CATEGORY_LIST_TYPE);
+            return categoryList == null ? List.of() : categoryList;
+        }
+    }
+
+    private static void addCategoryRange(Map<String, CategoryRange> loadedCategories, Map<String, String> categoryEntry) {
+        if (categoryEntry == null) {
+            return;
+        }
+
+        String categoryName = normalizeMetadataValue(categoryEntry.get("category"));
+        String fromTo = normalizeMetadataValue(categoryEntry.get("fromTo"));
+        if (categoryName.isBlank() || fromTo.isBlank()) {
+            return;
+        }
+
+        int[] range = parseRange(fromTo);
+        if (range == null) {
+            LOGGER.warn("Invalid category range '{}' for category '{}'", fromTo, categoryName);
+            return;
+        }
+
+        loadedCategories.put(categoryName, new CategoryRange(categoryName, range[0], range[1]));
+    }
+
+    private static Map<String, String> toCategoryEntry(CategoryRange range) {
+        Map<String, String> map = new ConcurrentHashMap<>();
+        map.put("category", range.category);
+        map.put("fromTo", range.rangeStart == range.rangeEnd
+                ? String.valueOf(range.rangeStart)
+                : range.rangeStart + " - " + range.rangeEnd);
+        return map;
+    }
+
     /**
      * Loads categories from categories.json and caches them in-memory.
      */
     public static void loadCategories() {
         synchronized (CATEGORY_LOCK) {
             Map<String, CategoryRange> loaded = new HashMap<>();
-            File file = new File(Main.getAppDataDir(), "categories.json");
+            File file = getCategoriesFile();
 
             if (!file.exists()) {
-                categories = loaded;
-                categoriesLoaded = true;
+                setLoadedCategories(loaded);
                 LOGGER.warn("categories.json not found at {}", file.getAbsolutePath());
                 return;
             }
 
-            Gson gson = new Gson();
-            java.lang.reflect.Type listType = new TypeToken<List<Map<String, String>>>() {
-            }.getType();
-
-            try (InputStream is = new FileInputStream(file);
-                    InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
-
-                List<Map<String, String>> categoryList = gson.fromJson(reader, listType);
-                if (categoryList != null) {
-                    for (Map<String, String> cat : categoryList) {
-                        if (cat == null) {
-                            continue;
-                        }
-
-                        String categoryName = cat.get("category");
-                        String fromTo = cat.get("fromTo");
-
-                        if (categoryName == null || categoryName.isBlank() || fromTo == null || fromTo.isBlank()) {
-                            continue;
-                        }
-
-                        int[] range = parseRange(fromTo);
-                        if (range == null) {
-                            LOGGER.warn("Invalid category range '{}' for category '{}'", fromTo, categoryName);
-                            continue;
-                        }
-
-                        loaded.put(categoryName, new CategoryRange(categoryName, range[0], range[1]));
-                    }
+            try {
+                for (Map<String, String> categoryEntry : readCategoryEntries(file)) {
+                    addCategoryRange(loaded, categoryEntry);
                 }
-
-                categories = loaded;
-                categoriesLoaded = true;
+                setLoadedCategories(loaded);
             } catch (Exception e) {
-                categories = loaded;
-                categoriesLoaded = true;
+                setLoadedCategories(loaded);
                 LOGGER.error("Error loading categories from {}", file.getAbsolutePath(), e);
-                new MessageDialog()
-                        .setTitle("Fehler")
-                        .setMessage("Fehler beim Laden der Kategorien: " + e.getMessage())
-                        .setDuration(5000)
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
+                showTimedMessage("Fehler", "Fehler beim Laden der Kategorien: " + e.getMessage(), JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -539,31 +555,38 @@ public final class ArticleUtils {
         }
 
         try {
-            List<Map<String, String>> categoryList = categories.values().stream().map(range -> {
-                Map<String, String> map = new ConcurrentHashMap<>();
-                map.put("category", range.category);
-                map.put("fromTo", range.rangeStart == range.rangeEnd
-                        ? String.valueOf(range.rangeStart)
-                        : range.rangeStart + " - " + range.rangeEnd);
-                return map;
-            }).sorted((left, right) -> compareCategoryNames(
+            List<Map<String, String>> categoryList = categories.values().stream()
+                    .map(ArticleUtils::toCategoryEntry)
+                    .sorted((left, right) -> compareCategoryNames(
                     left.getOrDefault("category", ""),
-                    right.getOrDefault("category", ""))).toList();
+                    right.getOrDefault("category", "")))
+                    .toList();
 
-            Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
-            String json = gson.toJson(categoryList);
-
-            File outFile = new File(Main.getAppDataDir(), "categories.json");
-            Files.writeString(outFile.toPath(), json, StandardCharsets.UTF_8);
+            Files.writeString(getCategoriesFile().toPath(), PRETTY_GSON.toJson(categoryList), StandardCharsets.UTF_8);
             categoriesLoaded = true;
         } catch (Exception e) {
             LOGGER.error("Error saving categories", e);
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Fehler beim Speichern der Kategorien: " + e.getMessage())
-                    .setDuration(5000)
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
+            showTimedMessage("Fehler", "Fehler beim Speichern der Kategorien: " + e.getMessage(), JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private static boolean isFillingCategoryAllowed(String category) {
+        String categoryLower = category == null ? "" : category.toLowerCase(Locale.ROOT);
+        return FILLING_ALLOWED_CATEGORY_KEYWORDS.stream().anyMatch(categoryLower::contains);
+    }
+
+    private static Double extractLiterValue(String details) {
+        if (details == null || details.isBlank()) {
+            return null;
+        }
+        Matcher matcher = LITER_PATTERN.matcher(details);
+        if (!matcher.find()) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(matcher.group(1).replace(',', '.').trim());
+        } catch (NumberFormatException ignored) {
+            return null;
         }
     }
 
@@ -572,21 +595,11 @@ public final class ArticleUtils {
             return false;
         }
 
-        String category = getCategoryForArticle(article.getArticleNumber());
-        String categoryLower = category == null ? "" : category.toLowerCase(Locale.ROOT);
-        boolean allowed = FILLING_ALLOWED_CATEGORY_KEYWORDS.stream().anyMatch(categoryLower::contains);
-
-        if (!allowed) {
+        if (!isFillingCategoryAllowed(getCategoryForArticle(article.getArticleNumber()))) {
             return false;
         }
 
-        String details = article.getDetails();
-        if (details == null || details.isBlank()) {
-            return false;
-        }
-
-        Matcher matcher = LITER_PATTERN.matcher(details);
-        return matcher.find();
+        return extractLiterValue(article.getDetails()) != null;
     }
 
     /**
@@ -703,11 +716,7 @@ public final class ArticleUtils {
 
         String details = article.getDetails();
         String category = getCategoryForArticle(article.getArticleNumber());
-
-        String categoryLower = category == null ? "" : category.toLowerCase(Locale.ROOT);
-        boolean allowed = FILLING_ALLOWED_CATEGORY_KEYWORDS.stream().anyMatch(categoryLower::contains);
-
-        if (!allowed) {
+        if (!isFillingCategoryAllowed(category)) {
             showErrorDialog("Artikelkategorie '" + category + "' ist nicht für die Preisberechnung geeignet. Artikel: "
                     + article.getName());
             throw new IllegalArgumentException(
@@ -720,16 +729,9 @@ public final class ArticleUtils {
             throw new IllegalArgumentException("Article details cannot be null or empty");
         }
 
-        Matcher matcher = LITER_PATTERN.matcher(details);
-        if (matcher.find()) {
-            String raw = matcher.group(1).replace(',', '.');
-            try {
-                double liter = Double.parseDouble(raw.trim());
-                return calculatePriceForFilling(article.getSellPrice(), liter, fillingAmount, unit);
-            } catch (NumberFormatException e) {
-                showErrorDialog("Konnte Literangabe aus Artikeldetails nicht parsen für Artikel: " + article.getName());
-                throw new IllegalArgumentException("Could not parse liter value from article details: " + details);
-            }
+        Double liter = extractLiterValue(details);
+        if (liter != null) {
+            return calculatePriceForFilling(article.getSellPrice(), liter, fillingAmount, unit);
         }
 
         showErrorDialog("Artikeldetails enthalten keine gültige Literangabe für Artikel: " + article.getName());
@@ -737,24 +739,92 @@ public final class ArticleUtils {
     }
 
     private static void showErrorDialog(String message) {
+        showTimedMessage("Fehler", message, JOptionPane.ERROR_MESSAGE);
+    }
+
+    private static void showTimedMessage(String title, String message, int messageType) {
         new MessageDialog()
-                .setTitle("Fehler")
+                .setTitle(title)
                 .setMessage(message)
                 .setDuration(5000)
-                .setMessageType(JOptionPane.ERROR_MESSAGE)
+                .setMessageType(messageType)
                 .display();
+    }
+
+    private static String promptForSeparatedVariant(Article article) {
+        List<String> variants = getCurrentSeparatedDetails(article);
+        if (variants.isEmpty()) {
+            return null;
+        }
+
+        String[] options = variants.toArray(new String[0]);
+        int choice = new MessageDialog()
+                .setTitle("Variante auswählen")
+                .setMessage("Wählen Sie die Variante für \"" + article.getName() + "\":")
+                .setOptionType(JOptionPane.DEFAULT_OPTION)
+                .setOptions(options)
+                .displayWithOptions();
+        if (choice < 0 || choice >= options.length) {
+            return null;
+        }
+        return options[choice];
+    }
+
+    private static Integer promptForQuantity(String articleNumber, Article article) {
+        String input = new MessageDialog()
+                .setTitle("Menge eingeben")
+                .setMessage("Menge für Artikel (" + articleNumber + ") " + article.getName() + " eingeben:")
+                .setInitialInputValue("1")
+                .setMessageType(JOptionPane.QUESTION_MESSAGE)
+                .displayWithStringInput();
+        if (input == null) {
+            return null;
+        }
+
+        try {
+            int quantity = Integer.parseInt(input.trim());
+            if (quantity <= 0) {
+                showTimedMessage("Ungültige Eingabe", "Bitte geben Sie eine Menge größer als 0 ein.", JOptionPane.ERROR_MESSAGE);
+                return null;
+            }
+            return quantity;
+        } catch (NumberFormatException ex) {
+            showTimedMessage("Ungültige Eingabe", "Bitte geben Sie eine gültige Zahl für die Menge ein.", JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
+    }
+
+    private static boolean addSelectedArticleToClientOrder(JTable articleTable, DefaultTableModel model, int selectedRow,
+                                                           List<Article> articlesToAdd) {
+        int modelRow = articleTable.convertRowIndexToModel(selectedRow);
+        String articleNumber = (String) model.getValueAt(modelRow, 0);
+        Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+        if (article == null) {
+            return true;
+        }
+
+        String pickedVariant = promptForSeparatedVariant(article);
+        if (!getCurrentSeparatedDetails(article).isEmpty() && pickedVariant == null) {
+            return false;
+        }
+
+        Integer quantity = promptForQuantity(articleNumber, article);
+        if (quantity == null) {
+            return true;
+        }
+
+        ArticleListGUI.addArticle(article, quantity, pickedVariant, null);
+        articlesToAdd.add(article);
+        return true;
     }
 
     public static void addSelectedArticlesToClientOrder(JFrame frame, JTable articleTable) {
         int[] selectedRows = articleTable.getSelectedRows();
         if (selectedRows.length == 0) {
-            new MessageDialog()
-                    .setTitle("Keine Auswahl")
-                    .setMessage(
-                            "Bitte wählen Sie mindestens einen Artikel aus, um ihn zur Kundenbestellung hinzuzufügen.")
-                    .setDuration(5000)
-                    .setMessageType(JOptionPane.WARNING_MESSAGE)
-                    .display();
+            showTimedMessage(
+                    "Keine Auswahl",
+                    "Bitte wählen Sie mindestens einen Artikel aus, um ihn zur Kundenbestellung hinzuzufügen.",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -762,81 +832,17 @@ public final class ArticleUtils {
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
 
         for (int selectedRow : selectedRows) {
-            int modelRow = articleTable.convertRowIndexToModel(selectedRow);
-            String artikelNr = (String) model.getValueAt(modelRow, 0);
-            Article article = ArticleManager.getInstance().getArticleByNumber(artikelNr);
-            if (article == null) {
-                continue;
-            }
-
-            String picked = null;
-
-            List<String> variants = getCurrentSeparatedDetails(article);
-            if (!variants.isEmpty()) {
-                String message = "Wählen Sie die Variante für \"" + article.getName() + "\":";
-                String[] options = variants.toArray(new String[0]);
-                int choice = new MessageDialog()
-                        .setTitle("Variante auswählen")
-                        .setMessage(message)
-                        .setOptionType(JOptionPane.DEFAULT_OPTION)
-                        .setOptions(options)
-                        .displayWithOptions();
-                if (choice < 0 || choice >= options.length) {
-                    return; // User cancelled or closed the dialog
-                }
-                picked = options[choice];
-            }
-
-            String input = new MessageDialog()
-                    .setTitle("Menge eingeben")
-                    .setMessage("Menge für Artikel (" + artikelNr + ") " + article.getName() + " eingeben:")
-                    .setInitialInputValue("1")
-                    .setMessageType(JOptionPane.QUESTION_MESSAGE)
-                    .displayWithStringInput();
-            if (input == null) {
-                continue;
-            }
-
-            try {
-                int menge = Integer.parseInt(input.trim());
-                if (menge <= 0) {
-                    new MessageDialog()
-                            .setTitle("Ungültige Eingabe")
-                            .setMessage("Bitte geben Sie eine Menge größer als 0 ein.")
-                            .setDuration(5000)
-                            .setMessageType(JOptionPane.ERROR_MESSAGE)
-                            .display();
-                    continue;
-                }
-
-                ArticleListGUI.addArticle(article, menge, picked, null);
-                articlesToAdd.add(article);
-            } catch (NumberFormatException ex) {
-                new MessageDialog()
-                        .setTitle("Ungültige Eingabe")
-                        .setMessage("Bitte geben Sie eine gültige Zahl für die Menge ein.")
-                        .setDuration(5000)
-                        .setMessageType(JOptionPane.ERROR_MESSAGE)
-                        .display();
+            if (!addSelectedArticleToClientOrder(articleTable, model, selectedRow, articlesToAdd)) {
+                return;
             }
         }
 
         if (articlesToAdd.isEmpty()) {
-            new MessageDialog()
-                    .setTitle("Fehler")
-                    .setMessage("Keine gültigen Artikel zum Hinzufügen gefunden.")
-                    .setDuration(5000)
-                    .setMessageType(JOptionPane.ERROR_MESSAGE)
-                    .display();
+            showTimedMessage("Fehler", "Keine gültigen Artikel zum Hinzufügen gefunden.", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        new MessageDialog()
-                .setTitle("Erfolg")
-                .setMessage("Artikel zur Kundenbestellung hinzugefügt.")
-                .setDuration(5000)
-                .setMessageType(JOptionPane.INFORMATION_MESSAGE)
-                .display();
+        showTimedMessage("Erfolg", "Artikel zur Kundenbestellung hinzugefügt.", JOptionPane.INFORMATION_MESSAGE);
     }
 
     /**
@@ -954,6 +960,17 @@ public final class ArticleUtils {
         return details.isEmpty() ? List.of() : details;
     }
 
+    private static boolean isSeparatedVariantPart(String part) {
+        return part != null && part.matches("[\\p{L}]+");
+    }
+
+    private static LinkedHashSet<String> getSeparatedParts(Article article) {
+        if (article == null) {
+            return new LinkedHashSet<>();
+        }
+        return new LinkedHashSet<>(getPartsFromDetails(article.getDetails(), true));
+    }
+
     public static boolean isArticleSeparated(String articleNumber) {
         if (articleNumber == null || articleNumber.isBlank()) {
             return false;
@@ -963,7 +980,7 @@ public final class ArticleUtils {
         if (article == null) {
             return false;
         }
-        List<String> parts = getPartsFromDetails(article.getDetails(), true);
+        List<String> parts = new ArrayList<>(getSeparatedParts(article));
         if (parts.size() <= 1) {
             return false;
         }
@@ -971,7 +988,7 @@ public final class ArticleUtils {
         // Blau/Gelb/Grün)
         // Parts containing digits (e.g. "50mm", "25m Rolle") are dimension specs, not
         // variants.
-        return parts.stream().allMatch(p -> p.matches("[\\p{L}]+"));
+        return parts.stream().allMatch(ArticleUtils::isSeparatedVariantPart);
     }
 
     public static List<SeperateArticle> newSeperatedArticles(String articleNumber) {
@@ -1001,7 +1018,7 @@ public final class ArticleUtils {
                 .max()
                 .orElse(0) + 1;
 
-        LinkedHashSet<String> parts = new LinkedHashSet<>(getPartsFromDetails(article.getDetails(), true));
+        LinkedHashSet<String> parts = getSeparatedParts(article);
         List<SeperateArticle> result = new ArrayList<>(parts.size());
         for (String part : parts) {
             if (part == null || part.isBlank()) {

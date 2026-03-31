@@ -169,6 +169,10 @@ public class SettingsUtils {
         String fontName = null;
         if (Main.settings != null) {
             fontName = Main.settings.getProperty("font_style");
+        } else {
+            // In case settings are not loaded yet, attempt to use system font as fallback
+            Font uiFont = UIManager.getFont("Label.font");
+            fontName = uiFont == null ? DEFAULT_FONT_STYLE : uiFont.getFamily();
         }
 
         if (fontName == null || fontName.trim().isEmpty()) {
