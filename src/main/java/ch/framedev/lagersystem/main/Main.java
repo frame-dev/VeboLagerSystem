@@ -49,7 +49,7 @@ import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.utils.UserDataDir;
-import ch.framedev.simplejavautils.Settings;
+import ch.framedev.lagersystem.utils.Settings;
 import ch.framedev.simplejavautils.SimpleJavaUtils;
 
 /**
@@ -1114,36 +1114,31 @@ public class Main {
     }
 
     /**
-     * Ensure a settings file exists
+     * Returns the settings file path and ensures its parent directory exists.
+     * The file itself is intentionally NOT pre-created so that {@link ch.framedev.lagersystem.utils.Settings}
+     * can fall back to the classpath template (which carries comments and default values)
+     * when the file does not yet exist.  The first call to {@code Settings.save()} will
+     * create the file.
      */
     private static File ensureSettingsFile() {
         File settingsFile = new File(getAppDataDir(), "settings.properties");
 
-        if (!settingsFile.exists()) {
-            createSettingsFile(settingsFile);
-        } else {
+        if (settingsFile.exists()) {
             logger.info("Settings file already exists: {}", settingsFile.getAbsolutePath());
+        } else {
+            // Ensure parent directory is present; Settings.save() will create the file.
+            File parent = settingsFile.getParentFile();
+            if (parent != null && !parent.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                parent.mkdirs();
+            }
+            logger.info("Settings file will be created on first save: {}", settingsFile.getAbsolutePath());
+            logUtils.addLog("Einstellungsdatei wird beim ersten Speichern erstellt: " + settingsFile.getAbsolutePath());
         }
 
         return settingsFile;
     }
 
-    /**
-     * Create settings file if it doesn't exist
-     */
-    private static void createSettingsFile(File settingsFile) {
-        try {
-            if (!settingsFile.createNewFile()) {
-                System.err.println("Konnte Einstellungsdatei nicht erstellen: " + settingsFile.getAbsolutePath());
-            } else {
-                logger.info("Settings file created: {}", settingsFile.getAbsolutePath());
-                logUtils.addLog("Einstellungsdatei erstellt: " + settingsFile.getAbsolutePath());
-            }
-        } catch (IOException e) {
-            logger.error("Fehler beim Erstellen der Einstellungsdatei: {}", e.getMessage(), e);
-            logUtils.addLog("Fehler beim Erstellen der Einstellungsdatei: " + e.getMessage());
-        }
-    }
 
     /**
      * Apply theme settings from configuration
