@@ -28,8 +28,6 @@ import ch.framedev.lagersystem.main.Main;
  * - Automatic cache invalidation on updates/deletes
  * - Configurable cache size
  */
-@SuppressWarnings({"unused", "deprecation"})
-
 public class ArticleManager {
     private static final Logger logger = LogManager.getLogger(ArticleManager.class);
 
@@ -125,13 +123,13 @@ public class ArticleManager {
                 "purchasePrice DOUBLE," +
                 "vendorName TEXT" +
                 ");";
-        databaseManager.executeUpdate(sql);
+        databaseManager.executeTrustedUpdate(sql);
         String sqlSecond = "CREATE TABLE IF NOT EXISTS " + DatabaseManager.TABLE_SEPERATE_ARTICLES + " (" +
             "\"index\" INTEGER," +
                 "articleNumber TEXT," +
                 "otherDetails TEXT" +
                 ");";
-        databaseManager.executeUpdate(sqlSecond);
+        databaseManager.executeTrustedUpdate(sqlSecond);
         migrateSeparatedArticlesSchema();
     }
 
@@ -141,15 +139,15 @@ public class ArticleManager {
                 "SELECT MIN(rowid) FROM " + DatabaseManager.TABLE_SEPERATE_ARTICLES +
                 " GROUP BY articleNumber, otherDetails" +
                 ");";
-        databaseManager.executeUpdate(deleteDuplicateDetailsSql);
+        databaseManager.executeTrustedUpdate(deleteDuplicateDetailsSql);
 
         String uniqueArticleDetailIndexSql = "CREATE UNIQUE INDEX IF NOT EXISTS idx_seperate_articles_article_detail " +
                 "ON " + DatabaseManager.TABLE_SEPERATE_ARTICLES + " (articleNumber, otherDetails);";
-        databaseManager.executeUpdate(uniqueArticleDetailIndexSql);
+        databaseManager.executeTrustedUpdate(uniqueArticleDetailIndexSql);
 
         String articleNumberIndexSql = "CREATE INDEX IF NOT EXISTS idx_seperate_articles_article_number " +
                 "ON " + DatabaseManager.TABLE_SEPERATE_ARTICLES + " (articleNumber);";
-        databaseManager.executeUpdate(articleNumberIndexSql);
+        databaseManager.executeTrustedUpdate(articleNumberIndexSql);
     }
 
     /**

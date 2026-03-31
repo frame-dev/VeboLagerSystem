@@ -11,7 +11,6 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
 
 import javax.swing.*;
 import java.awt.Color;
@@ -62,6 +61,31 @@ public final class ArticleExporter {
         return LocalDateTime.now().format(DISPLAY_DATE_FORMATTER);
     }
 
+    private static PDPageContentStream createPageContentStream(PDDocument document, PDPage page) throws IOException {
+        return new PDPageContentStream(
+                document,
+                page,
+                PDPageContentStream.AppendMode.OVERWRITE,
+                true,
+                false);
+    }
+
+    private static boolean isType1FallbackFont(PDFont font) {
+        return font != null && font.getClass().getSimpleName().contains("PDType1Font");
+    }
+
+    private static PDFont loadStandardPdfFont(String fieldName) {
+        try {
+            Class<?> fontClass = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
+            Object font = fontClass.getField(fieldName).get(null);
+            if (font instanceof PDFont pdfFont) {
+                return pdfFont;
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
     /**
      * Exports the contents of a JTable to a PDF file, allowing the user to choose the save location and file name. The PDF will include a header with the title and export date, a table with the article data, and a footer with page numbers and total article count.
      *
@@ -82,7 +106,7 @@ public final class ArticleExporter {
             PDFont[] fonts = loadPdfFonts(doc);
             PDFont boldFont = fonts[0];
             PDFont regularFont = fonts[1];
-            boolean useWinAnsiFallback = (boldFont instanceof PDType1Font) || (regularFont instanceof PDType1Font);
+            boolean useWinAnsiFallback = isType1FallbackFont(boldFont) || isType1FallbackFont(regularFont);
 
             PDRectangle pageSize = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
             float margin = 30f;
@@ -107,7 +131,7 @@ public final class ArticleExporter {
                 PDPage page = new PDPage(pageSize);
                 doc.addPage(page);
 
-                try (PDPageContentStream contentStream = new PDPageContentStream(doc, page)) {
+                try (PDPageContentStream contentStream = createPageContentStream(doc, page)) {
                     float yPosition = pageHeight - margin;
                     yPosition = drawTableExportHeader(contentStream, table, boldFont, regularFont,
                             pageWidth, margin, tableWidth, yPosition, tableHeaderHeight,
@@ -297,11 +321,11 @@ public final class ArticleExporter {
     }
 
     private static void setFillColor(PDPageContentStream cs, Color color) throws IOException {
-        cs.setNonStrokingColor(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f);
+        cs.setNonStrokingColor(color);
     }
 
     private static void setStrokeColor(PDPageContentStream cs, Color color) throws IOException {
-        cs.setStrokingColor(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f);
+        cs.setStrokingColor(color);
     }
 
     /**
@@ -406,8 +430,8 @@ public final class ArticleExporter {
 
         if (regular == null || bold == null) {
             // Last-resort fallback (limited glyph support)
-            regular = PDType1Font.HELVETICA;
-            bold = PDType1Font.HELVETICA_BOLD;
+            regular = loadStandardPdfFont("HELVETICA");
+            bold = loadStandardPdfFont("HELVETICA_BOLD");
         }
 
         if (bold == null) {
@@ -432,7 +456,6 @@ public final class ArticleExporter {
      * @param orderArticles        A Map of Article objects to their ordered quantities, representing the articles included in the order
      * @throws IOException If an error occurs during PDF generation or saving the file
      */
-    @SuppressWarnings("deprecation")
     public static void exportOrderToPDF(File file, JComboBox<String> receiverNameCombobox, JTextField receiverKontoField,
                                         JComboBox<String> senderNameCombobox, JTextField senderKontoField,
                                         JComboBox<String> departmentList, Map<Article, Integer> orderArticles,
@@ -464,15 +487,9 @@ public final class ArticleExporter {
                     boldFont = regularFont;
                 }
             } else {
-                try {
-                    Class<?> c = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
-                    Object helv = c.getField("HELVETICA").get(null);
-                    Object helvBold = c.getField("HELVETICA_BOLD").get(null);
-                    if (helv instanceof PDFont) regularFont = (PDFont) helv;
-                    if (helvBold instanceof PDFont) boldFont = (PDFont) helvBold;
-                    if (regularFont != null && boldFont == null) boldFont = regularFont;
-                } catch (Exception ignored) {
-                }
+                regularFont = loadStandardPdfFont("HELVETICA");
+                boldFont = loadStandardPdfFont("HELVETICA_BOLD");
+                if (regularFont != null && boldFont == null) boldFont = regularFont;
             }
 
             if (regularFont == null) {
@@ -480,20 +497,19 @@ public final class ArticleExporter {
             }
 
             final boolean useWinAnsiFallback =
-                    regularFont.getClass().getSimpleName().contains("PDType1Font") ||
-                            boldFont.getClass().getSimpleName().contains("PDType1Font");
+                    isType1FallbackFont(regularFont) || isType1FallbackFont(boldFont);
 
-            try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+            try (PDPageContentStream cs = createPageContentStream(doc, page)) {
                 float pageWidth = page.getMediaBox().getWidth();
                 float margin = 50;
                 float yPosition = 750;
 
-                cs.setNonStrokingColor(30, 58, 95);
+                setFillColor(cs, PDF_PRIMARY);
                 cs.addRect(margin, yPosition, pageWidth - 2 * margin, 60);
                 cs.fill();
 
                 cs.beginText();
-                cs.setNonStrokingColor(255, 255, 255);
+                setFillColor(cs, Color.WHITE);
                 cs.setFont(boldFont, 24);
                 cs.newLineAtOffset(margin + 10, yPosition + 25);
                 cs.showText("VEBO BESTELLUNG");
@@ -502,7 +518,7 @@ public final class ArticleExporter {
                 yPosition -= 80;
 
                 cs.beginText();
-                cs.setNonStrokingColor(0, 0, 0);
+                setFillColor(cs, PDF_TEXT);
                 cs.setFont(boldFont, 11);
                 cs.newLineAtOffset(margin, yPosition);
                 cs.showText("Bestelldatum:");
@@ -531,17 +547,17 @@ public final class ArticleExporter {
                 yPosition -= 30;
 
                 float boxHeight = 85;
-                cs.setNonStrokingColor(245, 247, 250);
+                setFillColor(cs, new Color(245, 247, 250));
                 cs.addRect(margin, yPosition - boxHeight, (pageWidth - 2 * margin - 10) / 2, boxHeight);
                 cs.fill();
 
-                cs.setNonStrokingColor(245, 247, 250);
+                setFillColor(cs, new Color(245, 247, 250));
                 cs.addRect(margin + (pageWidth - 2 * margin) / 2 + 5, yPosition - boxHeight,
                         (pageWidth - 2 * margin - 10) / 2, boxHeight);
                 cs.fill();
 
                 cs.beginText();
-                cs.setNonStrokingColor(0, 0, 0);
+                setFillColor(cs, PDF_TEXT);
                 cs.setFont(boldFont, 12);
                 cs.newLineAtOffset(margin + 10, yPosition - 15);
                 cs.showText("ABSENDER");
@@ -590,12 +606,12 @@ public final class ArticleExporter {
 
                 yPosition -= boxHeight + 30;
 
-                cs.setNonStrokingColor(62, 84, 98);
+                setFillColor(cs, PDF_PRIMARY_SOFT);
                 cs.addRect(margin, yPosition - 20, pageWidth - 2 * margin, 20);
                 cs.fill();
 
                 cs.beginText();
-                cs.setNonStrokingColor(255, 255, 255);
+                setFillColor(cs, Color.WHITE);
                 cs.setFont(boldFont, 10);
                 cs.newLineAtOffset(margin + 5, yPosition - 14);
                 cs.showText("Artikel");
@@ -627,13 +643,13 @@ public final class ArticleExporter {
                     total += line;
 
                     if (alternateRow) {
-                        cs.setNonStrokingColor(250, 250, 250);
+                        setFillColor(cs, new Color(250, 250, 250));
                         cs.addRect(margin, yPosition - 15, pageWidth - 2 * margin, 18);
                         cs.fill();
                     }
 
                     cs.beginText();
-                    cs.setNonStrokingColor(0, 0, 0);
+                    setFillColor(cs, PDF_TEXT);
                     cs.setFont(regularFont, 9);
                     cs.newLineAtOffset(margin + 5, yPosition - 10);
 
@@ -663,7 +679,7 @@ public final class ArticleExporter {
                 }
 
                 yPosition -= 10;
-                cs.setNonStrokingColor(200, 200, 200);
+                setFillColor(cs, new Color(200, 200, 200));
                 cs.setLineWidth(1);
                 cs.moveTo(margin, yPosition);
                 cs.lineTo(pageWidth - margin, yPosition);
@@ -671,12 +687,12 @@ public final class ArticleExporter {
 
                 yPosition -= 25;
 
-                cs.setNonStrokingColor(30, 58, 95);
+                setFillColor(cs, PDF_PRIMARY);
                 cs.addRect(pageWidth - margin - 150, yPosition - 25, 150, 30);
                 cs.fill();
 
                 cs.beginText();
-                cs.setNonStrokingColor(255, 255, 255);
+                setFillColor(cs, Color.WHITE);
                 cs.setFont(boldFont, 12);
                 cs.newLineAtOffset(pageWidth - margin - 140, yPosition - 15);
                 cs.showText("TOTAL:");
@@ -685,7 +701,7 @@ public final class ArticleExporter {
                 cs.endText();
 
                 cs.beginText();
-                cs.setNonStrokingColor(150, 150, 150);
+                setFillColor(cs, new Color(150, 150, 150));
                 cs.setFont(regularFont, 8);
                 cs.newLineAtOffset(margin, 30);
                 cs.showText("VEBO Lagersystem - Generiert am " + nowDisplayTimestamp());
@@ -761,7 +777,10 @@ public final class ArticleExporter {
         }
 
         try (PDDocument doc = new PDDocument()) {
-            PDFont regularFont = PDType1Font.HELVETICA;
+            PDFont regularFont = loadStandardPdfFont("HELVETICA");
+            if (regularFont == null) {
+                throw new IOException("Keine verwendbare Standardschriftart gefunden");
+            }
 
             PDRectangle pageSize = PDRectangle.A4;
             float margin = 40f;
@@ -772,7 +791,7 @@ public final class ArticleExporter {
 
             PDPage page = new PDPage(pageSize);
             doc.addPage(page);
-            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
+            PDPageContentStream contentStream = createPageContentStream(doc, page);
             contentStream.setFont(regularFont, fontSize);
 
             float y = yStart;
@@ -787,7 +806,7 @@ public final class ArticleExporter {
                         contentStream.close();
                         page = new PDPage(pageSize);
                         doc.addPage(page);
-                        contentStream = new PDPageContentStream(doc, page);
+                        contentStream = createPageContentStream(doc, page);
                         contentStream.setFont(regularFont, fontSize);
                         y = yStart;
                     }
@@ -952,12 +971,9 @@ public final class ArticleExporter {
             if (arial.exists()) {
                 regularFont = PDType0Font.load(doc, arial);
             } else {
-                try {
-                    Class<?> c = Class.forName("org.apache.pdfbox.pdmodel.font.PDType1Font");
-                    Object helv = c.getField("HELVETICA").get(null);
-                    regularFont = (PDFont) helv;
-                } catch (Exception e) {
-                    LOGGER.error("No usable Font found!", e);
+                regularFont = loadStandardPdfFont("HELVETICA");
+                if (regularFont == null) {
+                    LOGGER.error("No usable Font found!");
                     throw new IOException("Keine verwendbaren Schriftarten gefunden");
                 }
             }
@@ -970,7 +986,7 @@ public final class ArticleExporter {
 
             PDPage page = new PDPage(pageSize);
             doc.addPage(page);
-            PDPageContentStream contentStream = new PDPageContentStream(doc, page);
+            PDPageContentStream contentStream = createPageContentStream(doc, page);
             contentStream.setFont(regularFont, fontSize);
 
             float y = yStart;
@@ -981,7 +997,7 @@ public final class ArticleExporter {
                         contentStream.close();
                         page = new PDPage(pageSize);
                         doc.addPage(page);
-                        contentStream = new PDPageContentStream(doc, page);
+                        contentStream = createPageContentStream(doc, page);
                         contentStream.setFont(regularFont, fontSize);
                         y = yStart;
                     }

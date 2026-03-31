@@ -17,7 +17,7 @@ import ch.framedev.lagersystem.main.Main;
  * The ClientManager class is responsible for managing client data in the database. It provides methods to create, read, update, and delete client records, as well as to retrieve client information. The class uses caching to improve performance for frequently accessed data, such as client departments and the list of all clients. It also logs all operations performed on clients for auditing purposes.
  * @author framedev
  */
-@SuppressWarnings({"BooleanMethodIsAlwaysInverted", "deprecation"})
+@SuppressWarnings({"BooleanMethodIsAlwaysInverted"})
 
 public class ClientManager {
     private static final Logger logger = LogManager.getLogger(ClientManager.class);
@@ -43,7 +43,7 @@ public class ClientManager {
                 "firstLastName TEXT PRIMARY KEY," +
                 "department TEXT" +
                 ");";
-        databaseManager.executeUpdate(sql);
+        databaseManager.executeTrustedUpdate(sql);
     }
 
     /**

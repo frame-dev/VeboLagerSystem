@@ -126,7 +126,6 @@ final class SettingsMaintenanceService {
     record DeleteOldLogsResult(int deletedDatabaseLogs, int deletedFileLogs, int failedFileLogs) {
     }
 
-    @SuppressWarnings("deprecation")
     static void deleteTable(Component parent, Logger logger, String tableName) {
         if (tableName == null || tableName.trim().isEmpty()) {
             return;
@@ -136,8 +135,7 @@ final class SettingsMaintenanceService {
             DatabaseManager dbManager = Main.databaseManager;
 
             if (dbManager != null) {
-                String dropTableSQL = "DROP TABLE IF EXISTS " + tableName + ";";
-                boolean success = dbManager.executeUpdate(dropTableSQL);
+                boolean success = dbManager.dropTableIfExists(tableName);
 
                 if (success) {
                     SettingsDialogService.showInfo(

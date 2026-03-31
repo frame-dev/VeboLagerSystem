@@ -18,7 +18,7 @@ import static ch.framedev.lagersystem.managers.DatabaseManager.TABLE_LOGS;
  * LogManager for managing application logs in the database. Provides
  * functionality to create, retrieve, filter, and delete logs.
  */
-@SuppressWarnings({"unused", "deprecation"})
+@SuppressWarnings({"unused"})
 public class LogManager {
 
     private static final Logger logger = org.apache.logging.log4j.LogManager.getLogger(LogManager.class);
@@ -82,7 +82,7 @@ public class LogManager {
                 + "level TEXT NOT NULL,"
                 + "message TEXT NOT NULL"
                 + ");";
-        databaseManager.executeUpdate(sql);
+        databaseManager.executeTrustedUpdate(sql);
     }
 
     /**
@@ -184,7 +184,7 @@ public class LogManager {
         String sql = "SELECT id, timestamp, level, message FROM " + TABLE_LOGS + " ORDER BY id DESC;";
         List<Log> logs = new ArrayList<>();
 
-        try (ResultSet rs = databaseManager.executeQuery(sql)) {
+        try (ResultSet rs = databaseManager.executeTrustedQuery(sql)) {
             logs = collectLogs(rs);
             allLogsCache = Collections.unmodifiableList(logs);
             allLogsCacheTime = System.currentTimeMillis();
@@ -414,7 +414,7 @@ public class LogManager {
         // Deletes logs older than 30 days based on epochMillis
         long cutoffMillis = System.currentTimeMillis() - (30L * 24L * 60L * 60L * 1000L);
         String sql = "DELETE FROM " + TABLE_LOGS + " WHERE epochMillis < " + cutoffMillis;
-        databaseManager.executeUpdate(sql);
+        databaseManager.executeTrustedUpdate(sql);
         invalidateCaches();
     }
 
@@ -428,7 +428,7 @@ public class LogManager {
      */
     public boolean clearAllLogs() {
         String sql = "DELETE FROM " + TABLE_LOGS + ";";
-        boolean ok = databaseManager.executeUpdate(sql);
+        boolean ok = databaseManager.executeTrustedUpdate(sql);
         if (ok) {
             invalidateCaches();
         }
@@ -488,7 +488,7 @@ public class LogManager {
             return totalCountCache;
         }
         String sql = "SELECT COUNT(*) as count FROM " + TABLE_LOGS + ";";
-        try (ResultSet rs = databaseManager.executeQuery(sql)) {
+        try (ResultSet rs = databaseManager.executeTrustedQuery(sql)) {
             if (rs.next()) {
                 int count = rs.getInt("count");
                 totalCountCache = count;

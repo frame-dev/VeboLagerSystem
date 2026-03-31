@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
+@SuppressWarnings({"UnusedReturnValue", "DuplicatedCode"})
 public class UserManager {
 
     private static final Logger logger = LogManager.getLogger(UserManager.class);
@@ -50,7 +50,7 @@ public class UserManager {
                 "username TEXT UNIQUE," +
                 "orders TEXT" +
                 ");";
-        databaseManager.executeUpdate(sql);
+        databaseManager.executeTrustedUpdate(sql);
     }
 
     private void invalidateAllUsernamesCache() {
@@ -210,7 +210,7 @@ public class UserManager {
 
         List<String> usernames = new ArrayList<>();
         String sql = "SELECT username FROM " + TABLE_NAME + ";";
-        try (var resultSet = databaseManager.executeQuery(sql)) {
+        try (var resultSet = databaseManager.executeTrustedQuery(sql)) {
             while (resultSet.next()) {
                 String username = resultSet.getString("username");
                 usernames.add(username);

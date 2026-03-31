@@ -17,7 +17,6 @@ import ch.framedev.lagersystem.main.Main;
  *
  * @author framedev
  */
-@SuppressWarnings({"deprecation"})
 public class DepartmentManager {
 
     private static final Logger logger = LogManager.getLogger(DepartmentManager.class);
@@ -68,7 +67,7 @@ public class DepartmentManager {
                 "departmentName TEXT PRIMARY KEY," +
                 "kontoNumber TEXT" +
                 ");";
-        databaseManager.executeUpdate(sql);
+        databaseManager.executeTrustedUpdate(sql);
     }
 
     /**
@@ -226,7 +225,7 @@ public class DepartmentManager {
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_DEPARTMENTS + ";";
         List<Map<String, Object>> departments = new ArrayList<>();
-        try (var resultSet = databaseManager.executeQuery(sql)) {
+        try (var resultSet = databaseManager.executeTrustedQuery(sql)) {
             while (resultSet.next()) {
                 Map<String, Object> entry = Map.of(
                         "department", resultSet.getString("departmentName"),

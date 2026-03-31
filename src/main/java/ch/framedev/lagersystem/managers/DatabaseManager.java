@@ -215,6 +215,78 @@ public class DatabaseManager {
     }
 
     /**
+     * Executes trusted internal raw SQL query text.
+     *
+     * <p>This is intended for application-owned schema/setup statements and fixed
+     * internal queries where prepared statements are not practical.
+     *
+     * @param sql trusted SQL query string
+     * @return ResultSet or null on error; caller must call {@link #closeQuery(ResultSet)} when done.
+     */
+    public ResultSet executeTrustedQuery(String sql) {
+        if (sql == null || sql.trim().isEmpty()) {
+            Main.logUtils.addLog("Fehler bei der Abfrage: SQL ist leer");
+            return null;
+        }
+        try {
+            Statement stmt = connection.createStatement();
+            @SuppressWarnings("SqlSourceToSinkFlow") ResultSet rs = stmt.executeQuery(sql);
+            openStatements.put(rs, stmt);
+            return rs;
+        } catch (SQLException e) {
+            logger.error("SQL Exception during executeTrustedQuery: ", e);
+            Main.logUtils.addLog("Fehler bei der Abfrage: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Executes trusted internal raw SQL update/DDL text.
+     *
+     * <p>This is intended for application-owned schema/setup statements and fixed
+     * internal maintenance queries where prepared statements are not practical.
+     *
+     * @param sql trusted SQL update/DDL string
+     * @return true if update succeeded, false on error
+     */
+    public boolean executeTrustedUpdate(String sql) {
+        if (sql == null || sql.trim().isEmpty()) {
+            Main.logUtils.addLog("Fehler bei der Aktualisierung: SQL ist leer");
+            return false;
+        }
+        try (Statement stmt = connection.createStatement()) {
+            //noinspection SqlSourceToSinkFlow
+            stmt.executeUpdate(sql);
+            return true;
+        } catch (SQLException e) {
+            logger.error("SQL Exception during executeTrustedUpdate: ", e);
+            Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Executes trusted internal raw SQL update/DDL text and returns affected rows count.
+     *
+     * @param sql trusted SQL update/DDL string
+     * @return affected rows count, or -1 if an error occurs
+     */
+    public int executeTrustedUpdateWithCount(String sql) {
+        if (sql == null || sql.trim().isEmpty()) {
+            Main.logUtils.addLog("Fehler bei der Aktualisierung: SQL ist leer");
+            return -1;
+        }
+        try (Statement stmt = connection.createStatement()) {
+            //noinspection SqlSourceToSinkFlow
+            return stmt.executeUpdate(sql);
+        } catch (SQLException e) {
+            logger.error("SQL Exception during executeTrustedUpdateWithCount: ", e);
+            Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
+            return -1;
+        }
+    }
+
+    /**
      * Executes a raw SQL query string.
      *
      * <p><b>SECURITY WARNING:</b> Passing user-controlled input into this method can lead to SQL injection.
@@ -238,17 +310,7 @@ public class DatabaseManager {
             Main.logUtils.addLog("Unsichere SQL-Abfrage abgelehnt (verwende PreparedStatement)");
             return null;
         }
-
-        try {
-            Statement stmt = connection.createStatement();
-            @SuppressWarnings("SqlSourceToSinkFlow") ResultSet rs = stmt.executeQuery(sql);
-            openStatements.put(rs, stmt);
-            return rs;
-        } catch (SQLException e) {
-            logger.error("SQL Exception during executeQuery: ", e);
-            Main.logUtils.addLog("Fehler bei der Abfrage: " + e.getMessage());
-            return null;
-        }
+        return executeTrustedQuery(sql);
     }
 
     /**
@@ -453,16 +515,7 @@ public class DatabaseManager {
             Main.logUtils.addLog("Unsichere SQL-Aktualisierung abgelehnt (verwende PreparedStatement)");
             return false;
         }
-
-        try (Statement stmt = connection.createStatement()) {
-            //noinspection SqlSourceToSinkFlow
-            stmt.executeUpdate(sql);
-            return true;
-        } catch (SQLException e) {
-            logger.error("SQL Exception during executeUpdate: ", e);
-            Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
-            return false;
-        }
+        return executeTrustedUpdate(sql);
     }
 
     /**
@@ -503,15 +556,7 @@ public class DatabaseManager {
             Main.logUtils.addLog("Unsichere SQL-Aktualisierung abgelehnt (verwende PreparedStatement)");
             return -1;
         }
-
-        try (Statement stmt = connection.createStatement()) {
-            //noinspection SqlSourceToSinkFlow
-            return stmt.executeUpdate(sql);
-        } catch (SQLException e) {
-            logger.error("SQL Exception during executeUpdateWithCount: ", e);
-            Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
-            return -1;
-        }
+        return executeTrustedUpdateWithCount(sql);
     }
 
     /**
@@ -663,6 +708,39 @@ public class DatabaseManager {
             return true;
         } catch (SQLException e) {
             logger.error("Failed to clear table: {}", normalized, e);
+            Main.logUtils.addLog("Fehler beim Löschen der Tabelle " + normalized + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Drops a table when the name is a safe SQL identifier.
+     *
+     * @param tableName table name to drop
+     * @return true if the statement succeeded, false otherwise
+     */
+    @SuppressWarnings("SqlSourceToSinkFlow")
+    public boolean dropTableIfExists(String tableName) {
+        if (tableName == null || tableName.trim().isEmpty()) {
+            logger.error("dropTableIfExists called with invalid table name");
+            Main.logUtils.addLog("Invalid table name: " + tableName);
+            return false;
+        }
+
+        String normalized = tableName.trim();
+        if (!normalized.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+            logger.error("dropTableIfExists called with unsafe table name: {}", normalized);
+            Main.logUtils.addLog("Unsafe table name rejected: " + normalized);
+            return false;
+        }
+
+        try (Statement stmt = connection.createStatement()) {
+            stmt.executeUpdate("DROP TABLE IF EXISTS " + normalized);
+            logger.info("Dropped table if exists: {}", normalized);
+            Main.logUtils.addLog("Tabelle gelöscht: " + normalized);
+            return true;
+        } catch (SQLException e) {
+            logger.error("Failed to drop table: {}", normalized, e);
             Main.logUtils.addLog("Fehler beim Löschen der Tabelle " + normalized + ": " + e.getMessage());
             return false;
         }

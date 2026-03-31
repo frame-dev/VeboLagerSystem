@@ -13,7 +13,7 @@ import org.apache.logging.log4j.Logger;
 import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.main.Main;
 
-@SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
+@SuppressWarnings({"UnusedReturnValue", "DuplicatedCode"})
 public class VendorManager {
 
     private static final Logger logger = LogManager.getLogger(VendorManager.class);
@@ -62,7 +62,7 @@ public class VendorManager {
                 "suppliedArticles TEXT," +
                 "minOrderValue DOUBLE" +
                 ");";
-        databaseManager.executeUpdate(sql);
+        databaseManager.executeTrustedUpdate(sql);
     }
 
     public boolean existsVendor(String name) {
@@ -232,7 +232,7 @@ public class VendorManager {
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_VENDORS + ";";
         List<Vendor> vendors = new ArrayList<>();
-        try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
+        try (ResultSet resultSet = databaseManager.executeTrustedQuery(sql)) {
             while (resultSet.next()) {
                 String name = resultSet.getString("name");
                 Vendor v = getVendor(name, resultSet);

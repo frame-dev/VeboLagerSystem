@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * @author framedev
  */
-@SuppressWarnings({"deprecation", "BooleanMethodIsAlwaysInverted"})
+@SuppressWarnings({"BooleanMethodIsAlwaysInverted"})
 public class NotesManager {
 
     private static final Logger LOGGER = LogManager.getLogger(NotesManager.class);
@@ -78,7 +78,7 @@ public class NotesManager {
                 "content VARCHAR(2555)," +
                 "date TEXT" +
                 ");";
-        databaseManager.executeUpdate(sql);
+        databaseManager.executeTrustedUpdate(sql);
     }
 
     /**
@@ -177,7 +177,7 @@ public class NotesManager {
 
         List<Note> notes = new ArrayList<>();
         String sql = "SELECT * FROM " + TABLE + ";";
-        try (ResultSet resultSet = databaseManager.executeQuery(sql)) {
+        try (ResultSet resultSet = databaseManager.executeTrustedQuery(sql)) {
             while (resultSet.next()) {
                 String title = resultSet.getString("title");
                 String content = resultSet.getString("content");

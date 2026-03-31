@@ -12,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 import ch.framedev.lagersystem.classes.Warning;
 import ch.framedev.lagersystem.main.Main;
 
-@SuppressWarnings({ "deprecation" })
 public class WarningManager {
 
     private static final Logger LOGGER = LogManager.getLogger(WarningManager.class);
@@ -76,7 +75,7 @@ public class WarningManager {
                 "isResolved TEXT," +
                 "isDisplayed TEXT" +
                 ");";
-        databaseManager.executeUpdate(sql);
+        databaseManager.executeTrustedUpdate(sql);
     }
 
     /**
@@ -295,7 +294,7 @@ public class WarningManager {
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_WARNINGS + ";";
         List<Warning> warnings = new ArrayList<>();
-        try (var resultSet = databaseManager.executeQuery(sql)) {
+        try (var resultSet = databaseManager.executeTrustedQuery(sql)) {
             while (resultSet.next()) {
                 Warning w = new Warning(
                         resultSet.getString("title"),

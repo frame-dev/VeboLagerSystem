@@ -20,7 +20,7 @@ import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.utils.ArticleUtils;
 
-@SuppressWarnings({"UnusedReturnValue", "deprecation", "DuplicatedCode"})
+@SuppressWarnings({"UnusedReturnValue", "DuplicatedCode"})
 public class OrderManager {
 
     private static final Logger logger = LogManager.getLogger(OrderManager.class);
@@ -67,14 +67,14 @@ public class OrderManager {
                 "department TEXT," +
                 "status TEXT" +
                 ");";
-        databaseManager.executeUpdate(sql);
+        databaseManager.executeTrustedUpdate(sql);
         ensureMetadataColumns();
     }
 
     private void ensureMetadataColumns() {
         List<String> existingColumns = new ArrayList<>();
         String sql = "PRAGMA table_info(" + DatabaseManager.TABLE_ORDERS + ");";
-        try (var resultSet = databaseManager.executeQuery(sql)) {
+        try (var resultSet = databaseManager.executeTrustedQuery(sql)) {
             while (resultSet != null && resultSet.next()) {
                 existingColumns.add(resultSet.getString("name"));
             }
@@ -90,7 +90,7 @@ public class OrderManager {
     private void ensureColumnExists(List<String> existingColumns, String columnName) {
         boolean exists = existingColumns.stream().anyMatch(name -> columnName.equalsIgnoreCase(name));
         if (!exists) {
-            databaseManager.executeUpdate("ALTER TABLE " + DatabaseManager.TABLE_ORDERS
+            databaseManager.executeTrustedUpdate("ALTER TABLE " + DatabaseManager.TABLE_ORDERS
                     + " ADD COLUMN " + columnName + " TEXT;");
         }
     }
@@ -346,7 +346,7 @@ public class OrderManager {
 
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_ORDERS + ";";
         List<Order> orders = new ArrayList<>();
-        try (var resultSet = databaseManager.executeQuery(sql)) {
+        try (var resultSet = databaseManager.executeTrustedQuery(sql)) {
             while (resultSet.next()) {
                 String orderedArticlesStr = resultSet.getString("orderedArticles");
                 Map<String, Integer> orderedArticles = parseOrderedArticles(orderedArticlesStr);
