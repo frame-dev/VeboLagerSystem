@@ -251,8 +251,25 @@ public class Main {
      */
     private static String getStackTraceAsString(Throwable e) {
         StringBuilder sb = new StringBuilder();
-        for (StackTraceElement element : e.getStackTrace()) {
-            sb.append("\n  at ").append(element.toString());
+        Throwable current = e;
+        boolean first = true;
+        while (current != null) {
+            if (!first) {
+                sb.append("\nCaused by: ").append(current.getClass().getName());
+                if (current.getMessage() != null && !current.getMessage().isBlank()) {
+                    sb.append(": ").append(current.getMessage());
+                }
+            } else if (current.getClass() != null) {
+                sb.append("\n").append(current.getClass().getName());
+                if (current.getMessage() != null && !current.getMessage().isBlank()) {
+                    sb.append(": ").append(current.getMessage());
+                }
+            }
+            for (StackTraceElement element : current.getStackTrace()) {
+                sb.append("\n  at ").append(element);
+            }
+            current = current.getCause();
+            first = false;
         }
         return sb.toString();
     }
@@ -502,9 +519,13 @@ public class Main {
      * Initialize database connection
      */
     private static void initializeDatabase() {
-        databaseManager = new DatabaseManager(getAppDataDir().getAbsolutePath(), "vebo_lager_system.db");
-        System.out.println("✓ Datenbank initialisiert");
-        logger.info("Database initialized.");
+        DatabaseManager.DatabaseType databaseType = resolveDatabaseTypeSetting();
+        String databaseFileName = resolveDatabaseFileName(databaseType);
+        databaseManager = new DatabaseManager(databaseType, getAppDataDir().getAbsolutePath(), databaseFileName);
+        databaseManager.initializeApplicationSchema();
+        System.out.println("✓ Datenbank initialisiert (" + databaseType.getDisplayName() + ")");
+        logger.info("Database initialized with type {} at {}", databaseType.getConfigValue(),
+                databaseManager.getDatabaseUrl());
         cleanupOldLogsIfEnabled();
         logUtils.addLog("Datenbank initialisiert.");
     }
@@ -1034,12 +1055,46 @@ public class Main {
     }
 
     private static void initializeDefaultSettings() {
-        if (settings.contains("first-time")) {
-            return;
+        boolean changed = false;
+        if (!settings.contains("first-time")) {
+            settings.setProperty("first-time", "false");
+            changed = true;
+        }
+        if (!settings.contains("database_type")) {
+            settings.setProperty("database_type", DatabaseManager.DatabaseType.SQLITE.getConfigValue());
+            changed = true;
+        }
+        if (changed) {
+            settings.save();
+        }
+    }
+
+    private static DatabaseManager.DatabaseType resolveDatabaseTypeSetting() {
+        String configured = settings != null ? settings.getProperty("database_type") : null;
+        DatabaseManager.DatabaseType databaseType = DatabaseManager.DatabaseType.fromConfig(configured);
+
+        if (settings != null) {
+            String normalized = databaseType.getConfigValue();
+            if (!normalized.equalsIgnoreCase(String.valueOf(configured))) {
+                settings.setProperty("database_type", normalized);
+                settings.save();
+            }
         }
 
-        settings.setProperty("first-time", "false");
-        settings.save();
+        return databaseType;
+    }
+
+    private static String resolveDatabaseFileName(DatabaseManager.DatabaseType databaseType) {
+        String configured = settings != null ? settings.getProperty("database_file") : null;
+        if (configured != null && !configured.isBlank()) {
+            return configured.trim();
+        }
+        if (databaseType == DatabaseManager.DatabaseType.H2
+                || databaseType == DatabaseManager.DatabaseType.JSON
+                || databaseType == DatabaseManager.DatabaseType.YAML) {
+            return "vebo_lager_system";
+        }
+        return "vebo_lager_system.db";
     }
 
     private static void ensureCategoriesFileExists() {

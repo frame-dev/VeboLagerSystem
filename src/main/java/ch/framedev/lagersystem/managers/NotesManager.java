@@ -73,7 +73,7 @@ public class NotesManager {
 
     private void createTable() {
         String sql = "CREATE TABLE IF NOT EXISTS " + TABLE + " (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                databaseManager.identityColumn("id") + "," +
                 "title TEXT NOT NULL UNIQUE," +
                 "content VARCHAR(2555)," +
                 "date TEXT" +

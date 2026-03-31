@@ -216,7 +216,7 @@ final class SettingsStylingService {
         spinner.setBackground(ThemeManager.getInputBackgroundColor());
     }
 
-    static void styleComboBox(JComboBox<String> combo) {
+    static void styleComboBox(JComboBox<?> combo) {
         if (combo == null) {
             throw new IllegalArgumentException("combo must not be null");
         }

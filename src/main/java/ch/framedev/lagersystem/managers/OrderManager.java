@@ -72,15 +72,7 @@ public class OrderManager {
     }
 
     private void ensureMetadataColumns() {
-        List<String> existingColumns = new ArrayList<>();
-        String sql = "PRAGMA table_info(" + DatabaseManager.TABLE_ORDERS + ");";
-        try (var resultSet = databaseManager.executeTrustedQuery(sql)) {
-            while (resultSet != null && resultSet.next()) {
-                existingColumns.add(resultSet.getString("name"));
-            }
-        } catch (Exception ignored) {
-            // Fall through and try to add missing columns.
-        }
+        List<String> existingColumns = new ArrayList<>(databaseManager.getTableColumns(DatabaseManager.TABLE_ORDERS));
 
         ensureColumnExists(existingColumns, "articleSizes");
         ensureColumnExists(existingColumns, "articleColors");

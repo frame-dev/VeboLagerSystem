@@ -58,6 +58,9 @@ public class LogManager {
 
     private LogManager() {
         this.databaseManager = Main.databaseManager;
+        if (this.databaseManager == null) {
+            throw new IllegalStateException("DatabaseManager is not initialized");
+        }
         createTable();
     }
 
@@ -76,13 +79,21 @@ public class LogManager {
 
     private void createTable() {
         String sql = "CREATE TABLE IF NOT EXISTS " + TABLE_LOGS + " ("
-                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + databaseManager.identityColumn("id") + ","
                 + "timestamp TEXT NOT NULL,"
-                + "epochMillis INTEGER NOT NULL,"
+                + "epochMillis BIGINT NOT NULL,"
                 + "level TEXT NOT NULL,"
                 + "message TEXT NOT NULL"
                 + ");";
         databaseManager.executeTrustedUpdate(sql);
+        ensureEpochMillisColumnType();
+    }
+
+    private void ensureEpochMillisColumnType() {
+        if (databaseManager.isH2()) {
+            databaseManager.executeTrustedUpdate(
+                    "ALTER TABLE " + TABLE_LOGS + " ALTER COLUMN epochMillis BIGINT NOT NULL;");
+        }
     }
 
     /**

@@ -1,20 +1,35 @@
 package ch.framedev.lagersystem.managers;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import org.yaml.snakeyaml.Yaml;
+
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,7 +37,7 @@ import org.apache.logging.log4j.Logger;
 import ch.framedev.lagersystem.main.Main;
 
 /**
- * Simple DatabaseManager for SQLite.
+ * Simple DatabaseManager for SQLite and H2.
  * <p>
  * Performance notes:
  * - Avoids ParameterMetaData() (slow/unreliable in SQLite)
@@ -31,10 +46,55 @@ import ch.framedev.lagersystem.main.Main;
  * - clearDatabase() uses a transaction and a single Statement for speed
  * - clearTable() uses a strict whitelist (safe + fast)
  */
-@SuppressWarnings({"UnusedReturnValue", "DeprecatedIsStillUsed", "SqlWithoutWhere"})
+@SuppressWarnings({"UnusedReturnValue", "SqlWithoutWhere"})
 
 public class DatabaseManager {
     private static final Logger logger = LogManager.getLogger(DatabaseManager.class);
+    private static final Gson FILE_GSON = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
+    private static final Pattern CREATE_TABLE_PATTERN = Pattern.compile(
+            "CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?\"?([A-Za-z_][A-Za-z0-9_]*)\"?",
+            Pattern.CASE_INSENSITIVE);
+
+    public enum DatabaseType {
+        SQLITE("sqlite", "SQLite"),
+        H2("h2", "H2"),
+        JSON("json", "JSON Filesystem"),
+        YAML("yaml", "YAML Filesystem");
+
+        private final String configValue;
+        private final String displayName;
+
+        DatabaseType(String configValue, String displayName) {
+            this.configValue = configValue;
+            this.displayName = displayName;
+        }
+
+        public String getConfigValue() {
+            return configValue;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        public static DatabaseType fromConfig(String rawValue) {
+            if (rawValue == null || rawValue.isBlank()) {
+                return SQLITE;
+            }
+
+            String normalized = rawValue.trim().toLowerCase(Locale.ROOT);
+            if ("h2".equals(normalized)) {
+                return H2;
+            }
+            if ("json".equals(normalized)) {
+                return JSON;
+            }
+            if ("yaml".equals(normalized) || "yml".equals(normalized)) {
+                return YAML;
+            }
+            return SQLITE;
+        }
+    }
 
     // Singleton instance
     private static volatile DatabaseManager instance;
@@ -74,7 +134,7 @@ public class DatabaseManager {
      * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
      */
     public static final String TABLE_ARTICLES = "articles";
-    public static final String TABLE_SEPERATE_ARTICLES = "seperate_articles";
+    public static final String TABLE_SEPARATE_ARTICLES = "separate_articles";
     /**
      * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
      */
@@ -113,7 +173,7 @@ public class DatabaseManager {
      */
     public static final Set<String> ALLOWED_TABLES = Set.of(
             TABLE_ARTICLES,
-            TABLE_SEPERATE_ARTICLES,
+            TABLE_SEPARATE_ARTICLES,
             TABLE_VENDORS,
             TABLE_ORDERS,
             TABLE_CLIENTS,
@@ -124,7 +184,73 @@ public class DatabaseManager {
             TABLE_NOTES
     );
 
+    private static final List<String> APPLICATION_TABLES = List.of(
+            TABLE_WARNINGS,
+            TABLE_ORDERS,
+            TABLE_USERS,
+            TABLE_CLIENTS,
+            TABLE_DEPARTMENTS,
+            TABLE_ARTICLES,
+            TABLE_SEPARATE_ARTICLES,
+            TABLE_VENDORS,
+            TABLE_LOGS,
+            TABLE_NOTES
+    );
+
+    private static final Set<String> IDENTITY_MANAGED_TABLES = Set.of(
+            TABLE_LOGS,
+            TABLE_NOTES
+    );
+
+    public static final class MigrationSummary {
+        private final DatabaseType sourceType;
+        private final DatabaseType targetType;
+        private final int tableCount;
+        private final int rowCount;
+        private final Map<String, Integer> migratedRowsPerTable;
+
+        private MigrationSummary(DatabaseType sourceType,
+                                 DatabaseType targetType,
+                                 int tableCount,
+                                 int rowCount,
+                                 Map<String, Integer> migratedRowsPerTable) {
+            this.sourceType = sourceType;
+            this.targetType = targetType;
+            this.tableCount = tableCount;
+            this.rowCount = rowCount;
+            this.migratedRowsPerTable = migratedRowsPerTable == null
+                    ? Collections.emptyMap()
+                    : Collections.unmodifiableMap(new LinkedHashMap<>(migratedRowsPerTable));
+        }
+
+        public DatabaseType getSourceType() {
+            return sourceType;
+        }
+
+        public DatabaseType getTargetType() {
+            return targetType;
+        }
+
+        public int getTableCount() {
+            return tableCount;
+        }
+
+        public int getRowCount() {
+            return rowCount;
+        }
+
+        public Map<String, Integer> getMigratedRowsPerTable() {
+            return migratedRowsPerTable;
+        }
+    }
+
     private final Connection connection;
+    private final DatabaseType databaseType;
+    private final String databaseUrl;
+    private final File filesystemStorageDir;
+    private final Set<String> filesystemLoadedTables = Collections.synchronizedSet(new LinkedHashSet<>());
+    private final Object filesystemLock = new Object();
+    private int filesystemSyncSuspendDepth;
 
     /**
      * Tracks open ResultSet -> Statement pairs so both can be closed together later.
@@ -160,6 +286,18 @@ public class DatabaseManager {
      * @param fileName database file name
      */
     public DatabaseManager(String path, String fileName) {
+        this(DatabaseType.SQLITE, path, fileName);
+    }
+
+    /**
+     * Open (or create) a SQLite or H2 database at path/fileName.
+     *
+     * @param databaseType database engine to use
+     * @param path         directory path (maybe null or empty)
+     * @param fileName     database file name or base name
+     */
+    public DatabaseManager(DatabaseType databaseType, String path, String fileName) {
+        this.databaseType = databaseType == null ? DatabaseType.SQLITE : databaseType;
         String normalizedPath = (path == null) ? "" : path.trim();
         File dir = normalizedPath.isEmpty() ? null : new File(normalizedPath);
         if (dir != null && !dir.exists()) {
@@ -169,14 +307,129 @@ public class DatabaseManager {
             }
         }
 
-        File dbFile = (dir == null) ? new File(fileName) : new File(dir, fileName);
-        String url = "jdbc:sqlite:" + dbFile.getAbsolutePath();
+        this.filesystemStorageDir = resolveFilesystemStorageDir(this.databaseType, dir, fileName);
+        ensureFilesystemStorageDirectory();
+        String url = buildJdbcUrl(this.databaseType, dir, fileName);
+        this.databaseUrl = url;
         try {
+            loadJdbcDriver(this.databaseType);
             this.connection = DriverManager.getConnection(url);
-            applySQLitePragmas(); // performance + safety defaults
-        } catch (SQLException e) {
+            applyDatabaseSettings();
+        } catch (SQLException | ClassNotFoundException e) {
             Main.logUtils.addLog("Fehler beim Öffnen der Datenbank: " + e.getMessage());
-            throw new RuntimeException("Failed to open database: " + url, e);
+            throw new RuntimeException(buildOpenDatabaseErrorMessage(url, e), e);
+        }
+    }
+
+    private void loadJdbcDriver(DatabaseType type) throws ClassNotFoundException {
+        switch (type) {
+            case H2, JSON, YAML -> Class.forName("org.h2.Driver");
+            case SQLITE -> Class.forName("org.sqlite.JDBC");
+        }
+    }
+
+    private String buildOpenDatabaseErrorMessage(String url, Exception cause) {
+        if (cause instanceof ClassNotFoundException) {
+            return "Failed to open database: " + url
+                    + " (JDBC driver class not found at runtime: " + cause.getMessage()
+                    + ". Reload the Maven project / runtime classpath and try again.)";
+        }
+        if (cause instanceof SQLException sqlException && cause.getMessage() != null
+                && cause.getMessage().contains("No suitable driver")) {
+            return "Failed to open database: " + url
+                    + " (no suitable JDBC driver registered at runtime. The dependency may not be on the active runtime classpath.)";
+        }
+        return "Failed to open database: " + url;
+    }
+
+    private String buildJdbcUrl(DatabaseType type, File dir, String fileName) {
+        return switch (type) {
+            case H2 -> "jdbc:h2:file:" + resolveH2DatabasePath(dir, fileName);
+            case JSON, YAML -> "jdbc:h2:mem:" + resolveFilesystemDatabaseName(fileName);
+            case SQLITE -> {
+                File dbFile = (dir == null) ? new File(resolveSqliteFileName(fileName))
+                        : new File(dir, resolveSqliteFileName(fileName));
+                yield "jdbc:sqlite:" + dbFile.getAbsolutePath();
+            }
+        };
+    }
+
+    private String resolveH2DatabasePath(File dir, String fileName) {
+        String normalizedName = (fileName == null || fileName.isBlank()) ? "vebo_lager_system" : fileName.trim();
+        normalizedName = stripSuffix(normalizedName, ".mv.db");
+        normalizedName = stripSuffix(normalizedName, ".h2.db");
+        normalizedName = stripSuffix(normalizedName, ".db");
+        if (normalizedName.isBlank()) {
+            normalizedName = "vebo_lager_system";
+        }
+
+        File dbFile = (dir == null) ? new File(normalizedName) : new File(dir, normalizedName);
+        return dbFile.getAbsolutePath().replace('\\', '/');
+    }
+
+    private String resolveSqliteFileName(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "vebo_lager_system.db";
+        }
+        return fileName.trim();
+    }
+
+    private File resolveFilesystemStorageDir(DatabaseType type, File dir, String fileName) {
+        if (!isFilesystemType(type)) {
+            return null;
+        }
+
+        String normalizedName = resolveFilesystemDatabaseName(fileName);
+        String suffix = type == DatabaseType.JSON ? "_json" : "_yaml";
+        File baseDir = dir == null ? new File(normalizedName + suffix) : new File(dir, normalizedName + suffix);
+        return new File(baseDir, "tables");
+    }
+
+    private String resolveFilesystemDatabaseName(String fileName) {
+        String normalizedName = (fileName == null || fileName.isBlank()) ? "vebo_lager_system" : fileName.trim();
+        normalizedName = stripSuffix(normalizedName, ".json");
+        normalizedName = stripSuffix(normalizedName, ".yaml");
+        normalizedName = stripSuffix(normalizedName, ".yml");
+        normalizedName = stripSuffix(normalizedName, ".mv.db");
+        normalizedName = stripSuffix(normalizedName, ".h2.db");
+        normalizedName = stripSuffix(normalizedName, ".db");
+        normalizedName = normalizedName.replaceAll("[^A-Za-z0-9_\\-]", "_");
+        if (normalizedName.isBlank()) {
+            return "vebo_lager_system";
+        }
+        return normalizedName;
+    }
+
+    private String stripSuffix(String value, String suffix) {
+        if (value.toLowerCase(Locale.ROOT).endsWith(suffix)) {
+            return value.substring(0, value.length() - suffix.length());
+        }
+        return value;
+    }
+
+    private void applyDatabaseSettings() {
+        if (databaseType == DatabaseType.SQLITE) {
+            applySQLitePragmas();
+            return;
+        }
+        applyH2Settings();
+    }
+
+    private boolean isFilesystemType(DatabaseType type) {
+        return type == DatabaseType.JSON || type == DatabaseType.YAML;
+    }
+
+    public boolean isFilesystemBackend() {
+        return isFilesystemType(databaseType);
+    }
+
+    private void ensureFilesystemStorageDirectory() {
+        if (filesystemStorageDir == null) {
+            return;
+        }
+        if (!filesystemStorageDir.exists() && !filesystemStorageDir.mkdirs()) {
+            throw new RuntimeException("Failed to create filesystem storage directory: "
+                    + filesystemStorageDir.getAbsolutePath());
         }
     }
 
@@ -211,6 +464,18 @@ public class DatabaseManager {
             s.execute(sql);
         } catch (SQLException e) {
             logger.debug("Pragma failed (ignored): {}", sql, e);
+        }
+    }
+
+    private void applyH2Settings() {
+        execStatementSafe("SET DEFAULT_LOCK_TIMEOUT 5000");
+    }
+
+    private void execStatementSafe(String sql) {
+        try (Statement s = connection.createStatement()) {
+            s.execute(sql);
+        } catch (SQLException e) {
+            logger.debug("Database-specific statement failed (ignored): {}", sql, e);
         }
     }
 
@@ -257,6 +522,7 @@ public class DatabaseManager {
         try (Statement stmt = connection.createStatement()) {
             //noinspection SqlSourceToSinkFlow
             stmt.executeUpdate(sql);
+            onTrustedUpdateSuccess(sql);
             return true;
         } catch (SQLException e) {
             logger.error("SQL Exception during executeTrustedUpdate: ", e);
@@ -278,7 +544,9 @@ public class DatabaseManager {
         }
         try (Statement stmt = connection.createStatement()) {
             //noinspection SqlSourceToSinkFlow
-            return stmt.executeUpdate(sql);
+            int count = stmt.executeUpdate(sql);
+            onTrustedUpdateSuccess(sql);
+            return count;
         } catch (SQLException e) {
             logger.error("SQL Exception during executeTrustedUpdateWithCount: ", e);
             Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
@@ -390,6 +658,7 @@ public class DatabaseManager {
             bindParams(pstmt, params);
 
             pstmt.executeUpdate();
+            onPreparedMutationSuccess();
             return true;
         } catch (SQLException e) {
             logger.error("SQL Exception during executePreparedUpdate: ", e);
@@ -570,7 +839,9 @@ public class DatabaseManager {
         try {
             PreparedStatement pstmt = getCachedPreparedStatement("U", sql);
             bindParams(pstmt, params);
-            return pstmt.executeUpdate();
+            int count = pstmt.executeUpdate();
+            onPreparedMutationSuccess();
+            return count;
         } catch (SQLException e) {
             logger.error("SQL Exception during executeUpdateWithCount (prepared): ", e);
             Main.logUtils.addLog("Fehler bei der Aktualisierung: " + e.getMessage());
@@ -585,6 +856,271 @@ public class DatabaseManager {
      */
     public Connection getConnection() {
         return connection;
+    }
+
+    public DatabaseType getDatabaseType() {
+        return databaseType;
+    }
+
+    public boolean isSQLite() {
+        return databaseType == DatabaseType.SQLITE;
+    }
+
+    public boolean isH2() {
+        return databaseType == DatabaseType.H2;
+    }
+
+    public String getDatabaseUrl() {
+        return databaseUrl;
+    }
+
+    public static String getDefaultFileName(DatabaseType databaseType) {
+        return databaseType == DatabaseType.SQLITE ? "vebo_lager_system.db" : "vebo_lager_system";
+    }
+
+    public void initializeApplicationSchema() {
+        boolean deferFilesystemSync = isFilesystemBackend();
+        if (deferFilesystemSync) {
+            suspendFilesystemSync();
+        }
+
+        try {
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_ARTICLES + " ("
+                    + "articleNumber TEXT,"
+                    + "name TEXT,"
+                    + "details TEXT,"
+                    + "stockQuantity INTEGER,"
+                    + "minStockLevel INTEGER,"
+                    + "sellPrice DOUBLE,"
+                    + "purchasePrice DOUBLE,"
+                    + "vendorName TEXT"
+                    + ");");
+
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_SEPARATE_ARTICLES + " ("
+                    + "\"index\" INTEGER,"
+                    + "articleNumber TEXT,"
+                    + "otherDetails TEXT"
+                    + ");");
+            executeTrustedUpdate("CREATE UNIQUE INDEX IF NOT EXISTS idx_seperate_articles_article_detail "
+                    + "ON " + TABLE_SEPARATE_ARTICLES + " (articleNumber, otherDetails);");
+            executeTrustedUpdate("CREATE INDEX IF NOT EXISTS idx_seperate_articles_article_number "
+                    + "ON " + TABLE_SEPARATE_ARTICLES + " (articleNumber);");
+
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_VENDORS + " ("
+                    + "name TEXT UNIQUE,"
+                    + "contactPerson TEXT,"
+                    + "phoneNumber TEXT,"
+                    + "email TEXT,"
+                    + "address TEXT,"
+                    + "suppliedArticles TEXT,"
+                    + "minOrderValue DOUBLE"
+                    + ");");
+
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_ORDERS + " ("
+                    + "orderId TEXT UNIQUE,"
+                    + "orderedArticles TEXT,"
+                    + "articleSizes TEXT,"
+                    + "articleColors TEXT,"
+                    + "articleFillings TEXT,"
+                    + "receiverName TEXT,"
+                    + "receiverKontoNumber TEXT,"
+                    + "orderDate TEXT,"
+                    + "senderName TEXT,"
+                    + "senderKontoNumber TEXT,"
+                    + "department TEXT,"
+                    + "status TEXT"
+                    + ");");
+            ensureColumnExists(TABLE_ORDERS, "articleSizes", "TEXT");
+            ensureColumnExists(TABLE_ORDERS, "articleColors", "TEXT");
+            ensureColumnExists(TABLE_ORDERS, "articleFillings", "TEXT");
+
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_CLIENTS + " ("
+                    + "firstLastName TEXT PRIMARY KEY,"
+                    + "department TEXT"
+                    + ");");
+
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_DEPARTMENTS + " ("
+                    + "departmentName TEXT PRIMARY KEY,"
+                    + "kontoNumber TEXT"
+                    + ");");
+
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_USERS + " ("
+                    + "username TEXT UNIQUE,"
+                    + "orders TEXT"
+                    + ");");
+
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_WARNINGS + " ("
+                    + "title TEXT UNIQUE,"
+                    + "message TEXT,"
+                    + "type TEXT,"
+                    + "date TEXT,"
+                    + "isResolved TEXT,"
+                    + "isDisplayed TEXT"
+                    + ");");
+
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_LOGS + " ("
+                    + identityColumn("id") + ","
+                    + "timestamp TEXT NOT NULL,"
+                    + "epochMillis BIGINT NOT NULL,"
+                    + "level TEXT NOT NULL,"
+                    + "message TEXT NOT NULL"
+                    + ");");
+            if (isH2() || isFilesystemBackend()) {
+                executeTrustedUpdate("ALTER TABLE " + TABLE_LOGS + " ALTER COLUMN epochMillis BIGINT NOT NULL;");
+            }
+
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_NOTES + " ("
+                    + identityColumn("id") + ","
+                    + "title TEXT NOT NULL UNIQUE,"
+                    + "content VARCHAR(2555),"
+                    + "date TEXT"
+                    + ");");
+        } finally {
+            if (deferFilesystemSync) {
+                restoreFilesystemTablesIfNeeded();
+                resumeFilesystemSync();
+                syncFilesystemStorage();
+            }
+        }
+    }
+
+    public List<String> listUserTables() {
+        LinkedHashSet<String> tables = new LinkedHashSet<>();
+        try {
+            DatabaseMetaData metaData = connection.getMetaData();
+            try (ResultSet resultSet = metaData.getTables(connection.getCatalog(), null, "%", new String[]{"TABLE"})) {
+                while (resultSet.next()) {
+                    String schema = resultSet.getString("TABLE_SCHEM");
+                    String tableName = resultSet.getString("TABLE_NAME");
+                    if (tableName == null || tableName.isBlank()) {
+                        continue;
+                    }
+                    if ("INFORMATION_SCHEMA".equalsIgnoreCase(schema)) {
+                        continue;
+                    }
+                    if (tableName.toLowerCase(Locale.ROOT).startsWith("sqlite_")) {
+                        continue;
+                    }
+                    tables.add(tableName);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to list user tables", e);
+            Main.logUtils.addLog("Fehler beim Lesen der Tabellenliste: " + e.getMessage());
+        }
+        return tables.isEmpty() ? Collections.emptyList() : new ArrayList<>(tables);
+    }
+
+    public MigrationSummary migrateDataTo(DatabaseManager target) {
+        if (target == null) {
+            throw new IllegalArgumentException("Target database must not be null.");
+        }
+        if (this == target || Objects.equals(databaseUrl, target.databaseUrl)) {
+            throw new IllegalArgumentException("Source and target dataset must be different.");
+        }
+
+        initializeApplicationSchema();
+        target.initializeApplicationSchema();
+
+        Map<String, String> sourceTableLookup = new LinkedHashMap<>();
+        for (String sourceTable : listUserTables()) {
+            sourceTableLookup.put(sourceTable.toLowerCase(Locale.ROOT), sourceTable);
+        }
+
+        LinkedHashSet<String> orderedTables = new LinkedHashSet<>();
+        for (String applicationTable : APPLICATION_TABLES) {
+            String matchingTable = sourceTableLookup.get(applicationTable.toLowerCase(Locale.ROOT));
+            if (matchingTable != null) {
+                orderedTables.add(matchingTable);
+            }
+        }
+        orderedTables.addAll(sourceTableLookup.values());
+
+        Map<String, Integer> migratedRowsPerTable = new LinkedHashMap<>();
+        boolean autoCommit = true;
+        target.suspendFilesystemSync();
+        try {
+            autoCommit = target.connection.getAutoCommit();
+            target.connection.setAutoCommit(false);
+            target.clearTablesInternal(target.listUserTables());
+
+            for (String tableName : orderedTables) {
+                List<Map<String, Object>> rows = readAllRows(tableName);
+                List<String> actualColumns = target.getTableColumns(tableName);
+                for (Map<String, Object> row : rows) {
+                    target.insertRow(tableName, actualColumns, row);
+                }
+                target.realignIdentityColumnIfNeeded(tableName);
+                migratedRowsPerTable.put(tableName, rows.size());
+            }
+
+            target.connection.commit();
+        } catch (Exception e) {
+            try {
+                target.connection.rollback();
+            } catch (SQLException rollbackException) {
+                logger.error("Failed to rollback migration transaction", rollbackException);
+            }
+            throw new RuntimeException("Migration failed: " + e.getMessage(), e);
+        } finally {
+            try {
+                target.connection.setAutoCommit(autoCommit);
+            } catch (SQLException e) {
+                logger.error("Failed to restore auto-commit after migration", e);
+            }
+            target.resumeFilesystemSync();
+            if (target.isFilesystemBackend()) {
+                target.syncFilesystemStorage();
+            }
+        }
+
+        int totalRows = migratedRowsPerTable.values().stream().mapToInt(Integer::intValue).sum();
+        return new MigrationSummary(
+                databaseType,
+                target.databaseType,
+                migratedRowsPerTable.size(),
+                totalRows,
+                migratedRowsPerTable);
+    }
+
+    public String identityColumn(String columnName) {
+        String normalized = (columnName == null || columnName.isBlank()) ? "id" : columnName.trim();
+        if (databaseType == DatabaseType.H2 || isFilesystemBackend()) {
+            return normalized + " INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY";
+        }
+        return normalized + " INTEGER PRIMARY KEY AUTOINCREMENT";
+    }
+
+    public List<String> getTableColumns(String tableName) {
+        if (tableName == null || tableName.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        LinkedHashSet<String> columns = new LinkedHashSet<>();
+        String normalized = tableName.trim();
+        try {
+            DatabaseMetaData metaData = connection.getMetaData();
+            collectTableColumns(metaData, normalized, columns);
+            if (columns.isEmpty()) {
+                collectTableColumns(metaData, normalized.toUpperCase(Locale.ROOT), columns);
+            }
+            if (columns.isEmpty()) {
+                collectTableColumns(metaData, normalized.toLowerCase(Locale.ROOT), columns);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to read metadata for table: {}", normalized, e);
+            Main.logUtils.addLog("Fehler beim Lesen der Tabellenspalten: " + e.getMessage());
+        }
+        return columns.isEmpty() ? Collections.emptyList() : new ArrayList<>(columns);
+    }
+
+    private void collectTableColumns(DatabaseMetaData metaData, String tablePattern, Set<String> columns)
+            throws SQLException {
+        try (ResultSet resultSet = metaData.getColumns(connection.getCatalog(), null, tablePattern, null)) {
+            while (resultSet.next()) {
+                columns.add(resultSet.getString("COLUMN_NAME"));
+            }
+        }
     }
 
     /**
@@ -626,6 +1162,7 @@ public class DatabaseManager {
                 TABLE_CLIENTS,
                 TABLE_DEPARTMENTS,
                 TABLE_ARTICLES,
+                TABLE_SEPARATE_ARTICLES,
                 TABLE_VENDORS,
                 TABLE_LOGS,
                 TABLE_NOTES
@@ -645,6 +1182,7 @@ public class DatabaseManager {
                     clearedCount++;
                 }
                 connection.commit();
+                syncFilesystemStorage();
                 logger.info("Successfully cleared all {} tables", clearedCount);
                 return true;
             } catch (SQLException e) {
@@ -837,6 +1375,398 @@ public class DatabaseManager {
                 connection.setAutoCommit(autoCommit);
             } catch (SQLException ignored) {
             }
+        }
+    }
+
+    private void onTrustedUpdateSuccess(String sql) {
+        if (!isFilesystemBackend()) {
+            return;
+        }
+        if (initializeFilesystemTableIfNeeded(sql)) {
+            return;
+        }
+        syncFilesystemStorage();
+    }
+
+    private void onPreparedMutationSuccess() {
+        if (!isFilesystemBackend()) {
+            return;
+        }
+        syncFilesystemStorage();
+    }
+
+    private boolean initializeFilesystemTableIfNeeded(String sql) {
+        if (!isFilesystemBackend() || sql == null) {
+            return false;
+        }
+
+        Matcher matcher = CREATE_TABLE_PATTERN.matcher(sql);
+        if (!matcher.find()) {
+            return false;
+        }
+
+        loadFilesystemTable(matcher.group(1));
+        return true;
+    }
+
+    private void ensureColumnExists(String tableName, String columnName, String sqlType) {
+        if (tableName == null || tableName.isBlank() || columnName == null || columnName.isBlank()
+                || sqlType == null || sqlType.isBlank()) {
+            return;
+        }
+
+        boolean exists = getTableColumns(tableName).stream().anyMatch(columnName::equalsIgnoreCase);
+        if (!exists) {
+            executeTrustedUpdate("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + sqlType + ";");
+        }
+    }
+
+    private void realignIdentityColumnIfNeeded(String tableName) {
+        if ((!isH2() && !isFilesystemBackend()) || tableName == null || tableName.isBlank()) {
+            return;
+        }
+
+        String normalized = tableName.trim().toLowerCase(Locale.ROOT);
+        if (!IDENTITY_MANAGED_TABLES.contains(normalized)) {
+            return;
+        }
+
+        String actualTableName = resolveActualTableName(tableName);
+        if (actualTableName == null) {
+            return;
+        }
+
+        List<String> columns = getTableColumns(actualTableName);
+        String idColumn = columns.stream()
+                .filter(column -> "id".equalsIgnoreCase(column))
+                .findFirst()
+                .orElse(null);
+        if (idColumn == null) {
+            return;
+        }
+
+        String quotedTableName = quoteIdentifier(actualTableName);
+        String quotedIdColumn = quoteIdentifier(idColumn);
+        String sql = "SELECT COALESCE(MAX(" + quotedIdColumn + "), 0) FROM " + quotedTableName;
+
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
+            long nextValue = 1L;
+            if (resultSet.next()) {
+                nextValue = Math.max(1L, resultSet.getLong(1) + 1L);
+            }
+
+            statement.executeUpdate("ALTER TABLE " + quotedTableName
+                    + " ALTER COLUMN " + quotedIdColumn
+                    + " RESTART WITH " + nextValue);
+        } catch (SQLException e) {
+            logger.error("Failed to realign identity column for table {}", tableName, e);
+            Main.logUtils.addLog("Fehler beim Neujustieren der ID-Spalte für Tabelle "
+                    + tableName + ": " + e.getMessage());
+        }
+    }
+
+    private String resolveActualTableName(String tableName) {
+        if (tableName == null || tableName.isBlank()) {
+            return null;
+        }
+
+        String trimmed = tableName.trim();
+        for (String existingTable : listUserTables()) {
+            if (existingTable != null && existingTable.equalsIgnoreCase(trimmed)) {
+                return existingTable;
+            }
+        }
+        return null;
+    }
+
+    private void clearTablesInternal(List<String> tables) throws SQLException {
+        if (tables == null || tables.isEmpty()) {
+            return;
+        }
+
+        try (Statement statement = connection.createStatement()) {
+            for (String tableName : tables) {
+                if (tableName == null || tableName.isBlank()) {
+                    continue;
+                }
+                statement.executeUpdate("DELETE FROM " + quoteIdentifier(tableName));
+            }
+        }
+    }
+
+    private static String quoteIdentifier(String identifier) {
+        return "\"" + identifier.replace("\"", "\"\"") + "\"";
+    }
+
+    private void loadFilesystemTable(String tableName) {
+        if (!isFilesystemBackend() || tableName == null || tableName.isBlank()) {
+            return;
+        }
+
+        synchronized (filesystemLock) {
+            String normalized = tableName.trim().toLowerCase(Locale.ROOT);
+            if (filesystemLoadedTables.contains(normalized)) {
+                return;
+            }
+
+            String actualTableName = resolveActualTableName(tableName);
+            if (actualTableName == null) {
+                return;
+            }
+
+            filesystemLoadedTables.add(normalized);
+            File tableFile = getFilesystemTableFile(normalized);
+            if (!tableFile.exists()) {
+                return;
+            }
+
+            List<Map<String, Object>> rows = readFilesystemRows(tableFile);
+            if (rows.isEmpty()) {
+                return;
+            }
+
+            suspendFilesystemSync();
+            try {
+                List<String> actualColumns = getTableColumns(actualTableName);
+                for (Map<String, Object> row : rows) {
+                    insertRow(actualTableName, actualColumns, row);
+                }
+                realignIdentityColumnIfNeeded(actualTableName);
+            } finally {
+                resumeFilesystemSync();
+            }
+        }
+    }
+
+    private void insertRow(String tableName, List<String> actualColumns, Map<String, Object> row) {
+        if (row == null || row.isEmpty() || actualColumns == null || actualColumns.isEmpty()) {
+            return;
+        }
+
+        Map<String, String> columnLookup = new HashMap<>();
+        for (String column : actualColumns) {
+            columnLookup.put(column.toLowerCase(Locale.ROOT), column);
+        }
+
+        List<String> insertColumns = new ArrayList<>();
+        List<Object> values = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : row.entrySet()) {
+            if (entry.getKey() == null) {
+                continue;
+            }
+            String actualColumn = columnLookup.get(entry.getKey().toLowerCase(Locale.ROOT));
+            if (actualColumn == null) {
+                continue;
+            }
+            insertColumns.add(actualColumn);
+            values.add(entry.getValue());
+        }
+
+        if (insertColumns.isEmpty()) {
+            return;
+        }
+
+        StringBuilder sql = new StringBuilder("INSERT INTO ").append(tableName).append(" (");
+        for (int i = 0; i < insertColumns.size(); i++) {
+            if (i > 0) sql.append(", ");
+            sql.append('"').append(insertColumns.get(i)).append('"');
+        }
+        sql.append(") VALUES (");
+        for (int i = 0; i < insertColumns.size(); i++) {
+            if (i > 0) sql.append(", ");
+            sql.append('?');
+        }
+        sql.append(')');
+
+        try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            bindParams(statement, values.toArray());
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Failed to restore filesystem row for table {}", tableName, e);
+            Main.logUtils.addLog("Fehler beim Laden der Dateispeicher-Daten für Tabelle " + tableName + ": "
+                    + e.getMessage());
+        }
+    }
+
+    private void syncFilesystemStorage() {
+        if (!isFilesystemBackend() || filesystemStorageDir == null || filesystemSyncSuspendDepth > 0) {
+            return;
+        }
+
+        synchronized (filesystemLock) {
+            ensureFilesystemStorageDirectory();
+            Set<String> currentTables = new LinkedHashSet<>();
+            try {
+                DatabaseMetaData metaData = connection.getMetaData();
+                try (ResultSet tables = metaData.getTables(connection.getCatalog(), null, "%", new String[]{"TABLE"})) {
+                    while (tables.next()) {
+                        String schema = tables.getString("TABLE_SCHEM");
+                        String tableName = tables.getString("TABLE_NAME");
+                        if (tableName == null || tableName.isBlank()) {
+                            continue;
+                        }
+                        if ("INFORMATION_SCHEMA".equalsIgnoreCase(schema)) {
+                            continue;
+                        }
+                        currentTables.add(tableName.toLowerCase(Locale.ROOT));
+                        writeFilesystemRows(tableName, readAllRows(tableName));
+                    }
+                }
+                deleteStaleFilesystemTableFiles(currentTables);
+            } catch (SQLException e) {
+                logger.error("Failed to synchronize filesystem-backed tables", e);
+                Main.logUtils.addLog("Fehler beim Synchronisieren der Dateispeicher-Tabellen: " + e.getMessage());
+            }
+        }
+    }
+
+    private void restoreFilesystemTablesIfNeeded() {
+        if (!isFilesystemBackend() || filesystemStorageDir == null || !filesystemStorageDir.exists()) {
+            return;
+        }
+
+        File[] files = filesystemStorageDir.listFiles((dir, name) -> name.endsWith(getFilesystemFileExtension()));
+        if (files == null || files.length == 0) {
+            return;
+        }
+
+        for (File file : files) {
+            String fileName = file.getName();
+            String tableName = fileName.substring(0, fileName.length() - getFilesystemFileExtension().length());
+            String actualTableName = resolveActualTableName(tableName);
+            if (actualTableName == null || getRowCount(actualTableName) > 0) {
+                continue;
+            }
+
+            filesystemLoadedTables.remove(tableName.toLowerCase(Locale.ROOT));
+            loadFilesystemTable(actualTableName);
+        }
+    }
+
+    private List<Map<String, Object>> readAllRows(String tableName) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        try (Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery("SELECT * FROM " + tableName)) {
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+            while (rs.next()) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                for (int i = 1; i <= columnCount; i++) {
+                    row.put(metaData.getColumnLabel(i), rs.getObject(i));
+                }
+                rows.add(row);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to read rows for filesystem persistence from {}", tableName, e);
+            Main.logUtils.addLog("Fehler beim Lesen der Tabelle " + tableName + " für Dateispeicher: "
+                    + e.getMessage());
+        }
+        return rows;
+    }
+
+    private int getRowCount(String tableName) {
+        if (tableName == null || tableName.isBlank()) {
+            return 0;
+        }
+
+        try (Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            logger.error("Failed to count rows for filesystem restore in table {}", tableName, e);
+        }
+        return 0;
+    }
+
+    private void writeFilesystemRows(String tableName, List<Map<String, Object>> rows) {
+        File tableFile = getFilesystemTableFile(tableName.toLowerCase(Locale.ROOT));
+        try (FileWriter writer = new FileWriter(tableFile)) {
+            if (databaseType == DatabaseType.JSON) {
+                FILE_GSON.toJson(rows, writer);
+            } else {
+                new Yaml().dump(rows, writer);
+            }
+        } catch (IOException e) {
+            logger.error("Failed to write filesystem table {}", tableName, e);
+            Main.logUtils.addLog("Fehler beim Schreiben der Dateispeicher-Tabelle " + tableName + ": "
+                    + e.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> readFilesystemRows(File tableFile) {
+        try (FileReader reader = new FileReader(tableFile)) {
+            Object raw = databaseType == DatabaseType.JSON
+                    ? FILE_GSON.fromJson(reader, List.class)
+                    : new Yaml().load(reader);
+            if (!(raw instanceof List<?> list)) {
+                return Collections.emptyList();
+            }
+
+            List<Map<String, Object>> rows = new ArrayList<>();
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> map) {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    for (Map.Entry<?, ?> entry : map.entrySet()) {
+                        if (entry.getKey() != null) {
+                            row.put(String.valueOf(entry.getKey()), entry.getValue());
+                        }
+                    }
+                    rows.add(row);
+                }
+            }
+            return rows;
+        } catch (IOException e) {
+            logger.error("Failed to read filesystem table {}", tableFile.getAbsolutePath(), e);
+            Main.logUtils.addLog("Fehler beim Lesen der Dateispeicher-Datei " + tableFile.getName() + ": "
+                    + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    private void deleteStaleFilesystemTableFiles(Set<String> currentTables) {
+        File[] files = filesystemStorageDir.listFiles((dir, name) ->
+                name.endsWith(getFilesystemFileExtension()));
+        if (files == null) {
+            return;
+        }
+
+        for (File file : files) {
+            String name = file.getName();
+            String tableName = name.substring(0, name.length() - getFilesystemFileExtension().length());
+            String normalizedTableName = tableName.toLowerCase(Locale.ROOT);
+            boolean isApplicationTable = APPLICATION_TABLES.stream()
+                    .anyMatch(applicationTable -> applicationTable.equalsIgnoreCase(normalizedTableName));
+            if (isApplicationTable) {
+                continue;
+            }
+            if (currentTables.contains(normalizedTableName)) {
+                continue;
+            }
+            if (!file.delete()) {
+                logger.warn("Failed to delete stale filesystem table file {}", file.getAbsolutePath());
+            }
+        }
+    }
+
+    private File getFilesystemTableFile(String tableName) {
+        return new File(filesystemStorageDir, tableName + getFilesystemFileExtension());
+    }
+
+    private String getFilesystemFileExtension() {
+        return databaseType == DatabaseType.YAML ? ".yaml" : ".json";
+    }
+
+    private void suspendFilesystemSync() {
+        filesystemSyncSuspendDepth++;
+    }
+
+    private void resumeFilesystemSync() {
+        if (filesystemSyncSuspendDepth > 0) {
+            filesystemSyncSuspendDepth--;
         }
     }
 }

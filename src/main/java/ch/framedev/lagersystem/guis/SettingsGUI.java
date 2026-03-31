@@ -18,6 +18,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.NumberFormatter;
 import java.text.NumberFormat;
+import java.io.File;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.datatransfer.StringSelection;
@@ -73,6 +74,11 @@ public class SettingsGUI extends JFrame {
     private JTextField serverUrlField;
     private JComboBox<String> themeComboBox;
     private static JComboBox<String> fontComboBox;
+    private JComboBox<DatabaseManager.DatabaseType> databaseTypeComboBox;
+    private JComboBox<DatabaseManager.DatabaseType> migrationSourceComboBox;
+    private JLabel databaseBackendHintLabel;
+    private JLabel databaseMigrationHintLabel;
+    private JButton migrateDatabaseButton;
     /**
      * Suchfeld zum Filtern/Anzeigen der Einstellungen innerhalb der Tabs.
      */
@@ -131,6 +137,7 @@ public class SettingsGUI extends JFrame {
     private static final boolean DEFAULT_ENABLE_QR_IMPORT = true;
     private static final boolean DEFAULT_DARK_MODE = false;
     private static final boolean DEFAULT_DELETE_OLD_LOGS_ON_STARTUP = false;
+    private static final DatabaseManager.DatabaseType DEFAULT_DATABASE_TYPE = DatabaseManager.DatabaseType.SQLITE;
     private enum GlassIntensity {
         SUBTLE,
         MEDIUM
@@ -287,6 +294,11 @@ public class SettingsGUI extends JFrame {
          * "Hinzufügen"-Buttons in der Artikelverwaltung.
          */
         THEME_BUTTON_COLOR("theme_button_color"),
+        /**
+         * Welches Speicher-Backend verwendet werden soll. Unterstützt sqlite, h2,
+         * json und yaml.
+         */
+        DATABASE_TYPE("database_type"),
         /**
          * Ob alte Protokolle beim Start automatisch bereinigt werden sollen.
          */
@@ -1593,9 +1605,359 @@ public class SettingsGUI extends JFrame {
 
     private void buildDatabaseTab(JTabbedPane tabbedPane) {
         JPanel databasePanel = createTabContentPanel();
+        addTabSection(databasePanel, createDatabaseBackendCard(), 22);
+        addTabSection(databasePanel, createDatabaseMigrationCard(), 18);
         addTabSection(databasePanel, createDatabaseManagementCard(), 0);
         databasePanel.add(Box.createVerticalGlue());
         addScrollableTab(tabbedPane, UnicodeSymbols.FLOPPY + " Datenbank", databasePanel);
+    }
+
+    private JPanel createDatabaseBackendCard() {
+        JPanel backendCard = createStandardSectionCard(
+                UnicodeSymbols.FLOPPY + " Speicher-Backend",
+                "Wählen Sie aus, ob die App SQLite, H2, JSON oder YAML verwenden soll",
+                this::resetDatabaseDefaults);
+
+        backendCard.add(createInfoLabel(
+                "<html><div style='width:650px;'>Das ausgewählte Backend wird beim nächsten Start verwendet. " +
+                        "<b>SQLite</b> und <b>H2</b> bleiben dateibasierte Datenbanken. " +
+                        "<b>JSON</b> und <b>YAML</b> speichern Tabellen als Dateien im App-Datenordner. " +
+                        "Ein Backend-Wechsel migriert vorhandene Daten nicht automatisch.</div></html>"));
+        backendCard.add(Box.createVerticalStrut(12));
+
+        databaseTypeComboBox = new JComboBox<>(DatabaseManager.DatabaseType.values());
+        styleComboBox(databaseTypeComboBox);
+        databaseTypeComboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                String text = "";
+                if (value instanceof DatabaseManager.DatabaseType type) {
+                    text = type.getDisplayName() + " (" + type.getConfigValue() + ")";
+                }
+                return super.getListCellRendererComponent(list, text, index, isSelected, cellHasFocus);
+            }
+        });
+        databaseTypeComboBox.addActionListener(e -> {
+            updateDatabaseBackendHint();
+            updateDatabaseMigrationHint();
+        });
+
+        JPanel selectionPanel = createLabeledComboBoxPanel("Speicher-Backend:", databaseTypeComboBox);
+        selectionPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        backendCard.add(selectionPanel);
+        backendCard.add(Box.createVerticalStrut(10));
+
+        databaseBackendHintLabel = createInfoLabel("");
+        databaseBackendHintLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        backendCard.add(databaseBackendHintLabel);
+        updateDatabaseBackendHint();
+        return backendCard;
+    }
+
+    private void updateDatabaseBackendHint() {
+        if (databaseBackendHintLabel == null) {
+            return;
+        }
+
+        DatabaseManager.DatabaseType selectedType = getSelectedDatabaseType();
+        String storageMode = switch (selectedType) {
+            case SQLITE, H2 -> "Dateibasierte Datenbank";
+            case JSON, YAML -> "Dateisystem-Speicher";
+        };
+        databaseBackendHintLabel.setText(
+                "<html><div style='width:650px;'><b>" + selectedType.getDisplayName() + "</b> - " + storageMode +
+                        "<br/>Ablage: <code>" + describeDatabaseStorage(selectedType) + "</code>" +
+                        "<br/><i>Hinweis:</i> Bereits gespeicherte Daten bleiben im bisherigen Backend, bis sie separat migriert werden.</div></html>");
+    }
+
+    private DatabaseManager.DatabaseType getSelectedDatabaseType() {
+        if (databaseTypeComboBox == null || databaseTypeComboBox.getSelectedItem() == null) {
+            return DEFAULT_DATABASE_TYPE;
+        }
+        return (DatabaseManager.DatabaseType) databaseTypeComboBox.getSelectedItem();
+    }
+
+    private JPanel createDatabaseMigrationCard() {
+        JPanel migrationCard = createStandardSectionCard(
+                UnicodeSymbols.REFRESH + " Daten migrieren",
+                "Kopiert den Datenbestand von einem Quell-Backend in das aktuell ausgewählte Ziel-Backend",
+                null);
+
+        migrationCard.add(createInfoLabel(
+                "<html><div style='width:650px;'>Die Migration kopiert alle bekannten Anwendungstabellen "
+                        + "in das oben ausgewählte Ziel-Backend und <b>überschreibt</b> den dortigen Datenbestand. "
+                        + "Die Einstellung <b>Speicher-Backend</b> wird dadurch nicht automatisch gespeichert.</div></html>"));
+        migrationCard.add(Box.createVerticalStrut(12));
+
+        migrationSourceComboBox = new JComboBox<>(DatabaseManager.DatabaseType.values());
+        styleComboBox(migrationSourceComboBox);
+        migrationSourceComboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                          boolean isSelected, boolean cellHasFocus) {
+                String text = "";
+                if (value instanceof DatabaseManager.DatabaseType type) {
+                    text = type.getDisplayName() + " (" + type.getConfigValue() + ")";
+                }
+                return super.getListCellRendererComponent(list, text, index, isSelected, cellHasFocus);
+            }
+        });
+        DatabaseManager.DatabaseType activeType = Main.databaseManager != null
+                ? Main.databaseManager.getDatabaseType()
+                : DEFAULT_DATABASE_TYPE;
+        migrationSourceComboBox.setSelectedItem(activeType);
+        migrationSourceComboBox.addActionListener(e -> updateDatabaseMigrationHint());
+
+        JPanel sourcePanel = createLabeledComboBoxPanel("Quelle:", migrationSourceComboBox);
+        sourcePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        migrationCard.add(sourcePanel);
+        migrationCard.add(Box.createVerticalStrut(10));
+
+        databaseMigrationHintLabel = createInfoLabel("");
+        databaseMigrationHintLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        migrationCard.add(databaseMigrationHintLabel);
+        migrationCard.add(Box.createVerticalStrut(12));
+
+        JPanel actionRow = createWrapButtonPanel(FlowLayout.LEFT, 8, 8);
+        migrateDatabaseButton = createStyledButton(UnicodeSymbols.REFRESH + " Daten migrieren", ThemeManager.getSuccessColor());
+        migrateDatabaseButton.setToolTipText("Kopiert alle Anwendungstabellen in das ausgewählte Ziel-Backend");
+        migrateDatabaseButton.addActionListener(e -> startDatabaseMigration());
+        actionRow.add(migrateDatabaseButton);
+        migrationCard.add(actionRow);
+
+        updateDatabaseMigrationHint();
+        return migrationCard;
+    }
+
+    private void updateDatabaseMigrationHint() {
+        if (databaseMigrationHintLabel == null) {
+            return;
+        }
+
+        DatabaseManager.DatabaseType sourceType = getSelectedMigrationSourceType();
+        DatabaseManager.DatabaseType targetType = getSelectedDatabaseType();
+        boolean identical = sourceType == targetType;
+        boolean targetIsActive = Main.databaseManager != null && Main.databaseManager.getDatabaseType() == targetType;
+
+        if (migrateDatabaseButton != null) {
+            migrateDatabaseButton.setEnabled(!identical);
+        }
+
+        String targetNote = targetIsActive
+                ? "Das Ziel ist aktuell aktiv. Ein Neustart wird nach der Migration empfohlen."
+                : "Nach der Migration bitte das Ziel-Backend speichern und die App neu starten.";
+
+        databaseMigrationHintLabel.setText(
+                "<html><div style='width:650px;'><b>Quelle:</b> " + sourceType.getDisplayName()
+                        + "<br/><code>" + describeDatabaseStorage(sourceType) + "</code>"
+                        + "<br/><b>Ziel:</b> " + targetType.getDisplayName()
+                        + "<br/><code>" + describeDatabaseStorage(targetType) + "</code>"
+                        + "<br/><i>Hinweis:</i> "
+                        + (identical
+                        ? "Bitte unterschiedliche Backends für Quelle und Ziel auswählen."
+                        : targetNote)
+                        + "</div></html>");
+    }
+
+    private DatabaseManager.DatabaseType getSelectedMigrationSourceType() {
+        if (migrationSourceComboBox == null || migrationSourceComboBox.getSelectedItem() == null) {
+            return DEFAULT_DATABASE_TYPE;
+        }
+        return (DatabaseManager.DatabaseType) migrationSourceComboBox.getSelectedItem();
+    }
+
+    private String describeDatabaseStorage(DatabaseManager.DatabaseType databaseType) {
+        String configuredFileName = resolveDatabaseFileNameFor(databaseType);
+        File appDataDir = Main.getAppDataDir();
+        if (databaseType == DatabaseManager.DatabaseType.SQLITE) {
+            return new File(appDataDir, configuredFileName).getAbsolutePath();
+        }
+
+        String normalizedName = normalizeDatabaseBaseName(configuredFileName);
+        if (databaseType == DatabaseManager.DatabaseType.H2) {
+            return new File(appDataDir, normalizedName + ".mv.db").getAbsolutePath();
+        }
+
+        String suffix = databaseType == DatabaseManager.DatabaseType.JSON ? "_json" : "_yaml";
+        String extension = databaseType == DatabaseManager.DatabaseType.JSON ? "*.json" : "*.yaml";
+        return new File(new File(appDataDir, normalizedName + suffix), "tables").getAbsolutePath()
+                + File.separator + extension;
+    }
+
+    private String resolveDatabaseFileNameFor(DatabaseManager.DatabaseType databaseType) {
+        String configured = Main.settings.getProperty("database_file");
+        if (configured != null && !configured.isBlank()) {
+            return configured.trim();
+        }
+        return DatabaseManager.getDefaultFileName(databaseType);
+    }
+
+    private String normalizeDatabaseBaseName(String fileName) {
+        String normalized = (fileName == null || fileName.isBlank())
+                ? DatabaseManager.getDefaultFileName(DatabaseManager.DatabaseType.H2)
+                : fileName.trim();
+        normalized = stripSuffixIgnoreCase(normalized, ".mv.db");
+        normalized = stripSuffixIgnoreCase(normalized, ".db");
+        normalized = stripSuffixIgnoreCase(normalized, ".json");
+        normalized = stripSuffixIgnoreCase(normalized, ".yaml");
+        normalized = stripSuffixIgnoreCase(normalized, ".yml");
+        return normalized;
+    }
+
+    private String stripSuffixIgnoreCase(String value, String suffix) {
+        if (value == null || suffix == null) {
+            return value;
+        }
+        return value.toLowerCase(Locale.ROOT).endsWith(suffix.toLowerCase(Locale.ROOT))
+                ? value.substring(0, value.length() - suffix.length())
+                : value;
+    }
+
+    private void startDatabaseMigration() {
+        DatabaseManager.DatabaseType sourceType = getSelectedMigrationSourceType();
+        DatabaseManager.DatabaseType targetType = getSelectedDatabaseType();
+        if (sourceType == targetType) {
+            new MessageDialog()
+                    .setTitle("Migration nicht möglich")
+                    .setMessage("Quelle und Ziel müssen unterschiedlich sein.")
+                    .setMessageType(JOptionPane.WARNING_MESSAGE)
+                    .display();
+            return;
+        }
+
+        int confirm = new MessageDialog()
+                .setTitle("Migration bestätigen")
+                .setMessage("<html><b>Daten wirklich migrieren?</b><br/><br/>"
+                        + "Quelle: <b>" + sourceType.getDisplayName() + "</b><br/>"
+                        + describeDatabaseStorage(sourceType) + "<br/><br/>"
+                        + "Ziel: <b>" + targetType.getDisplayName() + "</b><br/>"
+                        + describeDatabaseStorage(targetType) + "<br/><br/>"
+                        + "Der aktuelle Datenbestand im Ziel wird ersetzt.</html>")
+                .setMessageType(JOptionPane.WARNING_MESSAGE)
+                .setOptionType(JOptionPane.YES_NO_OPTION)
+                .displayWithOptions();
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        if (migrateDatabaseButton != null) {
+            migrateDatabaseButton.setEnabled(false);
+        }
+        if (migrationSourceComboBox != null) {
+            migrationSourceComboBox.setEnabled(false);
+        }
+        String originalText = migrateDatabaseButton == null ? "" : migrateDatabaseButton.getText();
+        if (migrateDatabaseButton != null) {
+            migrateDatabaseButton.setText(UnicodeSymbols.REFRESH + " Migriert...");
+        }
+        setMaintenanceBusy(true);
+
+        SwingWorker<DatabaseManager.MigrationSummary, Void> worker = new SwingWorker<>() {
+            @Override
+            protected DatabaseManager.MigrationSummary doInBackground() {
+                return performDatabaseMigration(sourceType, targetType);
+            }
+
+            @Override
+            protected void done() {
+                if (migrateDatabaseButton != null) {
+                    migrateDatabaseButton.setEnabled(sourceType != targetType);
+                    migrateDatabaseButton.setText(originalText);
+                }
+                if (migrationSourceComboBox != null) {
+                    migrationSourceComboBox.setEnabled(true);
+                }
+                setMaintenanceBusy(false);
+                try {
+                    DatabaseManager.MigrationSummary summary = get();
+                    new MessageDialog()
+                            .setTitle("Migration erfolgreich")
+                            .setMessage(buildDatabaseMigrationSuccessMessage(summary))
+                            .setMessageType(JOptionPane.INFORMATION_MESSAGE)
+                            .display();
+                } catch (Exception ex) {
+                    logger.error("Database migration failed", ex);
+                    new MessageDialog()
+                            .setTitle("Migration fehlgeschlagen")
+                            .setMessage("Die Datenmigration konnte nicht abgeschlossen werden: "
+                                    + getReadableExceptionMessage(ex))
+                            .setDuration(7000)
+                            .setMessageType(JOptionPane.ERROR_MESSAGE)
+                            .display();
+                } finally {
+                    updateDatabaseMigrationHint();
+                }
+            }
+        };
+        worker.execute();
+    }
+
+    private DatabaseManager.MigrationSummary performDatabaseMigration(DatabaseManager.DatabaseType sourceType,
+                                                                      DatabaseManager.DatabaseType targetType) {
+        List<DatabaseManager> temporaryManagers = new ArrayList<>();
+        try {
+            DatabaseManager sourceManager = resolveMigrationManager(sourceType, temporaryManagers);
+            DatabaseManager targetManager = resolveMigrationManager(targetType, temporaryManagers);
+            return sourceManager.migrateDataTo(targetManager);
+        } finally {
+            for (DatabaseManager manager : temporaryManagers) {
+                try {
+                    manager.close();
+                } catch (Exception closeException) {
+                    logger.warn("Temporary migration manager could not be closed cleanly", closeException);
+                }
+            }
+        }
+    }
+
+    private DatabaseManager resolveMigrationManager(DatabaseManager.DatabaseType databaseType,
+                                                    List<DatabaseManager> temporaryManagers) {
+        if (Main.databaseManager != null && Main.databaseManager.getDatabaseType() == databaseType) {
+            return Main.databaseManager;
+        }
+
+        DatabaseManager manager = new DatabaseManager(
+                databaseType,
+                Main.getAppDataDir().getAbsolutePath(),
+                resolveDatabaseFileNameFor(databaseType));
+        temporaryManagers.add(manager);
+        return manager;
+    }
+
+    private String buildDatabaseMigrationSuccessMessage(DatabaseManager.MigrationSummary summary) {
+        StringBuilder builder = new StringBuilder("<html><b>")
+                .append(UnicodeSymbols.CHECKMARK)
+                .append(" Migration erfolgreich!</b><br/><br/>")
+                .append("Quelle: ")
+                .append(summary.getSourceType().getDisplayName())
+                .append("<br/>Ziel: ")
+                .append(summary.getTargetType().getDisplayName())
+                .append("<br/>Tabellen verarbeitet: ")
+                .append(summary.getTableCount())
+                .append("<br/>Zeilen kopiert: ")
+                .append(summary.getRowCount());
+
+        if (!summary.getMigratedRowsPerTable().isEmpty()) {
+            builder.append("<br/><br/>Tabellen: ");
+            boolean first = true;
+            for (Map.Entry<String, Integer> entry : summary.getMigratedRowsPerTable().entrySet()) {
+                if (!first) {
+                    builder.append(", ");
+                }
+                builder.append(entry.getKey()).append(" (").append(entry.getValue()).append(')');
+                first = false;
+            }
+        }
+
+        boolean targetIsActive = Main.databaseManager != null
+                && Main.databaseManager.getDatabaseType() == summary.getTargetType();
+        builder.append("<br/><br/><i>")
+                .append(targetIsActive
+                        ? "Das Ziel-Backend ist aktuell aktiv. Bitte starten Sie die App neu, damit alle Ansichten neu laden."
+                        : "Wenn dieses Backend verwendet werden soll, speichern Sie die Einstellung und starten Sie die App neu.")
+                .append("</i></html>");
+        return builder.toString();
     }
 
     private void buildImportExportTab(JTabbedPane tabbedPane) {
@@ -2959,6 +3321,12 @@ public class SettingsGUI extends JFrame {
                 int warningInterval = (Integer) warningDisplayIntervalSpinner.getValue();
                 boolean enableAutoCheck = enableAutoStockCheckCheckbox.isSelected();
                 boolean darkMode = darkModeCheckbox.isSelected();
+                String previousDatabaseType = Main.settings.getProperty("database_type");
+                if (previousDatabaseType == null || previousDatabaseType.isBlank()) {
+                    previousDatabaseType = DEFAULT_DATABASE_TYPE.getConfigValue();
+                }
+                String selectedDatabaseType = getSelectedDatabaseType().getConfigValue();
+                boolean databaseTypeChanged = !selectedDatabaseType.equalsIgnoreCase(previousDatabaseType);
 
                 SettingsRuntimeService.persistSettings(collectSettingsProperties());
 
@@ -2969,8 +3337,7 @@ public class SettingsGUI extends JFrame {
 
                 new MessageDialog()
                         .setTitle("Einstellungen gespeichert")
-                        .setMessage("<html><b>Einstellungen gespeichert!</b><br/><br/>" +
-                                "Die neuen Einstellungen wurden erfolgreich übernommen.</html>")
+                        .setMessage(buildSaveSuccessMessage(databaseTypeChanged))
                         .setMessageType(JOptionPane.INFORMATION_MESSAGE)
                         .display();
                 dispose();
@@ -2986,6 +3353,16 @@ public class SettingsGUI extends JFrame {
                     .display();
             Main.logUtils.addLog("Fehler beim Speichern der Einstellungen: " + e.getMessage());
         }
+    }
+
+    private String buildSaveSuccessMessage(boolean databaseTypeChanged) {
+        if (!databaseTypeChanged) {
+            return "<html><b>Einstellungen gespeichert!</b><br/><br/>" +
+                    "Die neuen Einstellungen wurden erfolgreich übernommen.</html>";
+        }
+        return "<html><b>Einstellungen gespeichert!</b><br/><br/>" +
+                "Die neuen Einstellungen wurden erfolgreich übernommen.<br/><br/>" +
+                "<b>Wichtig:</b> Das neue Speicher-Backend wird erst nach einem Neustart der Anwendung verwendet.</html>";
     }
 
     private void resetStockCheckDefaults() {
@@ -3039,6 +3416,21 @@ public class SettingsGUI extends JFrame {
         serverUrlField.setText(DEFAULT_SERVER_URL);
     }
 
+    private void resetDatabaseDefaults() {
+        if (databaseTypeComboBox != null) {
+            databaseTypeComboBox.setSelectedItem(DEFAULT_DATABASE_TYPE);
+            updateDatabaseBackendHint();
+            updateDatabaseMigrationHint();
+        }
+        if (migrationSourceComboBox != null) {
+            DatabaseManager.DatabaseType activeType = Main.databaseManager != null
+                    ? Main.databaseManager.getDatabaseType()
+                    : DEFAULT_DATABASE_TYPE;
+            migrationSourceComboBox.setSelectedItem(activeType);
+            updateDatabaseMigrationHint();
+        }
+    }
+
     private void resetAllDefaults() {
         resetStockCheckDefaults();
         resetWarningDefaults();
@@ -3047,6 +3439,7 @@ public class SettingsGUI extends JFrame {
         resetTableDefaults();
         resetThemeDefaults();
         resetServerDefaults();
+        resetDatabaseDefaults();
         resetColorDefaults();
         resetMaintenanceDefaults();
     }
@@ -3069,6 +3462,7 @@ public class SettingsGUI extends JFrame {
         props.setProperty("enable_automatic_import_qrcode", String.valueOf(automaticImportCheckBox.isSelected()));
         props.setProperty("qrcode_import_interval", String.valueOf(qrCodeImportIntervalSpinner.getValue()));
         props.setProperty("dark_mode", String.valueOf(darkModeCheckbox.isSelected()));
+        props.setProperty("database_type", getSelectedDatabaseType().getConfigValue());
         props.setProperty("table_font_size", String.valueOf(fontSizeTableSpinner.getValue()));
         props.setProperty("table_font_size_tab", String.valueOf(fontSizeTabSpinner.getValue()));
         Object fontStyle = fontComboBox.getSelectedItem();
@@ -3100,6 +3494,16 @@ public class SettingsGUI extends JFrame {
         darkModeCheckbox.setSelected(darkMode);
         themeComboBox.setSelectedItem(darkMode ? "Dark" : "Light");
         themeComboBox.setEnabled(!darkMode);
+        if (databaseTypeComboBox != null) {
+            databaseTypeComboBox.setSelectedItem(
+                    DatabaseManager.DatabaseType.fromConfig(props.getProperty("database_type")));
+        }
+        if (migrationSourceComboBox != null) {
+            DatabaseManager.DatabaseType activeType = Main.databaseManager != null
+                    ? Main.databaseManager.getDatabaseType()
+                    : DEFAULT_DATABASE_TYPE;
+            migrationSourceComboBox.setSelectedItem(activeType);
+        }
         fontSizeTableSpinner.setValue(SettingsProfileService.parseIntProperty(props, "table_font_size", DEFAULT_TABLE_FONT_SIZE));
         fontSizeTabSpinner.setValue(SettingsProfileService.parseIntProperty(props, "table_font_size_tab", DEFAULT_TAB_FONT_SIZE));
         fontComboBox.setSelectedItem(props.getProperty("font_style", DEFAULT_FONT_STYLE));
@@ -3109,6 +3513,8 @@ public class SettingsGUI extends JFrame {
         deleteOldLogsCheckBox.setSelected(Boolean.parseBoolean(
                 props.getProperty("delete_old_logs_on_startup", String.valueOf(DEFAULT_DELETE_OLD_LOGS_ON_STARTUP))));
         updateColorControls();
+        updateDatabaseBackendHint();
+        updateDatabaseMigrationHint();
         updatePreview();
     }
 
@@ -3216,7 +3622,7 @@ public class SettingsGUI extends JFrame {
         return SettingsDataTransferService.exportToCsv();
     }
 
-    private void styleComboBox(JComboBox<String> combo) {
+    private void styleComboBox(JComboBox<?> combo) {
         SettingsStylingService.styleComboBox(combo);
     }
 

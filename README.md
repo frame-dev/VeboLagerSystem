@@ -163,7 +163,7 @@
 
 ### Backend
 - **Java 21**
-- **SQLite** - Embedded Datenbank
+- **SQLite / H2** - Embedded Datenbank
 - **Apache PDFBox 2.0.35** - PDF-Generierung
 - **Log4j2** - Logging
 - **Gson** - JSON-Verarbeitung
@@ -182,6 +182,11 @@
     <groupId>org.xerial</groupId>
     <artifactId>sqlite-jdbc</artifactId>
     <version>3.51.1.0</version>
+</dependency>
+<dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>
+    <version>2.3.232</version>
 </dependency>
 
 <!-- PDF -->
@@ -509,6 +514,11 @@ enable_hourly_warnings=true
 warning_display_interval=1
 enable_auto_stock_check=true
 
+# Database
+# Supported values: sqlite, h2, json, yaml
+database_type=h2
+database_file=
+
 # QR-Code Import
 enable_automatic_import_qrcode=true
 qrcode_import_interval=10
@@ -540,6 +550,11 @@ github-token=
 ```
 VeboLagerSystem/
 ├── vebo_lager_system.db      # SQLite-Datenbank
+├── vebo_lager_system.mv.db   # H2-Datenbank (bei database_type=h2)
+├── vebo_lager_system_json/   # JSON-Dateispeicher (bei database_type=json)
+│   └── tables/
+├── vebo_lager_system_yaml/   # YAML-Dateispeicher (bei database_type=yaml)
+│   └── tables/
 ├── settings.properties       # Einstellungen
 ├── scans.json                # QR-Scan-Daten
 ├── qr_codes/                 # Generierte QR-Codes

@@ -613,7 +613,7 @@
                     <p class="subtitle" style="margin-top: 14px;">Alle wichtigen Bereiche der Anwendung an einem Ort:
                         Lager, Bestellungen, QR-Workflows, Protokolle, Wartung und tägliche Arbeitsabläufe.</p>
                 </div>
-                <div class="chip"><span class="dot"></span><span>Desktop App • Java 21 • SQLite • PDF</span></div>
+                <div class="chip"><span class="dot"></span><span>Desktop App • Java 21 • SQLite/H2 • PDF</span></div>
             </div>
 
             <blockquote>
@@ -940,6 +940,8 @@ mvn exec:java -Dexec.mainClass="ch.framedev.lagersystem.main.Main"</code></pre>
                 <pre><code># First run / Import
 first-time=true
 load-from-files=true
+database_type=sqlite
+database_file=
 
 # Scheduler
 stock_check_interval=30
@@ -964,7 +966,7 @@ theme_button_color=
 
 # Update-Manager
 github-token=</code></pre>
-                <p class="muted">Wichtige Bereiche sind Theme/UI, Warnungen, automatischer QR-Import, Kategorien, Server-Verbindung, Datenbankpflege und Update-Verhalten.</p>
+                <p class="muted">Wichtige Bereiche sind Theme/UI, Warnungen, automatischer QR-Import, Kategorien, Server-Verbindung, Datenbankpflege, Datenbanktyp (<code>sqlite</code>, <code>h2</code>, <code>json</code> oder <code>yaml</code>) und Update-Verhalten.</p>
             </section>
 
             <section id="datadir">
@@ -977,7 +979,9 @@ github-token=</code></pre>
                     </li>
                 </ul>
                 <pre><code>VeboLagerSystem/
-├── vebo_lager_system.db
+├── vebo_lager_system.db / vebo_lager_system.mv.db
+├── vebo_lager_system_json/tables/
+├── vebo_lager_system_yaml/tables/
 ├── settings.properties
 ├── scans.json
 ├── qr_codes/

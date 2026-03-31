@@ -36,6 +36,7 @@ public class LogUtils {
             DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss", Locale.ROOT);
     private static final DateTimeFormatter FILE_DATE_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ROOT);
+    private static final ThreadLocal<Boolean> FORWARDING_TO_DB = ThreadLocal.withInitial(() -> false);
     private final Path logDirectoryPath;
 
     /**
@@ -95,13 +96,22 @@ public class LogUtils {
         LOGGER.log(effectiveLevel, msg);
 
         // Forward to the application's own LogManager (if available)
+        if (Main.databaseManager == null) {
+            return;
+        }
+        if (Boolean.TRUE.equals(FORWARDING_TO_DB.get())) {
+            return;
+        }
         try {
+            FORWARDING_TO_DB.set(true);
             ch.framedev.lagersystem.managers.LogManager logManager = ch.framedev.lagersystem.managers.LogManager.getInstance();
             if (!logManager.createLog(mapAppLogLevel(effectiveLevel), msg)) {
                 LOGGER.log(Level.ERROR, "LogManager could not create log");
             }
         } catch (Exception ex) {
             LOGGER.log(Level.ERROR, "Fehler beim Weiterleiten an den internen LogManager", ex);
+        } finally {
+            FORWARDING_TO_DB.remove();
         }
     }
 
