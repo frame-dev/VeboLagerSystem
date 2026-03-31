@@ -9,6 +9,8 @@ import ch.framedev.lagersystem.managers.WarningManager;
 import ch.framedev.lagersystem.utils.UnicodeSymbols;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
@@ -19,15 +21,18 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * This class provides methods to display warnings in a modern, styled dialog. It can show individual warnings with details and actions, as well as a table overview of all warnings. It uses the WarningManager to retrieve and update warnings. The dialogs are designed to be visually appealing and user-friendly, with responsive layouts and consistent theming. The code is structured to separate UI construction from data handling, and includes helper methods for common UI components like headers, buttons, and status chips.
  */
 public class DisplayWarningDialog {
 
-    private static final Dimension WARNING_DIALOG_MIN_SIZE = new Dimension(620, 420);
-    private static final Dimension WARNINGS_DIALOG_SIZE = new Dimension(980, 650);
+    private static final Dimension WARNING_DIALOG_MIN_SIZE = new Dimension(700, 500);
+    private static final Dimension WARNING_DIALOG_SIZE = new Dimension(820, 580);
+    private static final Dimension WARNINGS_DIALOG_SIZE = new Dimension(1100, 760);
     private static final Dimension WARNINGS_EMPTY_DIALOG_SIZE = new Dimension(920, 620);
+    private static final int MESSAGE_PREVIEW_LENGTH = 96;
 
     /**
      * Private constructor to prevent instantiation, as this class is intended to be used statically.
@@ -69,71 +74,40 @@ public class DisplayWarningDialog {
                     palette.headerA(),
                     palette.headerB(),
                     palette.icon() + "  " + warning.getType().getDisplayName(),
-                    UnicodeSymbols.INFO + " Details",
+                    UnicodeSymbols.INFO + " Details und Status",
                     dialog
             );
             chrome.add(header, BorderLayout.NORTH);
 
-            JPanel contentCard = createCardPanel(new GridBagLayout(), 22, 22, 18, 22);
+            JPanel contentCard = createCardPanel(new BorderLayout(0, 16), 22, 22, 18, 22);
 
-            GridBagConstraints gbc = new GridBagConstraints();
-            gbc.gridx = 0;
-            gbc.gridy = 0;
-            gbc.weightx = 1.0;
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.anchor = GridBagConstraints.NORTHWEST;
-            gbc.insets = new Insets(0, 0, 12, 0);
-
-            // Title
             JLabel titleLabel = new JLabel(warning.getTitle());
-            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 17));
+            titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 18));
             titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
-            contentCard.add(titleLabel, gbc);
 
-            // Message (scrollable when large)
-            gbc.gridy++;
-            gbc.insets = new Insets(0, 0, 14, 0);
-            JTextArea messageArea = new JTextArea(warning.getMessage());
-            messageArea.setWrapStyleWord(true);
-            messageArea.setLineWrap(true);
-            messageArea.setEditable(false);
-            messageArea.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
-            messageArea.setForeground(ThemeManager.getTextPrimaryColor());
-            messageArea.setBackground(ThemeManager.getCardBackgroundColor());
-            messageArea.setBorder(null);
-            messageArea.setCaretPosition(0);
+            JLabel dateLabel = createMetaLabel(UnicodeSymbols.CALENDAR + " Datum: " + warning.getDate());
+            JLabel typeLabel = createMetaLabel(UnicodeSymbols.TAG + " Typ: " + warning.getType().getDisplayName());
 
-            JScrollPane messageScroll = new JScrollPane(messageArea);
-            messageScroll.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
-                    BorderFactory.createEmptyBorder(8, 10, 8, 10)
-            ));
-            messageScroll.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
-            messageScroll.setBackground(ThemeManager.getCardBackgroundColor());
-            messageScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-            messageScroll.getVerticalScrollBar().setUnitIncrement(14);
-            messageScroll.setPreferredSize(new Dimension(520, 130));
-            contentCard.add(messageScroll, gbc);
-
-            // Meta row
-            gbc.gridy++;
-            gbc.insets = new Insets(0, 0, 10, 0);
-            JPanel metaRow = new JPanel(new BorderLayout(10, 0));
+            JPanel metaRow = new JPanel(new BorderLayout(12, 8));
             metaRow.setOpaque(false);
+            metaRow.add(createStatusChip(warning.isResolved()), BorderLayout.EAST);
 
-            JLabel dateLabel = new JLabel(UnicodeSymbols.CALENDAR + " Datum: " + warning.getDate());
-            dateLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
-            dateLabel.setForeground(ThemeManager.getTextSecondaryColor());
-            metaRow.add(dateLabel, BorderLayout.WEST);
+            JPanel metaLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+            metaLeft.setOpaque(false);
+            metaLeft.add(typeLabel);
+            metaLeft.add(dateLabel);
+            metaRow.add(metaLeft, BorderLayout.WEST);
 
-            JLabel statusChip = createStatusChip(warning.isResolved());
-            metaRow.add(statusChip, BorderLayout.EAST);
+            JPanel introPanel = new JPanel(new BorderLayout(0, 10));
+            introPanel.setOpaque(false);
+            introPanel.add(titleLabel, BorderLayout.NORTH);
+            introPanel.add(metaRow, BorderLayout.SOUTH);
+            contentCard.add(introPanel, BorderLayout.NORTH);
 
-            contentCard.add(metaRow, gbc);
+            JTextArea messageArea = createMessageArea(warning.getMessage(), 14);
+            JScrollPane messageScroll = createMessageScrollPane(messageArea, 640, 260);
+            contentCard.add(createMessageCard(messageScroll), BorderLayout.CENTER);
 
-            // Buttons
-            gbc.gridy++;
-            gbc.insets = new Insets(8, 0, 0, 0);
             JPanel buttonBar = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
             buttonBar.setOpaque(false);
 
@@ -162,7 +136,7 @@ public class DisplayWarningDialog {
             closeBtn.addActionListener(e -> dialog.dispose());
             buttonBar.add(closeBtn);
 
-            contentCard.add(buttonBar, gbc);
+            contentCard.add(buttonBar, BorderLayout.SOUTH);
 
             chrome.add(contentCard, BorderLayout.CENTER);
 
@@ -173,8 +147,8 @@ public class DisplayWarningDialog {
             // Mark as displayed
             warning.setDisplayed(true);
 
-            dialog.pack();
             dialog.setMinimumSize(WARNING_DIALOG_MIN_SIZE);
+            dialog.setSize(WARNING_DIALOG_SIZE);
             dialog.setLocationRelativeTo(frame);
             dialog.setVisible(true);
         });
@@ -261,17 +235,17 @@ public class DisplayWarningDialog {
                     status,
                     type,
                     w.getTitle(),
-                    w.getMessage(),
+                    previewMessage(w.getMessage()),
                     w.getDate()
             });
         }
 
-        JTable table = getWarningsTable(tableModel);
+        JTable table = getWarningsTable(tableModel, warnings);
         TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
         table.setRowSorter(sorter);
 
         // Render: alternating rows; status color only in column 0
-        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+        DefaultTableCellRenderer defaultRenderer = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected,
                                                            boolean hasFocus, int row, int column) {
@@ -294,9 +268,22 @@ public class DisplayWarningDialog {
                     c.setForeground(ThemeManager.getSelectionForegroundColor());
                 }
 
-                setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
+                setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
                 setHorizontalAlignment(column == 3 ? SwingConstants.LEFT : SwingConstants.CENTER);
                 return c;
+            }
+        };
+        table.setDefaultRenderer(Object.class, defaultRenderer);
+        table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected,
+                                                           boolean hasFocus, int row, int column) {
+                JLabel label = (JLabel) defaultRenderer.getTableCellRendererComponent(
+                        t, value, isSelected, hasFocus, row, column);
+                label.setVerticalAlignment(SwingConstants.CENTER);
+                label.setHorizontalAlignment(SwingConstants.LEFT);
+                label.setText(createPreviewHtml(value == null ? "" : value.toString(), isSelected));
+                return label;
             }
         });
 
@@ -313,18 +300,93 @@ public class DisplayWarningDialog {
         th.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
         th.setPreferredSize(new Dimension(th.getWidth(), 40));
 
+        JTextField searchField = createSearchField();
+        JLabel resultLabel = createMetaLabel(UnicodeSymbols.SEARCH + " Suche in Titel, Nachricht, Typ und Datum");
+        JLabel openCountChip = createSummaryChip(
+                UnicodeSymbols.WARNING + " Offen: 0",
+                ThemeManager.getWarningColor(), ThemeManager.withAlpha(ThemeManager.getWarningColor(), 30));
+        JLabel resolvedCountChip = createSummaryChip(
+                UnicodeSymbols.CHECKMARK + " Gelöst: 0",
+                ThemeManager.getSuccessColor(), ThemeManager.withAlpha(ThemeManager.getSuccessColor(), 28));
+        JLabel totalCountChip = createSummaryChip(
+                UnicodeSymbols.CLIPBOARD + " Sichtbar: 0 / " + warnings.size(),
+                ThemeManager.getAccentColor(), ThemeManager.withAlpha(ThemeManager.getAccentColor(), 24));
+        final WarningFilterMode[] filterMode = {WarningFilterMode.ALL};
+
+        JPanel filterRow = new JPanel(new BorderLayout(10, 0));
+        filterRow.setOpaque(false);
+        filterRow.add(searchField, BorderLayout.CENTER);
+        filterRow.add(resultLabel, BorderLayout.EAST);
+
+        JPanel filterButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        filterButtons.setOpaque(false);
+        JToggleButton allButton = createFilterToggleButton("Alle");
+        JToggleButton openButton = createFilterToggleButton("Nur offen");
+        JToggleButton resolvedButton = createFilterToggleButton("Nur gelöst");
+        ButtonGroup filterGroup = new ButtonGroup();
+        filterGroup.add(allButton);
+        filterGroup.add(openButton);
+        filterGroup.add(resolvedButton);
+        allButton.setSelected(true);
+        filterButtons.add(allButton);
+        filterButtons.add(openButton);
+        filterButtons.add(resolvedButton);
+
+        JPanel summaryRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        summaryRow.setOpaque(false);
+        summaryRow.add(openCountChip);
+        summaryRow.add(resolvedCountChip);
+        summaryRow.add(totalCountChip);
+        summaryRow.add(filterButtons);
+
+        JPanel contentTop = createCardPanel(new BorderLayout(0, 10), 16, 16, 10, 16);
+        contentTop.add(filterRow, BorderLayout.NORTH);
+        contentTop.add(summaryRow, BorderLayout.SOUTH);
+
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createEmptyBorder(16, 16, 10, 16),
-                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true)
-        ));
+        scrollPane.setBorder(BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true));
         scrollPane.getViewport().setBackground(ThemeManager.getCardBackgroundColor());
         scrollPane.setBackground(ThemeManager.getBackgroundColor());
 
-        chrome.add(scrollPane, BorderLayout.CENTER);
+        JTextArea detailsArea = createMessageArea("", 15);
+        detailsArea.setText("Wählen Sie eine Warnung aus,\num alle Details vollständig zu sehen.");
+        JLabel detailTitle = new JLabel(UnicodeSymbols.INFO + " Warnungsdetails");
+        detailTitle.setFont(SettingsGUI.getFontByName(Font.BOLD, 16));
+        detailTitle.setForeground(ThemeManager.getTextPrimaryColor());
+        JLabel detailMeta = createMetaLabel("Noch keine Warnung ausgewählt");
+        JPanel detailStatusHolder = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        detailStatusHolder.setOpaque(false);
 
-        int resolvedCount = (int) warnings.stream().filter(Warning::isResolved).count();
-        int openCount = warnings.size() - resolvedCount;
+        JPanel detailHeader = new JPanel(new BorderLayout(10, 8));
+        detailHeader.setOpaque(false);
+        JPanel detailHeaderLeft = new JPanel(new BorderLayout(0, 6));
+        detailHeaderLeft.setOpaque(false);
+        detailHeaderLeft.add(detailTitle, BorderLayout.NORTH);
+        detailHeaderLeft.add(detailMeta, BorderLayout.SOUTH);
+        detailHeader.add(detailHeaderLeft, BorderLayout.CENTER);
+        detailHeader.add(detailStatusHolder, BorderLayout.EAST);
+
+        JPanel detailsCard = createCardPanel(new BorderLayout(0, 14), 18, 18, 18, 18);
+        detailsCard.add(detailHeader, BorderLayout.NORTH);
+        detailsCard.add(createMessageCard(
+                createMessageScrollPane(detailsArea, 900, 180),
+                "Vollständige Nachricht der ausgewählten Warnung",
+                "DETAILANSICHT"), BorderLayout.CENTER);
+
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scrollPane, detailsCard);
+        splitPane.setOpaque(false);
+        splitPane.setBorder(BorderFactory.createEmptyBorder(6, 16, 10, 16));
+        splitPane.setResizeWeight(0.62);
+        splitPane.setContinuousLayout(true);
+        splitPane.setDividerSize(10);
+        splitPane.setBackground(ThemeManager.getBackgroundColor());
+
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.setOpaque(false);
+        centerPanel.add(contentTop, BorderLayout.NORTH);
+        centerPanel.add(splitPane, BorderLayout.CENTER);
+
+        chrome.add(centerPanel, BorderLayout.CENTER);
 
         // Footer actions
         JPanel footer = new JPanel(new BorderLayout(10, 0));
@@ -333,10 +395,7 @@ public class DisplayWarningDialog {
 
         JPanel footerStatus = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 12));
         footerStatus.setOpaque(false);
-        footerStatus.add(createSummaryChip(UnicodeSymbols.WARNING + " Offen: " + openCount,
-            ThemeManager.getWarningColor(), ThemeManager.withAlpha(ThemeManager.getWarningColor(), 30)));
-        footerStatus.add(createSummaryChip(UnicodeSymbols.CHECKMARK + " Gelöst: " + resolvedCount,
-            ThemeManager.getSuccessColor(), ThemeManager.withAlpha(ThemeManager.getSuccessColor(), 28)));
+        footerStatus.add(createMetaLabel("Doppelklick zeigt die ausgewählte Warnung im Detaildialog."));
 
         JPanel footerButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
         footerButtons.setOpaque(false);
@@ -361,9 +420,28 @@ public class DisplayWarningDialog {
         closeBtn.setToolTipText("Schließt dieses Fenster");
         styleActionButton(closeBtn, ThemeManager.getSurfaceColor(), ThemeManager.getTextPrimaryColor());
 
+        Runnable refreshOverviewState = () -> applyFilters(
+                sorter, warnings, table, searchField, filterMode[0], resultLabel,
+                openCountChip, resolvedCountChip, totalCountChip,
+                detailTitle, detailMeta, detailsArea, detailStatusHolder);
+
+        allButton.addActionListener(e -> {
+            filterMode[0] = WarningFilterMode.ALL;
+            refreshOverviewState.run();
+        });
+        openButton.addActionListener(e -> {
+            filterMode[0] = WarningFilterMode.OPEN;
+            refreshOverviewState.run();
+        });
+        resolvedButton.addActionListener(e -> {
+            filterMode[0] = WarningFilterMode.RESOLVED;
+            refreshOverviewState.run();
+        });
+        installWarningSearch(searchField, refreshOverviewState);
+
         viewDetailsBtn.addActionListener(e -> {
-            int viewRow = table.getSelectedRow();
-            if (viewRow == -1) {
+            Warning selected = getSelectedWarning(table, warnings);
+            if (selected == null) {
                 new MessageDialog()
                         .setTitle("Keine Auswahl")
                         .setMessage("Bitte wählen Sie eine Warnung aus.")
@@ -371,8 +449,6 @@ public class DisplayWarningDialog {
                         .display();
                 return;
             }
-            int modelRow = table.convertRowIndexToModel(viewRow);
-            Warning selected = warnings.get(modelRow);
             displayWarning(frame, selected);
         });
 
@@ -390,8 +466,8 @@ public class DisplayWarningDialog {
         });
 
         resolveBtn.addActionListener(e -> {
-            int viewRow = table.getSelectedRow();
-            if (viewRow == -1) {
+            Warning selected = getSelectedWarning(table, warnings);
+            if (selected == null) {
                 JOptionPane.showMessageDialog(dialog,
                         "Bitte wählen Sie eine Warnung aus.",
                         "Keine Auswahl",
@@ -399,8 +475,7 @@ public class DisplayWarningDialog {
                         Main.iconSmall);
                 return;
             }
-            int modelRow = table.convertRowIndexToModel(viewRow);
-            Warning selected = warnings.get(modelRow);
+            int modelRow = warnings.indexOf(selected);
 
             if (selected.isResolved()) {
                 new MessageDialog()
@@ -415,6 +490,7 @@ public class DisplayWarningDialog {
             if (warningManager.resolveWarning(selected.getTitle())) {
                 selected.setResolved(true);
                 tableModel.setValueAt(UnicodeSymbols.CHECKMARK + " Gelöst", modelRow, 0);
+                refreshOverviewState.run();
                 new MessageDialog()
                         .setTitle("Erfolg")
                         .setMessage("Warnung wurde als gelöst markiert.")
@@ -425,8 +501,8 @@ public class DisplayWarningDialog {
         });
 
         deleteBtn.addActionListener(e -> {
-            int viewRow = table.getSelectedRow();
-            if (viewRow == -1) {
+            Warning selected = getSelectedWarning(table, warnings);
+            if (selected == null) {
                 new MessageDialog()
                         .setTitle("Keine Auswahl")
                         .setMessage("Bitte wählen Sie eine Warnung aus.")
@@ -434,7 +510,7 @@ public class DisplayWarningDialog {
                         .display();
                 return;
             }
-            int modelRow = table.convertRowIndexToModel(viewRow);
+            int modelRow = warnings.indexOf(selected);
 
             int confirm = new MessageDialog()
                 .setTitle("Löschen bestätigen")
@@ -444,12 +520,10 @@ public class DisplayWarningDialog {
                 .displayWithOptions();
             if (confirm != JOptionPane.YES_OPTION) return;
 
-            Warning selected = warnings.get(modelRow);
             if (warningManager.deleteWarning(selected.getTitle())) {
                 tableModel.removeRow(modelRow);
                 warnings.remove(modelRow);
-                dialog.dispose();
-                showAllWarnings(frame);
+                refreshOverviewState.run();
             }
         });
 
@@ -459,6 +533,14 @@ public class DisplayWarningDialog {
         });
 
         closeBtn.addActionListener(e -> dialog.dispose());
+
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                updateWarningDetails(getSelectedWarning(table, warnings), detailTitle, detailMeta, detailsArea, detailStatusHolder);
+            }
+        });
+
+        refreshOverviewState.run();
 
         footerButtons.add(viewDetailsBtn);
         footerButtons.add(resolveBtn);
@@ -497,10 +579,28 @@ public class DisplayWarningDialog {
         };
     }
 
-    private static JTable getWarningsTable(DefaultTableModel tableModel) {
+    private static JTable getWarningsTable(DefaultTableModel tableModel, List<Warning> warnings) {
         if(tableModel == null) throw new IllegalArgumentException("Table model must not be null");
-        JTable table = new JTable(tableModel);
-        table.setRowHeight(34);
+        JTable table = new JTable(tableModel) {
+            @Override
+            public String getToolTipText(MouseEvent event) {
+                int viewRow = rowAtPoint(event.getPoint());
+                int viewColumn = columnAtPoint(event.getPoint());
+                if (viewRow < 0 || viewColumn < 0) {
+                    return null;
+                }
+                if (viewColumn == 3) {
+                    int modelRow = convertRowIndexToModel(viewRow);
+                    if (modelRow >= 0 && modelRow < warnings.size()) {
+                        return toHtmlTooltip(warnings.get(modelRow).getMessage());
+                    }
+                }
+                Object value = getValueAt(viewRow, viewColumn);
+                return value == null ? null : value.toString();
+            }
+        };
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        table.setRowHeight(44);
         table.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setShowGrid(true);
@@ -514,6 +614,176 @@ public class DisplayWarningDialog {
         table.setBackground(ThemeManager.getCardBackgroundColor());
         table.setForeground(ThemeManager.getTextPrimaryColor());
         return table;
+    }
+
+    private static JTextField createSearchField() {
+        JTextField field = new JTextField();
+        field.setFont(SettingsGUI.getFontByName(Font.PLAIN, 13));
+        field.setForeground(ThemeManager.getTextPrimaryColor());
+        field.setBackground(ThemeManager.getInputBackgroundColor());
+        field.setCaretColor(ThemeManager.getTextPrimaryColor());
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(9, 12, 9, 12)
+        ));
+        field.setToolTipText("Suche nach Titel, Nachricht, Typ oder Datum");
+        return field;
+    }
+
+    private static void installWarningSearch(JTextField searchField, Runnable onFilterChange) {
+        DocumentListener listener = new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                onFilterChange.run();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                onFilterChange.run();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                onFilterChange.run();
+            }
+        };
+        searchField.getDocument().addDocumentListener(listener);
+    }
+
+    private static void applyFilters(TableRowSorter<DefaultTableModel> sorter, List<Warning> warnings, JTable table,
+                                     JTextField searchField, WarningFilterMode filterMode, JLabel resultLabel,
+                                     JLabel openCountChip, JLabel resolvedCountChip, JLabel totalCountChip,
+                                     JLabel detailTitle, JLabel detailMeta, JTextArea detailsArea, JPanel detailStatusHolder) {
+        String query = searchField.getText() == null ? "" : searchField.getText().trim().toLowerCase(Locale.ROOT);
+        sorter.setRowFilter(new RowFilter<>() {
+            @Override
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                Warning warning = warnings.get(entry.getIdentifier());
+                if (filterMode == WarningFilterMode.OPEN && warning.isResolved()) {
+                    return false;
+                }
+                if (filterMode == WarningFilterMode.RESOLVED && !warning.isResolved()) {
+                    return false;
+                }
+                if (query.isEmpty()) {
+                    return true;
+                }
+                return containsIgnoreCase(warning.getTitle(), query)
+                        || containsIgnoreCase(warning.getMessage(), query)
+                        || containsIgnoreCase(warning.getDate(), query)
+                        || containsIgnoreCase(warning.getType().getDisplayName(), query);
+            }
+        });
+        updateOverviewStats(table, warnings.size(), openCountChip, resolvedCountChip, totalCountChip, resultLabel);
+        if (table.getRowCount() > 0) {
+            table.setRowSelectionInterval(0, 0);
+            updateWarningDetails(getSelectedWarning(table, warnings), detailTitle, detailMeta, detailsArea, detailStatusHolder);
+        } else {
+            table.clearSelection();
+            updateWarningDetails(null, detailTitle, detailMeta, detailsArea, detailStatusHolder);
+        }
+    }
+
+    private static void updateOverviewStats(JTable table, int totalWarnings, JLabel openCountChip,
+                                            JLabel resolvedCountChip, JLabel totalCountChip, JLabel resultLabel) {
+        int visibleOpen = 0;
+        int visibleResolved = 0;
+        for (int i = 0; i < table.getRowCount(); i++) {
+            Object statusValue = table.getValueAt(i, 0);
+            if (statusValue != null && statusValue.toString().contains("Gelöst")) {
+                visibleResolved++;
+            } else {
+                visibleOpen++;
+            }
+        }
+        openCountChip.setText(UnicodeSymbols.WARNING + " Offen: " + visibleOpen);
+        resolvedCountChip.setText(UnicodeSymbols.CHECKMARK + " Gelöst: " + visibleResolved);
+        totalCountChip.setText(UnicodeSymbols.CLIPBOARD + " Sichtbar: " + table.getRowCount() + " / " + totalWarnings);
+        resultLabel.setText(UnicodeSymbols.SEARCH + " Treffer: " + table.getRowCount());
+    }
+
+    private static boolean containsIgnoreCase(String value, String query) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(query);
+    }
+
+    private static String previewMessage(String message) {
+        if (message == null) {
+            return "";
+        }
+        String compact = message.replace('\n', ' ').replaceAll("\\s+", " ").trim();
+        if (compact.length() <= MESSAGE_PREVIEW_LENGTH) {
+            return compact;
+        }
+        return compact.substring(0, MESSAGE_PREVIEW_LENGTH - 1) + "…";
+    }
+
+    private static String createPreviewHtml(String preview, boolean selected) {
+        String fg = toHex(selected ? ThemeManager.getSelectionForegroundColor() : ThemeManager.getTextPrimaryColor());
+        String muted = toHex(selected
+                ? ThemeManager.withAlpha(ThemeManager.getSelectionForegroundColor(), 215)
+                : ThemeManager.getTextSecondaryColor());
+        return "<html><div style='line-height:1.2;padding-top:2px;padding-bottom:2px;'>"
+                + "<span style='color:" + muted + ";font-size:9px;font-weight:700;'>VORSCHAU</span><br/>"
+                + "<span style='color:" + fg + ";font-size:11px;'>"
+                + escapeHtml(preview)
+                + "</span></div></html>";
+    }
+
+    private static String toHtmlTooltip(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        return "<html><div style='width:420px;'>" + escapeHtml(text).replace("\n", "<br/>") + "</div></html>";
+    }
+
+    private static String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
+    }
+
+    private static String toHex(Color color) {
+        return String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());
+    }
+
+    private static Warning getSelectedWarning(JTable table, List<Warning> warnings) {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            return null;
+        }
+        int modelRow = table.convertRowIndexToModel(viewRow);
+        if (modelRow < 0 || modelRow >= warnings.size()) {
+            return null;
+        }
+        return warnings.get(modelRow);
+    }
+
+    private static void updateWarningDetails(Warning warning, JLabel titleLabel, JLabel metaLabel,
+                                             JTextArea messageArea, JPanel statusHolder) {
+        if (warning == null) {
+            titleLabel.setText(UnicodeSymbols.INFO + " Warnungsdetails");
+            metaLabel.setText("Noch keine Warnung ausgewählt");
+            messageArea.setText("Wählen Sie eine Warnung aus,\num alle Details vollständig zu sehen.");
+            statusHolder.removeAll();
+            statusHolder.revalidate();
+            statusHolder.repaint();
+            return;
+        }
+
+        titleLabel.setText(warning.getTitle());
+        metaLabel.setText(UnicodeSymbols.TAG + " " + warning.getType().getDisplayName()
+                + "   •   " + UnicodeSymbols.CALENDAR + " " + warning.getDate());
+        messageArea.setText(warning.getMessage());
+        messageArea.setCaretPosition(0);
+
+        statusHolder.removeAll();
+        statusHolder.add(createStatusChip(warning.isResolved()));
+        statusHolder.revalidate();
+        statusHolder.repaint();
     }
 
     // ------------------------ UI helpers ------------------------
@@ -552,6 +822,127 @@ public class DisplayWarningDialog {
         panel.setBorder(BorderFactory.createEmptyBorder(top, left, bottom, right));
         panel.setOpaque(false);
         return panel;
+    }
+
+    private static JTextArea createMessageArea(String text, int fontSize) {
+        JTextArea messageArea = new JTextArea(text);
+        messageArea.setWrapStyleWord(true);
+        messageArea.setLineWrap(true);
+        messageArea.setEditable(false);
+        messageArea.setFont(SettingsGUI.getFontByName(Font.PLAIN, fontSize));
+        messageArea.setForeground(ThemeManager.getTextPrimaryColor());
+        messageArea.setBackground(ThemeManager.getSurfaceColor());
+        messageArea.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        messageArea.setMargin(new Insets(6, 6, 6, 6));
+        messageArea.setCaretPosition(0);
+        messageArea.setSelectionColor(ThemeManager.getSelectionBackgroundColor());
+        messageArea.setSelectedTextColor(ThemeManager.getSelectionForegroundColor());
+        return messageArea;
+    }
+
+    private static JScrollPane createMessageScrollPane(JTextArea messageArea, int preferredWidth, int preferredHeight) {
+        JScrollPane messageScroll = new JScrollPane(messageArea);
+        messageScroll.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        messageScroll.getViewport().setBackground(ThemeManager.getSurfaceColor());
+        messageScroll.setBackground(ThemeManager.getSurfaceColor());
+        messageScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        messageScroll.getVerticalScrollBar().setUnitIncrement(14);
+        messageScroll.setPreferredSize(new Dimension(preferredWidth, preferredHeight));
+        return messageScroll;
+    }
+
+    private static JPanel createMessageCard(JScrollPane messageScroll) {
+        return createMessageCard(messageScroll, "Ausführlicher Nachrichtentext", "NACHRICHT");
+    }
+
+    private static JPanel createMessageCard(JScrollPane messageScroll, String helperText, String badgeText) {
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
+        panel.setOpaque(false);
+        JLabel label = new JLabel(UnicodeSymbols.MEMO + " Nachricht");
+        label.setFont(SettingsGUI.getFontByName(Font.BOLD, 14));
+        label.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JLabel helperLabel = createMetaLabel(helperText);
+        JComponent badge = createPreviewBadge(badgeText);
+
+        JPanel header = new JPanel(new BorderLayout(10, 4));
+        header.setOpaque(false);
+        JPanel headerLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        headerLeft.setOpaque(false);
+        headerLeft.add(label);
+        headerLeft.add(badge);
+        header.add(headerLeft, BorderLayout.WEST);
+        header.add(helperLabel, BorderLayout.EAST);
+
+        JPanel body = new ArticleGUI.RoundedPanel(ThemeManager.withAlpha(ThemeManager.getSurfaceColor(), 248), 16);
+        body.setLayout(new BorderLayout(0, 0));
+        body.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.withAlpha(ThemeManager.getBorderColor(), 105), 1, true),
+                BorderFactory.createEmptyBorder(0, 0, 0, 0)
+        ));
+        body.setOpaque(false);
+
+        JPanel accentRail = new JPanel();
+        accentRail.setPreferredSize(new Dimension(8, 0));
+        accentRail.setBackground(ThemeManager.withAlpha(ThemeManager.getAccentColor(), 185));
+        body.add(accentRail, BorderLayout.WEST);
+
+        JPanel scrollWrap = new JPanel(new BorderLayout());
+        scrollWrap.setOpaque(false);
+        scrollWrap.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
+        scrollWrap.add(messageScroll, BorderLayout.CENTER);
+        body.add(scrollWrap, BorderLayout.CENTER);
+
+        panel.add(header, BorderLayout.NORTH);
+        panel.add(body, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private static JLabel createMetaLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(SettingsGUI.getFontByName(Font.PLAIN, 12));
+        label.setForeground(ThemeManager.getTextSecondaryColor());
+        return label;
+    }
+
+    private static JComponent createPreviewBadge(String text) {
+        JLabel badge = new JLabel(text);
+        badge.setFont(SettingsGUI.getFontByName(Font.BOLD, 10));
+        badge.setForeground(ThemeManager.getAccentColor());
+        badge.setOpaque(true);
+        badge.setBackground(ThemeManager.withAlpha(ThemeManager.getAccentColor(), 28));
+        badge.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.withAlpha(ThemeManager.getAccentColor(), 110), 1, true),
+                BorderFactory.createEmptyBorder(3, 8, 3, 8)
+        ));
+        return badge;
+    }
+
+    private static JToggleButton createFilterToggleButton(String text) {
+        JToggleButton button = new JToggleButton(text);
+        button.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
+        button.setForeground(ThemeManager.getTextPrimaryColor());
+        button.setBackground(ThemeManager.getSurfaceColor());
+        button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(ThemeManager.getBorderColor(), 1, true),
+                BorderFactory.createEmptyBorder(7, 12, 7, 12)
+        ));
+        button.addItemListener(e -> {
+            boolean selected = button.isSelected();
+            Color bg = selected ? ThemeManager.withAlpha(ThemeManager.getAccentColor(), 36) : ThemeManager.getSurfaceColor();
+            Color fg = selected ? ThemeManager.getAccentColor() : ThemeManager.getTextPrimaryColor();
+            Color border = selected ? ThemeManager.getAccentColor() : ThemeManager.getBorderColor();
+            button.setBackground(bg);
+            button.setForeground(fg);
+            button.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(border, 1, true),
+                    BorderFactory.createEmptyBorder(7, 12, 7, 12)
+            ));
+        });
+        return button;
     }
 
     private static JPanel createGradientHeader(Color a, Color b, String title, String subtitle, JDialog dialog) {
@@ -761,7 +1152,7 @@ public class DisplayWarningDialog {
         return badge;
     }
 
-    private static JComponent createSummaryChip(String text, Color fg, Color bg) {
+    private static JLabel createSummaryChip(String text, Color fg, Color bg) {
         JLabel chip = new JLabel(text);
         chip.setFont(SettingsGUI.getFontByName(Font.BOLD, 12));
         chip.setForeground(fg);
@@ -772,5 +1163,11 @@ public class DisplayWarningDialog {
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)
         ));
         return chip;
+    }
+
+    private enum WarningFilterMode {
+        ALL,
+        OPEN,
+        RESOLVED
     }
 }
