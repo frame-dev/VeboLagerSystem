@@ -29,6 +29,7 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -434,7 +435,7 @@ public final class ArticleUtils {
         categoriesLoaded = true;
     }
 
-    private static List<Map<String, String>> readCategoryEntries(File file) throws Exception {
+    private static List<Map<String, String>> readCategoryEntries(File file) throws IOException {
         try (InputStream is = new FileInputStream(file);
              InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
             List<Map<String, String>> categoryList = GSON.fromJson(reader, CATEGORY_LIST_TYPE);
@@ -490,7 +491,7 @@ public final class ArticleUtils {
                     addCategoryRange(loaded, categoryEntry);
                 }
                 setLoadedCategories(loaded);
-            } catch (Exception e) {
+            } catch (IOException e) {
                 setLoadedCategories(loaded);
                 LOGGER.error("Error loading categories from {}", file.getAbsolutePath(), e);
                 showTimedMessage("Fehler", "Fehler beim Laden der Kategorien: " + e.getMessage(), JOptionPane.ERROR_MESSAGE);
@@ -564,7 +565,7 @@ public final class ArticleUtils {
 
             Files.writeString(getCategoriesFile().toPath(), PRETTY_GSON.toJson(categoryList), StandardCharsets.UTF_8);
             categoriesLoaded = true;
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOGGER.error("Error saving categories", e);
             showTimedMessage("Fehler", "Fehler beim Speichern der Kategorien: " + e.getMessage(), JOptionPane.ERROR_MESSAGE);
         }

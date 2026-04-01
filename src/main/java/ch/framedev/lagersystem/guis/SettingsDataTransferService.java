@@ -10,6 +10,8 @@ import ch.framedev.lagersystem.managers.DepartmentManager;
 import ch.framedev.lagersystem.managers.OrderManager;
 import ch.framedev.lagersystem.managers.VendorManager;
 import ch.framedev.lagersystem.utils.ArticleUtils;
+
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -56,7 +58,7 @@ final class SettingsDataTransferService {
         int result = fileChooser.showOpenDialog(null);
         if (result != JFileChooser.APPROVE_OPTION) {
             LOGGER.info("CSV import cancelled by user");
-            System.out.println("[SettingsGUI] Import abgebrochen");
+            Main.logUtils.addLog(Level.INFO, "Import abgebrochen");
             return;
         }
 
@@ -92,7 +94,7 @@ final class SettingsDataTransferService {
                 case 2 -> importClientsFromCsv(selectedFile);
                 case 3 -> importDepartmentsFromCsv(selectedFile);
                 case 4 -> importOrdersFromCsv();
-                default -> System.out.println("[SettingsGUI] Import abgebrochen");
+                default -> Main.logUtils.addLog("Import abgebrochen: Kein Datentyp ausgewählt");
             }
         }
     }
@@ -121,12 +123,10 @@ final class SettingsDataTransferService {
                         article.getPurchasePrice(),
                         escapeCSV(article.getVendorName()));
             }
-            System.out.println("[SettingsGUI] Artikel erfolgreich nach " + csvFile.getAbsolutePath() + " exportiert ("
-                    + articles.size() + " Einträge)");
+            Main.logUtils.addLog("Artikel erfolgreich nach " + csvFile.getAbsolutePath() + " exportiert (" + articles.size() + " Einträge)");
             successCount++;
         } catch (Exception e) {
             String errorMsg = "Fehler beim Exportieren der Artikel: " + e.getMessage();
-            System.err.println("[SettingsGUI] " + errorMsg);
             LogManager.getLogger(SettingsGUI.class).error(errorMsg, e);
             Main.logUtils.addLog(errorMsg);
         }
@@ -144,12 +144,11 @@ final class SettingsDataTransferService {
                         escapeCSV(vendor.getAddress()),
                         escapeCSV(String.valueOf(vendor.getMinOrderValue())));
             }
-            System.out.println("[SettingsGUI] Lieferanten erfolgreich nach " + vendorCsvFile.getAbsolutePath()
+            Main.logUtils.addLog("Lieferanten erfolgreich nach " + vendorCsvFile.getAbsolutePath()
                     + " exportiert (" + vendors.size() + " Einträge)");
             successCount++;
         } catch (Exception ex) {
             String errorMsg = "Fehler beim Exportieren der Lieferanten: " + ex.getMessage();
-            System.err.println("[SettingsGUI] " + errorMsg);
             LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
             Main.logUtils.addLog(errorMsg);
         }
@@ -163,12 +162,11 @@ final class SettingsDataTransferService {
                 String department = clientMap.getOrDefault("department", "");
                 writer.printf("\"%s\",\"%s\"%n", escapeCSV(name), escapeCSV(department));
             }
-            System.out.println("[SettingsGUI] Kunden erfolgreich nach " + clientCsvFile.getAbsolutePath()
+            Main.logUtils.addLog("Kunden erfolgreich nach " + clientCsvFile.getAbsolutePath()
                     + " exportiert (" + clients.size() + " Einträge)");
             successCount++;
         } catch (Exception ex) {
             String errorMsg = "Fehler beim Exportieren der Kunden: " + ex.getMessage();
-            System.err.println("[SettingsGUI] " + errorMsg);
             LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
             Main.logUtils.addLog(errorMsg);
         }
@@ -205,12 +203,11 @@ final class SettingsDataTransferService {
                         escapeCSV(order.getStatus()),
                         escapeCSV(order.getDepartment()));
             }
-            System.out.println("[SettingsGUI] Bestellungen erfolgreich nach " + orderCsvFile.getAbsolutePath()
+            Main.logUtils.addLog("Bestellungen erfolgreich nach " + orderCsvFile.getAbsolutePath()
                     + " exportiert (" + orders.size() + " Einträge)");
             successCount++;
         } catch (Exception ex) {
             String errorMsg = "Fehler beim Exportieren der Bestellungen: " + ex.getMessage();
-            System.err.println("[SettingsGUI] " + errorMsg);
             LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
             Main.logUtils.addLog(errorMsg);
         }
@@ -224,19 +221,18 @@ final class SettingsDataTransferService {
                 String kontoNumber = String.valueOf(department.getOrDefault("kontoNumber", ""));
                 writer.printf("\"%s\",\"%s\"%n", escapeCSV(name), escapeCSV(kontoNumber));
             }
-            System.out.println("[SettingsGUI] Abteilungen erfolgreich nach " + departmentCsvFile.getAbsolutePath()
+            Main.logUtils.addLog("Abteilungen erfolgreich nach " + departmentCsvFile.getAbsolutePath()
                     + " exportiert (" + departments.size() + " Einträge)");
             successCount++;
         } catch (Exception ex) {
             String errorMsg = "Fehler beim Exportieren der Abteilungen: " + ex.getMessage();
-            System.err.println("[SettingsGUI] " + errorMsg);
             LogManager.getLogger(SettingsGUI.class).error(errorMsg, ex);
             Main.logUtils.addLog(errorMsg);
         }
 
-        System.out.println("[SettingsGUI] CSV-Export abgeschlossen: " + successCount + "/" + totalTables
+        Main.logUtils.addLog("CSV-Export abgeschlossen: " + successCount + "/" + totalTables
                 + " Tabellen erfolgreich exportiert");
-        System.out.println("[SettingsGUI] Dateien gespeichert in: " + Main.getAppDataDir().getAbsolutePath());
+        Main.logUtils.addLog("Dateien gespeichert in: " + Main.getAppDataDir().getAbsolutePath());
         LOGGER.info("CSV export finished: {}/{} tables exported", successCount, totalTables);
         Main.logUtils.addLog("CSV-Export abgeschlossen: " + successCount + "/" + totalTables + " Tabellen erfolgreich exportiert");
         return new ExportSummary(successCount, totalTables);
@@ -280,7 +276,7 @@ final class SettingsDataTransferService {
                     }
                 } catch (Exception e) {
                     errors++;
-                    System.err.println("[SettingsGUI] Fehler beim Importieren einer Zeile: " + e.getMessage());
+                    Main.logUtils.addLog(Level.ERROR, "Fehler beim Importieren: " + e.getMessage());
                 }
             }
 
@@ -355,7 +351,7 @@ final class SettingsDataTransferService {
                     }
                 } catch (Exception e) {
                     errors++;
-                    System.err.println("[SettingsGUI] Fehler beim Importieren einer Zeile: " + e.getMessage());
+                    Main.logUtils.addLog(Level.ERROR, "Fehler beim Importieren einer Zeile: " + e.getMessage());
                 }
             }
 
@@ -407,7 +403,7 @@ final class SettingsDataTransferService {
                     }
                 } catch (Exception e) {
                     errors++;
-                    System.err.println("[SettingsGUI] Fehler beim Importieren einer Zeile: " + e.getMessage());
+                    Main.logUtils.addLog(Level.ERROR, "Fehler beim Importieren einer Zeile: " + e.getMessage());
                 }
             }
 
@@ -428,8 +424,8 @@ final class SettingsDataTransferService {
                 "<html><b>Bestellungs-Import nicht verfügbar</b><br/><br/>" +
                         "Der Import von Bestellungen ist aus Sicherheitsgründen deaktiviert.<br/>" +
                         "Bestellungen sollten nur über die normale Bestellfunktion erstellt werden.</html>");
-        System.out.println(
-                "[SettingsGUI] Bestellungs-Import wurde übersprungen (nicht implementiert aus Sicherheitsgründen)");
+                    
+        Main.logUtils.addLog("Bestellungs-Import wurde übersprungen (nicht implementiert aus Sicherheitsgründen)");
     }
 
     private static void importDepartmentsFromCsv(File csvFile) {
@@ -475,7 +471,7 @@ final class SettingsDataTransferService {
                     }
                 } catch (Exception e) {
                     errors++;
-                    System.err.println("[SettingsGUI] Fehler beim Importieren einer Zeile: " + e.getMessage());
+                    Main.logUtils.addLog(Level.ERROR, "Fehler beim Importieren einer Zeile: " + e.getMessage());
                 }
             }
 
@@ -500,8 +496,7 @@ final class SettingsDataTransferService {
 
     private static void logImportFailure(String entityLabel, Exception exception) {
         SettingsCsvFeedbackService.showImportError(entityLabel, exception.getMessage());
-        System.err.println("[SettingsGUI] Fehler beim Importieren der " + entityLabel + ": " + exception.getMessage());
-        Main.logUtils.addLog("Fehler beim Importieren der " + entityLabel + ": " + exception.getMessage());
+        Main.logUtils.addLog(Level.ERROR, "Fehler beim Importieren der " + entityLabel + ": " + exception.getMessage());
     }
 
     private static String[] parseCsvLine(String line) {

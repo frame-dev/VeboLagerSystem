@@ -18,10 +18,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
+import com.google.zxing.WriterException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -71,7 +74,7 @@ public class QRCodeUtils {
             String encodedData;
             try {
                 encodedData = URLEncoder.encode(data, StandardCharsets.UTF_8);
-            } catch (Exception ex) {
+            } catch (RuntimeException ex) {
                 logger.error("Error encoding QR data for article: {}", article.getArticleNumber(), ex);
                 Main.logUtils.addLog(Level.ERROR, "Fehler beim Kodieren der QR-Daten für Artikel: " + article.getArticleNumber() + " - " + ex.getMessage());
                 continue;
@@ -80,7 +83,7 @@ public class QRCodeUtils {
             try {
                 File qrCodeFile = QRCodeGenerator.generateQRCodeImage(url, 300, 300, Main.getAppDataDir() + "/qr_codes/" + article.getArticleNumber() + "_qrcode.png");
                 qrCodeFiles.add(qrCodeFile);
-            } catch (Exception e) {
+            } catch (WriterException | IOException e) {
                 logger.error("Error generating QR code for article: {}", article.getArticleNumber(), e);
                 Main.logUtils.addLog(Level.ERROR, "Fehler beim Generieren des QR-Codes für Artikel: " + article.getArticleNumber() + " - " + e.getMessage());
             }
@@ -102,7 +105,7 @@ public class QRCodeUtils {
             if (!STORE.exists()) {
                 Files.writeString(STORE.toPath(), "[]", StandardCharsets.UTF_8);
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             logger.warn("Could not ensure QR store exists at {}: {}", STORE.getAbsolutePath(), e.getMessage());
             Main.logUtils.addLog(Level.ERROR, "Konnte QR-Store nicht initialisieren: " + e.getMessage());
         }
@@ -116,7 +119,7 @@ public class QRCodeUtils {
         try (Reader reader = new FileReader(STORE, StandardCharsets.UTF_8)) {
             JsonArray arr = GSON.fromJson(reader, JsonArray.class);
             return arr != null ? arr : new JsonArray();
-        } catch (Exception e) {
+        } catch (IOException e) {
             logger.warn("Failed to read QR store ({}): {}", STORE.getAbsolutePath(), e.getMessage());
             Main.logUtils.addLog(Level.ERROR, "Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
             return new JsonArray();
@@ -128,38 +131,14 @@ public class QRCodeUtils {
      *
      * @return List of maps representing QR code scan data
      */
-    @SuppressWarnings("unchecked")
     public static List<Map<String, Object>> retrieveQrCodeDataFromWebsite() {
         String urlString = resolveScanListUrl(Main.settings.getProperty("server_url"));
 
         List<Map<String, Object>> mapList = new ArrayList<>();
         HttpURLConnection connection = null;
         try {
-            URL url = new URI(urlString).toURL();
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(10000); // 10 seconds timeout
-            connection.setReadTimeout(10000);
-            connection.setRequestProperty("Accept", "application/json");
-            connection.setRequestProperty("User-Agent", "VeboLagerSystem/1.0");
-
-            int responseCode = connection.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                try (InputStreamReader reader = new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8)) {
-                    JsonArray jsonArray = GSON.fromJson(reader, JsonArray.class);
-                    if (jsonArray != null) {
-                        for (JsonElement e : jsonArray) {
-                            JsonObject obj = e.getAsJsonObject();
-                            Map<String, Object> map = GSON.fromJson(GSON.toJson(obj), Map.class);
-                            mapList.add(map);
-                            Main.logUtils.addLog(Level.INFO, "QR-Code-Daten von der Webseite abgerufen: " + map.toString());
-                        }
-                    }
-                }
-            } else {
-                logger.error("Failed to fetch QR code data. HTTP response code: {}", responseCode);
-                Main.logUtils.addLog(Level.ERROR, "Fehler beim Abrufen der QR-Code-Daten. HTTP-Antwortcode: " + responseCode);
-            }
+            connection = getConnection(urlString);
+            getResponseCode(mapList, connection);
         } catch (IOException e) {
             logger.error("Error while fetching QR code data from website", e);
             Main.logUtils.addLog(Level.ERROR, "Fehler beim Abrufen der QR-Code-Daten von der Webseite: " + e.getMessage());
@@ -172,6 +151,41 @@ public class QRCodeUtils {
             }
         }
         return mapList;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void getResponseCode(List<Map<String, Object>> mapList, HttpURLConnection connection)
+            throws IOException {
+        int responseCode = connection.getResponseCode();
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            try (InputStreamReader reader = new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8)) {
+                JsonArray jsonArray = GSON.fromJson(reader, JsonArray.class);
+                if (jsonArray != null) {
+                    for (JsonElement e : jsonArray) {
+                        JsonObject obj = e.getAsJsonObject();
+                        Map<String, Object> map = GSON.fromJson(GSON.toJson(obj), Map.class);
+                        mapList.add(map);
+                        Main.logUtils.addLog(Level.INFO, "QR-Code-Daten von der Webseite abgerufen: " + map.toString());
+                    }
+                }
+            }
+        } else {
+            logger.error("Failed to fetch QR code data. HTTP response code: {}", responseCode);
+            Main.logUtils.addLog(Level.ERROR, "Fehler beim Abrufen der QR-Code-Daten. HTTP-Antwortcode: " + responseCode);
+        }
+    }
+
+    private static HttpURLConnection getConnection(String urlString)
+            throws MalformedURLException, URISyntaxException, IOException, ProtocolException {
+        HttpURLConnection connection;
+        URL url = new URI(urlString).toURL();
+        connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(10000); // 10 seconds timeout
+        connection.setReadTimeout(10000);
+        connection.setRequestProperty("Accept", "application/json");
+        connection.setRequestProperty("User-Agent", "VeboLagerSystem/1.0");
+        return connection;
     }
 
     public static String resolveScanSubmitUrl(String serverUrlSetting) {

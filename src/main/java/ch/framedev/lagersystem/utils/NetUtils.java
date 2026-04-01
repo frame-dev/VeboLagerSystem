@@ -3,6 +3,7 @@
 import com.sun.net.httpserver.HttpExchange;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
 import java.util.Enumeration;
@@ -29,7 +30,7 @@ public final class NetUtils {
                     return true;
                 }
             }
-        } catch (Exception ignored) {
+        } catch (SocketException ignored) {
         }
         return false;
     }
@@ -91,12 +92,12 @@ public final class NetUtils {
                     }
                 }
             }
-        } catch (Exception ignored) {
+        } catch (SocketException ignored) {
         }
         // Fallback
         try {
             return InetAddress.getLocalHost().getHostAddress();
-        } catch (Exception e) {
+        } catch (UnknownHostException e) {
             return null;
         }
     }
@@ -108,7 +109,13 @@ public final class NetUtils {
     public static String getPublicIp() {
         String service = "https://api.ipify.org";
         try {
-            HttpURLConnection conn = (HttpURLConnection) new URI(service).toURL().openConnection();
+            HttpURLConnection conn;
+            try {
+                conn = (HttpURLConnection) new URI(service).toURL().openConnection();
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+                return null;
+            }
             conn.setConnectTimeout(2000);
             conn.setReadTimeout(2000);
             conn.setRequestMethod("GET");
@@ -116,7 +123,7 @@ public final class NetUtils {
                 String ip = br.readLine();
                 return (ip == null || ip.isBlank()) ? null : ip.trim();
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             return null;
         }
     }

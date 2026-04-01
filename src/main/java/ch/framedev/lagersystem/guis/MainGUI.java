@@ -19,12 +19,14 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.text.SimpleDateFormat;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -112,9 +114,9 @@ public class MainGUI extends JFrame {
 
     private JTabbedPane tabbedPane;
     private final Map<KeyStroke, EmbeddedShortcutBinding> embeddedShortcutBindings = new LinkedHashMap<>();
-    private final SimpleDateFormat headerDateFormat = new SimpleDateFormat("dd. MMMM", Locale.GERMAN);
-    private final SimpleDateFormat headerTimeFormat = new SimpleDateFormat("HH:mm", Locale.GERMAN);
-    private final SimpleDateFormat headerWarningTimeFormat = new SimpleDateFormat("HH:mm", Locale.GERMAN);
+    private final DateTimeFormatter headerDateFormat = DateTimeFormatter.ofPattern("dd. MMMM", Locale.GERMAN);
+    private final DateTimeFormatter headerTimeFormat = DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN);
+    private final DateTimeFormatter headerWarningTimeFormat = DateTimeFormatter.ofPattern("HH:mm", Locale.GERMAN);
     private JLabel headerDateValueLabel;
     private JLabel headerTimeValueLabel;
     private JLabel headerWarningCheckLabel;
@@ -897,7 +899,7 @@ public class MainGUI extends JFrame {
     }
 
     private void updateHeaderDateTime() {
-        Date now = new Date();
+        LocalDateTime now = LocalDateTime.now();
         if (headerDateValueLabel != null) {
             headerDateValueLabel.setText(headerDateFormat.format(now));
         }
@@ -926,7 +928,7 @@ public class MainGUI extends JFrame {
         }
 
         if (nextWarningCheckMillis > 0L) {
-            headerWarningCheckLabel.setText("Naechste Warnpruefung " + headerWarningTimeFormat.format(new Date(nextWarningCheckMillis)));
+            headerWarningCheckLabel.setText("Naechste Warnpruefung " + LocalDateTime.ofInstant(Instant.ofEpochMilli(nextWarningCheckMillis), ZoneId.systemDefault()).format(headerWarningTimeFormat));
         } else {
             headerWarningCheckLabel.setText("Warnpruefung wird vorbereitet");
         }

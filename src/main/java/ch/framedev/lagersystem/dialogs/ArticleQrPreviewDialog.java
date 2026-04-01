@@ -32,9 +32,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -258,7 +258,7 @@ public final class ArticleQrPreviewDialog {
             File fileToSave = ExportDialogUtils.chooseSaveFile(
                     parent,
                     "PDF Speichern",
-                    "QR_Codes_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".pdf",
+                    "QR_Codes_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".pdf",
                     "pdf",
                     "PDF (*.pdf)");
             if (fileToSave == null) {

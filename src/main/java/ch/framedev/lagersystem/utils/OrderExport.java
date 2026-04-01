@@ -17,6 +17,7 @@ import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import javax.swing.*;
 import java.awt.Color;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -236,7 +237,7 @@ public class OrderExport {
 
             ExportDialogUtils.showExportSuccess("Erfolg", "PDF", outputFile.getAbsolutePath());
 
-        } catch (Exception ex) {
+        } catch (IOException ex) {
             LOGGER.error("Fehler beim Erstellen des PDF-Exports", ex);
             OrderLoggingUtils.getInstance().addError(orderId,
                     "Fehler beim PDF-Export: " + ex.getMessage());
@@ -244,7 +245,7 @@ public class OrderExport {
         }
     }
 
-    private static float drawHeader(PDPageContentStream cs, PDFont boldFont, float pageWidth, float y) throws Exception {
+    private static float drawHeader(PDPageContentStream cs, PDFont boldFont, float pageWidth, float y) throws IOException {
         setFillColor(cs, COLOR_PRIMARY);
         cs.addRect(MARGIN, y - HEADER_HEIGHT, pageWidth - 2 * MARGIN, HEADER_HEIGHT);
         cs.fill();
@@ -266,7 +267,7 @@ public class OrderExport {
         return y - (HEADER_HEIGHT + 20f);
     }
 
-    private static float drawOrderInfo(PDPageContentStream cs, Fonts fonts, String orderDate, String orderId, String status, float y) throws Exception {
+    private static float drawOrderInfo(PDPageContentStream cs, Fonts fonts, String orderDate, String orderId, String status, float y) throws IOException {
         // Bestelldatum
         text(cs, fonts.bold, 11, COLOR_TEXT, MARGIN, y, "Bestelldatum:");
         text(cs, fonts.regular, 11, COLOR_TEXT, MARGIN + 100, y, orderDate);
@@ -292,7 +293,7 @@ public class OrderExport {
     private static float drawSenderReceiver(PDPageContentStream cs, Fonts fonts, float pageWidth,
                                            String senderName, String senderKonto,
                                            String receiverName, String receiverKonto, String department,
-                                           float y) throws Exception {
+                                           float y) throws IOException {
 
         setFillColor(cs, COLOR_SURFACE);
         cs.addRect(MARGIN, y - BOX_HEIGHT, (pageWidth - 2 * MARGIN - 10) / 2, BOX_HEIGHT);
@@ -318,7 +319,7 @@ public class OrderExport {
     }
 
     private static float drawTableHeader(PDPageContentStream cs, PDFont boldFont, float pageWidth, float y,
-                                         TableColumns columns) throws Exception {
+                                         TableColumns columns) throws IOException {
         setFillColor(cs, COLOR_PRIMARY_SOFT);
         cs.addRect(MARGIN, y - TABLE_HEADER_HEIGHT, pageWidth - 2 * MARGIN, TABLE_HEADER_HEIGHT);
         cs.fill();
@@ -334,7 +335,7 @@ public class OrderExport {
     private static void drawArticleRow(PDPageContentStream cs, Fonts fonts, Order order, String orderItemKey,
                        Article article, int qty,
                        double unitPrice, double lineTotal, float y,
-                       TableColumns columns) throws Exception {
+                       TableColumns columns) throws IOException {
     String articleLabel = truncate(order.formatArticleLabel(article, orderItemKey), 34)
             + " (" + safe(article.getArticleNumber()) + ")";
 
@@ -347,7 +348,7 @@ public class OrderExport {
         y - 10, CHF.format(lineTotal) + " CHF");
     }
 
-    private static float drawTotals(PDPageContentStream cs, PDFont boldFont, float pageWidth, float y, double total) throws Exception {
+    private static float drawTotals(PDPageContentStream cs, PDFont boldFont, float pageWidth, float y, double total) throws IOException {
         y -= 10;
     setStrokeColor(cs, COLOR_LINE);
         cs.setLineWidth(1);
@@ -373,7 +374,7 @@ public class OrderExport {
         return y - 10;
     }
 
-    private static void drawFooter(PDPageContentStream cs, PDFont regularFont, int pageNumber, float pageWidth) throws Exception {
+    private static void drawFooter(PDPageContentStream cs, PDFont regularFont, int pageNumber, float pageWidth) throws IOException {
         text(cs, regularFont, 8, COLOR_MUTED, MARGIN, FOOTER_Y,
                 "VEBO Lagersystem - Generiert am " + LocalDateTime.now().format(FOOTER_TIMESTAMP_FORMATTER));
         textRight(cs, regularFont, 8, COLOR_MUTED, pageWidth - MARGIN, FOOTER_Y,
@@ -383,7 +384,7 @@ public class OrderExport {
     private static void text(PDPageContentStream cs, PDFont font, float size,
                              Color color,
                              float x, float y,
-                             String text) throws Exception {
+                             String text) throws IOException {
         cs.beginText();
         setFillColor(cs, color);
         cs.setFont(font, size);
@@ -393,17 +394,17 @@ public class OrderExport {
     }
 
     private static void textRight(PDPageContentStream cs, PDFont font, float size, Color color,
-                                  float rightX, float y, String value) throws Exception {
+                                  float rightX, float y, String value) throws IOException {
         String content = value == null ? "" : value;
         float textWidth = font.getStringWidth(content) / 1000f * size;
         text(cs, font, size, color, rightX - textWidth, y, content);
     }
 
-    private static void setFillColor(PDPageContentStream cs, Color color) throws Exception {
+    private static void setFillColor(PDPageContentStream cs, Color color) throws IOException {
         cs.setNonStrokingColor(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f);
     }
 
-    private static void setStrokeColor(PDPageContentStream cs, Color color) throws Exception {
+    private static void setStrokeColor(PDPageContentStream cs, Color color) throws IOException {
         cs.setStrokingColor(color.getRed() / 255f, color.getGreen() / 255f, color.getBlue() / 255f);
     }
 
@@ -463,7 +464,7 @@ public class OrderExport {
                 }
             }
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOGGER.warn("Konnte TrueType-Font nicht laden, nutze PDFBox-Fallback.", e);
         }
 

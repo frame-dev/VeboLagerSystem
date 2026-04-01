@@ -32,8 +32,13 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 @SuppressWarnings("SameReturnValue")
 public class ScanServer {
+
+    private static final Logger logger = LogManager.getLogger(ScanServer.class);
 
     private static final File STORE = new File(Main.getAppDataDir(), "scans.json");
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
@@ -55,14 +60,14 @@ public class ScanServer {
         server.createContext("/latest.json", ScanServer::handleLatestRequest);
 
         server.start();
-        System.out.println("Server running:");
-        System.out.println("  http://<host>:8080/scan?data=...");
-        System.out.println("  http://<host>:8080/scan.php?data=...");
-        System.out.println("  http://<host>:8080/list");
-        System.out.println("  http://<host>:8080/scans.json");
-        System.out.println("  http://<host>:8080/latest");
-        System.out.println("  http://<host>:8080/latest.json");
-        System.out.println(NetUtils.getLocalIp());
+        logger.info("Server running:");
+        logger.info("  http://<host>:8080/scan?data=...");
+        logger.info("  http://<host>:8080/scan.php?data=...");
+        logger.info("  http://<host>:8080/list");
+        logger.info("  http://<host>:8080/scans.json");
+        logger.info("  http://<host>:8080/latest");
+        logger.info("  http://<host>:8080/latest.json");
+        logger.info("  Local IP: {}", NetUtils.getLocalIp());
     }
 
     private static void handleScanRequest(HttpExchange exchange) throws IOException {
@@ -108,17 +113,19 @@ public class ScanServer {
             obj.addProperty("color", color);
             appendToArrayFile(obj);
 
-            System.out.println("Received: " + decodedData
-                    + " qty=" + quantity
-                    + " ownUse=" + ownUse
-                    + " type=" + type
-                    + (size.isBlank() ? "" : " size=" + size)
-                    + (color.isBlank() ? "" : " color=" + color)
-                    + " from " + NetUtils.getClientIp(exchange));
+            logger.info("Received: {} qty={} ownUse={} type={}{}{} from {}",
+                    decodedData,
+                    quantity,
+                    ownUse,
+                    type,
+                    size.isBlank() ? "" : " size=" + size,
+                    color.isBlank() ? "" : " color=" + color,
+                    NetUtils.getClientIp(exchange));
 
             respond(exchange, 200, buildSuccessPage(), "text/html; charset=utf-8");
         } catch (Exception e) {
-            System.err.println("Error handling scan request: " + e);
+            Main.logUtils.addLog("Fehler beim Verarbeiten des Scan-Requests: " + e.getMessage());
+            logger.error("Fehler beim Verarbeiten des Scan-Requests", e);
             respond(exchange, 500, "Internal Server Error");
         }
     }
@@ -576,7 +583,7 @@ public class ScanServer {
     private static synchronized void appendToArrayFile(JsonObject element) throws IOException {
         File parent = STORE.getParentFile();
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            System.err.println("Konnte Verzeichnis nicht erstellen: " + parent.getAbsolutePath());
+            logger.error("Konnte Verzeichnis nicht erstellen: " + parent.getAbsolutePath());
         }
 
         JsonArray arr = readArrayFile();

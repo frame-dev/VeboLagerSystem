@@ -60,8 +60,12 @@ public final class UpdateManager {
         // Load token from settings if available
         String githubToken = Main.settings.getProperty("github-token");
         if (githubToken != null && !githubToken.isEmpty()) {
-            setPersonalToken(githubToken);
-            logger.debug("GitHub token loaded from settings");
+            if(!githubToken.equalsIgnoreCase("your_github_token_here")) {
+                setPersonalToken(githubToken);
+                logger.debug("GitHub token loaded from settings");
+            } else {
+                logger.warn("GitHub token in settings is a placeholder. Please set a valid token for authenticated API requests.");
+            }
         }
     }
 

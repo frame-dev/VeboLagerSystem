@@ -53,7 +53,8 @@ final class SettingsRuntimeService {
             boolean currentDarkMode = ThemeManager.isDarkMode();
             if (currentDarkMode != darkMode) {
                 ThemeManager.setDarkMode(darkMode);
-                System.out.println("[SettingsGUI] Theme geaendert zu: " + (darkMode ? "Dark Mode" : "Light Mode"));
+                logger.info("Theme geändert zu: {}", darkMode ? "Dark Mode" : "Light Mode");
+                Main.logUtils.addLog("Theme geändert zu: " + (darkMode ? "Dark Mode" : "Light Mode"));
 
                 int restart = SettingsDialogService.showYesNo(
                         "Neustart empfohlen",
@@ -80,30 +81,28 @@ final class SettingsRuntimeService {
 
             if (enableAutoCheck) {
                 scheduler.startScheduledStockCheck(interval, TimeUnit.MINUTES);
-                System.out.println("[SettingsGUI] Automatische Lagerbestandspruefung neu gestartet (Intervall: "
-                        + interval + " Min.)");
+                Main.logUtils.addLog("Automatische Lagerbestandspruefung neu gestartet (Intervall: " + interval + " Min.)");
             } else {
-                System.out.println("[SettingsGUI] Automatische Lagerbestandspruefung deaktiviert");
+                Main.logUtils.addLog("Automatische Lagerbestandspruefung deaktiviert");
             }
 
             if (enableWarnings) {
                 scheduler.startWarningDisplay(warningInterval, TimeUnit.HOURS);
-                System.out.println("[SettingsGUI] Automatische Warnanzeige aktiviert (Intervall: " + warningInterval
+                Main.logUtils.addLog("Automatische Warnanzeige aktiviert (Intervall: " + warningInterval
                         + " Stunde(n))");
             } else {
-                System.out.println("[SettingsGUI] Automatische Warnanzeige deaktiviert");
+                Main.logUtils.addLog("Automatische Warnanzeige deaktiviert");
             }
 
             if (enableQrImport) {
                 scheduler.startAutoImportQrCodes(qrCodeImportInterval, TimeUnit.MINUTES);
-                System.out.println("[SettingsGUI] Automatischer QR-Code Import aktiviert (Intervall: "
+                Main.logUtils.addLog("Automatischer QR-Code Import aktiviert (Intervall: "
                         + qrCodeImportInterval + " Min.)");
             } else {
-                System.out.println("[SettingsGUI] Automatischer QR-Code Import deaktiviert");
+                Main.logUtils.addLog("Automatischer QR-Code Import deaktiviert");
             }
 
         } catch (Exception e) {
-            System.err.println("[SettingsGUI] Fehler beim Anwenden der Einstellungen: " + e.getMessage());
             logger.error("Fehler beim Anwenden der Einstellungen", e);
             Main.logUtils.addLog("Fehler beim Anwenden der Einstellungen: " + e.getMessage());
         }

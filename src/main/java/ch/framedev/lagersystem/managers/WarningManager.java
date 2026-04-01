@@ -1,5 +1,6 @@
 package ch.framedev.lagersystem.managers;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -116,8 +117,9 @@ public class WarningManager {
             return true;
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[] { title })) {
+            if (resultSet == null) return true;
             return !resultSet.next();
-        } catch (Exception e) {
+        } catch (SQLException e) {
             LOGGER.error("Error while checking if warning with title '{}' exists", title, e);
             // fail-open: allow creation if DB check fails
             return true;
@@ -135,10 +137,11 @@ public class WarningManager {
 
         String sql = "SELECT isResolved FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[] { title })) {
+            if (resultSet == null) return false;
             if (resultSet.next()) {
                 return parseDbBoolean(resultSet.getString("isResolved"));
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             LOGGER.error("Error while checking if warning with title '{}' is resolved", title, e);
             return false;
         }
@@ -245,7 +248,7 @@ public class WarningManager {
                 cache.put(title, w);
                 return w;
             }
-        } catch (Exception e) {
+        } catch (SQLException | IllegalArgumentException e) {
             LOGGER.error("Error while retrieving warning with title '{}'", title, e);
             return null;
         }
@@ -269,10 +272,11 @@ public class WarningManager {
 
         String sql = "SELECT isDisplayed FROM " + DatabaseManager.TABLE_WARNINGS + " WHERE title = ?;";
         try (var resultSet = databaseManager.executePreparedQuery(sql, new Object[] { title })) {
+            if (resultSet == null) return false;
             if (resultSet.next()) {
                 return parseDbBoolean(resultSet.getString("isDisplayed"));
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             LOGGER.error("Error while checking if warning with title '{}' is displayed", title, e);
             return false;
         }
@@ -295,6 +299,7 @@ public class WarningManager {
         String sql = "SELECT * FROM " + DatabaseManager.TABLE_WARNINGS + ";";
         List<Warning> warnings = new ArrayList<>();
         try (var resultSet = databaseManager.executeTrustedQuery(sql)) {
+            if (resultSet == null) return Collections.emptyList();
             while (resultSet.next()) {
                 Warning w = new Warning(
                         resultSet.getString("title"),
@@ -310,8 +315,7 @@ public class WarningManager {
             // cache the list (immutable view)
             allWarningsCache = Collections.unmodifiableList(warnings);
             allWarningsCacheTime = System.currentTimeMillis();
-        } catch (Exception e) {
-            System.err.println("[WarningManager] Fehler beim Laden aller Warnungen: " + e.getMessage());
+        } catch (SQLException | IllegalArgumentException e) {
             Main.logUtils.addLog("Fehler beim Laden aller Warnungen");
             LOGGER.error("Error while retrieving all warnings", e);
         }

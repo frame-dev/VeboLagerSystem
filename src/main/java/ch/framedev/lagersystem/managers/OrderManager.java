@@ -97,11 +97,11 @@ public class OrderManager {
         if (orderedArticles == null || orderedArticles.isEmpty()) return "";
         return orderedArticles.entrySet().stream()
                 .filter(e -> e.getKey() != null)
-                .map(OrderManager::extracted)
+                .map(OrderManager::serializeArticleEntry)
                 .collect(Collectors.joining(","));
     }
 
-    private static String extracted(Entry<String, Integer> e) {
+    private static String serializeArticleEntry(Entry<String, Integer> e) {
         if(e.getValue() == null) {
             return e.getKey().trim() + ":0";
         }

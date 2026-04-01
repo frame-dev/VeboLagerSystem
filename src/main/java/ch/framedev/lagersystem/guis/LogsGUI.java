@@ -31,12 +31,11 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,7 +47,7 @@ import java.util.regex.Pattern;
 public class LogsGUI extends JFrame {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-    private static final SimpleDateFormat TIMESTAMP_FORMAT = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
     private final Logger logger = LogManager.getLogger(LogsGUI.class);
 
@@ -569,7 +568,7 @@ public class LogsGUI extends JFrame {
             case ALL -> loadAllLogs();
         };
         applyFilters();
-        lastUpdatedLabel.setText("Letzte Aktualisierung: " + TIMESTAMP_FORMAT.format(new Date()));
+        lastUpdatedLabel.setText("Letzte Aktualisierung: " + LocalDateTime.now().format(TIMESTAMP_FORMAT));
     }
 
     private List<String> loadAllLogs() {
@@ -912,7 +911,7 @@ public class LogsGUI extends JFrame {
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("CSV Speichern");
-        fileChooser.setSelectedFile(new File("Logs_Export_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".csv"));
+        fileChooser.setSelectedFile(new File("Logs_Export_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) + ".csv"));
         int userSelection = fileChooser.showSaveDialog(this);
         if (userSelection != JFileChooser.APPROVE_OPTION) {
             return;

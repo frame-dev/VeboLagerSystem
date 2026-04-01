@@ -47,7 +47,7 @@ public class ArticleManager {
     // Cache for all articles (invalidated on any modification)
     private volatile List<Article> allArticlesCache;
     private volatile long allArticlesCacheTime;
-    private static final long CACHE_EXPIRY_MS = 60000; // 1 minute
+    private static final long CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
     private final ReentrantReadWriteLock allArticlesLock = new ReentrantReadWriteLock();
     // Fast membership lookup for article numbers (avoid linear scans)

@@ -28,7 +28,7 @@ public class ClientManager {
     private final DatabaseManager databaseManager;
 
     // Simple caches for fast lookups
-    private static final long CACHE_EXPIRY_MS = 60_000; // 1 minute
+    private static final long CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
     private final Map<String, String> departmentCache = new ConcurrentHashMap<>();
     private volatile List<Map<String, String>> allClientsCache;
     private volatile long allClientsCacheTime;

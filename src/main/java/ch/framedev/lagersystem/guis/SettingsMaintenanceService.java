@@ -226,8 +226,8 @@ final class SettingsMaintenanceService {
                                 "Alle Daten wurden aus der Datenbank entfernt.<br/><br/>" +
                                 "Das Programm sollte nun neu gestartet werden.</html>");
 
-                System.out.println("[SettingsGUI] Datenbank wurde erfolgreich bereinigt");
-
+                logger.info("Datenbank wurde erfolgreich bereinigt");
+                Main.logUtils.addLog("Datenbank erfolgreich bereinigt");
                 if (showRestartRecommendation() == JOptionPane.YES_OPTION) {
                     System.exit(0);
                 }
@@ -236,7 +236,6 @@ final class SettingsMaintenanceService {
                 Main.logUtils.addLog("Fehler: Datenbankverbindung nicht verfügbar.");
             }
         } catch (Exception e) {
-            System.err.println("[SettingsGUI] Fehler beim Löschen der Datenbank: " + e.getMessage());
             logger.error("Fehler beim Löschen der Datenbank", e);
             SettingsDialogService.showError(
                     "Fehler",

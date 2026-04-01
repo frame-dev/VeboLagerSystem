@@ -32,7 +32,8 @@ import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 
@@ -1420,7 +1421,7 @@ public class NewOrderGUI extends JFrame {
                 fillingsPayload,
                 receiver,
                 receiverKontoField.getText().trim(),
-                new SimpleDateFormat("dd.MM.yyyy").format(new Date()),
+                LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy")),
                 sender,
                 senderKontoField.getText().trim(),
                 department
@@ -1576,8 +1577,7 @@ public class NewOrderGUI extends JFrame {
                               Map<String, String> orderArticleColors, Map<String, String> orderArticleFillings,
                               String receiverName, String receiverKontoNumber,
                               String senderName, String senderKontoNumber, String department) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy");
-        String date = dateFormat.format(new Date());
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
         Order order = new Order(
                 "ORD" + System.currentTimeMillis(),
                 orderArticles,

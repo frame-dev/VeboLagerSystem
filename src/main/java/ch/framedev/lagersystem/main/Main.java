@@ -182,8 +182,9 @@ public class Main {
                 () -> {
             initializeCliDataAccess();
                     generateQrCodesAndLog();
-            System.out.println("QR-Codes für alle Artikel erstellt.");
+            logger.info("Erzwungenes Erstellen von QR-Codes für alle Artikel abgeschlossen.");
                 });
+
     }
 
     public static void forceImportData() {
@@ -195,7 +196,7 @@ public class Main {
             deleteImportedItemsList();
             importInitialData(null);
             initializeDefaultUser();
-            System.out.println("Datenimport abgeschlossen.");
+            logger.info("Datenimport abgeschlossen.");
                 });
     }
 
@@ -216,7 +217,8 @@ public class Main {
     }
 
     private static void runCliOperation(String startMessage, String errorMessage, Runnable action) {
-        System.out.println(startMessage);
+        logger.info(startMessage);
+        logUtils.addLog(startMessage);
         try {
             action.run();
         } catch (Exception e) {
@@ -226,7 +228,8 @@ public class Main {
     }
 
     private static void runServerMode(String[] args) {
-        System.out.println("Starte Server-Modus...");
+        logger.info("Starte Server-Modus...");
+        logUtils.addLog("Starte Server-Modus...");
         try {
             ScanServer.main(args);
         } catch (Exception e) {
@@ -259,11 +262,6 @@ public class Main {
                 if (current.getMessage() != null && !current.getMessage().isBlank()) {
                     sb.append(": ").append(current.getMessage());
                 }
-            } else if (current.getClass() != null) {
-                sb.append("\n").append(current.getClass().getName());
-                if (current.getMessage() != null && !current.getMessage().isBlank()) {
-                    sb.append(": ").append(current.getMessage());
-                }
             }
             for (StackTraceElement element : current.getStackTrace()) {
                 sb.append("\n  at ").append(element);
@@ -279,8 +277,8 @@ public class Main {
      */
     private static void printStartupInfo() {
         printSeparatorLine();
-        System.out.println("Starte VEBO Lagersystem...");
-        System.out.println("Version: " + VERSION);
+        logger.info("Starte VEBO Lagersystem...");
+        logger.info("Version: " + VERSION);
         printDashedLine();
         printSystemInfo();
         printSeparatorLine();
@@ -290,23 +288,23 @@ public class Main {
      * Print system information (Java version, vendor, OS)
      */
     private static void printSystemInfo() {
-        System.out.println("Java Version: " + System.getProperty("java.version"));
-        System.out.println("Java Vendor: " + System.getProperty("java.vendor"));
-        System.out.println("OS: " + System.getProperty("os.name") + " | " + System.getProperty("os.version"));
+        logger.info("Java Version: " + System.getProperty("java.version"));
+        logger.info("Java Vendor: " + System.getProperty("java.vendor"));
+        logger.info("OS: " + System.getProperty("os.name") + " | " + System.getProperty("os.version"));
     }
 
     /**
      * Print separator line
      */
     private static void printSeparatorLine() {
-        System.out.println("=".repeat(60));
+        logger.info("=".repeat(60));
     }
 
     /**
      * Print dashed line
      */
     private static void printDashedLine() {
-        System.out.println("-".repeat(60));
+        logger.info("-".repeat(60));
     }
 
     /**
@@ -370,6 +368,7 @@ public class Main {
 
         if (!loadFromFiles) {
             logger.info("Initial data import skipped as per settings.");
+            logUtils.addLog("Initial data import skipped as per settings.");
             return;
         }
 
@@ -441,8 +440,6 @@ public class Main {
      * message, title, and icon for the dialog as parameters and returns the result
      * of the user's choice.
      * 
-     * @param progressListener Listener to receive progress updates during the
-     *                         confirmation dialog
      * @return true if the user chooses to import initial data, false otherwise
      */
     private static boolean askForInitialDataImport() {
@@ -498,7 +495,8 @@ public class Main {
      */
     private static void initializeTheme() {
         ThemeManager.initialize();
-        System.out.println("✓ Theme initialisiert - Dark mode: " + ThemeManager.isDarkMode());
+        logger.info("✓ Theme initialisiert - Dark mode: {}", ThemeManager.isDarkMode());
+        logUtils.addLog("✓ Theme initialisiert - Dark mode: " + ThemeManager.isDarkMode());
     }
 
     /**
@@ -523,7 +521,8 @@ public class Main {
         String databaseFileName = resolveDatabaseFileName(databaseType);
         databaseManager = new DatabaseManager(databaseType, getAppDataDir().getAbsolutePath(), databaseFileName);
         databaseManager.initializeApplicationSchema();
-        System.out.println("✓ Datenbank initialisiert (" + databaseType.getDisplayName() + ")");
+        logger.info("✓ Datenbank initialisiert ({})", databaseType.getDisplayName());
+        logUtils.addLog("✓ Datenbank initialisiert (" + databaseType.getDisplayName() + ")");
         logger.info("Database initialized with type {} at {}", databaseType.getConfigValue(),
                 databaseManager.getDatabaseUrl());
         cleanupOldLogsIfEnabled();
@@ -548,7 +547,8 @@ public class Main {
         importClients(importUtils, importedItems, newlyImportedItems);
         persistImportedItems(newlyImportedItems);
 
-        System.out.println("✓ Alle Daten importiert");
+        logger.info("✓ Alle Daten importiert");
+        logUtils.addLog("✓ Alle Daten importiert");
     }
 
     /**
@@ -560,7 +560,8 @@ public class Main {
         ArticleManager articleManager = ArticleManager.getInstance();
         List<Map<String, Object>> data = importUtils.loadInventoryFile();
 
-        System.out.println("\nImportiere " + data.size() + " Artikel...");
+        logger.info("Importiere {} Artikel...", data.size());
+        logUtils.addLog("Importiere " + data.size() + " Artikel...");
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : data) {
@@ -588,6 +589,7 @@ public class Main {
             result.incrementImported();
             importedItems.add(article.getArticleNumber());
             newlyImportedItems.add(article.getArticleNumber());
+            logger.info("Importierter Artikel: {} ({})", article.getName(), article.getArticleNumber());
             logUtils.addLog("Importierter Artikel: " + article.getName() + " (" + article.getArticleNumber() + ")");
         } else {
             result.incrementSkipped();
@@ -660,7 +662,8 @@ public class Main {
         VendorManager vendorManager = VendorManager.getInstance();
         List<Map<String, Object>> vendorData = importUtils.loadVendorList();
 
-        System.out.println("\n🚚 Importiere " + vendorData.size() + " Lieferanten...");
+        logger.info("\n🚚 Importiere {} Lieferanten...", vendorData.size());
+        logUtils.addLog("🚚 Importiere " + vendorData.size() + " Lieferanten...");
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : vendorData) {
@@ -724,7 +727,8 @@ public class Main {
         DepartmentManager departmentManager = DepartmentManager.getInstance();
         List<Map<String, Object>> departmentData = importUtils.loadDepartmentsList();
 
-        System.out.println("\nImportiere " + departmentData.size() + " Abteilungen...");
+        logger.info("\nImportiere {} Abteilungen...", departmentData.size());
+        logUtils.addLog("🚚 Importiere " + departmentData.size() + " Abteilungen...");
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : departmentData) {
@@ -751,9 +755,11 @@ public class Main {
             result.incrementImported();
             importedItems.add(departmentName);
             newlyImportedItems.add(departmentName);
+            logger.info("Importierte Abteilung: {}", departmentName);
             logUtils.addLog("Importierte Abteilung: " + departmentName);
         } else {
             result.incrementSkipped();
+            logger.error("Fehler beim Importieren der Abteilung: {}", departmentName);
             logUtils.addLog("Fehler beim Importieren der Abteilung: " + departmentName);
         }
     }
@@ -767,7 +773,8 @@ public class Main {
         ClientManager clientManager = ClientManager.getInstance();
         List<Map<String, Object>> clientData = importUtils.loadClientsList();
 
-        System.out.println("\n👥 Importiere " + clientData.size() + " Kunden...");
+        logger.info("\n👥 Importiere {} Kunden...", clientData.size());
+        logUtils.addLog("👥 Importiere " + clientData.size() + " Kunden...");
         ImportResult result = new ImportResult();
 
         for (Map<String, Object> itemData : clientData) {
@@ -794,9 +801,11 @@ public class Main {
             result.incrementImported();
             importedItems.add(firstLastName);
             newlyImportedItems.add(firstLastName);
+            logger.info("Importierter Kunde: {}", firstLastName);
             logUtils.addLog("Importierter Kunde: " + firstLastName);
         } else {
             result.incrementSkipped();
+            logger.error("Fehler beim Importieren des Kunden: {}", firstLastName);
             logUtils.addLog("Fehler beim Importieren des Kunden: " + firstLastName);
         }
     }
@@ -836,7 +845,8 @@ public class Main {
 
         if (!userManager.existsUser(user.getName())) {
             userManager.insertUser(user);
-            System.out.println("\nOK Standard-Benutzer erstellt");
+            logger.info("✓ Standard-Benutzer erstellt");
+            logUtils.addLog("✓ Standard-Benutzer erstellt");
         }
     }
 
@@ -845,10 +855,12 @@ public class Main {
      */
     private static void launchGUI() {
         Runnable r = () -> {
-            System.out.println("\n🚀 Starte GUI...");
+            logger.info("🚀 Starte GUI...");
+            logUtils.addLog("🚀 Starte GUI...");
             MainGUI mainGUI = new MainGUI();
             mainGUI.display();
-            System.out.println("✓ Anwendung gestartet");
+            logger.info("✓ Anwendung gestartet");
+            logUtils.addLog("✓ Anwendung gestartet");
 
             startScheduledTasks();
         };
@@ -989,7 +1001,8 @@ public class Main {
     private static void startStockCheckScheduler(SchedulerManager schedulerManager, SchedulerConfig config) {
         if (config.enableAutoCheck) {
             schedulerManager.startScheduledStockCheck(config.stockCheckInterval, java.util.concurrent.TimeUnit.MINUTES);
-            System.out.println("✓ Lagerbestandsprüfung gestartet (Intervall: " + config.stockCheckInterval + " Min.)");
+            logger.info("✓ Lagerbestandsprüfung gestartet (Intervall: {} Min.)", config.stockCheckInterval);
+            logUtils.addLog("✓ Lagerbestandsprüfung gestartet (Intervall: " + config.stockCheckInterval + " Min.)");
         }
     }
 
@@ -999,7 +1012,8 @@ public class Main {
     private static void startWarningDisplayScheduler(SchedulerManager schedulerManager, SchedulerConfig config) {
         if (config.enableWarnings) {
             schedulerManager.startHourlyWarningDisplay();
-            System.out.println("✓ Stündliche Warnanzeige gestartet");
+            logger.info("✓ Stündliche Warnanzeige gestartet");
+            logUtils.addLog("✓ Stündliche Warnanzeige gestartet");
         }
     }
 
@@ -1010,7 +1024,8 @@ public class Main {
         if (config.enableAutomaticImport) {
             schedulerManager.startAutoImportQrCodes(config.automaticImportInterval,
                     java.util.concurrent.TimeUnit.MINUTES);
-            System.out.println("✓ Automatischer QR-Code Import gestartet");
+            logger.info("✓ Automatischer QR-Code Import gestartet");
+            logUtils.addLog("✓ Automatischer QR-Code Import gestartet");
         }
     }
 
@@ -1046,11 +1061,11 @@ public class Main {
         File settingsFile = ensureSettingsFile();
         settings = new Settings("settings.properties", Main.class, settingsFile);
         initializeDefaultSettings();
-        System.out.println("✓ Einstellungen geladen");
+        logger.info("✓ Einstellungen geladen");
+        logUtils.addLog("✓ Einstellungen geladen");
 
         applyThemeSettings();
         applyTableFontSettings();
-        loadGitHubToken();
         ensureCategoriesFileExists();
     }
 
@@ -1150,7 +1165,8 @@ public class Main {
         ThemeManager themeManager = ThemeManager.getInstance();
         themeManager.setTheme(darkMode ? ThemeManager.Theme.DARK : ThemeManager.Theme.LIGHT);
 
-        System.out.println("✓ Theme gesetzt: " + (darkMode ? "Dark Mode" : "Light Mode"));
+        logger.info("✓ Theme gesetzt: {}", darkMode ? "Dark Mode" : "Light Mode");
+        logUtils.addLog("✓ Theme gesetzt: " + (darkMode ? "Dark Mode" : "Light Mode"));
     }
 
     /**
@@ -1170,20 +1186,6 @@ public class Main {
     }
 
     /**
-     * Load GitHub token for update manager
-     */
-    private static void loadGitHubToken() {
-        String githubToken = settings.getProperty("github-token");
-
-        if (githubToken != null && !githubToken.isEmpty()) {
-            UpdateManager.getInstance().setPersonalToken(githubToken);
-            logUtils.addLog("GitHub Token für Update-Manager gesetzt");
-        } else {
-            logUtils.addLog("Kein GitHub Token für Update-Manager gesetzt");
-        }
-    }
-
-    /**
      * Check for application updates from GitHub across all release channels
      */
     private static void checkForUpdates() {
@@ -1193,45 +1195,48 @@ public class Main {
             // Check all channels
             UpdateManager.ChannelUpdateResult channelResult = updateManager.checkAllChannels();
 
-            if (channelResult == null) {
-                System.out.println("⚠  Konnte nicht auf Updates prüfen (keine Verbindung zu GitHub)");
-                return;
-            }
-
             // Log current version and channel
             UpdateManager.ReleaseChannel currentChannel = UpdateManager.detectChannel(VERSION);
-            System.out.println("✓ Aktuelle Version: " + VERSION + " (" + currentChannel + ")");
+            logUtils.addLog("✓ Aktuelle Version: " + VERSION + " (" + currentChannel + ")" + " - Update Check erfolgreich");
+            logger.info("✓ Aktuelle Version: {} ({}) - Update Check erfolgreich", VERSION, currentChannel);
 
             // Check for updates in the current channel
             UpdateManager.VersionComparisonResult comparison = updateManager.compareWithLatest();
 
             if (comparison == null) {
-                System.out.println("⚠  Konnte nicht auf Updates prüfen (keine Verbindung zu GitHub)");
+                logger.warn("⚠  Konnte nicht auf Updates prüfen (keine Verbindung zu GitHub)");
+                logUtils.addLog("⚠  Konnte nicht auf Updates prüfen (keine Verbindung zu GitHub)");
                 return;
             }
 
             // Display console output
             if (comparison.updateAvailable()) {
-                System.out.println("⚠  Update verfügbar in deinem Channel: " + comparison.latestVersion());
+                logger.warn("⚠  Update verfügbar in deinem Channel: {}", comparison.latestVersion());
+                logUtils.addLog("⚠  Update verfügbar in deinem Channel: " + comparison.latestVersion());
             } else if (comparison.isCurrent()) {
-                System.out.println("✓ Anwendung ist auf dem neuesten Stand");
+                logger.info("✓ Anwendung ist auf dem neuesten Stand");
+                logUtils.addLog("✓ Anwendung ist auf dem neuesten Stand");
             } else if (comparison.isNewer()) {
-                System.out.println(
-                        "✓ Entwicklungsversion (neuer als letzte Release: " + comparison.latestVersion() + ")");
+                logger.info("✓ Entwicklungsversion (neuer als letzte Release: {})", comparison.latestVersion());
+                logUtils.addLog("✓ Entwicklungsversion (neuer als letzte Release: " + comparison.latestVersion() + ")");
             }
 
             // Log all available channels
             if (channelResult.stableVersion() != null) {
-                System.out.println("  → Stable: " + channelResult.stableVersion());
+                logger.info("  → Stable: {}", channelResult.stableVersion());
+                logUtils.addLog("  → Stable: " + channelResult.stableVersion());
             }
             if (channelResult.betaVersion() != null) {
-                System.out.println("  → Beta: " + channelResult.betaVersion());
+                logger.info("  → Beta: {}", channelResult.betaVersion());
+                logUtils.addLog("  → Beta: " + channelResult.betaVersion());
             }
             if (channelResult.alphaVersion() != null) {
-                System.out.println("  → Alpha: " + channelResult.alphaVersion());
+                logger.info("  → Alpha: {}", channelResult.alphaVersion());
+                logUtils.addLog("  → Alpha: " + channelResult.alphaVersion());
             }
             if (channelResult.testingVersion() != null) {
-                System.out.println("  → Testing: " + channelResult.testingVersion());
+                logger.info("  → Testing: {}", channelResult.testingVersion());
+                logUtils.addLog("  → Testing: " + channelResult.testingVersion());
             }
 
             // Show GUI dialog if any update is available
@@ -1378,7 +1383,8 @@ public class Main {
         }
 
         public void printSummary() {
-            System.out.println("  → " + imported + " importiert, " + skipped + " übersprungen");
+            logger.info("  → {} importiert, {} übersprungen", imported, skipped);
+            logUtils.addLog("  → " + imported + " importiert, " + skipped + " übersprungen");
         }
     }
 
@@ -1528,7 +1534,8 @@ public class Main {
 
     private static void logSplashProgress(int percent, String message) {
         String safeMessage = message == null ? "" : message;
-        System.out.println("[Splash] " + percent + "% - " + safeMessage);
+        logger.info("[Splash] {}% - {}", percent, safeMessage);
+        logUtils.addLog("[Splash] " + percent + "% - " + safeMessage);
     }
 
     private static void handleCriticalStartupError(String message, Exception e) {

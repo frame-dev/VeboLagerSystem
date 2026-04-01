@@ -5,6 +5,12 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import ch.framedev.lagersystem.main.Main;
+
 /**
  * A properties file handler that fully preserves comments and blank lines
  * during both load and save operations.
@@ -37,6 +43,8 @@ import java.util.*;
  * }</pre>
  */
 public class Settings {
+
+    private final static Logger logger = LogManager.getLogger(Settings.class);
 
     // -------------------------------------------------------------------------
     // Internal line model
@@ -268,7 +276,8 @@ public class Settings {
                 }
             }
         } catch (IOException e) {
-            System.err.println("[Settings] Failed to save settings to " + file.getAbsolutePath() + ": " + e.getMessage());
+            Main.logUtils.addLog(Level.ERROR, "Failed to save settings to " + file.getAbsolutePath() + ": " + e.getMessage());
+            logger.error("Failed to save settings to " + file.getAbsolutePath() + ": " + e.getMessage(), e);   
         }
     }
 
@@ -286,7 +295,8 @@ public class Settings {
                 new InputStreamReader(new FileInputStream(source), StandardCharsets.UTF_8))) {
             parse(reader);
         } catch (IOException e) {
-            System.err.println("[Settings] Failed to load settings from " + source.getAbsolutePath() + ": " + e.getMessage());
+            Main.logUtils.addLog(Level.ERROR, "Failed to load settings from " + source.getAbsolutePath() + ": " + e.getMessage());
+            logger.error("Failed to load settings from " + source.getAbsolutePath(), e);
         }
     }
 
@@ -312,7 +322,8 @@ public class Settings {
                 new InputStreamReader(url.openStream(), StandardCharsets.UTF_8))) {
             parse(reader);
         } catch (IOException e) {
-            System.err.println("[Settings] Failed to load classpath resource '" + resourceName + "': " + e.getMessage());
+            Main.logUtils.addLog(Level.ERROR, "Failed to load classpath resource '" + resourceName + "': " + e.getMessage());
+            logger.error("Failed to load classpath resource '" + resourceName + "'", e);
         }
     }
 

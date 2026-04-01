@@ -1,25 +1,25 @@
 # 📝 TODOs – VEBO Lagersystem
 
-> Zuletzt aktualisiert: 31.03.2026
+> Zuletzt aktualisiert: 01.04.2026
 
 ---
 
 ## 🐛 Bugfixes / Code-Qualität
 
-- [ ] `Main.java` Z.444 – JavaDoc-Parameter `progressListener` ist undefiniert → JavaDoc korrigieren
-- [ ] `Main.java` Z.262 – `current.getClass() != null` ist immer `true` → Bedingung entfernen oder sinnvoll ersetzen
-- [ ] `Main.java` Z.1196 – `channelResult == null` ist immer `false` → Nullcheck entfernen
-- [ ] Alle `System.err.println` in `SettingsDataTransferService`, `SettingsGUI`, `SettingsRuntimeService`, `WarningManager` und `Settings` durch **Log4j2-Logger** ersetzen
-- [ ] Alle `System.out.println` in `Main.java` (Startup-Banner etc.) durch **Log4j2-Logger** ersetzen
-- [ ] `ScanServer.java` – `System.out.println` / `System.err.println` durch Logger ersetzen
-- [ ] **GitHub-Token-Platzhalter**: `loadGitHubToken()` und `UpdateManager`-Konstruktor setzen den Token auch wenn er noch `"your_github_token_here"` ist → Platzhalter-Check vor `setPersonalToken()` ergänzen
-- [ ] **Doppelte Token-Initialisierung**: `UpdateManager()`-Konstruktor liest `github-token` aus Settings UND `Main.loadGitHubToken()` ruft danach erneut `setPersonalToken()` auf → einen der beiden Pfade entfernen
+- [x] `Main.java` Z.444 – JavaDoc-Parameter `progressListener` ist undefiniert → JavaDoc korrigieren
+- [x] `Main.java` Z.262 – `current.getClass() != null` ist immer `true` → Bedingung entfernen oder sinnvoll ersetzen
+- [x] `Main.java` Z.1196 – `channelResult == null` ist immer `false` → Nullcheck entfernen
+- [x] Alle `System.err.println` in `SettingsDataTransferService`, `SettingsGUI`, `SettingsRuntimeService`, `WarningManager` und `Settings` durch **Log4j2-Logger** ersetzen
+- [x] Alle `System.out.println` in `Main.java` (Startup-Banner etc.) durch **Log4j2-Logger** ersetzen
+- [x] `ScanServer.java` – `System.out.println` / `System.err.println` durch Logger ersetzen
+- [x] **GitHub-Token-Platzhalter**: `loadGitHubToken()` und `UpdateManager`-Konstruktor setzen den Token auch wenn er noch `"your_github_token_here"` ist → Platzhalter-Check vor `setPersonalToken()` ergänzen
+- [x] **Doppelte Token-Initialisierung**: `UpdateManager()`-Konstruktor liest `github-token` aus Settings UND `Main.loadGitHubToken()` ruft danach erneut `setPersonalToken()` auf → einen der beiden Pfade entfernen
 - [ ] **`notes.content` Spalten-Typ**: `VARCHAR(2555)` in `NotesManager` und `DatabaseManager` – `2555` ist wahrscheinlich ein Tippfehler; für SQLite besser `TEXT` verwenden
-- [ ] **`catch (Exception e)` zu weit gefasst**: in `QRCodeUtils`, `ArticleUtils`, `WarningManager`, `ImportUtils`, `OrderExport` und `NetUtils` sollten spezifische Exception-Typen gefangen werden statt der Basis-Klasse
-- [ ] **`SimpleDateFormat` nicht thread-safe**: in `NewOrderGUI`, `MainGUI`, `LogsGUI` und `ArticleQrPreviewDialog` wird `SimpleDateFormat` verwendet → durch `DateTimeFormatter` + `LocalDate`/`LocalDateTime` ersetzen (wie bereits in `ScanServer` und `LogManager` getan)
-- [ ] **`OrderManager.extracted()` – nichtssagender Methodenname**: `private static String extracted(...)` → umbenennen in `serializeArticleEntry()`
+- [x] **`catch (Exception e)` zu weit gefasst**: in `QRCodeUtils`, `ArticleUtils`, `WarningManager`, `ImportUtils`, `OrderExport` und `NetUtils` sollten spezifische Exception-Typen gefangen werden statt der Basis-Klasse
+- [x] **`SimpleDateFormat` nicht thread-safe**: in `NewOrderGUI`, `MainGUI`, `LogsGUI` und `ArticleQrPreviewDialog` wird `SimpleDateFormat` verwendet → durch `DateTimeFormatter` + `LocalDate`/`LocalDateTime` ersetzen (wie bereits in `ScanServer` und `LogManager` getan)
+- [x] **`OrderManager.extracted()` – nichtssagender Methodenname**: `private static String extracted(...)` → umbenennen in `serializeArticleEntry()`
 - [ ] **`OrderManager` fehlt `resetInstance()`**: alle anderen Manager haben diese Methode für Test-Reset; `OrderManager` fehlt sie → Tests für `OrderManager` sind dadurch aufwändiger
-- [ ] **`LogManager.CACHE_TTL_MILLIS` ist Instanzvariable**: `private final long CACHE_TTL_MILLIS = 60 * 1000;` (Z.40) → sollte `private static final` sein, da der Wert nicht pro Instanz variiert
+- [x] **`LogManager.CACHE_TTL_MILLIS` ist Instanzvariable**: `private final long CACHE_TTL_MILLIS = 60 * 1000;` (Z.40) → sollte `private static final` sein, da der Wert nicht pro Instanz variiert
 - [ ] **`OrderManager.CACHE_TTL_MILLIS` als lokale Variable**: Z.334 `long CACHE_TTL_MILLIS = 5 * 60 * 1000;` wird bei jedem `getOrders()`-Aufruf neu angelegt → als Klassenkonstante (`private static final`) auslagern (wie in `VendorManager`, `WarningManager` etc. korrekt gemacht)
 
 ---
@@ -61,8 +61,8 @@
 ## 📐 Code-Konsistenz
 
 - [ ] **`resetInstance()` fehlt** in `OrderManager`, `LogManager`, `NotesManager`, `WarningManager`, `UserManager`, `VendorManager` → alle Singleton-Manager sollten für Tests resetbar sein (analog zu `ArticleManager`, `ClientManager`, `DatabaseManager`)
-- [ ] **`SimpleDateFormat` durch `DateTimeFormatter` ersetzen**: `NewOrderGUI` (2×), `MainGUI` (3×), `LogsGUI` (2×), `ArticleQrPreviewDialog` (1×) → einheitlich `LocalDate.now().format(DateTimeFormatter.ofPattern(...))` verwenden
-- [ ] **`OrderManager.extracted()`** – Methode trägt den von der IDE automatisch generierten Platzhalternamen → umbenennen in `serializeArticleEntry(Entry<String, Integer> e)`
+- [x] **`SimpleDateFormat` durch `DateTimeFormatter` ersetzen**: `NewOrderGUI` (2×), `MainGUI` (3×), `LogsGUI` (2×), `ArticleQrPreviewDialog` (1×) → einheitlich `LocalDate.now().format(DateTimeFormatter.ofPattern(...))` verwenden
+- [x] **`OrderManager.extracted()`** – Methode trägt den von der IDE automatisch generierten Platzhalternamen → umbenennen in `serializeArticleEntry(Entry<String, Integer> e)`
 - [ ] **`@SuppressWarnings("unused")`** auf Klassen-Ebene in `QRCodeUtils` und lokal in `MainGUI`/`ClientGUI` → ungenutzte Methoden/Felder entweder entfernen oder mit Kommentar dokumentieren, warum sie vorhanden sind
 - [ ] **`UpdateManager` – `@SuppressWarnings("DoubleCheckedLocking")`**: `instance`-Feld ist `volatile`, die Unterdrückung ist technisch korrekt, wirkt aber wie ein Fehler → `@GuardedBy`-Kommentar ergänzen oder `enum`-Singleton-Muster verwenden
 - [ ] **Singleton-Muster vereinheitlichen**: `OrderManager` verwendet `getInstance()` mit lokalem `local`-Trick, andere Manager verwenden einfacheres DCL ohne lokale Variable → konsistentes Muster durch alle Manager
@@ -94,7 +94,6 @@
 - [ ] **Tabellenfilter** persistent speichern (zuletzt verwendeter Suchbegriff/Filter bleibt erhalten)
 - [ ] **Artikelbilder:** Möglichkeit, einem Artikel ein Bild/Foto zuzuordnen
 - [ ] **`ScanServer`-URL-Vorschau**: In den Einstellungen nach Eingabe der `server_url` einen „Test"-Button anbieten, der die URL auf Erreichbarkeit prüft
-- [ ] **`disable_header`-Einstellung** in der SettingsGUI sichtbar machen (aktuell nur via `settings.properties` manuell konfigurierbar)
 
 ---
 

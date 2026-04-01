@@ -304,7 +304,7 @@ public class ImportUtils {
             LOGGER.error("Failed to read inventory file: {}", INVENTORY_FILE.getAbsolutePath(), e);
             Main.logUtils.addLog("Failed to read inventory file: " + INVENTORY_FILE.getAbsolutePath());
             throw new RuntimeException("Failed to load inventory file", e);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             LOGGER.error("Unexpected error while parsing inventory file", e);
             Main.logUtils.addLog(String.format("Unexpected error while parsing inventory file: %s", INVENTORY_FILE.getAbsolutePath()));
             throw new RuntimeException("Failed to load inventory file", e);

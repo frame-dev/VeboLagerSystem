@@ -3302,10 +3302,10 @@ public class SettingsGUI extends JFrame {
                 tableFontSlider.setValue((Integer) fontSizeTableSpinner.getValue());
                 tabFontSlider.setValue((Integer) fontSizeTabSpinner.getValue());
 
-                System.out.println("[SettingsGUI] Einstellungen geladen");
+                Main.logUtils.addLog("Einstellungen geladen");
             }
         } catch (Exception e) {
-            System.err.println("[SettingsGUI] Fehler beim Laden der Einstellungen: " + e.getMessage());
+            logger.error("Fehler beim Laden der Einstellungen", e);
             Main.logUtils.addLog("Fehler beim Laden der Einstellungen: " + e.getMessage());
         }
     }
@@ -3330,7 +3330,8 @@ public class SettingsGUI extends JFrame {
 
                 SettingsRuntimeService.persistSettings(collectSettingsProperties());
 
-                System.out.println("[SettingsGUI] Einstellungen gespeichert");
+                Main.logUtils.addLog("Einstellungen gespeichert");
+                logger.info("Einstellungen gespeichert");
 
                 applySettings(interval, enableWarnings, warningInterval, enableAutoCheck, darkMode);
                 ThemeManager.setCustomColors(selectedAccentColor, selectedHeaderColor, selectedButtonColor);
@@ -3343,7 +3344,7 @@ public class SettingsGUI extends JFrame {
                 dispose();
             }
         } catch (Exception e) {
-            System.err.println("[SettingsGUI] Fehler beim Speichern der Einstellungen: " + e.getMessage());
+            logger.error("Fehler beim Speichern der Einstellungen", e);
             new MessageDialog()
                     .setTitle("Fehler beim Speichern")
                     .setMessage("<html><b>Fehler beim Speichern!</b><br/><br/>" +

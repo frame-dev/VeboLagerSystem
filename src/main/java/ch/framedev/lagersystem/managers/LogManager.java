@@ -37,7 +37,7 @@ public class LogManager {
     private final ConcurrentHashMap<LogLevel, Integer> countsCache = new ConcurrentHashMap<>();
     private volatile Integer totalCountCache = null;
     private volatile long countsCacheTime = 0L;
-    private final long CACHE_TTL_MILLIS = 60 * 1000; // 1 minute for logs/counts
+    private static final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes for logs/counts
 
     /**
      * Log levels enum for better type safety
