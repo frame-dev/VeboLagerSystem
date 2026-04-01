@@ -26,11 +26,10 @@
 
 ## ✅ Tests
 
-- [ ] **`OrderManagerTest`** – Kein Test für `OrderManager` vorhanden (kein `resetInstance()` erschwert Isolation)
-- [ ] **`LogManagerTest`** – Kein Test für `LogManager` vorhanden
+- [x] **`OrderManagerTest`** – Kein Test für `OrderManager` vorhanden (kein `resetInstance()` erschwert Isolation)
+- [x] **`LogManagerTest`** – Kein Test für `LogManager` vorhanden
 - [ ] **`SchedulerManagerTest`** – Kein Test für `SchedulerManager` vorhanden (Start/Stop, Intervall)
-- [ ] **`ThemeManagerTest`** – Kein Test für `ThemeManager` vorhanden
-- [ ] **`UpdateManagerTest`** – Kein Test für `UpdateManager` (Channel-Parsing, Version-Vergleich)
+- [x] **`UpdateManagerTest`** – Kein Test für `UpdateManager` (Channel-Parsing, Version-Vergleich)
 - [ ] **`ImportUtilsTest`** – Kein Test für CSV-Import-Logik
 - [ ] **`ArticleExporterTest`** – Kein Test für Artikel-Export (CSV/PDF)
 - [ ] **`OrderExportTest`** – Kein Test für Bestellungs-PDF-Export

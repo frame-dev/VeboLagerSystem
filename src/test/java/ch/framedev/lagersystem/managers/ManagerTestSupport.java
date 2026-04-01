@@ -51,6 +51,7 @@ abstract class ManagerTestSupport {
         resetSingleton(NotesManager.class);
         resetSingleton(DepartmentManager.class);
         resetSingleton(LogManager.class);
+        resetSingleton(OrderManager.class);
     }
 
     private void resetSingleton(Class<?> type) {
