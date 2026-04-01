@@ -334,7 +334,7 @@ public class DatabaseManager {
                     + " (JDBC driver class not found at runtime: " + cause.getMessage()
                     + ". Reload the Maven project / runtime classpath and try again.)";
         }
-        if (cause instanceof SQLException sqlException && cause.getMessage() != null
+        if (cause instanceof SQLException && cause.getMessage() != null
                 && cause.getMessage().contains("No suitable driver")) {
             return "Failed to open database: " + url
                     + " (no suitable JDBC driver registered at runtime. The dependency may not be on the active runtime classpath.)";
@@ -1695,8 +1695,7 @@ public class DatabaseManager {
                     + e.getMessage());
         }
     }
-
-    @SuppressWarnings("unchecked")
+    
     private List<Map<String, Object>> readFilesystemRows(File tableFile) {
         try (FileReader reader = new FileReader(tableFile)) {
             Object raw = databaseType == DatabaseType.JSON
