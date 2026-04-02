@@ -50,7 +50,9 @@ import ch.framedev.lagersystem.utils.ImportUtils;
 import ch.framedev.lagersystem.utils.LogUtils;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
 import ch.framedev.lagersystem.utils.UserDataDir;
+import ch.framedev.lagersystem.utils.Variables;
 import ch.framedev.lagersystem.utils.Settings;
+import ch.framedev.lagersystem.utils.SettingsUtils;
 import ch.framedev.simplejavautils.SimpleJavaUtils;
 
 /**
@@ -128,7 +130,7 @@ public class Main {
      * be updated with each release to reflect the current version of the
      * application.
      */
-    public static final String VERSION = "0.3-TESTING";
+    public static final String VERSION = Variables.VERSION;
 
     /**
      * Main method - entry point of the application. Initializes the application,
@@ -1127,6 +1129,7 @@ public class Main {
         if (changed) {
             settings.save();
         }
+        SettingsUtils.applyDefaultSettings(Variables.settingsDefaults());
     }
 
     private static DatabaseManager.DatabaseType resolveDatabaseTypeSetting() {

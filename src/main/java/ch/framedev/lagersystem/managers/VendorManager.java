@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 
 import ch.framedev.lagersystem.classes.Vendor;
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.Variables;
 
 @SuppressWarnings({"UnusedReturnValue", "DuplicatedCode"})
 public class VendorManager {
@@ -19,7 +20,6 @@ public class VendorManager {
     private static final Logger logger = LogManager.getLogger(VendorManager.class);
 
     private static volatile VendorManager instance = null;
-    private static final Object LOCK = new Object();
     private final DatabaseManager databaseManager;
 
     // ==================== Cache ====================
@@ -27,7 +27,7 @@ public class VendorManager {
     private volatile List<Vendor> allVendorsCache = null;
     private volatile long allVendorsCacheTime = 0L;
 
-    private static final long ALL_VENDORS_CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes
+    private static final long ALL_VENDORS_CACHE_TTL_MILLIS = Variables.CACHE_TTL_MILLIS; // 5 minutes
 
     private void invalidateAllVendorsCache() {
         allVendorsCache = null;
@@ -40,16 +40,25 @@ public class VendorManager {
     }
 
     public static VendorManager getInstance() {
-        VendorManager local = instance;
-        if (local == null) {
-            synchronized (LOCK) {
+        if (instance == null) {
+            synchronized (VendorManager.class) {
                 if (instance == null) {
                     instance = new VendorManager();
                 }
-                local = instance;
             }
         }
-        return local;
+        return instance;
+    }
+
+    /**
+     * For testing or reinitialization: resets the singleton instance (use with caution).
+     */
+    public static void resetInstance() {
+        synchronized (VendorManager.class) {
+            if (instance != null) {
+                instance = null;
+            }
+        }
     }
 
     private void createTable() {

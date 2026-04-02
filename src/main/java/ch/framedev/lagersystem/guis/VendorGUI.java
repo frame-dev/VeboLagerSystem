@@ -17,8 +17,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
@@ -221,22 +219,7 @@ public class VendorGUI extends JFrame {
             updateVendorCountLabel();
         };
 
-        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                doSearch.run();
-            }
-
-            @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                doSearch.run();
-            }
-
-            @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                doSearch.run();
-            }
-        });
+        searchField.getDocument().addDocumentListener(JFrameUtils.onTextChanged(doSearch));
 
         searchBtn.addActionListener(e -> doSearch.run());
         clearBtn.addActionListener(e -> {
@@ -1077,22 +1060,7 @@ public class VendorGUI extends JFrame {
         bottomButtons.add(closeButton);
         bottomPanel.add(bottomButtons, BorderLayout.EAST);
 
-        searchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                refreshList.run();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                refreshList.run();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                refreshList.run();
-            }
-        });
+        searchField.getDocument().addDocumentListener(JFrameUtils.onTextChanged(refreshList));
         clearSearchButton.addActionListener(e -> searchField.setText(""));
         searchField.addActionListener(e -> refreshList.run());
         searchField.registerKeyboardAction(

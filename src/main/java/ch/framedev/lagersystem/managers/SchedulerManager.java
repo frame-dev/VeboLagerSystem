@@ -41,7 +41,6 @@ public class SchedulerManager {
     private static final DateTimeFormatter WARNING_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static volatile SchedulerManager instance;
-    private static final Object lock = new Object();
 
     private ScheduledExecutorService executor;
     private ScheduledFuture<?> stockCheckTask;
@@ -124,17 +123,14 @@ public class SchedulerManager {
      * @return scheduler manager instance
      */
     public static SchedulerManager getInstance() {
-        SchedulerManager local = SchedulerManager.instance;
-        if (local == null) {
-            synchronized (lock) {
-                local = SchedulerManager.instance;
-                if (local == null) {
-                    local = new SchedulerManager();
-                    SchedulerManager.instance = local;
+        if (instance == null) {
+            synchronized (SchedulerManager.class) {
+                if (instance == null) {
+                    instance = new SchedulerManager();
                 }
             }
         }
-        return local;
+        return instance;
     }
 
     /**

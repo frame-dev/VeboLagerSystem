@@ -12,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.logging.log4j.Logger;
 
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.Variables;
+
 import static ch.framedev.lagersystem.managers.DatabaseManager.TABLE_LOGS;
 
 /**
@@ -37,7 +39,7 @@ public class LogManager {
     private final ConcurrentHashMap<LogLevel, Integer> countsCache = new ConcurrentHashMap<>();
     private volatile Integer totalCountCache = null;
     private volatile long countsCacheTime = 0L;
-    private static final long CACHE_TTL_MILLIS = 5 * 60 * 1000; // 5 minutes for logs/counts
+    private static final long CACHE_TTL_MILLIS = Variables.CACHE_TTL_MILLIS; // 5 minutes for logs/counts
 
     /**
      * Log levels enum for better type safety
@@ -65,16 +67,25 @@ public class LogManager {
     }
 
     public static LogManager getInstance() {
-        LogManager local = instance;
-        if (local == null) {
+        if (instance == null) {
             synchronized (LogManager.class) {
                 if (instance == null) {
                     instance = new LogManager();
                 }
-                local = instance;
             }
         }
-        return local;
+        return instance;
+    }
+
+    /**
+     * For testing or reinitialization: resets the singleton instance (use with caution).
+     */
+    public static void resetInstance() {
+        synchronized (LogManager.class) {
+            if (instance != null) {
+                instance = null;
+            }
+        }
     }
 
     private void createTable() {

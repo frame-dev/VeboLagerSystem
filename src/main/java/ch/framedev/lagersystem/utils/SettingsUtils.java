@@ -13,6 +13,7 @@ import java.util.List;
 import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
+import java.util.Map;
 
 import static ch.framedev.lagersystem.guis.SettingsGUI.DEFAULT_FONT_STYLE;
 
@@ -262,5 +263,14 @@ public class SettingsUtils {
             g2.dispose();
             super.paintComponent(g);
         }
+    }
+
+    public static void applyDefaultSettings(Map<String,String> defaults) {
+        for (Map.Entry<String, String> entry : defaults.entrySet()) {
+            if (!Main.settings.contains(entry.getKey())) {
+                Main.settings.setProperty(entry.getKey(), entry.getValue());
+            }
+        }
+        Main.settings.save();
     }
 }

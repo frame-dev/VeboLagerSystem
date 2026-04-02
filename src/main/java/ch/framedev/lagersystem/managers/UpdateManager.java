@@ -7,7 +7,6 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,6 +18,7 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.Variables;
 
 /**
  * Manages application updates by checking GitHub releases.
@@ -44,7 +44,7 @@ public final class UpdateManager {
     private String personalToken;
     private String cachedLatestVersion;
     private long lastCheckTime = 0;
-    private static final long CACHE_DURATION = TimeUnit.MINUTES.toMillis(5); // Cache for 5 minutes
+    private static final long CACHE_DURATION = Variables.CACHE_TTL_MILLIS;
 
     /**
      * Enum representing different release channels/branches

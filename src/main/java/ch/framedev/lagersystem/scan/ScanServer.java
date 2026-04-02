@@ -1,7 +1,12 @@
 package ch.framedev.lagersystem.scan;
 
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.managers.DatabaseManager;
 import ch.framedev.lagersystem.utils.NetUtils;
+import ch.framedev.lagersystem.utils.Settings;
+import ch.framedev.lagersystem.utils.UserDataDir;
+import ch.framedev.lagersystem.utils.Variables;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -13,6 +18,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Reader;
@@ -38,19 +44,32 @@ import org.apache.logging.log4j.Logger;
 @SuppressWarnings("SameReturnValue")
 public class ScanServer {
 
+    /**
+     * Application settings loaded from properties file, accessible throughout the
+     * application.
+     */
+    public static volatile Settings settings;
+    /**
+     * Cached application data directory to avoid redundant lookups. Initialized on
+     * first access and reused for subsequent calls to getAppDataDir().
+     */
+    private static volatile File appDataDirCache;
+
     private static final Logger logger = LogManager.getLogger(ScanServer.class);
 
-    private static final File STORE = new File(Main.getAppDataDir(), "scans.json");
+    private static final File STORE = Variables.STORE;
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
 
     @SuppressWarnings("HttpUrlsUsage")
     public static void main(String[] args) throws Exception {
-        int port = 8080;
+        loadSettings();
+        String portStr = settings.getProperty("scan_server_port", "8080");
+        int port = Integer.parseInt(portStr);
 
         HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", port), 0);
-        server.setExecutor(Executors.newCachedThreadPool());
+        server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
 
         server.createContext("/scan", ScanServer::handleScanRequest);
         server.createContext("/scan.php", ScanServer::handleScanRequest);
@@ -613,6 +632,77 @@ public class ScanServer {
             return el.getAsJsonArray();
         } catch (JsonParseException e) {
             return new JsonArray();
+        }
+    }
+
+    /**
+     * Load application settings from a properties file
+     */
+    private static void loadSettings() {
+        File settingsFile = ensureSettingsFile();
+        settings = new Settings("settings.properties", Main.class, settingsFile);
+        initializeDefaultSettings();
+        logger.info("✓ Einstellungen geladen");
+    }
+
+    /**
+     * Returns the settings file path and ensures its parent directory exists.
+     * The file itself is intentionally NOT pre-created so that {@link ch.framedev.lagersystem.utils.Settings}
+     * can fall back to the classpath template (which carries comments and default values)
+     * when the file does not yet exist.  The first call to {@code Settings.save()} will
+     * create the file.
+     */
+    private static File ensureSettingsFile() {
+        File settingsFile = new File(getAppDataDir(), "settings.properties");
+
+        if (settingsFile.exists()) {
+            logger.info("Settings file already exists: {}", settingsFile.getAbsolutePath());
+        } else {
+            // Ensure parent directory is present; Settings.save() will create the file.
+            File parent = settingsFile.getParentFile();
+            if (parent != null && !parent.exists()) {
+                //noinspection ResultOfMethodCallIgnored
+                parent.mkdirs();
+            }
+            logger.info("Settings file will be created on first save: {}", settingsFile.getAbsolutePath());}
+
+        return settingsFile;
+    }
+
+    /**
+     * Get application data directory path
+     *
+     * @return File object representing the app data directory
+     */
+    public static File getAppDataDir() {
+        File cached = appDataDirCache;
+        if (cached != null) {
+            return cached;
+        }
+        try {
+            File resolved = UserDataDir.getAppPath("VeboLagerSystem").toFile();
+            appDataDirCache = resolved;
+            return resolved;
+        } catch (FileNotFoundException e) {
+            logger.error("Could not get VeboLagerSystem directory.", e);
+            File fallback = new File(".");
+            appDataDirCache = fallback;
+            return fallback;
+        }
+    }
+
+    private static void initializeDefaultSettings() {
+        boolean changed = false;
+        if (!settings.contains("first-time")) {
+            settings.setProperty("first-time", "false");
+            changed = true;
+        }
+        if (!settings.contains("database_type")) {
+            settings.setProperty("database_type", DatabaseManager.DatabaseType.SQLITE.getConfigValue());
+            changed = true;
+        }
+        if (changed) {
+            settings.save();
         }
     }
 }

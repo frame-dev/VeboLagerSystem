@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 
 import ch.framedev.lagersystem.classes.Warning;
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.Variables;
 
 public class WarningManager {
 
@@ -29,7 +30,7 @@ public class WarningManager {
     private volatile List<Warning> allWarningsCache = null;
     private volatile long allWarningsCacheTime = 0L;
 
-    private static final long ALL_WARNINGS_CACHE_TTL_MILLIS = 5 * 60 * 1000L; // 5 minutes
+    private static final long ALL_WARNINGS_CACHE_TTL_MILLIS = Variables.CACHE_TTL_MILLIS; // 5 minutes
     private static final String DB_TRUE = "true";
     private static final String DB_FALSE = "false";
 
@@ -52,16 +53,25 @@ public class WarningManager {
      * @return WarningManager instance
      */
     public static WarningManager getInstance() {
-        WarningManager local = instance;
-        if (local == null) {
+        if (instance == null) {
             synchronized (WarningManager.class) {
                 if (instance == null) {
                     instance = new WarningManager();
                 }
-                local = instance;
             }
         }
-        return local;
+        return instance;
+    }
+
+    /**
+     * For testing or reinitialization: resets the singleton instance (use with caution).
+     */
+    public static void resetInstance() {
+        synchronized (WarningManager.class) {
+            if (instance != null) {
+                instance = null;
+            }
+        }
     }
 
     /**

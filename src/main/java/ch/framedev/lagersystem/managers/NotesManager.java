@@ -2,6 +2,7 @@ package ch.framedev.lagersystem.managers;
 
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.classes.Note;
+import ch.framedev.lagersystem.utils.Variables;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -32,6 +33,8 @@ public class NotesManager {
     private static volatile NotesManager instance = null;
     private final DatabaseManager databaseManager;
 
+    private static final long CACHE_TTL_MILLIS = Variables.CACHE_TTL_MILLIS;
+
     // ==================== Cache ====================
     private final ConcurrentHashMap<String, Note> cache = new ConcurrentHashMap<>();
     private volatile List<Note> allNotesCache = null;
@@ -59,16 +62,25 @@ public class NotesManager {
      * @return The singleton instance of NotesManager.
      */
     public static NotesManager getInstance() {
-        NotesManager local = instance;
-        if (local == null) {
+        if (instance == null) {
             synchronized (NotesManager.class) {
                 if (instance == null) {
                     instance = new NotesManager();
                 }
-                local = instance;
             }
         }
-        return local;
+        return instance;
+    }
+
+    /**
+     * For testing or reinitialization: resets the singleton instance (use with caution).
+     */
+    public static void resetInstance() {
+        synchronized (NotesManager.class) {
+            if (instance != null) {
+                instance = null;
+            }
+        }
     }
 
     private void createTable() {
@@ -174,7 +186,6 @@ public class NotesManager {
 
     public List<Note> getAllNotes() {
         long now = System.currentTimeMillis();
-        final long CACHE_TTL_MILLIS = 5 * 60 * 1000;
         if (allNotesCache != null && (now - allNotesCacheTime) < CACHE_TTL_MILLIS) {
             return allNotesCache;
         }

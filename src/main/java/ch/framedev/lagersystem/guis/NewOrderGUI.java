@@ -21,8 +21,6 @@ import org.apache.logging.log4j.Logger;
 
 
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
@@ -527,14 +525,8 @@ public class NewOrderGUI extends JFrame {
         panel.add(fillingButton, gc);
 
         // live filter
-        articleSearchField.getDocument().addDocumentListener(new DocumentListener() {
-            private void update() {
-                rebuildArticleComboModel(articleSearchField.getText());
-            }
-            @Override public void insertUpdate(DocumentEvent e) { update(); }
-            @Override public void removeUpdate(DocumentEvent e) { update(); }
-            @Override public void changedUpdate(DocumentEvent e) { update(); }
-        });
+        articleSearchField.getDocument().addDocumentListener(
+                JFrameUtils.onTextChanged(() -> rebuildArticleComboModel(articleSearchField.getText())));
         articleSearchField.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override
             public void focusGained(java.awt.event.FocusEvent e) {

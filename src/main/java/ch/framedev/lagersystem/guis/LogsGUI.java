@@ -15,7 +15,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Style;
@@ -481,22 +480,7 @@ public class LogsGUI extends JFrame {
     }
 
     private void attachFilterListeners() {
-        DocumentListener listener = new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                applyFilters();
-            }
-        };
+        DocumentListener listener = JFrameUtils.onTextChanged(this::applyFilters);
         searchField.getDocument().addDocumentListener(listener);
         fromDateField.getDocument().addDocumentListener(listener);
         toDateField.getDocument().addDocumentListener(listener);

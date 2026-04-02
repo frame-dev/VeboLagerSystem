@@ -269,22 +269,7 @@ public class OrderGUI extends JFrame {
         Runnable doSearch = this::applyCombinedFilter;
 
         // Live filter while typing
-        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                doSearch.run();
-            }
-
-            @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                doSearch.run();
-            }
-
-            @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                doSearch.run();
-            }
-        });
+        searchField.getDocument().addDocumentListener(JFrameUtils.onTextChanged(doSearch));
 
         searchBtn.addActionListener(e -> doSearch.run());
         clearBtn.addActionListener(e -> {
@@ -592,22 +577,8 @@ public class OrderGUI extends JFrame {
             tcm.getColumn(i).setPreferredWidth(baseColumnWidths[i]);
         }
 
-        // Alternating row colors for readability (subtle) - DO NOT override status
-        // renderer
-        DefaultTableCellRenderer alternatingRenderer = new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-                    boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                if (!isSelected) {
-                    c.setBackground(
-                            row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
-                    c.setForeground(ThemeManager.getTextPrimaryColor());
-                }
-                return c;
-            }
-        };
-        orderTable.setDefaultRenderer(Object.class, alternatingRenderer);
+        // Alternating row colors for readability (subtle) - DO NOT override status renderer
+        orderTable.setDefaultRenderer(Object.class, JFrameUtils.createAlternatingRowRenderer());
 
         // Header styling
         JTableHeader header = orderTable.getTableHeader();

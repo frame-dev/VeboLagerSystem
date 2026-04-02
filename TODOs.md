@@ -43,36 +43,37 @@
 
 ## 🔧 Technische Schulden (Tech Debt)
 
-- [ ] `settings.properties`-Ressource wird beim ersten Start nur geladen wenn die externe Datei **nicht** existiert oder leer ist – Migrationsschutz für bestehende User-Dateien ohne neue Schlüssel fehlt (automatisch fehlende Keys nachfüllen)
+- [x] `settings.properties`-Ressource wird beim ersten Start nur geladen wenn die externe Datei **nicht** existiert oder leer ist – Migrationsschutz für bestehende User-Dateien ohne neue Schlüssel fehlt (automatisch fehlende Keys nachfüllen)
 - [x] `DatabaseManager` – `resetInstance()` ist `public` und nur für Tests gedacht → mit `@VisibleForTesting` annotieren oder in `protected` umwandeln
 - [x] `Main.settings` ist `public static` – Threading-Sicherheit durch `volatile` oder AtomicReference verbessern
 - [x] `supplier_orders.txt` und `imported_qrcodes.txt` werden als einfache Text-Dateien geführt → in Datenbanktabellen überführen für Konsistenz
 - [ ] Persistenz-Layer: JSON/YAML Backend hat keine Schema-Versionierung – Migrationsstrategie fehlt
 - [x] `ArticleUtils.getCategoryForArticle()` liest `categories.json` über `Main.getAppDataDir()` – schwer testbar; in `CategoryManager` auslagern
 - [ ] **`ScanServer.STORE` und `QRCodeUtils.STORE`** definieren beide `new File(Main.getAppDataDir(), "scans.json")` → duplizierte Konstante; in einer gemeinsamen Klasse (z. B. `AppPaths`) zentralisieren
-- [ ] **`ScanServer` – Port 8080 hardkodiert** (`int port = 8080`) → über `settings.properties` konfigurierbar machen (neuer Key `scan_server_port`)
-- [ ] **`ScanServer` – unbegrenzter Thread-Pool**: `Executors.newCachedThreadPool()` kann unter Last Ressourcen erschöpfen → durch `newFixedThreadPool(n)` oder `newVirtualThreadPerTaskExecutor()` (Java 21) ersetzen
+- [x] **`ScanServer` – Port 8080 hardkodiert** (`int port = 8080`) → über `settings.properties` konfigurierbar machen (neuer Key `scan_server_port`)
+- [x] **`ScanServer` – unbegrenzter Thread-Pool**: `Executors.newCachedThreadPool()` kann unter Last Ressourcen erschöpfen → durch `newFixedThreadPool(n)` oder `newVirtualThreadPerTaskExecutor()` (Java 21) ersetzen
 - [ ] **`ScanServer.STORE` wird als `static final`-Feld bei Klassen-Laden initialisiert** → `Main.getAppDataDir()` muss zu diesem Zeitpunkt bereits initialisiert sein; Reihenfolge dokumentieren oder lazy initialization verwenden
-- [ ] **`@SuppressWarnings("DuplicatedCode")`** in `ArticleExporter`, `OrderExport`, `JFrameUtils` und mehreren GUIs deutet auf echten Code-Duplikat hin → gemeinsame Helfer-Methoden extrahieren statt Warnung unterdrücken
-- [ ] **`NotesManager.CACHE_TTL_MILLIS` als lokale Variable**: Z.177 `final long CACHE_TTL_MILLIS = 5 * 60 * 1000;` in `getAllNotes()` → ebenfalls als `private static final` auslagern
-- [ ] **Cache-TTL inkonsistent**: `LogManager` nutzt 1 Minute, alle anderen Manager nutzen 5 Minuten, `UpdateManager` 5 Minuten – keine gemeinsame Konstante; einen zentralen `CacheConfig`-Wert definieren oder zumindest dokumentieren warum die TTLs abweichen
+- [x] **`@SuppressWarnings("DuplicatedCode")`** in `ArticleExporter`, `OrderExport`, `JFrameUtils` und mehreren GUIs deutet auf echten Code-Duplikat hin → gemeinsame Helfer-Methoden extrahieren statt Warnung unterdrücken
+- [x] **`NotesManager.CACHE_TTL_MILLIS` als lokale Variable**: Z.177 `final long CACHE_TTL_MILLIS = 5 * 60 * 1000;` in `getAllNotes()` → ebenfalls als `private static final` auslagern
+- [x] **Cache-TTL inkonsistent**: `LogManager` nutzt 1 Minute, alle anderen Manager nutzen 5 Minuten, `UpdateManager` 5 Minuten – keine gemeinsame Konstante; einen zentralen `CacheConfig`-Wert definieren oder zumindest dokumentieren warum die TTLs abweichen
 
 ---
 
 ## 📐 Code-Konsistenz
 
-- [ ] **`resetInstance()` fehlt** in `OrderManager`, `LogManager`, `NotesManager`, `WarningManager`, `UserManager`, `VendorManager` → alle Singleton-Manager sollten für Tests resetbar sein (analog zu `ArticleManager`, `ClientManager`, `DatabaseManager`)
+- [x] **`resetInstance()` fehlt** in `OrderManager`, `LogManager`, `NotesManager`, `WarningManager`, `UserManager`, `VendorManager`, `CategoryManager` → alle Singleton-Manager sollten für Tests resetbar sein (analog zu `ArticleManager`, `ClientManager`, `DatabaseManager`)
 - [x] **`SimpleDateFormat` durch `DateTimeFormatter` ersetzen**: `NewOrderGUI` (2×), `MainGUI` (3×), `LogsGUI` (2×), `ArticleQrPreviewDialog` (1×) → einheitlich `LocalDate.now().format(DateTimeFormatter.ofPattern(...))` verwenden
 - [x] **`OrderManager.extracted()`** – Methode trägt den von der IDE automatisch generierten Platzhalternamen → umbenennen in `serializeArticleEntry(Entry<String, Integer> e)`
 - [ ] **`@SuppressWarnings("unused")`** auf Klassen-Ebene in `QRCodeUtils` und lokal in `MainGUI`/`ClientGUI` → ungenutzte Methoden/Felder entweder entfernen oder mit Kommentar dokumentieren, warum sie vorhanden sind
 - [ ] **`UpdateManager` – `@SuppressWarnings("DoubleCheckedLocking")`**: `instance`-Feld ist `volatile`, die Unterdrückung ist technisch korrekt, wirkt aber wie ein Fehler → `@GuardedBy`-Kommentar ergänzen oder `enum`-Singleton-Muster verwenden
-- [ ] **Singleton-Muster vereinheitlichen**: `OrderManager` verwendet `getInstance()` mit lokalem `local`-Trick, andere Manager verwenden einfacheres DCL ohne lokale Variable → konsistentes Muster durch alle Manager
+- [x] **Singleton-Muster vereinheitlichen**: `OrderManager` verwendet `getInstance()` mit lokalem `local`-Trick, andere Manager verwenden einfacheres DCL ohne lokale Variable → konsistentes Muster durch alle Manager
 
 ---
 
 ## ✨ Features / Verbesserungen
 
-- [ ] **Einstellungen:** Fehlende Keys beim Programmstart automatisch mit Default-Werten aus dem Classpath-Template nachfüllen (statt nur `first-time` und `database_type`)
+- [x] **Variables:** Klasse erstellen mit allen nutzvollen Variablen
+- [x] **Einstellungen:** Fehlende Keys beim Programmstart automatisch mit Default-Werten aus dem Classpath-Template nachfüllen (statt nur `first-time` und `database_type`)
 - [x] **Datenbank-Migration:** UI-Dialog zum Migrieren zwischen Backends (z. B. SQLite → H2) vollständig implementieren und testen
 - [ ] **Passwort-/Rollenkonzept:** Benutzerverwaltung um Rollen (Admin, Benutzer, Gast) erweitern
 - [ ] **Artikel-Verlauf:** Bestandsänderungen mit Zeitstempel/Benutzer protokollieren (Audit-Trail)

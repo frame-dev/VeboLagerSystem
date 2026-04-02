@@ -2,6 +2,7 @@ package ch.framedev.lagersystem.managers;
 
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,13 +10,18 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.Variables;
 
 public class CategoryManager {
 
     public static final String UNKNOWN_CATEGORY = "Unbekannt";
     private static final Pattern RANGE_PATTERN = Pattern.compile("^\\s*(\\d+)\\s*(?:-\\s*(\\d+))?\\s*$");
+    private static final long ALL_CATEGORIES_CACHE_TTL_MILLIS = Variables.CACHE_TTL_MILLIS;
 
-    private static CategoryManager instance;
+    private volatile List<Map<String, String>> allCategoriesCache = null;
+    private volatile long allCategoriesCacheTime = 0L;
+
+    private static volatile CategoryManager instance;
     private final DatabaseManager databaseManager;
 
     private CategoryManager() {
@@ -23,15 +29,24 @@ public class CategoryManager {
         createTable();
     }
 
-    public static synchronized CategoryManager getInstance() {
+    public static CategoryManager getInstance() {
         if (instance == null) {
-            instance = new CategoryManager();
+            synchronized (CategoryManager.class) {
+                if (instance == null) {
+                    instance = new CategoryManager();
+                }
+            }
         }
         return instance;
     }
 
     public static void resetInstance() {
         instance = null;
+    }
+
+    private void invalidateAllCategoriesCache() {
+        allCategoriesCache = null;
+        allCategoriesCacheTime = 0L;
     }
 
     private void createTable() {
@@ -50,7 +65,9 @@ public class CategoryManager {
         if(exists(category))
             return false; // Prevent inserting duplicate category
         String sql = "INSERT INTO " + DatabaseManager.TABLE_CATEGORIES + " (category, fromTo) VALUES (?, ?);";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{category, fromTo});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{category, fromTo});
+        if (result) invalidateAllCategoriesCache();
+        return result;
     }
 
     public boolean exists(String category) {
@@ -72,7 +89,9 @@ public class CategoryManager {
         if(!exists(category))
             return false; // Prevent updating non-existing category
         String sql = "UPDATE " + DatabaseManager.TABLE_CATEGORIES + " SET fromTo = ? WHERE category = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{newFromTo, category});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{newFromTo, category});
+        if (result) invalidateAllCategoriesCache();
+        return result;
     }
 
     public boolean deleteCategory(String category) {
@@ -83,10 +102,16 @@ public class CategoryManager {
             return false;
         }
         String sql = "DELETE FROM " + DatabaseManager.TABLE_CATEGORIES + " WHERE category = ?;";
-        return databaseManager.executePreparedUpdate(sql, new Object[]{category});
+        boolean result = databaseManager.executePreparedUpdate(sql, new Object[]{category});
+        if (result) invalidateAllCategoriesCache();
+        return result;
     }
 
     public List<Map<String, String>> getAllCategories() {
+        long now = System.currentTimeMillis();
+        if (allCategoriesCache != null && (now - allCategoriesCacheTime) < ALL_CATEGORIES_CACHE_TTL_MILLIS) {
+            return allCategoriesCache;
+        }
         List<Map<String, String>> categories = new ArrayList<>();
         String sql = "SELECT category, fromTo FROM " + DatabaseManager.TABLE_CATEGORIES + ";";
         try (ResultSet resultSet = databaseManager.executeTrustedQuery(sql)) {
@@ -96,10 +121,13 @@ public class CategoryManager {
                 category.put("fromTo", resultSet.getString("fromTo"));
                 categories.add(category);
             }
+            allCategoriesCache = Collections.unmodifiableList(categories);
+            allCategoriesCacheTime = System.currentTimeMillis();
+            return allCategoriesCache;
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return categories;
+        return allCategoriesCache != null ? allCategoriesCache : Collections.emptyList();
     }
 
     public String getCategoryForArticle(String articleNumber) {

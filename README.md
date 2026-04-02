@@ -75,7 +75,7 @@
 
 ### 🧾 Lieferanten-Bestellungen (Nachbestellungen)
 - Eigene Oberfläche für Nachbestellungen
-- Persistente Liste (`supplier_orders.txt`)
+- Persistente Liste in Datenbanktabelle (`supplier_orders`)
 - Aktionen: Entfernen, Alle löschen, Speichern, Aktualisieren
 - Protokollierung in `vendorOrder.log`
 
@@ -102,7 +102,7 @@
 ### 📱 QR-Code-Integration
 - QR-Scans aus Server-JSON importieren
 - Automatische Import-Intervalle
-- Duplikat-Tracking (`imported_qrcodes.txt`)
+- Duplikat-Tracking in Datenbanktabelle (`imported_qrcodes`)
 - Eigenverbrauch-Tracking (`own_use_list.txt`)
 - Optionaler lokaler **QR-Scan-Server** (siehe unten)
 
@@ -365,8 +365,7 @@ VeboLagerSystem/
 │   │       ├── inventar.json
 │   │       ├── vendor.json
 │   │       ├── clients.json
-│   │       ├── departments.json
-│   │       └── categories.json
+│   │       └── departments.json
 │   └── test/
 ├── pom.xml
 └── README.md
@@ -451,7 +450,7 @@ CREATE TABLE IF NOT EXISTS warnings (
 CREATE TABLE IF NOT EXISTS notes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
-    content VARCHAR(2555),
+    content TEXT,
     date TEXT
 );
 
@@ -461,6 +460,30 @@ CREATE TABLE IF NOT EXISTS logs (
     timestamp TEXT NOT NULL,
     level TEXT NOT NULL,
     message TEXT NOT NULL
+);
+
+-- Supplier Orders
+CREATE TABLE IF NOT EXISTS supplier_orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    article_number TEXT NOT NULL UNIQUE,
+    name TEXT,
+    vendor TEXT,
+    quantity INTEGER,
+    stock INTEGER,
+    added_at TEXT
+);
+
+-- Imported QR Codes
+CREATE TABLE IF NOT EXISTS imported_qrcodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    qr_id TEXT NOT NULL UNIQUE
+);
+
+-- Categories
+CREATE TABLE IF NOT EXISTS categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL UNIQUE,
+    fromTo TEXT NOT NULL
 );
 ```
 
@@ -558,8 +581,6 @@ VeboLagerSystem/
 ├── settings.properties       # Einstellungen
 ├── scans.json                # QR-Scan-Daten
 ├── qr_codes/                 # Generierte QR-Codes
-├── supplier_orders.txt       # Lieferanten-Nachbestellungen
-├── imported_qrcodes.txt      # QR-Code-Import-Tracking
 ├── imported_items.txt        # Import-Tracking
 ├── own_use_list.txt          # Eigenverbrauch-Tracking
 └── logs/
@@ -677,8 +698,8 @@ Diese Software ist Eigentum von VEBO Oensingen und darf ohne ausdrückliche schr
 ## 📊 Statistiken
 
 - **Version:** 0.3-TESTING
-- **Stand:** Februar 2026
-- **Java Dateien:** 46
+- **Stand:** April 2026
+- **Java Dateien:** 47
 - **Zeilen Code (Java):** ~27k
 - **Dependencies:** 10
 - **Supported Platforms:** Windows, macOS, Linux

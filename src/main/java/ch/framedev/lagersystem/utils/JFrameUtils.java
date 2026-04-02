@@ -10,6 +10,7 @@ import javax.swing.*;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import javax.swing.plaf.basic.BasicComboPopup;
 import javax.swing.plaf.basic.ComboPopup;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
@@ -650,5 +651,37 @@ public class JFrameUtils {
             }
         }
         return 0.0;
+    }
+
+    /**
+     * Creates a {@link javax.swing.event.DocumentListener} that calls {@code onChange}
+     * on every insert, remove, and change event. Attach it to a text component's document:
+     * <pre>field.getDocument().addDocumentListener(JFrameUtils.onTextChanged(this::doFilter));</pre>
+     */
+    public static javax.swing.event.DocumentListener onTextChanged(Runnable onChange) {
+        return new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { onChange.run(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { onChange.run(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { onChange.run(); }
+        };
+    }
+
+    /**
+     * Creates a {@link DefaultTableCellRenderer} that applies the standard application
+     * alternating row colors and text color, delegating selection rendering to the super class.
+     */
+    public static DefaultTableCellRenderer createAlternatingRowRenderer() {
+        return new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? ThemeManager.getTableRowEvenColor() : ThemeManager.getTableRowOddColor());
+                    c.setForeground(ThemeManager.getTextPrimaryColor());
+                }
+                return c;
+            }
+        };
     }
 }

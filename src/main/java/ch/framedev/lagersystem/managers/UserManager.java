@@ -2,6 +2,8 @@ package ch.framedev.lagersystem.managers;
 
 import ch.framedev.lagersystem.classes.User;
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.Variables;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -16,11 +18,10 @@ public class UserManager {
     private static final Logger logger = LogManager.getLogger(UserManager.class);
 
     private static volatile UserManager instance = null;
-    private static final Object LOCK = new Object();
     private final DatabaseManager databaseManager;
 
     private static final String TABLE_NAME = DatabaseManager.TABLE_USERS;
-    private static final long ALL_USERNAMES_CACHE_TTL_MILLIS = 5 * 60 * 1000;
+    private static final long ALL_USERNAMES_CACHE_TTL_MILLIS = Variables.CACHE_TTL_MILLIS;
 
     // ==================== Cache ====================
     private final ConcurrentHashMap<String, User> cache = new ConcurrentHashMap<>();
@@ -33,16 +34,25 @@ public class UserManager {
     }
 
     public static UserManager getInstance() {
-        UserManager local = instance;
-        if (local == null) {
-            synchronized (LOCK) {
+        if (instance == null) {
+            synchronized (UserManager.class) {
                 if (instance == null) {
                     instance = new UserManager();
                 }
-                local = instance;
             }
         }
-        return local;
+        return instance;
+    }
+
+    /**
+     * For testing or reinitialization: resets the singleton instance (use with caution).
+     */
+    public static void resetInstance() {
+        synchronized (UserManager.class) {
+            if (instance != null) {
+                instance = null;
+            }
+        }
     }
 
     private void createTable() {

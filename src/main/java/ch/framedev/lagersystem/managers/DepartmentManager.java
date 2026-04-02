@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.Variables;
 
 /**
  * This class manages the departments in the database. It provides methods to create, read, update and delete departments.
@@ -28,7 +29,7 @@ public class DepartmentManager {
     private final ConcurrentHashMap<String, Map<String, Object>> cache = new ConcurrentHashMap<>();
     private volatile List<Map<String, Object>> allDepartmentsCache = null;
     private volatile long allDepartmentsCacheTime = 0L;
-    private static final long CACHE_TTL_MILLIS = 5 * 60 * 1000;
+    private static final long CACHE_TTL_MILLIS = Variables.CACHE_TTL_MILLIS;
 
     private void invalidateCaches() {
         allDepartmentsCache = null;
@@ -46,16 +47,14 @@ public class DepartmentManager {
      * @return the singleton instance of DepartmentManager.
      */
     public static DepartmentManager getInstance() {
-        DepartmentManager local = instance;
-        if (local == null) {
+        if (instance == null) {
             synchronized (DepartmentManager.class) {
                 if (instance == null) {
                     instance = new DepartmentManager();
                 }
-                local = instance;
             }
         }
-        return local;
+        return instance;
     }
 
     /**

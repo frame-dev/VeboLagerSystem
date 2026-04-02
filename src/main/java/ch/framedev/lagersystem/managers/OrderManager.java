@@ -19,6 +19,7 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.utils.ArticleUtils;
+import ch.framedev.lagersystem.utils.Variables;
 
 @SuppressWarnings({"UnusedReturnValue", "DuplicatedCode"})
 public class OrderManager {
@@ -30,7 +31,7 @@ public class OrderManager {
     private final DatabaseManager databaseManager;
 
     // ==================== Cache ====================
-    private static final long CACHE_TTL_MILLIS = 5 * 60 * 1000;
+    private static final long CACHE_TTL_MILLIS = Variables.CACHE_TTL_MILLIS;
     private final ConcurrentHashMap<String, Order> cache = new ConcurrentHashMap<>();
     private volatile List<Order> allOrdersCache = null;
     private volatile long allOrdersCacheTime = 0L;
@@ -41,16 +42,14 @@ public class OrderManager {
     }
 
     public static OrderManager getInstance() {
-        OrderManager local = instance;
-        if (local == null) {
+        if (instance == null) {
             synchronized (OrderManager.class) {
                 if (instance == null) {
                     instance = new OrderManager();
                 }
-                local = instance;
             }
         }
-        return local;
+        return instance;
     }
 
     /**

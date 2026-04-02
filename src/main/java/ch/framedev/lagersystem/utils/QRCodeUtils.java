@@ -45,7 +45,7 @@ public class QRCodeUtils {
     private static final Gson GSON = new Gson();
 
     /** Local store for QR scan data (JSON array stored in scans.json). */
-    private static final File STORE = new File(Main.getAppDataDir(), "scans.json");
+    private static final File STORE = Variables.STORE;
 
     /**
      * Generates QR code images for a list of articles.

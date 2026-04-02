@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.utils.Variables;
 
 /**
  * The ClientManager class is responsible for managing client data in the database. It provides methods to create, read, update, and delete client records, as well as to retrieve client information. The class uses caching to improve performance for frequently accessed data, such as client departments and the list of all clients. It also logs all operations performed on clients for auditing purposes.
@@ -28,7 +29,7 @@ public class ClientManager {
     private final DatabaseManager databaseManager;
 
     // Simple caches for fast lookups
-    private static final long CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+    private static final long CACHE_EXPIRY_MS = Variables.CACHE_TTL_MILLIS; // 5 minutes
     private final Map<String, String> departmentCache = new ConcurrentHashMap<>();
     private volatile List<Map<String, String>> allClientsCache;
     private volatile long allClientsCacheTime;
