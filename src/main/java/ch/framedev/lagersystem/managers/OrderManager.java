@@ -30,6 +30,7 @@ public class OrderManager {
     private final DatabaseManager databaseManager;
 
     // ==================== Cache ====================
+    private static final long CACHE_TTL_MILLIS = 5 * 60 * 1000;
     private final ConcurrentHashMap<String, Order> cache = new ConcurrentHashMap<>();
     private volatile List<Order> allOrdersCache = null;
     private volatile long allOrdersCacheTime = 0L;
@@ -50,6 +51,17 @@ public class OrderManager {
             }
         }
         return local;
+    }
+
+    /**
+     * For testing or reinitialization: resets the singleton instance (use with caution).
+     */
+    public static void resetInstance() {
+        synchronized (OrderManager.class) {
+            if (instance != null) {
+                instance = null;
+            }
+        }
     }
 
     private void createTable() {
@@ -331,7 +343,6 @@ public class OrderManager {
 
     public List<Order> getOrders() {
         long now = System.currentTimeMillis();
-        long CACHE_TTL_MILLIS = 5 * 60 * 1000;
         if (allOrdersCache != null && (now - allOrdersCacheTime) < CACHE_TTL_MILLIS) {
             return allOrdersCache;
         }

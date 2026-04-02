@@ -5,6 +5,9 @@ import ch.framedev.simplejavautils.SimpleJavaUtils;
 import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.SeperateArticle;
 import ch.framedev.lagersystem.managers.ArticleManager;
+import ch.framedev.lagersystem.managers.DatabaseManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -32,6 +35,7 @@ public class ImportUtils {
     private final File VENDOR_FILE;
     private final File DEPARTMENT_FILE;
     private final File CLIENTS_FILE;
+    private final File CATEGORY_FILE;
     private final static File SEPERATED_ARTICLES_FILE = new File(Main.getAppDataDir(), "seperated_articles.json");
     private static volatile ImportUtils instance;
 
@@ -112,6 +116,18 @@ public class ImportUtils {
         } else {
             LOGGER.info("Clients file loaded: {}", CLIENTS_FILE.getAbsolutePath());
             Main.logUtils.addLog(CLIENTS_FILE.getAbsolutePath() + " loaded successfully");
+        }
+
+        CATEGORY_FILE = new SimpleJavaUtils().getFromResourceFile("categories.json", Main.class);
+        if (CATEGORY_FILE == null) {
+            LOGGER.warn("Category file 'categories.json' not found in resources");
+            Main.logUtils.addLog("Category file 'categories.json' not found in resources");
+        } else if (!CATEGORY_FILE.exists()) {
+            LOGGER.warn("Category file does not exist: {}", CATEGORY_FILE.getAbsolutePath());
+            Main.logUtils.addLog(CATEGORY_FILE.getAbsolutePath() + " does not exist");
+        } else {
+            LOGGER.info("Category file loaded: {}", CATEGORY_FILE.getAbsolutePath());
+            Main.logUtils.addLog(CATEGORY_FILE.getAbsolutePath() + " loaded successfully");
         }
 
         if(!SEPERATED_ARTICLES_FILE.exists()) {
@@ -313,6 +329,53 @@ public class ImportUtils {
         return inventoryData;
     }
 
+    public List<Map<String,String>> loadCategoryList() {
+        List<Map<String, String>> categoryList = new ArrayList<>();
+
+        if(CATEGORY_FILE == null || !CATEGORY_FILE.exists()) {
+            LOGGER.warn("Cannot load inventory: file is null or does not exist");
+            Main.logUtils.addLog("Cannot load inventory: file is null or does not exist");
+            return categoryList;
+        }
+
+        Gson gson = new Gson();
+        try(FileReader reader = new FileReader(CATEGORY_FILE)) {
+            JsonArray jsonArray = gson.fromJson(reader, JsonArray.class);
+            if(jsonArray == null) {
+                LOGGER.warn("Category file is empty or invalid JSON");
+                Main.logUtils.addLog("Category file is empty or invalid JSON");
+                return categoryList;
+            }
+            for(JsonElement jsonElement : jsonArray) {
+                if(!jsonElement.isJsonObject()) {
+                    LOGGER.debug("Skipping non-object element in category array");
+                    Main.logUtils.addLog("Skipping non-object element in category array");
+                    continue;
+                }
+                JsonObject jsonObject = jsonElement.getAsJsonObject();
+                Map<String, String> categoryData = new HashMap<>();
+                if(jsonObject.has("category") && jsonObject.get("category").isJsonPrimitive()) {
+                    categoryData.put("category", jsonObject.get("category").getAsString());
+                }
+                if(jsonObject.has("fromTo") && jsonObject.get("fromTo").isJsonPrimitive()) {
+                    categoryData.put("fromTo", jsonObject.get("fromTo").getAsString());
+                }
+                categoryList.add(categoryData);
+            }
+            LOGGER.info("Successfully loaded {} categories from category file", categoryList.size());
+            Main.logUtils.addLog(String.format("Loaded %d categories from category file.", categoryList.size()));
+        } catch (IOException e) {
+            LOGGER.error("Failed to read category file: {}", CATEGORY_FILE.getAbsolutePath(), e);
+            Main.logUtils.addLog("Failed to read category file: " + CATEGORY_FILE.getAbsolutePath());
+            throw new RuntimeException("Failed to load category file", e);
+        } catch (RuntimeException e) {
+            LOGGER.error("Unexpected error while parsing category file", e);
+            Main.logUtils.addLog(String.format("Unexpected error while parsing category file: %s", CATEGORY_FILE.getAbsolutePath()));
+            throw new RuntimeException("Failed to load category file", e);
+        }
+        return categoryList;
+    }
+
     /**
      * Parse a JsonObject into a Map.
      *
@@ -405,39 +468,74 @@ public class ImportUtils {
     }
 
     /**
-     * Add a QR code ID to the list of imported QR codes. This method appends the given QR code ID to a text file named 'imported_qrcodes.txt' located in the application's data directory. Each QR code ID is written on a new line. If the file does not exist, it will be created. If an error occurs during writing, an error message is logged using the application's logging utility and the logger.
+     * Add a QR code ID to the list of imported QR codes. Stored in the database table
+     * {@code imported_qrcodes}. Duplicate IDs are silently ignored.
      *
      * @param qrId The QR code ID to be added to the list of imported QR codes.
      */
     public static void addQrCodeImport(String qrId) {
-        File file = new File(Main.getAppDataDir(), "imported_qrcodes.txt");
-        try (FileWriter writer = new FileWriter(file, true)) {
-            writer.write(qrId + System.lineSeparator());
-            writer.flush();
-        } catch (IOException e) {
-            Main.logUtils.addLog("Failed to write imported qrcodes.txt to imported_qrcodes.txt");
-            LOGGER.error("Failed to write QR code ID to imported_qrcodes.txt", e);
+        migrateQrCodesFileIfNeeded();
+        DatabaseManager db = Main.databaseManager;
+        if (db == null) {
+            LOGGER.error("DatabaseManager not available – cannot record QR code import");
+            return;
+        }
+        String sql = "INSERT OR IGNORE INTO " + DatabaseManager.TABLE_IMPORTED_QRCODES + " (qr_id) VALUES (?);";
+        boolean ok = db.executePreparedUpdate(sql, new Object[]{qrId});
+        if (!ok) {
+            Main.logUtils.addLog("Fehler beim Speichern der importierten QR-Code-ID: " + qrId);
+            LOGGER.error("Failed to insert QR code ID into database: {}", qrId);
         }
     }
 
     /**
-     * Get the list of imported QR code IDs. This method reads the 'imported_qrcodes.txt' file located in the application's data directory and returns a list of QR code IDs that have been imported. Each line in the file represents a single QR code ID. If the file does not exist, an empty list is returned. If an error occurs during reading, an error message is logged using the application's logging utility and the logger, and an empty list is returned.
+     * Get the list of imported QR code IDs from the database.
      *
-     * @return List of imported QR code IDs, or an empty list if the file does not exist or an error occurs during reading.
+     * @return List of imported QR code IDs, or an empty list if none exist or an error occurs.
      */
     public static List<String> getImportedQrCodes() {
-        List<String> importedQrCodes = new ArrayList<>();
-        File file = new File(Main.getAppDataDir(), "imported_qrcodes.txt");
-        if (!file.exists()) {
-            return importedQrCodes;
+        migrateQrCodesFileIfNeeded();
+        DatabaseManager db = Main.databaseManager;
+        if (db == null) {
+            return new ArrayList<>();
         }
-        try {
-            importedQrCodes = Files.readAllLines(file.toPath());
-        } catch (IOException e) {
-            Main.logUtils.addLog("Failed to read imported qrcodes.txt from imported_qrcodes.txt");
-            LOGGER.error("Failed to read imported QR codes from imported_qrcodes.txt", e);
+        List<String> importedQrCodes = new ArrayList<>();
+        String sql = "SELECT qr_id FROM " + DatabaseManager.TABLE_IMPORTED_QRCODES + ";";
+        try (ResultSet rs = db.executeTrustedQuery(sql)) {
+            while (rs.next()) {
+                importedQrCodes.add(rs.getString("qr_id"));
+            }
+        } catch (SQLException e) {
+            Main.logUtils.addLog("Fehler beim Lesen der importierten QR-Codes: " + e.getMessage());
+            LOGGER.error("Failed to read imported QR codes from database", e);
         }
         return importedQrCodes;
+    }
+
+    /** One-time migration: if the legacy imported_qrcodes.txt exists, import its lines into the DB and delete the file. */
+    private static void migrateQrCodesFileIfNeeded() {
+        File file = new File(Main.getAppDataDir(), "imported_qrcodes.txt");
+        if (!file.exists()) {
+            return;
+        }
+        DatabaseManager db = Main.databaseManager;
+        if (db == null) {
+            return;
+        }
+        try {
+            List<String> lines = Files.readAllLines(file.toPath());
+            String sql = "INSERT OR IGNORE INTO " + DatabaseManager.TABLE_IMPORTED_QRCODES + " (qr_id) VALUES (?);";
+            for (String line : lines) {
+                if (line != null && !line.isBlank()) {
+                    db.executePreparedUpdate(sql, new Object[]{line.trim()});
+                }
+            }
+            if (!file.delete()) {
+                LOGGER.warn("Could not delete legacy imported_qrcodes.txt after migration");
+            }
+        } catch (IOException e) {
+            LOGGER.error("Failed to migrate imported_qrcodes.txt to database", e);
+        }
     }
 
     /**

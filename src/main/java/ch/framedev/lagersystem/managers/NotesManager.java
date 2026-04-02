@@ -75,7 +75,7 @@ public class NotesManager {
         String sql = "CREATE TABLE IF NOT EXISTS " + TABLE + " (" +
                 databaseManager.identityColumn("id") + "," +
                 "title TEXT NOT NULL UNIQUE," +
-                "content VARCHAR(2555)," +
+                "content TEXT," +
                 "date TEXT" +
                 ");";
         databaseManager.executeTrustedUpdate(sql);

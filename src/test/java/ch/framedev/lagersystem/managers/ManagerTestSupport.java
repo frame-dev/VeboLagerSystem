@@ -44,6 +44,7 @@ abstract class ManagerTestSupport {
 
     protected void resetAllManagerSingletons() {
         ArticleManager.resetInstance();
+        CategoryManager.resetInstance();
         ClientManager.resetInstance();
         resetSingleton(VendorManager.class);
         resetSingleton(UserManager.class);
@@ -51,7 +52,7 @@ abstract class ManagerTestSupport {
         resetSingleton(NotesManager.class);
         resetSingleton(DepartmentManager.class);
         resetSingleton(LogManager.class);
-        resetSingleton(OrderManager.class);
+        OrderManager.resetInstance();
     }
 
     private void resetSingleton(Class<?> type) {

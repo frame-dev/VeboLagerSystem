@@ -217,7 +217,6 @@ final class SettingsMaintenanceService {
             if (dbManager != null) {
                 dbManager.clearDatabase();
                 deleteRuntimeDataFile("own_use_list.txt");
-                deleteRuntimeDataFile("imported_qrcodes.txt");
                 deleteRuntimeDataFile("imported_items.txt");
 
                 SettingsDialogService.showInfo(

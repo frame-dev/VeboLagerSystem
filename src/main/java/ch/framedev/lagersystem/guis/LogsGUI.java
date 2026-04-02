@@ -2,6 +2,7 @@ package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
+import ch.framedev.lagersystem.managers.DatabaseManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleExporter;
 import ch.framedev.lagersystem.utils.JFrameUtils;
@@ -972,9 +973,17 @@ public class LogsGUI extends JFrame {
         File logFile = switch (currentCategory) {
             case ORDER -> new File(new File(Main.getAppDataDir(), "logs"), "bestellung.log");
             case SUPPLIER -> new File(new File(Main.getAppDataDir(), "logs"), "vendorOrder.log");
-            case SUPPLIER_ORDER -> new File(Main.getAppDataDir(), "supplier_orders.txt");
+            case SUPPLIER_ORDER -> null;
             case ALL -> null;
         };
+
+        if (currentCategory == LogCategory.SUPPLIER_ORDER) {
+            if (Main.databaseManager != null) {
+                Main.databaseManager.clearTable(DatabaseManager.TABLE_SUPPLIER_ORDERS);
+            }
+            refreshCurrentLogs();
+            return;
+        }
 
         if (logFile == null) {
             return;

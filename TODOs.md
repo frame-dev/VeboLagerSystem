@@ -14,18 +14,19 @@
 - [x] `ScanServer.java` – `System.out.println` / `System.err.println` durch Logger ersetzen
 - [x] **GitHub-Token-Platzhalter**: `loadGitHubToken()` und `UpdateManager`-Konstruktor setzen den Token auch wenn er noch `"your_github_token_here"` ist → Platzhalter-Check vor `setPersonalToken()` ergänzen
 - [x] **Doppelte Token-Initialisierung**: `UpdateManager()`-Konstruktor liest `github-token` aus Settings UND `Main.loadGitHubToken()` ruft danach erneut `setPersonalToken()` auf → einen der beiden Pfade entfernen
-- [ ] **`notes.content` Spalten-Typ**: `VARCHAR(2555)` in `NotesManager` und `DatabaseManager` – `2555` ist wahrscheinlich ein Tippfehler; für SQLite besser `TEXT` verwenden
+- [x] **`notes.content` Spalten-Typ**: `VARCHAR(2555)` in `NotesManager` und `DatabaseManager` – `2555` ist wahrscheinlich ein Tippfehler; für SQLite besser `TEXT` verwenden
 - [x] **`catch (Exception e)` zu weit gefasst**: in `QRCodeUtils`, `ArticleUtils`, `WarningManager`, `ImportUtils`, `OrderExport` und `NetUtils` sollten spezifische Exception-Typen gefangen werden statt der Basis-Klasse
 - [x] **`SimpleDateFormat` nicht thread-safe**: in `NewOrderGUI`, `MainGUI`, `LogsGUI` und `ArticleQrPreviewDialog` wird `SimpleDateFormat` verwendet → durch `DateTimeFormatter` + `LocalDate`/`LocalDateTime` ersetzen (wie bereits in `ScanServer` und `LogManager` getan)
 - [x] **`OrderManager.extracted()` – nichtssagender Methodenname**: `private static String extracted(...)` → umbenennen in `serializeArticleEntry()`
-- [ ] **`OrderManager` fehlt `resetInstance()`**: alle anderen Manager haben diese Methode für Test-Reset; `OrderManager` fehlt sie → Tests für `OrderManager` sind dadurch aufwändiger
+- [x] **`OrderManager` fehlt `resetInstance()`**: alle anderen Manager haben diese Methode für Test-Reset; `OrderManager` fehlt sie → Tests für `OrderManager` sind dadurch aufwändiger
 - [x] **`LogManager.CACHE_TTL_MILLIS` ist Instanzvariable**: `private final long CACHE_TTL_MILLIS = 60 * 1000;` (Z.40) → sollte `private static final` sein, da der Wert nicht pro Instanz variiert
-- [ ] **`OrderManager.CACHE_TTL_MILLIS` als lokale Variable**: Z.334 `long CACHE_TTL_MILLIS = 5 * 60 * 1000;` wird bei jedem `getOrders()`-Aufruf neu angelegt → als Klassenkonstante (`private static final`) auslagern (wie in `VendorManager`, `WarningManager` etc. korrekt gemacht)
+- [x] **`OrderManager.CACHE_TTL_MILLIS` als lokale Variable**: Z.334 `long CACHE_TTL_MILLIS = 5 * 60 * 1000;` wird bei jedem `getOrders()`-Aufruf neu angelegt → als Klassenkonstante (`private static final`) auslagern (wie in `VendorManager`, `WarningManager` etc. korrekt gemacht)
 
 ---
 
 ## ✅ Tests
 
+- [x] **`CategoryManagerText`** - Kein Test für `CategoryManager` vorhanden
 - [x] **`OrderManagerTest`** – Kein Test für `OrderManager` vorhanden (kein `resetInstance()` erschwert Isolation)
 - [x] **`LogManagerTest`** – Kein Test für `LogManager` vorhanden
 - [ ] **`SchedulerManagerTest`** – Kein Test für `SchedulerManager` vorhanden (Start/Stop, Intervall)
@@ -43,11 +44,11 @@
 ## 🔧 Technische Schulden (Tech Debt)
 
 - [ ] `settings.properties`-Ressource wird beim ersten Start nur geladen wenn die externe Datei **nicht** existiert oder leer ist – Migrationsschutz für bestehende User-Dateien ohne neue Schlüssel fehlt (automatisch fehlende Keys nachfüllen)
-- [ ] `DatabaseManager` – `resetInstance()` ist `public` und nur für Tests gedacht → mit `@VisibleForTesting` annotieren oder in `protected` umwandeln
-- [ ] `Main.settings` ist `public static` – Threading-Sicherheit durch `volatile` oder AtomicReference verbessern
-- [ ] `supplier_orders.txt` und `imported_qrcodes.txt` werden als einfache Text-Dateien geführt → in Datenbanktabellen überführen für Konsistenz
+- [x] `DatabaseManager` – `resetInstance()` ist `public` und nur für Tests gedacht → mit `@VisibleForTesting` annotieren oder in `protected` umwandeln
+- [x] `Main.settings` ist `public static` – Threading-Sicherheit durch `volatile` oder AtomicReference verbessern
+- [x] `supplier_orders.txt` und `imported_qrcodes.txt` werden als einfache Text-Dateien geführt → in Datenbanktabellen überführen für Konsistenz
 - [ ] Persistenz-Layer: JSON/YAML Backend hat keine Schema-Versionierung – Migrationsstrategie fehlt
-- [ ] `ArticleUtils.getCategoryForArticle()` liest `categories.json` über `Main.getAppDataDir()` – schwer testbar; in `CategoryManager` auslagern
+- [x] `ArticleUtils.getCategoryForArticle()` liest `categories.json` über `Main.getAppDataDir()` – schwer testbar; in `CategoryManager` auslagern
 - [ ] **`ScanServer.STORE` und `QRCodeUtils.STORE`** definieren beide `new File(Main.getAppDataDir(), "scans.json")` → duplizierte Konstante; in einer gemeinsamen Klasse (z. B. `AppPaths`) zentralisieren
 - [ ] **`ScanServer` – Port 8080 hardkodiert** (`int port = 8080`) → über `settings.properties` konfigurierbar machen (neuer Key `scan_server_port`)
 - [ ] **`ScanServer` – unbegrenzter Thread-Pool**: `Executors.newCachedThreadPool()` kann unter Last Ressourcen erschöpfen → durch `newFixedThreadPool(n)` oder `newVirtualThreadPerTaskExecutor()` (Java 21) ersetzen

@@ -35,6 +35,7 @@ import ch.framedev.lagersystem.guis.MainGUI;
 import ch.framedev.lagersystem.guis.SettingsGUI;
 import ch.framedev.lagersystem.guis.SplashscreenGUI;
 import ch.framedev.lagersystem.managers.ArticleManager;
+import ch.framedev.lagersystem.managers.CategoryManager;
 import ch.framedev.lagersystem.managers.ClientManager;
 import ch.framedev.lagersystem.managers.DatabaseManager;
 import ch.framedev.lagersystem.managers.DepartmentManager;
@@ -113,7 +114,7 @@ public class Main {
      * Application settings loaded from properties file, accessible throughout the
      * application.
      */
-    public static Settings settings;
+    public static volatile Settings settings;
     /**
      * Application icons loaded from resources, used for GUI and dialogs.
      */
@@ -545,10 +546,54 @@ public class Main {
         importDepartments(importUtils, importedItems, newlyImportedItems);
         updateProgress(progressListener, 86, "Importiere Kunden...");
         importClients(importUtils, importedItems, newlyImportedItems);
+        updateProgress(progressListener, 87, "Importiere Kategorien...");
+        importCategories(importUtils, importedItems, newlyImportedItems);
         persistImportedItems(newlyImportedItems);
 
         logger.info("✓ Alle Daten importiert");
         logUtils.addLog("✓ Alle Daten importiert");
+    }
+
+    private static void importCategories(ImportUtils importUtils, java.util.Set<String> importedItems, List<String> newlyImportedItems) {
+        CategoryManager categoryManager = CategoryManager.getInstance();
+        List<Map<String, String>> categoryData = importUtils.loadCategoryList();
+
+        logger.info("\n📂 Importiere {} Kategorien...", categoryData.size());
+        logUtils.addLog("📂 Importiere " + categoryData.size() + " Kategorien...");
+        ImportResult result = new ImportResult();
+
+        for (Map<String, String> itemData : categoryData) {
+            processCategoryImport(categoryManager, itemData, result, importedItems, newlyImportedItems);
+        }
+
+        result.printSummary();
+    }
+
+    private static void processCategoryImport(CategoryManager categoryManager,
+            Map<String, String> itemData,
+            ImportResult result,
+            java.util.Set<String> importedItems,
+            List<String> newlyImportedItems) {
+        String categoryName = itemData.get("category");
+        String fromTo = itemData.get("fromTo");
+        if (categoryName == null || categoryName.isBlank() || fromTo == null || fromTo.isBlank()) {
+            result.incrementSkipped();
+            logUtils.addLog("Kategorie mit ungültigen Daten übersprungen: " + categoryName);
+            return;
+        }
+        if (importedItems.contains(categoryName)) {
+            result.incrementSkipped();
+            return;
+        }
+        if(categoryManager.insertCategory(categoryName, fromTo)) {
+            result.incrementImported();
+            importedItems.add(categoryName);
+            newlyImportedItems.add(categoryName);
+            logger.info("Importierte Kategorie: {} ({})", categoryName, fromTo);
+            logUtils.addLog("Importierte Kategorie: " + categoryName + " (" + fromTo + ")");
+        } else {
+            result.incrementSkipped();
+        }
     }
 
     /**

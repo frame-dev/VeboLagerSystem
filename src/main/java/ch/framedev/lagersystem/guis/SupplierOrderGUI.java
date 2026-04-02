@@ -4,6 +4,7 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
+import ch.framedev.lagersystem.managers.DatabaseManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.JFrameUtils;
 import ch.framedev.lagersystem.utils.KeyboardShortcutUtils;
@@ -27,6 +28,8 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -51,8 +54,6 @@ public class SupplierOrderGUI extends JFrame {
     private static final int STOCK_COLUMN_INDEX = 4;
     private static final int ADDED_AT_COLUMN_INDEX = 5;
 
-    private static final String FILE_SEPARATOR = "|";
-    private static final Path ORDER_FILE = new File(Main.getAppDataDir(), "supplier_orders.txt").toPath();
     private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
     private static final int[] BASE_COLUMN_WIDTHS = new int[]{150, 280, 180, 120, 120, 170};
     private static final String[] COLUMNS = {
@@ -447,34 +448,31 @@ public class SupplierOrderGUI extends JFrame {
     }
 
     private void loadFromFile() {
-        ensureOrderFileExists();
+        migrateSupplierOrdersFileIfNeeded();
         orderItems.clear();
 
-        try {
-            List<String> lines = Files.readAllLines(ORDER_FILE, StandardCharsets.UTF_8);
-            for (String line : lines) {
-                if (line == null || line.isBlank()) {
-                    continue;
-                }
+        DatabaseManager db = Main.databaseManager;
+        if (db == null) {
+            return;
+        }
 
-                String[] parts = line.split(Pattern.quote(FILE_SEPARATOR), -1);
-                if (parts.length < 6) {
-                    continue;
-                }
-
+        String sql = "SELECT article_number, name, vendor, quantity, stock, added_at FROM "
+                + DatabaseManager.TABLE_SUPPLIER_ORDERS + " ORDER BY id;";
+        try (ResultSet rs = db.executeTrustedQuery(sql)) {
+            while (rs.next()) {
                 orderItems.add(new OrderItem(
-                        parts[0],
-                        parts[1],
-                        parts[2],
-                        safeInt(parts[3]),
-                        safeInt(parts[4]),
-                        parts[5]
+                        rs.getString("article_number"),
+                        rs.getString("name"),
+                        rs.getString("vendor"),
+                        rs.getInt("quantity"),
+                        rs.getInt("stock"),
+                        rs.getString("added_at")
                 ));
             }
             syncStockLevels();
-        } catch (Exception e) {
-            logger.error("Fehler beim Laden der Lieferanten-Bestelldatei: {}", e.getMessage(), e);
-            Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler beim Laden der Lieferanten-Bestelldatei: " + e.getMessage());
+        } catch (SQLException e) {
+            logger.error("Fehler beim Laden der Lieferanten-Bestellungen aus der Datenbank: {}", e.getMessage(), e);
+            Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler beim Laden der Lieferanten-Bestellungen: " + e.getMessage());
         }
     }
 
@@ -495,36 +493,41 @@ public class SupplierOrderGUI extends JFrame {
     }
 
     private boolean persist() {
-        ensureOrderFileExists();
+        DatabaseManager db = Main.databaseManager;
+        if (db == null) {
+            return false;
+        }
         syncStockLevels();
 
-        List<String> lines = new ArrayList<>();
+        // Replace all rows: delete existing then re-insert current list
+        db.executeTrustedUpdate("DELETE FROM " + DatabaseManager.TABLE_SUPPLIER_ORDERS + ";");
+
+        String insertSql = "INSERT INTO " + DatabaseManager.TABLE_SUPPLIER_ORDERS
+                + " (article_number, name, vendor, quantity, stock, added_at) VALUES (?, ?, ?, ?, ?, ?);";
+        boolean allOk = true;
         for (OrderItem item : orderItems) {
             if (item == null) {
                 continue;
             }
-
-            lines.add(String.join(FILE_SEPARATOR,
+            boolean ok = db.executePreparedUpdate(insertSql, new Object[]{
                     safeText(item.articleNumber()),
                     safeText(item.name()),
                     safeText(item.vendor()),
-                    String.valueOf(item.quantity()),
-                    String.valueOf(item.stock()),
-                    safeText(item.addedAt())));
-
-            VendorOrderLogging.getInstance().addLog(
-                    "Bestellposten gespeichert: Artikelnummer " + item.articleNumber() + ", Menge: " + item.quantity());
+                    item.quantity(),
+                    item.stock(),
+                    safeText(item.addedAt())
+            });
+            if (!ok) {
+                allOk = false;
+                logger.error("Fehler beim Speichern des Bestellpostens: {}", item.articleNumber());
+            } else {
+                VendorOrderLogging.getInstance().addLog(
+                        "Bestellposten gespeichert: Artikelnummer " + item.articleNumber() + ", Menge: " + item.quantity());
+            }
         }
 
-        try {
-            Files.write(ORDER_FILE, lines, StandardCharsets.UTF_8);
-            refreshTable();
-            return true;
-        } catch (Exception e) {
-            logger.error("Fehler beim Speichern der Lieferanten-Bestellungen: {}", e.getMessage(), e);
-            Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler beim Speichern der Lieferanten-Bestellungen: " + e.getMessage());
-            return false;
-        }
+        refreshTable();
+        return allOk;
     }
 
     private void refreshTable() {
@@ -765,16 +768,33 @@ public class SupplierOrderGUI extends JFrame {
         return JFrameUtils.createThemeButton(text, ThemeManager.getErrorColor());
     }
 
-    private static void ensureOrderFileExists() {
+    /** One-time migration: if the legacy supplier_orders.txt exists, import its rows into the DB and delete the file. */
+    private static void migrateSupplierOrdersFileIfNeeded() {
+        Path legacyFile = new File(Main.getAppDataDir(), "supplier_orders.txt").toPath();
+        if (!Files.exists(legacyFile)) {
+            return;
+        }
+        DatabaseManager db = Main.databaseManager;
+        if (db == null) {
+            return;
+        }
         try {
-            File parent = ORDER_FILE.toFile().getParentFile();
-            if (parent != null && !parent.exists()) {
-                parent.mkdirs();
+            List<String> lines = Files.readAllLines(legacyFile, StandardCharsets.UTF_8);
+            String sql = "INSERT OR IGNORE INTO " + DatabaseManager.TABLE_SUPPLIER_ORDERS
+                    + " (article_number, name, vendor, quantity, stock, added_at) VALUES (?, ?, ?, ?, ?, ?);";
+            for (String line : lines) {
+                if (line == null || line.isBlank()) continue;
+                String[] parts = line.split(Pattern.quote("|"), -1);
+                if (parts.length < 6) continue;
+                db.executePreparedUpdate(sql, new Object[]{
+                        parts[0], parts[1], parts[2],
+                        safeInt(parts[3]), safeInt(parts[4]), parts[5]
+                });
             }
-            if (!Files.exists(ORDER_FILE)) {
-                Files.createFile(ORDER_FILE);
-            }
-        } catch (Exception ignored) {
+            Files.delete(legacyFile);
+        } catch (Exception e) {
+            LogManager.getLogger(SupplierOrderGUI.class)
+                    .warn("Fehler bei der Migration von supplier_orders.txt: {}", e.getMessage(), e);
         }
     }
 
@@ -806,7 +826,7 @@ public class SupplierOrderGUI extends JFrame {
             return null;
         }
 
-        String[] parts = line.split(Pattern.quote(FILE_SEPARATOR), -1);
+        String[] parts = line.split(Pattern.quote("|"), -1);
         if (parts.length < 6) {
             return null;
         }
@@ -831,13 +851,25 @@ public class SupplierOrderGUI extends JFrame {
 
     public static List<String> getAllSupplierOrders() {
         List<String> orders = new ArrayList<>();
-        ensureOrderFileExists();
-        try {
-            orders.addAll(Files.readAllLines(ORDER_FILE, StandardCharsets.UTF_8));
-        } catch (Exception e) {
-            LogManager.getLogger(SupplierOrderGUI.class).error("Fehler beim Lesen der Lieferanten-Bestelldatei: {}",
-                    e.getMessage(), e);
-            Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler beim Lesen der Lieferanten-Bestelldatei: " + e.getMessage());
+        DatabaseManager db = Main.databaseManager;
+        if (db == null) {
+            return orders;
+        }
+        String sql = "SELECT article_number, name, vendor, quantity, stock, added_at FROM "
+                + DatabaseManager.TABLE_SUPPLIER_ORDERS + " ORDER BY id;";
+        try (ResultSet rs = db.executeTrustedQuery(sql)) {
+            while (rs.next()) {
+                orders.add(rs.getString("article_number") + "|"
+                        + rs.getString("name") + "|"
+                        + rs.getString("vendor") + "|"
+                        + rs.getInt("quantity") + "|"
+                        + rs.getInt("stock") + "|"
+                        + rs.getString("added_at"));
+            }
+        } catch (SQLException e) {
+            LogManager.getLogger(SupplierOrderGUI.class).error(
+                    "Fehler beim Lesen der Lieferanten-Bestellungen: {}", e.getMessage(), e);
+            Main.logUtils.addLog("[SUPPLIER ORDER|ERROR] Fehler beim Lesen der Lieferanten-Bestellungen: " + e.getMessage());
         }
         return orders;
     }

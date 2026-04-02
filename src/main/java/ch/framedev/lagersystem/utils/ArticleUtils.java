@@ -4,12 +4,9 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.SeperateArticle;
 import ch.framedev.lagersystem.dialogs.MessageDialog;
 import ch.framedev.lagersystem.guis.ArticleListGUI;
-import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
+import ch.framedev.lagersystem.managers.CategoryManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,13 +24,7 @@ import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.math.BigDecimal;
 import java.util.Base64;
 import java.util.ArrayList;
@@ -43,7 +34,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -56,13 +46,7 @@ import java.util.regex.Pattern;
 public final class ArticleUtils {
 
     private static final Logger LOGGER = LogManager.getLogger(ArticleUtils.class);
-    private static final Gson GSON = new Gson();
-    private static final Gson PRETTY_GSON = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
-    private static final java.lang.reflect.Type CATEGORY_LIST_TYPE = new TypeToken<List<Map<String, String>>>() {
-    }.getType();
 
-    private static final String UNKNOWN_CATEGORY = "Unbekannt";
-    private static final String CATEGORIES_FILE_NAME = "categories.json";
     private static final Object CATEGORY_LOCK = new Object();
     private static volatile boolean categoriesLoaded;
 
@@ -116,13 +100,6 @@ public final class ArticleUtils {
      */
     private static final Pattern PART_TRAILING_PUNCT = Pattern.compile(
             "[\\s()\\[\\]\\u00e0]+$");
-
-    /**
-     * Compiled pattern for extracting leading numeric order tokens like
-     * {@code "1.2"}.
-     */
-    private static final Pattern CATEGORY_ORDER_PATTERN = Pattern.compile(
-            "^\\s*(\\d+(?:\\.\\d+)*)");
 
     /**
      * Compiled pattern for parsing a category range such as {@code "100-199"} or
@@ -426,21 +403,13 @@ public final class ArticleUtils {
         return decimal.toPlainString().replace('.', ',');
     }
 
-    private static File getCategoriesFile() {
-        return new File(Main.getAppDataDir(), CATEGORIES_FILE_NAME);
-    }
-
     private static void setLoadedCategories(Map<String, CategoryRange> loadedCategories) {
         categories = loadedCategories;
         categoriesLoaded = true;
     }
 
-    private static List<Map<String, String>> readCategoryEntries(File file) throws IOException {
-        try (InputStream is = new FileInputStream(file);
-             InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
-            List<Map<String, String>> categoryList = GSON.fromJson(reader, CATEGORY_LIST_TYPE);
-            return categoryList == null ? List.of() : categoryList;
-        }
+    private static List<Map<String, String>> readCategoryEntries() {
+        return CategoryManager.getInstance().getAllCategories();
     }
 
     private static void addCategoryRange(Map<String, CategoryRange> loadedCategories, Map<String, String> categoryEntry) {
@@ -463,39 +432,21 @@ public final class ArticleUtils {
         loadedCategories.put(categoryName, new CategoryRange(categoryName, range[0], range[1]));
     }
 
-    private static Map<String, String> toCategoryEntry(CategoryRange range) {
-        Map<String, String> map = new ConcurrentHashMap<>();
-        map.put("category", range.category);
-        map.put("fromTo", range.rangeStart == range.rangeEnd
-                ? String.valueOf(range.rangeStart)
-                : range.rangeStart + " - " + range.rangeEnd);
-        return map;
-    }
-
     /**
-     * Loads categories from categories.json and caches them in-memory.
+     * Loads categories from the database and caches them in-memory.
      */
     public static void loadCategories() {
         synchronized (CATEGORY_LOCK) {
             Map<String, CategoryRange> loaded = new HashMap<>();
-            File file = getCategoriesFile();
-
-            if (!file.exists()) {
-                setLoadedCategories(loaded);
-                LOGGER.warn("categories.json not found at {}", file.getAbsolutePath());
-                return;
-            }
-
             try {
-                for (Map<String, String> categoryEntry : readCategoryEntries(file)) {
+                for (Map<String, String> categoryEntry : readCategoryEntries()) {
                     addCategoryRange(loaded, categoryEntry);
                 }
-                setLoadedCategories(loaded);
-            } catch (IOException e) {
-                setLoadedCategories(loaded);
-                LOGGER.error("Error loading categories from {}", file.getAbsolutePath(), e);
+            } catch (Exception e) {
+                LOGGER.error("Error loading categories from database", e);
                 showTimedMessage("Fehler", "Fehler beim Laden der Kategorien: " + e.getMessage(), JOptionPane.ERROR_MESSAGE);
             }
+            setLoadedCategories(loaded);
         }
     }
 
@@ -548,27 +499,25 @@ public final class ArticleUtils {
     }
 
     /**
-     * Persists categories to categories.json.
+     * Persists categories to the database.
      */
     private static void saveCategories() {
         if (categories == null || categories.isEmpty()) {
             return;
         }
 
-        try {
-            List<Map<String, String>> categoryList = categories.values().stream()
-                    .map(ArticleUtils::toCategoryEntry)
-                    .sorted((left, right) -> compareCategoryNames(
-                    left.getOrDefault("category", ""),
-                    right.getOrDefault("category", "")))
-                    .toList();
-
-            Files.writeString(getCategoriesFile().toPath(), PRETTY_GSON.toJson(categoryList), StandardCharsets.UTF_8);
-            categoriesLoaded = true;
-        } catch (IOException e) {
-            LOGGER.error("Error saving categories", e);
-            showTimedMessage("Fehler", "Fehler beim Speichern der Kategorien: " + e.getMessage(), JOptionPane.ERROR_MESSAGE);
+        CategoryManager categoryManager = CategoryManager.getInstance();
+        for (CategoryRange range : categories.values()) {
+            String fromTo = range.rangeStart == range.rangeEnd
+                    ? String.valueOf(range.rangeStart)
+                    : range.rangeStart + " - " + range.rangeEnd;
+            if (!categoryManager.exists(range.category)) {
+                categoryManager.insertCategory(range.category, fromTo);
+            } else {
+                categoryManager.updateCategory(range.category, fromTo);
+            }
         }
+        categoriesLoaded = true;
     }
 
     private static boolean isFillingCategoryAllowed(String category) {
@@ -603,82 +552,12 @@ public final class ArticleUtils {
         return extractLiterValue(article.getDetails()) != null;
     }
 
-    /**
-     * Compares category names using numeric-aware ordering for prefixed categories
-     * (e.g. "1.2" before "1.10"), then falls back to case-insensitive text order.
-     */
-    private static int compareCategoryNames(String left, String right) {
-        List<Integer> leftOrder = extractCategoryOrder(left);
-        List<Integer> rightOrder = extractCategoryOrder(right);
-
-        int max = Math.max(leftOrder.size(), rightOrder.size());
-        for (int i = 0; i < max; i++) {
-            int leftPart = i < leftOrder.size() ? leftOrder.get(i) : -1;
-            int rightPart = i < rightOrder.size() ? rightOrder.get(i) : -1;
-            if (leftPart != rightPart) {
-                return Integer.compare(leftPart, rightPart);
-            }
-        }
-
-        String leftSafe = left == null ? "" : left;
-        String rightSafe = right == null ? "" : right;
-        return String.CASE_INSENSITIVE_ORDER.compare(leftSafe, rightSafe);
-    }
-
-    /**
-     * Extracts leading numeric order tokens from categories such as "1.2
-     * Something".
-     */
-    private static List<Integer> extractCategoryOrder(String categoryName) {
-        if (categoryName == null || categoryName.isBlank()) {
-            return List.of();
-        }
-
-        Matcher matcher = CATEGORY_ORDER_PATTERN.matcher(categoryName);
-        if (!matcher.find()) {
-            return List.of();
-        }
-
-        String[] parts = matcher.group(1).split("\\.");
-        List<Integer> orderParts = new ArrayList<>(parts.length);
-        for (String part : parts) {
-            try {
-                orderParts.add(Integer.parseInt(part));
-            } catch (NumberFormatException ignored) {
-                // Ignore malformed token and stop numeric extraction.
-                break;
-            }
-        }
-        return orderParts;
-    }
 
     /**
      * Resolves a category name for an article number.
      */
     public static String getCategoryForArticle(String articleNumber) {
-        if (articleNumber == null || articleNumber.isBlank()) {
-            return UNKNOWN_CATEGORY;
-        }
-
-        ensureCategoriesLoaded();
-        if (categories == null || categories.isEmpty()) {
-            return UNKNOWN_CATEGORY;
-        }
-
-        String numericPart = articleNumber.replaceAll("[^0-9]", "");
-        if (numericPart.isEmpty()) {
-            return UNKNOWN_CATEGORY;
-        }
-
-        try {
-            int articleNum = Integer.parseInt(numericPart);
-            Optional<CategoryRange> match = categories.values().stream()
-                    .filter(r -> r != null && articleNum >= r.rangeStart && articleNum <= r.rangeEnd)
-                    .findFirst();
-            return match.map(r -> r.category).orElse(UNKNOWN_CATEGORY);
-        } catch (NumberFormatException ignored) {
-            return UNKNOWN_CATEGORY;
-        }
+        return CategoryManager.getInstance().getCategoryForArticle(articleNumber);
     }
 
     /**

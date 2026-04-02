@@ -118,8 +118,9 @@ public class DatabaseManager {
 
     /**
      * For testing or reinitialization: resets the singleton instance (use with caution).
+     * Intentionally {@code protected} — not part of the public API; same-package test code can access it.
      */
-    public static void resetInstance() {
+    protected static void resetInstance() {
         synchronized (DatabaseManager.class) {
             if (instance != null) {
                 instance.close();
@@ -167,6 +168,18 @@ public class DatabaseManager {
      * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
      */
     public static final String TABLE_NOTES = "notes";
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
+    public static final String TABLE_SUPPLIER_ORDERS = "supplier_orders";
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
+    public static final String TABLE_IMPORTED_QRCODES = "imported_qrcodes";
+    /**
+     * IMPORTANT: These table names are used in clearTable() and must be kept in sync with your actual schema.
+     */
+    public static final String TABLE_CATEGORIES = "categories";
 
     /**
      * Whitelist of allowed table names for clearTable() to prevent SQL injection. Must be kept in sync with actual schema and clearTable() usage.
@@ -181,7 +194,10 @@ public class DatabaseManager {
             TABLE_USERS,
             TABLE_WARNINGS,
             TABLE_LOGS,
-            TABLE_NOTES
+            TABLE_NOTES,
+            TABLE_SUPPLIER_ORDERS,
+            TABLE_IMPORTED_QRCODES,
+            TABLE_CATEGORIES
     );
 
     private static final List<String> APPLICATION_TABLES = List.of(
@@ -194,12 +210,18 @@ public class DatabaseManager {
             TABLE_SEPARATE_ARTICLES,
             TABLE_VENDORS,
             TABLE_LOGS,
-            TABLE_NOTES
+            TABLE_NOTES,
+            TABLE_SUPPLIER_ORDERS,
+            TABLE_IMPORTED_QRCODES,
+            TABLE_CATEGORIES
     );
 
     private static final Set<String> IDENTITY_MANAGED_TABLES = Set.of(
             TABLE_LOGS,
-            TABLE_NOTES
+            TABLE_NOTES,
+            TABLE_SUPPLIER_ORDERS,
+            TABLE_IMPORTED_QRCODES,
+            TABLE_CATEGORIES
     );
 
     public static final class MigrationSummary {
@@ -972,9 +994,31 @@ public class DatabaseManager {
             executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_NOTES + " ("
                     + identityColumn("id") + ","
                     + "title TEXT NOT NULL UNIQUE,"
-                    + "content VARCHAR(2555),"
+                    + "content TEXT,"
                     + "date TEXT"
                     + ");");
+
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_SUPPLIER_ORDERS + " ("
+                    + identityColumn("id") + ","
+                    + "article_number TEXT NOT NULL,"
+                    + "name TEXT,"
+                    + "vendor TEXT,"
+                    + "quantity INTEGER,"
+                    + "stock INTEGER,"
+                    + "added_at TEXT"
+                    + ");");
+            executeTrustedUpdate("CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_orders_article_number "
+                    + "ON " + TABLE_SUPPLIER_ORDERS + " (article_number);");
+
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_IMPORTED_QRCODES + " ("
+                    + identityColumn("id") + ","
+                    + "qr_id TEXT NOT NULL UNIQUE"
+                    + ");");
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS categories ("
+                + identityColumn("id") + ","
+                + "category TEXT NOT NULL UNIQUE,"
+                + "fromTo TEXT NOT NULL"
+                + ");");
         } finally {
             if (deferFilesystemSync) {
                 restoreFilesystemTablesIfNeeded();
@@ -1165,7 +1209,9 @@ public class DatabaseManager {
                 TABLE_SEPARATE_ARTICLES,
                 TABLE_VENDORS,
                 TABLE_LOGS,
-                TABLE_NOTES
+                TABLE_NOTES,
+                TABLE_SUPPLIER_ORDERS,
+                TABLE_IMPORTED_QRCODES
         };
 
         boolean autoCommit = true;
