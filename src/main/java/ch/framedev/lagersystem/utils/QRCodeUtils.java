@@ -45,7 +45,9 @@ public class QRCodeUtils {
     private static final Gson GSON = new Gson();
 
     /** Local store for QR scan data (JSON array stored in scans.json). */
-    private static final File STORE = Variables.STORE;
+    private static File getStore() {
+        return Variables.getScanStore();
+    }
 
     /**
      * Generates QR code images for a list of articles.
@@ -97,16 +99,17 @@ public class QRCodeUtils {
      */
     private static void ensureStoreExists() {
         try {
-            File parent = STORE.getParentFile();
+            File store = getStore();
+            File parent = store.getParentFile();
             if (parent != null && !parent.exists()) {
                 //noinspection ResultOfMethodCallIgnored
                 parent.mkdirs();
             }
-            if (!STORE.exists()) {
-                Files.writeString(STORE.toPath(), "[]", StandardCharsets.UTF_8);
+            if (!store.exists()) {
+                Files.writeString(store.toPath(), "[]", StandardCharsets.UTF_8);
             }
         } catch (IOException e) {
-            logger.warn("Could not ensure QR store exists at {}: {}", STORE.getAbsolutePath(), e.getMessage());
+            logger.warn("Could not ensure QR store exists at {}: {}", getStore().getAbsolutePath(), e.getMessage());
             Main.logUtils.addLog(Level.ERROR, "Konnte QR-Store nicht initialisieren: " + e.getMessage());
         }
     }
@@ -116,11 +119,12 @@ public class QRCodeUtils {
      */
     private static JsonArray readStoreArray() {
         ensureStoreExists();
-        try (Reader reader = new FileReader(STORE, StandardCharsets.UTF_8)) {
+        File store = getStore();
+        try (Reader reader = new FileReader(store, StandardCharsets.UTF_8)) {
             JsonArray arr = GSON.fromJson(reader, JsonArray.class);
             return arr != null ? arr : new JsonArray();
         } catch (IOException e) {
-            logger.warn("Failed to read QR store ({}): {}", STORE.getAbsolutePath(), e.getMessage());
+            logger.warn("Failed to read QR store ({}): {}", store.getAbsolutePath(), e.getMessage());
             Main.logUtils.addLog(Level.ERROR, "Fehler beim Lesen der gespeicherten QR-Codes: " + e.getMessage());
             return new JsonArray();
         }
@@ -323,7 +327,7 @@ public class QRCodeUtils {
     public static void clearStoredQRCodes() {
         ensureStoreExists();
         try {
-            Files.writeString(STORE.toPath(), "[]", StandardCharsets.UTF_8);
+            Files.writeString(getStore().toPath(), "[]", StandardCharsets.UTF_8);
         } catch (IOException e) {
             logger.error("Could not clear stored QR codes: {}", e.getMessage(), e);
             Main.logUtils.addLog(Level.ERROR, "Konnte gespeicherte QR-Codes nicht löschen: " + e.getMessage());

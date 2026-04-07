@@ -29,11 +29,11 @@
 - [x] **`CategoryManagerText`** - Kein Test für `CategoryManager` vorhanden
 - [x] **`OrderManagerTest`** – Kein Test für `OrderManager` vorhanden (kein `resetInstance()` erschwert Isolation)
 - [x] **`LogManagerTest`** – Kein Test für `LogManager` vorhanden
-- [ ] **`SchedulerManagerTest`** – Kein Test für `SchedulerManager` vorhanden (Start/Stop, Intervall)
+- [x] **`SchedulerManagerTest`** – Kein Test für `SchedulerManager` vorhanden (Start/Stop, Intervall)
 - [x] **`UpdateManagerTest`** – Kein Test für `UpdateManager` (Channel-Parsing, Version-Vergleich)
-- [ ] **`ImportUtilsTest`** – Kein Test für CSV-Import-Logik
-- [ ] **`ArticleExporterTest`** – Kein Test für Artikel-Export (CSV/PDF)
-- [ ] **`OrderExportTest`** – Kein Test für Bestellungs-PDF-Export
+- [x] **`ImportUtilsTest`** – Kein Test für CSV-Import-Logik
+- [x] **`ArticleExporterTest`** – Kein Test für Artikel-Export (CSV/PDF)
+- [x] **`OrderExportTest`** – Kein Test für Bestellungs-PDF-Export
 - [ ] **`QRCodeGeneratorTest`** – Kein Test für QR-Code-Generierung
 - [ ] **`OrderLoggingUtilsTest`** – Kein Test für Bestell-Logging
 - [ ] **`VendorOrderLoggingTest`** – Kein Test für Lieferanten-Bestell-Logging
@@ -49,10 +49,10 @@
 - [x] `supplier_orders.txt` und `imported_qrcodes.txt` werden als einfache Text-Dateien geführt → in Datenbanktabellen überführen für Konsistenz
 - [ ] Persistenz-Layer: JSON/YAML Backend hat keine Schema-Versionierung – Migrationsstrategie fehlt
 - [x] `ArticleUtils.getCategoryForArticle()` liest `categories.json` über `Main.getAppDataDir()` – schwer testbar; in `CategoryManager` auslagern
-- [ ] **`ScanServer.STORE` und `QRCodeUtils.STORE`** definieren beide `new File(Main.getAppDataDir(), "scans.json")` → duplizierte Konstante; in einer gemeinsamen Klasse (z. B. `AppPaths`) zentralisieren
+- [x] **`ScanServer.STORE` und `QRCodeUtils.STORE`** definieren beide `new File(Main.getAppDataDir(), "scans.json")` → duplizierte Konstante; in einer gemeinsamen Klasse (z. B. `AppPaths`) zentralisieren
 - [x] **`ScanServer` – Port 8080 hardkodiert** (`int port = 8080`) → über `settings.properties` konfigurierbar machen (neuer Key `scan_server_port`)
 - [x] **`ScanServer` – unbegrenzter Thread-Pool**: `Executors.newCachedThreadPool()` kann unter Last Ressourcen erschöpfen → durch `newFixedThreadPool(n)` oder `newVirtualThreadPerTaskExecutor()` (Java 21) ersetzen
-- [ ] **`ScanServer.STORE` wird als `static final`-Feld bei Klassen-Laden initialisiert** → `Main.getAppDataDir()` muss zu diesem Zeitpunkt bereits initialisiert sein; Reihenfolge dokumentieren oder lazy initialization verwenden
+- [x] **`ScanServer.STORE` wird als `static final`-Feld bei Klassen-Laden initialisiert** → `Main.getAppDataDir()` muss zu diesem Zeitpunkt bereits initialisiert sein; Reihenfolge dokumentieren oder lazy initialization verwenden
 - [x] **`@SuppressWarnings("DuplicatedCode")`** in `ArticleExporter`, `OrderExport`, `JFrameUtils` und mehreren GUIs deutet auf echten Code-Duplikat hin → gemeinsame Helfer-Methoden extrahieren statt Warnung unterdrücken
 - [x] **`NotesManager.CACHE_TTL_MILLIS` als lokale Variable**: Z.177 `final long CACHE_TTL_MILLIS = 5 * 60 * 1000;` in `getAllNotes()` → ebenfalls als `private static final` auslagern
 - [x] **Cache-TTL inkonsistent**: `LogManager` nutzt 1 Minute, alle anderen Manager nutzen 5 Minuten, `UpdateManager` 5 Minuten – keine gemeinsame Konstante; einen zentralen `CacheConfig`-Wert definieren oder zumindest dokumentieren warum die TTLs abweichen

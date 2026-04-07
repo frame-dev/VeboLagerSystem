@@ -9,8 +9,20 @@ import sys
 import platform
 import urllib.request
 from pathlib import Path
-from fpdf import FPDF
-from fpdf.enums import XPos, YPos, RenderStyle
+
+try:
+    from fpdf import FPDF
+    from fpdf.enums import XPos, YPos, RenderStyle
+except ModuleNotFoundError as exc:
+    if exc.name == "fpdf":
+        print(
+            "Fehler: Das Python-Paket 'fpdf2' ist nicht installiert.\n"
+            "Installiere die Abhaengigkeit mit:\n"
+            "  python3 -m pip install -r requirements.txt",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    raise
 
 ROOT   = Path(__file__).resolve().parent.parent
 INPUT  = ROOT / "TODOs.md"

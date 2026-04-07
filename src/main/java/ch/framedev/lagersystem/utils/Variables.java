@@ -21,7 +21,9 @@ public class Variables {
      */
     public static final String VERSION = "0.3-TESTING";
 
-    public static final File STORE = new File(Main.getAppDataDir(), "scans.json");
+    public static File getScanStore() {
+        return new File(Main.getAppDataDir(), "scans.json");
+    }
 
     public static Map<String,String> settingsDefaults() {
         Map<String,String> defaults = new HashMap<>();

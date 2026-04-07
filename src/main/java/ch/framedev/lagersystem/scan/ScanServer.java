@@ -57,10 +57,13 @@ public class ScanServer {
 
     private static final Logger logger = LogManager.getLogger(ScanServer.class);
 
-    private static final File STORE = Variables.STORE;
     private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
     private static final DateTimeFormatter TIMESTAMP_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
+
+    private static File getStore() {
+        return Variables.getScanStore();
+    }
 
     @SuppressWarnings("HttpUrlsUsage")
     public static void main(String[] args) throws Exception {
@@ -600,7 +603,8 @@ public class ScanServer {
     }
 
     private static synchronized void appendToArrayFile(JsonObject element) throws IOException {
-        File parent = STORE.getParentFile();
+        File store = getStore();
+        File parent = store.getParentFile();
         if (parent != null && !parent.exists() && !parent.mkdirs()) {
             logger.error("Konnte Verzeichnis nicht erstellen: " + parent.getAbsolutePath());
         }
@@ -609,7 +613,7 @@ public class ScanServer {
         arr.add(element);
 
         try (Writer w = Files.newBufferedWriter(
-                STORE.toPath(),
+                store.toPath(),
                 StandardCharsets.UTF_8,
                 StandardOpenOption.CREATE,
                 StandardOpenOption.TRUNCATE_EXISTING,
@@ -620,11 +624,12 @@ public class ScanServer {
     }
 
     private static JsonArray readArrayFile() throws IOException {
-        if (!STORE.exists() || STORE.length() == 0) {
+        File store = getStore();
+        if (!store.exists() || store.length() == 0) {
             return new JsonArray();
         }
 
-        try (Reader r = Files.newBufferedReader(STORE.toPath(), StandardCharsets.UTF_8)) {
+        try (Reader r = Files.newBufferedReader(store.toPath(), StandardCharsets.UTF_8)) {
             JsonElement el = JsonParser.parseReader(r);
             if (el == null || el.isJsonNull() || !el.isJsonArray()) {
                 return new JsonArray();
