@@ -75,9 +75,8 @@
 - [x] **Variables:** Klasse erstellen mit allen nutzvollen Variablen
 - [x] **Einstellungen:** Fehlende Keys beim Programmstart automatisch mit Default-Werten aus dem Classpath-Template nachfüllen (statt nur `first-time` und `database_type`)
 - [x] **Datenbank-Migration:** UI-Dialog zum Migrieren zwischen Backends (z. B. SQLite → H2) vollständig implementieren und testen
-- [ ] **Passwort-/Rollenkonzept:** Benutzerverwaltung um Rollen (Admin, Benutzer, Gast) erweitern
+- [ ] ~~**Passwort-/Rollenkonzept:** *Benutzerverwaltung um Rollen (Admin, Benutzer, Gast) erweitern*~~
 - [ ] **Artikel-Verlauf:** Bestandsänderungen mit Zeitstempel/Benutzer protokollieren (Audit-Trail)
-- [ ] **Barcode-Scanner:** Direkte USB-/Bluetooth-Scanner-Unterstützung im QR-Code-Workflow
 - [ ] **REST API:** Externe Integration über eine einfache HTTP-API (z. B. mit `ScanServer` erweitern)
 - [ ] **Automatische Nachbestellungen:** Schwellenwert-basierte automatische Erstellung von Lieferanten-Bestellvorschlägen
 - [ ] **Backup-Funktion:** Einzel-Klick-Backup der Datenbank und Einstellungen ins App-Datenverzeichnis
