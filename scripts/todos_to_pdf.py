@@ -8,6 +8,7 @@ import re
 import sys
 import platform
 import urllib.request
+from datetime import date
 from pathlib import Path
 
 try:
@@ -202,6 +203,26 @@ def parse_todos(lines):
     return total, done, sections
 
 
+def newest_date(lines) -> str:
+    dates: list[date] = []
+    for line in lines:
+        for match in re.finditer(r"\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b", line):
+            day, month, year = map(int, match.groups())
+            try:
+                dates.append(date(year, month, day))
+            except ValueError:
+                pass
+        for match in re.finditer(r"\b(\d{4})-(\d{1,2})-(\d{1,2})\b", line):
+            year, month, day = map(int, match.groups())
+            try:
+                dates.append(date(year, month, day))
+            except ValueError:
+                pass
+
+    latest = max(dates, default=date.today())
+    return latest.strftime("%d.%m.%Y")
+
+
 # ── PDF ──────────────────────────────────────────────────────────────────────
 class TodoPDF(FPDF):
 
@@ -239,7 +260,7 @@ class TodoPDF(FPDF):
                   align="C")
 
     # ── Title block ───────────────────────────────────────────────────────────
-    def draw_title_block(self, total: int, done: int):
+    def draw_title_block(self, total: int, done: int, stand_date: str):
         open_c = total - done
         pct    = int(done / total * 100) if total else 0
         hh     = 44
@@ -265,7 +286,7 @@ class TodoPDF(FPDF):
         self.set_font("Segoe", "I", 8)
         self.set_text_color(*C_HDR_MUTED)
         self.cell(0, 5,
-                  f"Stand: 31.03.2026    {total} Eintraege    "
+                  f"Stand: {stand_date}    {total} Eintraege    "
                   f"{open_c} offen    {done} erledigt    {pct}% abgeschlossen",
                   new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
@@ -399,6 +420,7 @@ class TodoPDF(FPDF):
 def build(md_path: Path, out_path: Path):
     lines = md_path.read_text(encoding="utf-8").splitlines()
     total, done, section_counts = parse_todos(lines)
+    stand_date = newest_date(lines)
 
     font_reg, font_bold, font_italic = resolve_fonts()
     print(f"  Schrift: {font_reg.name}  ({_SYSTEM})", flush=True)
@@ -408,7 +430,7 @@ def build(md_path: Path, out_path: Path):
     pdf.set_margins(MARGIN, MARGIN, MARGIN)
     pdf.set_auto_page_break(auto=False)
     pdf.add_page()
-    pdf.draw_title_block(total, done)
+    pdf.draw_title_block(total, done, stand_date)
 
     row_index = 0
     for line in lines:

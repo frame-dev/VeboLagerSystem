@@ -43,6 +43,7 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 public class VendorGUI extends JFrame {
 
     private static final Logger LOGGER = LogManager.getLogger(VendorGUI.class);
+    private static final String FILTER_KEY_SEARCH = "ui.filter.vendors.search";
 
     private static final int NAME_COLUMN_INDEX = 0;
     private static final int CONTACT_COLUMN_INDEX = 1;
@@ -205,6 +206,7 @@ public class VendorGUI extends JFrame {
 
         Runnable doSearch = () -> {
             String text = searchField.getText().trim();
+            JFrameUtils.setPersistentUiValue(FILTER_KEY_SEARCH, text);
             if (text.isEmpty()) {
                 sorter.setRowFilter(null);
             } else {
@@ -238,6 +240,8 @@ public class VendorGUI extends JFrame {
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_FOCUSED
         );
+
+        restoreTableFilters(searchField, doSearch);
 
         ComponentAdapter resizeListener = new ComponentAdapter() {
             @Override
@@ -432,6 +436,14 @@ public class VendorGUI extends JFrame {
             }
         };
         vendorLoadWorker.execute();
+    }
+
+    private void restoreTableFilters(JTextField searchField, Runnable applyFilter) {
+        if (searchField == null || applyFilter == null) {
+            return;
+        }
+        searchField.setText(JFrameUtils.getPersistentUiValue(FILTER_KEY_SEARCH, ""));
+        applyFilter.run();
     }
 
     private void populateVendors(List<Vendor> vendors) {
@@ -793,6 +805,12 @@ public class VendorGUI extends JFrame {
         String text = "Lieferanten: " + shown + " / " + total;
         vendorCountLabel.setText(text);
         tableCountLabel.setText(text);
+        JFrameUtils.updateTableEmptyState(
+                tableScrollPane,
+                vendorTable,
+                total == 0,
+                "Willkommen bei den Lieferanten",
+                "Noch sind keine Lieferanten hinterlegt. Erfassen Sie den ersten Lieferanten, damit Artikel sauber zugeordnet werden können.");
     }
 
     /**

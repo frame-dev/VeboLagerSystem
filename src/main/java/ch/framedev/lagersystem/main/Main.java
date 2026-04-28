@@ -1222,13 +1222,24 @@ public class Main {
      */
     private static void applyTableFontSettings() {
         int fontSize = getPositiveIntSetting("table_font_size", SettingsGUI.TABLE_FONT_SIZE);
+        int tabFontSize = getPositiveIntSetting("table_font_size_tab", SettingsGUI.TAB_FONT_SIZE);
         SettingsGUI.TABLE_FONT_SIZE = fontSize;
+        SettingsGUI.TAB_FONT_SIZE = tabFontSize;
 
         // Persist normalized value so invalid/empty entries don't reappear on restart.
         String normalized = String.valueOf(fontSize);
         String current = settings.getProperty("table_font_size");
         if (!normalized.equals(current)) {
             settings.setProperty("table_font_size", normalized);
+        }
+
+        String normalizedTab = String.valueOf(tabFontSize);
+        String currentTab = settings.getProperty("table_font_size_tab");
+        if (!normalizedTab.equals(currentTab)) {
+            settings.setProperty("table_font_size_tab", normalizedTab);
+        }
+
+        if (!normalized.equals(current) || !normalizedTab.equals(currentTab)) {
             settings.save();
         }
     }

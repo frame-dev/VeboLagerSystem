@@ -1,6 +1,6 @@
 # 📝 TODOs – VEBO Lagersystem
 
-> Zuletzt aktualisiert: 01.04.2026
+> Zuletzt aktualisiert: 28.04.2026
 
 ---
 
@@ -21,7 +21,7 @@
 - [x] **`OrderManager` fehlt `resetInstance()`**: alle anderen Manager haben diese Methode für Test-Reset; `OrderManager` fehlt sie → Tests für `OrderManager` sind dadurch aufwändiger
 - [x] **`LogManager.CACHE_TTL_MILLIS` ist Instanzvariable**: `private final long CACHE_TTL_MILLIS = 60 * 1000;` (Z.40) → sollte `private static final` sein, da der Wert nicht pro Instanz variiert
 - [x] **`OrderManager.CACHE_TTL_MILLIS` als lokale Variable**: Z.334 `long CACHE_TTL_MILLIS = 5 * 60 * 1000;` wird bei jedem `getOrders()`-Aufruf neu angelegt → als Klassenkonstante (`private static final`) auslagern (wie in `VendorManager`, `WarningManager` etc. korrekt gemacht)
-- [ ] **`Tabs Font size`**: Tabs font size doesn't work in Settings panel. The UI doesn't change.
+- [x] **`Tabs Font size`**: Tabs font size doesn't work in Settings panel. The UI doesn't change.
 - [ ] **`Performance Fix`**: Fixes in all Manager classes and more stable Database usage.
 
 ---
@@ -80,7 +80,7 @@
 - [ ] ~~**Passwort-/Rollenkonzept:** *Benutzerverwaltung um Rollen (Admin, Benutzer, Gast) erweitern*~~
 - [x] **Artikel-Verlauf:** Bestandsänderungen mit Zeitstempel/Benutzer protokollieren (Audit-Trail)
 - [ ] **REST API:** Externe Integration über eine einfache HTTP-API (z. B. mit `ScanServer` erweitern)
-- [ ] **Automatische Nachbestellungen:** Schwellenwert-basierte automatische Erstellung von Lieferanten-Bestellvorschlägen
+- [ ] **Automatische Nachbestellungen:** Schwellenwert-basierte automatische Erstellung von Lieferanten-Bestellvorschlägen, in den Einstellungen konfigurierbar und aktivierbar
 - [ ] **Backup-Funktion:** Einzel-Klick-Backup der Datenbank und Einstellungen ins App-Datenverzeichnis
 - [ ] **Export-Vorlagen:** Konfigurierbare PDF-Vorlagen für Bestellungen und Artikel-Listen
 - [ ] **`ScanServer` – konfigurierbarer Port:** Neuen Key `scan_server_port` in `settings.properties` einlesen und beim Start nutzen
@@ -93,9 +93,9 @@
 
 - [ ] **Spaltenbreiten-Einstellungen** in Tabellen persistent speichern (nach Neustart erhalten)
 - [ ] **Tastaturkürzel** vollständig dokumentieren und in der Hilfe anzeigen (`KEYBOARD_SHORTCUTS.md` → In-App-Hilfe)
-- [ ] **Leere Zustände:** Beim ersten Start oder bei leerer Datenbank einen „Willkommen"-Hinweis anzeigen statt leerer Tabellen
-- [ ] **Undo/Redo:** Rückgängig-Funktion für kritische Aktionen (Löschen, Bestandsänderung)
-- [ ] **Tabellenfilter** persistent speichern (zuletzt verwendeter Suchbegriff/Filter bleibt erhalten)
+- [x] **Leere Zustände:** Beim ersten Start oder bei leerer Datenbank einen „Willkommen"-Hinweis anzeigen statt leerer Tabellen
+- [x] **Undo/Redo:** Rückgängig-Funktion für kritische Aktionen (Löschen, Bestandsänderung)
+- [x] **Tabellenfilter** persistent speichern (zuletzt verwendeter Suchbegriff/Filter bleibt erhalten)
 - [ ] **Artikelbilder:** Möglichkeit, einem Artikel ein Bild/Foto zuzuordnen
 - [ ] **`ScanServer`-URL-Vorschau**: In den Einstellungen nach Eingabe der `server_url` einen „Test"-Button anbieten, der die URL auf Erreichbarkeit prüft
 

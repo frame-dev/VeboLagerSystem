@@ -53,6 +53,7 @@ public class SupplierOrderGUI extends JFrame {
     private static final int QUANTITY_COLUMN_INDEX = 3;
     private static final int STOCK_COLUMN_INDEX = 4;
     private static final int ADDED_AT_COLUMN_INDEX = 5;
+    private static final String FILTER_KEY_SEARCH = "ui.filter.supplierOrders.search";
 
     private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
     private static final int[] BASE_COLUMN_WIDTHS = new int[]{150, 280, 180, 120, 120, 170};
@@ -428,6 +429,7 @@ public class SupplierOrderGUI extends JFrame {
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_FOCUSED
         );
+        restoreTableFilters();
 
         table.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -567,6 +569,12 @@ public class SupplierOrderGUI extends JFrame {
 
         statusLabel.setText("Einträge: " + visible + " / " + total + (selected > 0 ? " • Auswahl: 1" : ""));
         quantityLabel.setText("Bestellmenge: " + visibleQuantity);
+        JFrameUtils.updateTableEmptyState(
+                tableScrollPane,
+                table,
+                total == 0,
+                "Willkommen bei den Lieferanten-Bestellungen",
+                "Noch gibt es keine Bestellposten. Fügen Sie Artikel hinzu, sobald ein Lieferantenbedarf entsteht.");
     }
 
     private void updateActionState() {
@@ -578,6 +586,7 @@ public class SupplierOrderGUI extends JFrame {
 
     private void applySearchFilter() {
         String text = searchField.getText().trim();
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_SEARCH, text);
         if (text.isEmpty()) {
             sorter.setRowFilter(null);
         } else {
@@ -594,6 +603,11 @@ public class SupplierOrderGUI extends JFrame {
         searchField.setText("");
         sorter.setRowFilter(null);
         updateStatusLabels();
+    }
+
+    private void restoreTableFilters() {
+        searchField.setText(JFrameUtils.getPersistentUiValue(FILTER_KEY_SEARCH, ""));
+        applySearchFilter();
     }
 
     private void removeSelected() {

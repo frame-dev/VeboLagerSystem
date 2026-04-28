@@ -39,6 +39,13 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 public class ArticleGUI extends JFrame {
 
     private static final Logger LOGGER = LogManager.getLogger(ArticleGUI.class);
+    private static final String FILTER_KEY_SEARCH = "ui.filter.articles.search";
+    private static final String FILTER_KEY_CATEGORY = "ui.filter.articles.category";
+    private static final String FILTER_KEY_VENDOR = "ui.filter.articles.vendor";
+    private static final String FILTER_KEY_STOCK_MIN = "ui.filter.articles.stock.min";
+    private static final String FILTER_KEY_STOCK_MAX = "ui.filter.articles.stock.max";
+    private static final String FILTER_KEY_PRICE_MIN = "ui.filter.articles.price.min";
+    private static final String FILTER_KEY_PRICE_MAX = "ui.filter.articles.price.max";
 
     public final JTable articleTable;
     // scroll pane reference so we can read viewport width on resize
@@ -55,6 +62,10 @@ public class ArticleGUI extends JFrame {
     private JTextField searchField;
     private SwingWorker<List<Article>, Void> articleLoadWorker;
     private int articleLoadGeneration = 0;
+    private final Deque<UndoableArticleAction> undoStack = new ArrayDeque<>();
+    private final Deque<UndoableArticleAction> redoStack = new ArrayDeque<>();
+    private JButton undoButton;
+    private JButton redoButton;
 
     // Category management
     private JComboBox<String> categoryFilter;
@@ -216,6 +227,14 @@ public class ArticleGUI extends JFrame {
         bulkAdjustStockButton.setToolTipText("Passt den Lagerbestand für alle ausgewählten Artikel an");
         bulkAdjustStockButton.addActionListener(e -> adjustStockForSelectedArticles());
 
+        undoButton = createRoundedButton("↶ Rückgängig");
+        undoButton.setToolTipText("Letzte Löschung oder Bestandsänderung rückgängig machen");
+        undoButton.addActionListener(e -> undoLastArticleAction());
+
+        redoButton = createRoundedButton("↷ Wiederholen");
+        redoButton.setToolTipText("Zuletzt rückgängig gemachte Aktion erneut ausführen");
+        redoButton.addActionListener(e -> redoLastArticleAction());
+
         JButton bulkExportButton = createRoundedButton(UnicodeSymbols.DOWNLOAD + " Auswahl exportieren");
         bulkExportButton.setToolTipText("Exportiert die ausgewählten Artikel");
         bulkExportButton.addActionListener(e -> exportSelectedArticles(this, articleTable));
@@ -244,6 +263,10 @@ public class ArticleGUI extends JFrame {
         bulkGroup.add(bulkAdjustStockButton);
         bulkGroup.add(bulkExportButton);
 
+        JPanel historyGroup = createToolbarGroup();
+        historyGroup.add(undoButton);
+        historyGroup.add(redoButton);
+
         JPanel qrGroup = createToolbarGroup();
         qrGroup.add(generateQrCodesButton);
         qrGroup.add(qrPreviewPdfButton);
@@ -258,11 +281,14 @@ public class ArticleGUI extends JFrame {
         toolbarWrapper.add(createToolbarDivider());
         toolbarWrapper.add(bulkGroup);
         toolbarWrapper.add(createToolbarDivider());
+        toolbarWrapper.add(historyGroup);
+        toolbarWrapper.add(createToolbarDivider());
         toolbarWrapper.add(qrGroup);
         toolbarWrapper.add(createToolbarDivider());
         toolbarWrapper.add(infoGroup);
 
         toolbarCard.add(toolbarWrapper, BorderLayout.CENTER);
+        updateUndoRedoState();
 
         JScrollPane toolbarScrollPane = new JScrollPane(
                 toolbarCard,
@@ -430,6 +456,8 @@ public class ArticleGUI extends JFrame {
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_FOCUSED);
 
+        restoreTableFilters();
+
         // Auto-resize columns when the window or viewport changes size
         ComponentAdapter resizeListener = new ComponentAdapter() {
             @Override
@@ -463,6 +491,8 @@ public class ArticleGUI extends JFrame {
         KeyboardShortcutUtils.addTooltipHint(deleteArticleButton, KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
         KeyboardShortcutUtils.addTooltipHint(refreshButton, KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0));
         KeyboardShortcutUtils.addTooltipHint(clearButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_L));
+        KeyboardShortcutUtils.addTooltipHint(undoButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_Z));
+        KeyboardShortcutUtils.addTooltipHint(redoButton, KeyboardShortcutUtils.menuKey(KeyEvent.VK_Y));
         KeyboardShortcutUtils.registerClose(this);
         KeyboardShortcutUtils.registerFocus(rootPane, "articles.focusSearch",
                 KeyboardShortcutUtils.menuKey(KeyEvent.VK_F), searchField);
@@ -476,6 +506,10 @@ public class ArticleGUI extends JFrame {
                 KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), refreshButton);
         KeyboardShortcutUtils.registerButton(rootPane, "articles.clearSearch",
                 KeyboardShortcutUtils.menuKey(KeyEvent.VK_L), clearButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "articles.undo",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_Z), undoButton);
+        KeyboardShortcutUtils.registerButton(rootPane, "articles.redo",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_Y), redoButton);
     }
 
     private Object[] showUpdateArticleDialog(Object[] existingData) {
@@ -725,6 +759,12 @@ public class ArticleGUI extends JFrame {
                 total = model.getRowCount();
             }
             countLabel.setText("Artikel: " + filtered + " / " + total);
+            JFrameUtils.updateTableEmptyState(
+                    tableScrollPane,
+                    articleTable,
+                    total == 0,
+                    "Willkommen im Artikellager",
+                    "Noch sind keine Artikel erfasst. Fügen Sie den ersten Artikel hinzu oder importieren Sie Artikeldaten, um die Lagerverwaltung zu starten.");
         }
     }
 
@@ -745,6 +785,7 @@ public class ArticleGUI extends JFrame {
     private void handleInlineEdit(int modelRow) {
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
         String articleNumber = String.valueOf(model.getValueAt(modelRow, 0));
+        Article beforeArticle = ArticleManager.getInstance().getArticleByNumber(articleNumber);
         String name = String.valueOf(model.getValueAt(modelRow, 1)).trim();
         String details = String.valueOf(model.getValueAt(modelRow, 3));
         Integer stockQuantity = parseInteger(model.getValueAt(modelRow, 4));
@@ -786,6 +827,12 @@ public class ArticleGUI extends JFrame {
 
         if (!ArticleManager.getInstance().updateArticle(article)) {
             showInlineEditError("Fehler beim Speichern der Aenderung.", articleNumber, modelRow);
+        } else if (beforeArticle != null && beforeArticle.getStockQuantity() != article.getStockQuantity()) {
+            pushUndoAction(new StockChangeUndoAction(
+                    article.getArticleNumber(),
+                    article.getName(),
+                    beforeArticle.getStockQuantity(),
+                    article.getStockQuantity()));
         }
     }
 
@@ -815,12 +862,20 @@ public class ArticleGUI extends JFrame {
             return;
         }
 
+        Article beforeArticle = ArticleManager.getInstance().getArticleByNumber(updatedArticle.getArticleNumber());
         if (ArticleManager.getInstance().updateArticle(updatedArticle)) {
             LOGGER.info("Updated article '{}' ({})", updatedArticle.getArticleNumber(), updatedArticle.getName());
             logUtils.addLog(Level.INFO,
                     "Artikel aktualisiert: " + updatedArticle.getArticleNumber() + " - " + updatedArticle.getName());
             applyArticleToTableRow(model, modelRow, updatedArticle);
             applyCombinedFilters();
+            if (beforeArticle != null && beforeArticle.getStockQuantity() != updatedArticle.getStockQuantity()) {
+                pushUndoAction(new StockChangeUndoAction(
+                        updatedArticle.getArticleNumber(),
+                        updatedArticle.getName(),
+                        beforeArticle.getStockQuantity(),
+                        updatedArticle.getStockQuantity()));
+            }
             new MessageDialog("Artikel erfolgreich aktualisiert.", "Erfolg", 5000).display();
         } else {
             LOGGER.warn("Failed to update article '{}'", updatedArticle.getArticleNumber());
@@ -913,6 +968,212 @@ public class ArticleGUI extends JFrame {
         return null;
     }
 
+    private void pushUndoAction(UndoableArticleAction action) {
+        if (action == null) {
+            return;
+        }
+        undoStack.push(action);
+        redoStack.clear();
+        updateUndoRedoState();
+    }
+
+    private void undoLastArticleAction() {
+        if (undoStack.isEmpty()) {
+            return;
+        }
+        UndoableArticleAction action = undoStack.pop();
+        if (action.undo()) {
+            redoStack.push(action);
+            loadArticles();
+            new MessageDialog("Rückgängig gemacht: " + action.getDescription(), "Rückgängig", 5000).display();
+        } else {
+            new MessageDialog("Die Aktion konnte nicht rückgängig gemacht werden.", "Rückgängig", 5000).display();
+        }
+        updateUndoRedoState();
+    }
+
+    private void redoLastArticleAction() {
+        if (redoStack.isEmpty()) {
+            return;
+        }
+        UndoableArticleAction action = redoStack.pop();
+        if (action.redo()) {
+            undoStack.push(action);
+            loadArticles();
+            new MessageDialog("Wiederholt: " + action.getDescription(), "Wiederholen", 5000).display();
+        } else {
+            new MessageDialog("Die Aktion konnte nicht wiederholt werden.", "Wiederholen", 5000).display();
+        }
+        updateUndoRedoState();
+    }
+
+    private void updateUndoRedoState() {
+        if (undoButton != null) {
+            undoButton.setEnabled(!undoStack.isEmpty());
+        }
+        if (redoButton != null) {
+            redoButton.setEnabled(!redoStack.isEmpty());
+        }
+    }
+
+    private Article copyArticle(Article article) {
+        if (article == null) {
+            return null;
+        }
+        return new Article(
+                article.getArticleNumber(),
+                article.getName(),
+                article.getDetails(),
+                article.getStockQuantity(),
+                article.getMinStockLevel(),
+                article.getSellPrice(),
+                article.getPurchasePrice(),
+                article.getVendorName());
+    }
+
+    private boolean restoreArticleSnapshot(Article snapshot) {
+        ArticleManager articleManager = ArticleManager.getInstance();
+        if (snapshot == null || snapshot.getArticleNumber() == null) {
+            return false;
+        }
+        Article copy = copyArticle(snapshot);
+        if (articleManager.existsArticle(copy.getArticleNumber())) {
+            return articleManager.updateArticle(copy, "Undo/Redo");
+        }
+        return articleManager.insertArticle(copy);
+    }
+
+    private interface UndoableArticleAction {
+        boolean undo();
+
+        boolean redo();
+
+        String getDescription();
+    }
+
+    private class StockChangeUndoAction implements UndoableArticleAction {
+        private final String articleNumber;
+        private final String articleName;
+        private final int oldStock;
+        private final int newStock;
+
+        StockChangeUndoAction(String articleNumber, String articleName, int oldStock, int newStock) {
+            this.articleNumber = articleNumber;
+            this.articleName = articleName == null || articleName.isBlank() ? articleNumber : articleName;
+            this.oldStock = oldStock;
+            this.newStock = newStock;
+        }
+
+        @Override
+        public boolean undo() {
+            return setStock(oldStock);
+        }
+
+        @Override
+        public boolean redo() {
+            return setStock(newStock);
+        }
+
+        @Override
+        public String getDescription() {
+            return "Bestand " + articleName + " (" + oldStock + " ↔ " + newStock + ")";
+        }
+
+        private boolean setStock(int stock) {
+            Article article = ArticleManager.getInstance().getArticleByNumber(articleNumber);
+            if (article == null) {
+                return false;
+            }
+            Article updated = new Article(
+                    article.getArticleNumber(),
+                    article.getName(),
+                    article.getDetails(),
+                    stock,
+                    article.getMinStockLevel(),
+                    article.getSellPrice(),
+                    article.getPurchasePrice(),
+                    article.getVendorName());
+            return ArticleManager.getInstance().updateArticle(updated, "Undo/Redo");
+        }
+    }
+
+    private class DeleteArticlesUndoAction implements UndoableArticleAction {
+        private final List<Article> articles;
+
+        DeleteArticlesUndoAction(List<Article> articles) {
+            this.articles = articles == null ? List.of() : articles.stream()
+                    .map(ArticleGUI.this::copyArticle)
+                    .filter(Objects::nonNull)
+                    .toList();
+        }
+
+        @Override
+        public boolean undo() {
+            boolean success = true;
+            for (Article article : articles) {
+                success &= restoreArticleSnapshot(article);
+            }
+            return success && !articles.isEmpty();
+        }
+
+        @Override
+        public boolean redo() {
+            boolean success = true;
+            ArticleManager articleManager = ArticleManager.getInstance();
+            for (Article article : articles) {
+                if (article == null || article.getArticleNumber() == null) {
+                    success = false;
+                    continue;
+                }
+                if (articleManager.existsArticle(article.getArticleNumber())) {
+                    success &= articleManager.deleteArticleByNumber(article.getArticleNumber());
+                }
+            }
+            return success && !articles.isEmpty();
+        }
+
+        @Override
+        public String getDescription() {
+            return articles.size() == 1
+                    ? "Artikel wiederherstellen/löschen"
+                    : articles.size() + " Artikel wiederherstellen/löschen";
+        }
+    }
+
+    private class CompositeArticleUndoAction implements UndoableArticleAction {
+        private final String description;
+        private final List<UndoableArticleAction> actions;
+
+        CompositeArticleUndoAction(String description, List<? extends UndoableArticleAction> actions) {
+            this.description = description == null || description.isBlank() ? "Artikel-Aktion" : description;
+            this.actions = actions == null ? List.of() : new ArrayList<>(actions);
+        }
+
+        @Override
+        public boolean undo() {
+            boolean success = true;
+            ListIterator<UndoableArticleAction> iterator = actions.listIterator(actions.size());
+            while (iterator.hasPrevious()) {
+                success &= iterator.previous().undo();
+            }
+            return success && !actions.isEmpty();
+        }
+
+        @Override
+        public boolean redo() {
+            boolean success = true;
+            for (UndoableArticleAction action : actions) {
+                success &= action.redo();
+            }
+            return success && !actions.isEmpty();
+        }
+
+        @Override
+        public String getDescription() {
+            return description;
+        }
+    }
+
     private void deleteSelectedArticle() {
         int selectedRow = articleTable.getSelectedRow();
         if (selectedRow == -1) {
@@ -935,12 +1196,16 @@ public class ArticleGUI extends JFrame {
 
         // Remove from a database first
         ArticleManager articleManager = ArticleManager.getInstance();
+        Article deletedArticle = copyArticle(articleManager.getArticleByNumber(artikelnummer));
         if (articleManager.deleteArticleByNumber(artikelnummer)) {
             // Only remove from the table if DB deletion succeeded
             model.removeRow(modelRow);
             updateCountLabel();
             LOGGER.info("Deleted article '{}'", artikelnummer);
             logUtils.addLog(Level.INFO, "Artikel gelöscht: " + artikelnummer);
+            if (deletedArticle != null) {
+                pushUndoAction(new DeleteArticlesUndoAction(List.of(deletedArticle)));
+            }
             MessageDialog messageDialog = new MessageDialog("Artikel erfolgreich gelöscht.", "Erfolg", 5000);
             messageDialog.display();
         } else {
@@ -977,11 +1242,16 @@ public class ArticleGUI extends JFrame {
         ArticleManager articleManager = ArticleManager.getInstance();
         isUpdatingTable = true;
         int deletedCount = 0;
+        List<Article> deletedArticles = new ArrayList<>();
         for (int modelRow : modelRows) {
             String artikelnummer = String.valueOf(model.getValueAt(modelRow, 0));
+            Article deletedArticle = copyArticle(articleManager.getArticleByNumber(artikelnummer));
             if (articleManager.deleteArticleByNumber(artikelnummer)) {
                 model.removeRow(modelRow);
                 deletedCount++;
+                if (deletedArticle != null) {
+                    deletedArticles.add(deletedArticle);
+                }
             } else {
                 LOGGER.warn("Failed to delete article '{}' during bulk delete", artikelnummer);
             }
@@ -991,6 +1261,9 @@ public class ArticleGUI extends JFrame {
         LOGGER.info("Bulk deleted {} of {} selected articles", deletedCount, modelRows.size());
         if (deletedCount > 0) {
             logUtils.addLog(Level.INFO, "Mehrfachlöschung von Artikeln abgeschlossen: " + deletedCount + " gelöscht");
+            if (!deletedArticles.isEmpty()) {
+                pushUndoAction(new DeleteArticlesUndoAction(deletedArticles));
+            }
         }
     }
 
@@ -1042,6 +1315,7 @@ public class ArticleGUI extends JFrame {
         ArticleManager articleManager = ArticleManager.getInstance();
         DefaultTableModel model = (DefaultTableModel) articleTable.getModel();
         isUpdatingTable = true;
+        List<StockChangeUndoAction> stockChanges = new ArrayList<>();
         for (int selectedRow : articleTable.getSelectedRows()) {
             int modelRow = articleTable.convertRowIndexToModel(selectedRow);
             String artikelnummer = String.valueOf(model.getValueAt(modelRow, 0));
@@ -1061,9 +1335,22 @@ public class ArticleGUI extends JFrame {
                     article.getVendorName());
             if (articleManager.updateArticle(updated)) {
                 model.setValueAt(newStock, modelRow, 4);
+                if (article.getStockQuantity() != newStock) {
+                    stockChanges.add(new StockChangeUndoAction(
+                            article.getArticleNumber(),
+                            article.getName(),
+                            article.getStockQuantity(),
+                            newStock));
+                }
             }
         }
         isUpdatingTable = false;
+        if (!stockChanges.isEmpty()) {
+            pushUndoAction(new CompositeArticleUndoAction(
+                    "Bestandsänderung für " + stockChanges.size() + " Artikel",
+                    stockChanges));
+            updateCountLabel();
+        }
     }
 
     /**
@@ -1843,6 +2130,7 @@ public class ArticleGUI extends JFrame {
     }
 
     private void applyCombinedFilters() {
+        persistTableFilters();
         String selectedCategory = categoryFilter == null ? null : (String) categoryFilter.getSelectedItem();
         String searchQuery = searchField == null ? "" : searchField.getText().trim().toLowerCase(Locale.ROOT);
         String vendorQuery = vendorFilterField == null ? "" : vendorFilterField.getText().trim().toLowerCase(Locale.ROOT);
@@ -1924,6 +2212,40 @@ public class ArticleGUI extends JFrame {
 
         sorter.setRowFilter(rowFilter);
         updateCountLabel();
+    }
+
+    private void restoreTableFilters() {
+        if (searchField == null || categoryFilter == null || vendorFilterField == null
+                || stockMinField == null || stockMaxField == null
+                || priceMinField == null || priceMaxField == null) {
+            return;
+        }
+        searchField.setText(JFrameUtils.getPersistentUiValue(FILTER_KEY_SEARCH, ""));
+        String category = JFrameUtils.getPersistentUiValue(FILTER_KEY_CATEGORY, "Alle Kategorien");
+        if (!JFrameUtils.selectComboBoxItem(categoryFilter, category)) {
+            categoryFilter.setSelectedItem("Alle Kategorien");
+        }
+        vendorFilterField.setText(JFrameUtils.getPersistentUiValue(FILTER_KEY_VENDOR, ""));
+        stockMinField.setText(JFrameUtils.getPersistentUiValue(FILTER_KEY_STOCK_MIN, ""));
+        stockMaxField.setText(JFrameUtils.getPersistentUiValue(FILTER_KEY_STOCK_MAX, ""));
+        priceMinField.setText(JFrameUtils.getPersistentUiValue(FILTER_KEY_PRICE_MIN, ""));
+        priceMaxField.setText(JFrameUtils.getPersistentUiValue(FILTER_KEY_PRICE_MAX, ""));
+        applyCombinedFilters();
+    }
+
+    private void persistTableFilters() {
+        if (searchField == null || categoryFilter == null || vendorFilterField == null
+                || stockMinField == null || stockMaxField == null
+                || priceMinField == null || priceMaxField == null) {
+            return;
+        }
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_SEARCH, searchField.getText().trim());
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_CATEGORY, String.valueOf(categoryFilter.getSelectedItem()));
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_VENDOR, vendorFilterField.getText().trim());
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_STOCK_MIN, stockMinField.getText().trim());
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_STOCK_MAX, stockMaxField.getText().trim());
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_PRICE_MIN, priceMinField.getText().trim());
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_PRICE_MAX, priceMaxField.getText().trim());
     }
 
     private boolean matchesSearchQuery(RowFilter.Entry<? extends DefaultTableModel, ? extends Integer> entry,

@@ -21,6 +21,7 @@ import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Utility class for creating and styling Swing components with a consistent look and feel across the application.
@@ -95,6 +96,100 @@ public class JFrameUtils {
             headerText.add(subtitleLabel);
         }
         return headerText;
+    }
+
+    public static void updateTableEmptyState(JScrollPane scrollPane, JTable table, boolean empty,
+                                             String title, String message) {
+        if (scrollPane == null || table == null) {
+            return;
+        }
+
+        if (empty) {
+            scrollPane.setColumnHeaderView(null);
+            scrollPane.setViewportView(createTableEmptyState(title, message));
+        } else {
+            if (scrollPane.getViewport().getView() != table) {
+                scrollPane.setViewportView(table);
+            }
+            scrollPane.setColumnHeaderView(table.getTableHeader());
+        }
+        scrollPane.revalidate();
+        scrollPane.repaint();
+    }
+
+    private static JPanel createTableEmptyState(String title, String message) {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(ThemeManager.getCardBackgroundColor());
+        panel.setBorder(BorderFactory.createEmptyBorder(48, 32, 48, 32));
+
+        JPanel content = new JPanel();
+        content.setOpaque(false);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+
+        JLabel iconLabel = new JLabel(UnicodeSymbols.INFO);
+        iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        iconLabel.setFont(SettingsGUI.getFontByName(Font.PLAIN, 42));
+        iconLabel.setForeground(ThemeManager.getAccentColor());
+
+        JLabel titleLabel = new JLabel(title == null ? "Willkommen" : title);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        titleLabel.setFont(SettingsGUI.getFontByName(Font.BOLD, 22));
+        titleLabel.setForeground(ThemeManager.getTextPrimaryColor());
+
+        JTextArea messageArea = new JTextArea(message == null ? "" : message);
+        messageArea.setAlignmentX(Component.CENTER_ALIGNMENT);
+        messageArea.setEditable(false);
+        messageArea.setFocusable(false);
+        messageArea.setOpaque(false);
+        messageArea.setLineWrap(true);
+        messageArea.setWrapStyleWord(true);
+        messageArea.setFont(SettingsGUI.getFontByName(Font.PLAIN, 14));
+        messageArea.setForeground(ThemeManager.getTextSecondaryColor());
+        messageArea.setMaximumSize(new Dimension(520, 90));
+        messageArea.setPreferredSize(new Dimension(520, 70));
+
+        content.add(iconLabel);
+        content.add(Box.createVerticalStrut(12));
+        content.add(titleLabel);
+        content.add(Box.createVerticalStrut(8));
+        content.add(messageArea);
+        panel.add(content);
+        return panel;
+    }
+
+    public static String getPersistentUiValue(String key, String fallback) {
+        if (Main.settings == null || key == null || key.isBlank()) {
+            return fallback == null ? "" : fallback;
+        }
+        String value = Main.settings.getProperty(key);
+        return value == null ? (fallback == null ? "" : fallback) : value;
+    }
+
+    public static void setPersistentUiValue(String key, String value) {
+        if (Main.settings == null || key == null || key.isBlank()) {
+            return;
+        }
+        String normalizedValue = value == null ? "" : value;
+        String current = Main.settings.getProperty(key);
+        if (Objects.equals(current, normalizedValue)) {
+            return;
+        }
+        Main.settings.setProperty(key, normalizedValue);
+        Main.settings.save();
+    }
+
+    public static boolean selectComboBoxItem(JComboBox<?> comboBox, String value) {
+        if (comboBox == null || value == null) {
+            return false;
+        }
+        for (int i = 0; i < comboBox.getItemCount(); i++) {
+            Object item = comboBox.getItemAt(i);
+            if (value.equals(String.valueOf(item))) {
+                comboBox.setSelectedIndex(i);
+                return true;
+            }
+        }
+        return false;
     }
 
     public static RoundedPanel createHeaderCard(int radius, Insets padding) {

@@ -45,6 +45,8 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.*;
 public class OrderGUI extends JFrame {
 
     private static final Logger LOGGER = LogManager.getLogger(OrderGUI.class);
+    private static final String FILTER_KEY_SEARCH = "ui.filter.orders.search";
+    private static final String FILTER_KEY_STATUS = "ui.filter.orders.status";
 
     private final JTable orderTable;
     private final JScrollPane tableScrollPane;
@@ -286,6 +288,7 @@ public class OrderGUI extends JFrame {
                 JComponent.WHEN_FOCUSED);
 
         filterComboBox.addActionListener(e -> applyCombinedFilter());
+        restoreTableFilters();
 
         // auto resize logic
         ComponentAdapter resizeListener = new ComponentAdapter() {
@@ -392,6 +395,12 @@ public class OrderGUI extends JFrame {
             count = orderTable.getRowCount();
         }
         orderCountLabel.setText("Anzahl Bestellungen: " + count);
+        JFrameUtils.updateTableEmptyState(
+                tableScrollPane,
+                orderTable,
+                orderTable.getModel().getRowCount() == 0,
+                "Willkommen bei den Bestellungen",
+                "Noch sind keine Bestellungen vorhanden. Erstellen Sie die erste Bestellung, sobald Artikel und Kundendaten bereitstehen.");
     }
 
     private void setupTableInteractions() {
@@ -1040,6 +1049,7 @@ public class OrderGUI extends JFrame {
     }
 
     private void applyCombinedFilter() {
+        persistTableFilters();
         if (sorter == null) {
             updateOrderCount();
             return;
@@ -1061,5 +1071,19 @@ public class OrderGUI extends JFrame {
 
         sorter.setRowFilter(filters.isEmpty() ? null : RowFilter.andFilter(filters));
         updateOrderCount();
+    }
+
+    private void restoreTableFilters() {
+        searchField.setText(JFrameUtils.getPersistentUiValue(FILTER_KEY_SEARCH, ""));
+        String status = JFrameUtils.getPersistentUiValue(FILTER_KEY_STATUS, "Alle Bestellungen");
+        if (!JFrameUtils.selectComboBoxItem(filterComboBox, status)) {
+            filterComboBox.setSelectedItem("Alle Bestellungen");
+        }
+        applyCombinedFilter();
+    }
+
+    private void persistTableFilters() {
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_SEARCH, searchField.getText().trim());
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_STATUS, String.valueOf(filterComboBox.getSelectedItem()));
     }
 }

@@ -118,6 +118,7 @@ public class SettingsGUI extends JFrame {
     private JButton accentColorButton;
     private JButton headerColorButton;
     private JButton buttonColorButton;
+    private JTabbedPane settingsTabbedPane;
     private JLabel accentHexLabel;
     private JLabel headerHexLabel;
     private JLabel buttonHexLabel;
@@ -156,6 +157,7 @@ public class SettingsGUI extends JFrame {
      * Tabellen-UI genutzt.
      */
     public static int TABLE_FONT_SIZE = 16;
+    public static int TAB_FONT_SIZE = 15;
 
     /**
      * Schlüssel/Mapping der unterstützten Einstellungsvariablen.
@@ -635,10 +637,11 @@ public class SettingsGUI extends JFrame {
 
     private JTabbedPane createTabbedPane() {
         JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.TOP);
+        settingsTabbedPane = tabbedPane;
         tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
         tabbedPane.setOpaque(false);
         tabbedPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        tabbedPane.setFont(getFontByName(Font.BOLD, 14));
+        tabbedPane.setFont(getFontByName(Font.BOLD, getCurrentTabFontSize()));
         tabbedPane.setBackground(ThemeManager.getCardBackgroundColor());
         tabbedPane.setForeground(ThemeManager.getTextPrimaryColor());
         tabbedPane.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, ThemeManager.getBorderColor()));
@@ -663,7 +666,7 @@ public class SettingsGUI extends JFrame {
         tabbedPane.setUI(new javax.swing.plaf.basic.BasicTabbedPaneUI() {
             @Override
             protected int calculateTabHeight(int tabPlacement, int tabIndex, int fontHeight) {
-                return 42;
+                return Math.max(42, fontHeight + 22);
             }
 
             @Override
@@ -700,10 +703,46 @@ public class SettingsGUI extends JFrame {
                 BorderFactory.createEmptyBorder(6, 12, 6, 12)));
 
         JLabel label = new JLabel(title == null ? "" : title);
-        label.setFont(getFontByName(Font.BOLD, 13));
+        label.setFont(getFontByName(Font.BOLD, getCurrentTabFontSize()));
         label.setForeground(selected ? getReadableTextColor(selectedBg) : ThemeManager.getTextPrimaryColor());
         pill.add(label, BorderLayout.CENTER);
         return pill;
+    }
+
+    private int getCurrentTabFontSize() {
+        if (fontSizeTabSpinner != null && fontSizeTabSpinner.getValue() instanceof Number number) {
+            return clampTabFontSize(number.intValue());
+        }
+        if (Main.settings != null) {
+            try {
+                return clampTabFontSize(Integer.parseInt(Main.settings.getProperty("table_font_size_tab",
+                        String.valueOf(TAB_FONT_SIZE))));
+            } catch (NumberFormatException ignored) {
+                // Fall back to the last known valid value below.
+            }
+        }
+        return clampTabFontSize(TAB_FONT_SIZE);
+    }
+
+    private int clampTabFontSize(int fontSize) {
+        return Math.max(10, Math.min(40, fontSize));
+    }
+
+    private void refreshSettingsTabFont() {
+        if (settingsTabbedPane == null) {
+            return;
+        }
+        int tabSize = getCurrentTabFontSize();
+        TAB_FONT_SIZE = tabSize;
+        settingsTabbedPane.setFont(getFontByName(Font.BOLD, tabSize));
+        Object refreshTabs = settingsTabbedPane.getClientProperty("settings.tab.refresh");
+        if (refreshTabs instanceof Runnable runnable) {
+            runnable.run();
+        } else {
+            refreshTabPills(settingsTabbedPane);
+        }
+        settingsTabbedPane.revalidate();
+        settingsTabbedPane.repaint();
     }
 
     private void applySettingsVisualPolish(Container root) {
@@ -1416,7 +1455,10 @@ public class SettingsGUI extends JFrame {
         tabFontSample.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         fontSizeTableSpinner.addChangeListener(e -> updatePreview());
-        fontSizeTabSpinner.addChangeListener(e -> updatePreview());
+        fontSizeTabSpinner.addChangeListener(e -> {
+            updatePreview();
+            refreshSettingsTabFont();
+        });
 
         tableCard.add(Box.createVerticalStrut(12));
         addSliderSetting(tableCard, tableSizePanel, tableFontSlider, tableFontSample);
@@ -3301,6 +3343,7 @@ public class SettingsGUI extends JFrame {
                 applySettingsProperties(props);
                 tableFontSlider.setValue((Integer) fontSizeTableSpinner.getValue());
                 tabFontSlider.setValue((Integer) fontSizeTabSpinner.getValue());
+                refreshSettingsTabFont();
 
                 Main.logUtils.addLog("Einstellungen geladen");
             }
@@ -3333,6 +3376,7 @@ public class SettingsGUI extends JFrame {
                 Main.logUtils.addLog("Einstellungen gespeichert");
                 logger.info("Einstellungen gespeichert");
 
+                applyFontSettingsFromControls();
                 applySettings(interval, enableWarnings, warningInterval, enableAutoCheck, darkMode);
                 ThemeManager.setCustomColors(selectedAccentColor, selectedHeaderColor, selectedButtonColor);
 
@@ -3505,8 +3549,13 @@ public class SettingsGUI extends JFrame {
                     : DEFAULT_DATABASE_TYPE;
             migrationSourceComboBox.setSelectedItem(activeType);
         }
-        fontSizeTableSpinner.setValue(SettingsProfileService.parseIntProperty(props, "table_font_size", DEFAULT_TABLE_FONT_SIZE));
-        fontSizeTabSpinner.setValue(SettingsProfileService.parseIntProperty(props, "table_font_size_tab", DEFAULT_TAB_FONT_SIZE));
+        int tableFontSize = SettingsProfileService.parseIntProperty(props, "table_font_size", DEFAULT_TABLE_FONT_SIZE);
+        int tabFontSize = clampTabFontSize(
+                SettingsProfileService.parseIntProperty(props, "table_font_size_tab", DEFAULT_TAB_FONT_SIZE));
+        TABLE_FONT_SIZE = tableFontSize;
+        TAB_FONT_SIZE = tabFontSize;
+        fontSizeTableSpinner.setValue(tableFontSize);
+        fontSizeTabSpinner.setValue(tabFontSize);
         fontComboBox.setSelectedItem(props.getProperty("font_style", DEFAULT_FONT_STYLE));
         selectedAccentColor = SettingsProfileService.parseColor(props.getProperty("theme_accent_color"));
         selectedHeaderColor = SettingsProfileService.parseColor(props.getProperty("theme_header_color"));
@@ -3517,6 +3566,7 @@ public class SettingsGUI extends JFrame {
         updateDatabaseBackendHint();
         updateDatabaseMigrationHint();
         updatePreview();
+        refreshSettingsTabFont();
     }
 
     @SuppressWarnings("MagicConstant")
@@ -3561,6 +3611,20 @@ public class SettingsGUI extends JFrame {
                 darkMode,
                 automaticImportCheckBox.isSelected(),
                 (Integer) qrCodeImportIntervalSpinner.getValue());
+    }
+
+    private void applyFontSettingsFromControls() {
+        int tableSize = fontSizeTableSpinner == null ? DEFAULT_TABLE_FONT_SIZE
+                : (Integer) fontSizeTableSpinner.getValue();
+        int tabSize = fontSizeTabSpinner == null ? DEFAULT_TAB_FONT_SIZE
+                : clampTabFontSize((Integer) fontSizeTabSpinner.getValue());
+
+        TABLE_FONT_SIZE = tableSize;
+        TAB_FONT_SIZE = tabSize;
+        UIManager.put("Table.font", getFontByName(Font.PLAIN, tableSize));
+        UIManager.put("TableHeader.font", getFontByName(Font.BOLD, Math.max(10, tableSize - 1)));
+        UIManager.put("TabbedPane.font", getFontByName(Font.BOLD, tabSize));
+        refreshSettingsTabFont();
     }
 
     /**

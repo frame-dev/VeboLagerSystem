@@ -704,10 +704,10 @@ public class MainGUI extends JFrame {
      */
     private int getTabFontSize() {
         if (Main.settings == null) {
-            return 15;
+            return SettingsGUI.TAB_FONT_SIZE;
         }
         String fontSizeTabStr = Main.settings.getProperty("table_font_size_tab");
-        int fontSizeTab = 15;
+        int fontSizeTab = SettingsGUI.TAB_FONT_SIZE;
         try {
             fontSizeTab = Integer.parseInt(fontSizeTabStr);
         } catch (NumberFormatException ignored) {

@@ -20,8 +20,6 @@ import java.awt.event.*;
 import java.util.*;
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
-
 import static ch.framedev.lagersystem.utils.JFrameUtils.createSecondaryButton;
 
 /**
@@ -38,6 +36,8 @@ import static ch.framedev.lagersystem.utils.JFrameUtils.createSecondaryButton;
 public class ClientGUI extends JFrame {
 
     private static final Logger LOGGER = LogManager.getLogger(ClientGUI.class);
+    private static final String FILTER_KEY_SEARCH = "ui.filter.clients.search";
+    private static final String FILTER_KEY_DEPARTMENT = "ui.filter.clients.department";
 
     private final JTable clientTable;
     private final JScrollPane tableScrollPane;
@@ -242,30 +242,8 @@ public class ClientGUI extends JFrame {
         TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>((DefaultTableModel) clientTable.getModel());
         clientTable.setRowSorter(sorter);
 
-        filterDepartmentCombobox.addActionListener(listener -> {
-            String selected = (String) filterDepartmentCombobox.getSelectedItem();
-            if (selected == null || ALL_DEPARTMENTS_LABEL.equals(selected)) {
-                sorter.setRowFilter(null);
-            } else {
-                sorter.setRowFilter(RowFilter.regexFilter("^" + Pattern.quote(selected) + "$", 1));
-            }
-            updateClientCountLabel(sorter);
-        });
-
-        Runnable doSearch = () -> {
-            String text = searchField.getText().trim();
-            if (text.isEmpty()) {
-                sorter.setRowFilter(null);
-            } else {
-                try {
-                    String regex = "(?i)" + Pattern.quote(text);
-                    sorter.setRowFilter(RowFilter.regexFilter(regex, 0, 1));
-                } catch (PatternSyntaxException ex) {
-                    sorter.setRowFilter(RowFilter.regexFilter(Pattern.quote(text), 0, 1));
-                }
-            }
-            updateClientCountLabel(sorter);
-        };
+        Runnable doSearch = () -> applyClientFilters(searchField, sorter);
+        filterDepartmentCombobox.addActionListener(listener -> doSearch.run());
 
         // Live filter while typing
         searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
@@ -289,8 +267,7 @@ public class ClientGUI extends JFrame {
         clearBtn.addActionListener(e -> {
             searchField.setText("");
             filterDepartmentCombobox.setSelectedItem(ALL_DEPARTMENTS_LABEL);
-            sorter.setRowFilter(null);
-            updateClientCountLabel(sorter);
+            doSearch.run();
         });
         searchField.addActionListener(e -> doSearch.run());
         // ESC clears
@@ -298,11 +275,11 @@ public class ClientGUI extends JFrame {
                 e -> {
                     searchField.setText("");
                     filterDepartmentCombobox.setSelectedItem(ALL_DEPARTMENTS_LABEL);
-                    sorter.setRowFilter(null);
+                    doSearch.run();
                 },
                 KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
                 JComponent.WHEN_FOCUSED);
-        updateClientCountLabel(sorter);
+        restoreTableFilters(searchField, sorter);
 
         // ===== Table interactions =====
         setupTableInteractions();
@@ -501,10 +478,51 @@ public class ClientGUI extends JFrame {
         LOGGER.info("Loaded {} clients into ClientGUI", dbClients.size());
     }
 
+    private void restoreTableFilters(JTextField searchField, TableRowSorter<DefaultTableModel> sorter) {
+        if (searchField == null || sorter == null) {
+            return;
+        }
+        searchField.setText(JFrameUtils.getPersistentUiValue(FILTER_KEY_SEARCH, ""));
+        String department = JFrameUtils.getPersistentUiValue(FILTER_KEY_DEPARTMENT, ALL_DEPARTMENTS_LABEL);
+        if (!JFrameUtils.selectComboBoxItem(filterDepartmentCombobox, department)) {
+            filterDepartmentCombobox.setSelectedItem(ALL_DEPARTMENTS_LABEL);
+        }
+        applyClientFilters(searchField, sorter);
+    }
+
+    private void applyClientFilters(JTextField searchField, TableRowSorter<DefaultTableModel> sorter) {
+        if (searchField == null || sorter == null) {
+            updateClientCountLabel(sorter);
+            return;
+        }
+
+        String text = searchField.getText().trim();
+        Object selectedItem = filterDepartmentCombobox.getSelectedItem();
+        String selectedDepartment = selectedItem == null ? ALL_DEPARTMENTS_LABEL : String.valueOf(selectedItem);
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_SEARCH, text);
+        JFrameUtils.setPersistentUiValue(FILTER_KEY_DEPARTMENT, selectedDepartment);
+
+        List<RowFilter<DefaultTableModel, Integer>> filters = new ArrayList<>();
+        if (!text.isEmpty()) {
+            filters.add(RowFilter.regexFilter("(?i)" + Pattern.quote(text), 0, 1));
+        }
+        if (selectedDepartment != null && !ALL_DEPARTMENTS_LABEL.equals(selectedDepartment)) {
+            filters.add(RowFilter.regexFilter("^" + Pattern.quote(selectedDepartment) + "$", 1));
+        }
+        sorter.setRowFilter(filters.isEmpty() ? null : RowFilter.andFilter(filters));
+        updateClientCountLabel(sorter);
+    }
+
     private void updateClientCountLabel(TableRowSorter<?> sorter) {
         int total = clientTable.getModel().getRowCount();
         int shown = sorter != null ? sorter.getViewRowCount() : total;
         clientCountLabel.setText("Kunden: " + shown + " / " + total);
+        JFrameUtils.updateTableEmptyState(
+                tableScrollPane,
+                clientTable,
+                total == 0,
+                "Willkommen bei den Kunden",
+                "Noch sind keine Kunden erfasst. Legen Sie den ersten Kunden an, um Bestellungen direkt zuordnen zu können.");
     }
 
     private void styleCountBadge(JLabel label) {
