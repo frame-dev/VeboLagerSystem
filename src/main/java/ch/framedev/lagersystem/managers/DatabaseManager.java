@@ -225,7 +225,8 @@ public class DatabaseManager {
             TABLE_NOTES,
             TABLE_SUPPLIER_ORDERS,
             TABLE_IMPORTED_QRCODES,
-            TABLE_CATEGORIES
+            TABLE_CATEGORIES,
+            TABLE_HISTORIES
     );
 
     public static final class MigrationSummary {
@@ -1023,6 +1024,25 @@ public class DatabaseManager {
                 + "category TEXT NOT NULL UNIQUE,"
                 + "fromTo TEXT NOT NULL"
                 + ");");
+            executeTrustedUpdate("CREATE TABLE IF NOT EXISTS " + TABLE_HISTORIES + " ("
+                    + identityColumn("id") + ","
+                    + "info TEXT(255),"
+                    + "date TEXT(255),"
+                    + "articleNumber TEXT,"
+                    + "userName TEXT,"
+                    + "oldStock INTEGER,"
+                    + "newStock INTEGER,"
+                    + "changeAmount INTEGER,"
+                    + "action TEXT"
+                    + ");");
+            ensureColumnExists(TABLE_HISTORIES, "articleNumber", "TEXT");
+            ensureColumnExists(TABLE_HISTORIES, "userName", "TEXT");
+            ensureColumnExists(TABLE_HISTORIES, "oldStock", "INTEGER");
+            ensureColumnExists(TABLE_HISTORIES, "newStock", "INTEGER");
+            ensureColumnExists(TABLE_HISTORIES, "changeAmount", "INTEGER");
+            ensureColumnExists(TABLE_HISTORIES, "action", "TEXT");
+            executeTrustedUpdate("CREATE INDEX IF NOT EXISTS idx_histories_article_number "
+                    + "ON " + TABLE_HISTORIES + " (articleNumber);");
         } finally {
             if (deferFilesystemSync) {
                 restoreFilesystemTablesIfNeeded();
@@ -1215,7 +1235,8 @@ public class DatabaseManager {
                 TABLE_LOGS,
                 TABLE_NOTES,
                 TABLE_SUPPLIER_ORDERS,
-                TABLE_IMPORTED_QRCODES
+                TABLE_IMPORTED_QRCODES,
+                TABLE_HISTORIES
         };
 
         boolean autoCommit = true;

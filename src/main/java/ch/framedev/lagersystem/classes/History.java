@@ -24,10 +24,28 @@ public class History {
 
     private String info;
     private String date;
+    private String articleNumber;
+    private String userName;
+    private Integer oldStock;
+    private Integer newStock;
+    private Integer changeAmount;
+    private String action;
 
     public History(String info, String date) {
         this.info = info;
         this.date = date;
+    }
+
+    public History(String info, String date, String articleNumber, String userName,
+                   Integer oldStock, Integer newStock, Integer changeAmount, String action) {
+        this.info = info;
+        this.date = date;
+        this.articleNumber = articleNumber;
+        this.userName = userName;
+        this.oldStock = oldStock;
+        this.newStock = newStock;
+        this.changeAmount = changeAmount;
+        this.action = action;
     }
 
     public String getInfo() {
@@ -44,6 +62,54 @@ public class History {
 
     public void setDate(String date) {
         this.date = date;
+    }
+
+    public String getArticleNumber() {
+        return articleNumber;
+    }
+
+    public void setArticleNumber(String articleNumber) {
+        this.articleNumber = articleNumber;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public Integer getOldStock() {
+        return oldStock;
+    }
+
+    public void setOldStock(Integer oldStock) {
+        this.oldStock = oldStock;
+    }
+
+    public Integer getNewStock() {
+        return newStock;
+    }
+
+    public void setNewStock(Integer newStock) {
+        this.newStock = newStock;
+    }
+
+    public Integer getChangeAmount() {
+        return changeAmount;
+    }
+
+    public void setChangeAmount(Integer changeAmount) {
+        this.changeAmount = changeAmount;
+    }
+
+    public String getAction() {
+        return action;
+    }
+
+    public void setAction(String action) {
+        this.action = action;
     }
 
     public Date stringToDate() {

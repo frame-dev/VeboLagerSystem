@@ -1,6 +1,7 @@
 package ch.framedev.lagersystem.managers;
 
 import ch.framedev.lagersystem.classes.Article;
+import ch.framedev.lagersystem.classes.History;
 import ch.framedev.lagersystem.classes.SeperateArticle;
 import ch.framedev.lagersystem.classes.Vendor;
 import org.junit.jupiter.api.DisplayName;
@@ -58,11 +59,26 @@ class ArticleManagerTest extends ManagerTestSupport {
         ArticleManager manager = ArticleManager.getInstance();
         manager.insertArticle(new Article("3301", "Spray", "250 ml", 10, 1, 4.0, 2.0, "VendorY"));
 
-        assertTrue(manager.addToStock("3301", 5));
+        assertTrue(manager.addToStock("3301", 5, "anna"));
         assertEquals(15, manager.getArticleByNumber("3301").getStockQuantity());
 
-        assertTrue(manager.removeFromStock("3301", 20));
+        assertTrue(manager.removeFromStock("3301", 20, "bernd"));
         assertEquals(0, manager.getArticleByNumber("3301").getStockQuantity());
+
+        List<History> histories = HistoryManager.getInstance().getHistoriesForArticle("3301");
+        assertEquals(2, histories.size());
+        assertEquals("bernd", histories.get(0).getUserName());
+        assertEquals(15, histories.get(0).getOldStock());
+        assertEquals(0, histories.get(0).getNewStock());
+        assertEquals(-15, histories.get(0).getChangeAmount());
+        assertEquals("STOCK_DECREASED", histories.get(0).getAction());
+        assertTrue(histories.get(0).getInfo().contains("Benutzer: bernd"));
+
+        assertEquals("anna", histories.get(1).getUserName());
+        assertEquals(10, histories.get(1).getOldStock());
+        assertEquals(15, histories.get(1).getNewStock());
+        assertEquals(5, histories.get(1).getChangeAmount());
+        assertEquals("STOCK_INCREASED", histories.get(1).getAction());
     }
 
     @Test

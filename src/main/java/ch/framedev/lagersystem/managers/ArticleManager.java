@@ -358,10 +358,15 @@ public class ArticleManager {
      * @return true if successful, false otherwise
      */
     public boolean updateArticle(Article article) {
+        return updateArticle(article, resolveCurrentUserName());
+    }
+
+    public boolean updateArticle(Article article, String userName) {
         if (article == null) throw new IllegalArgumentException("Article cannot be null");
         if (!existsArticle(article.getArticleNumber())) {
             return false;
         }
+        Integer previousStockQuantity = getStockQuantityFromDatabase(article.getArticleNumber());
         String sql = "UPDATE " + DatabaseManager.TABLE_ARTICLES + " SET name = ?, details = ?, stockQuantity = ?, minStockLevel = ?, sellPrice = ?, purchasePrice = ?, vendorName = ? " +
                 "WHERE articleNumber = ?;";
         insertVendorForArticle(article);
@@ -372,6 +377,7 @@ public class ArticleManager {
         if (success) {
             invalidateArticleCache(article.getArticleNumber());
             cacheArticle(article);
+            logStockChangeIfNeeded(article, previousStockQuantity, userName);
             logger.debug("Article {} updated in cache", article.getArticleNumber());
             Main.logUtils.addLog("Article with number '" + article.getArticleNumber() + "' updated");
         } else {
@@ -379,6 +385,48 @@ public class ArticleManager {
         }
 
         return success;
+    }
+
+    private Integer getStockQuantityFromDatabase(String articleNumber) {
+        String sql = "SELECT stockQuantity FROM " + DatabaseManager.TABLE_ARTICLES + " WHERE articleNumber = ? LIMIT 1;";
+        ResultSet resultSet = null;
+        try {
+            resultSet = databaseManager.executePreparedQuery(sql, new Object[]{articleNumber});
+            if (resultSet != null && resultSet.next()) {
+                return resultSet.getInt("stockQuantity");
+            }
+        } catch (SQLException e) {
+            logger.error("Error while reading current stock for article '{}'", articleNumber, e);
+            Main.logUtils.addLog("Error while reading current stock for article '" + articleNumber + "'");
+        } finally {
+            databaseManager.closeQuery(resultSet);
+        }
+        return null;
+    }
+
+    private void logStockChangeIfNeeded(Article article, Integer previousStockQuantity, String userName) {
+        if (article == null || previousStockQuantity == null
+                || previousStockQuantity == article.getStockQuantity()) {
+            return;
+        }
+
+        boolean historyInserted = HistoryManager.getInstance().insertStockChange(
+                article.getArticleNumber(),
+                article.getName(),
+                previousStockQuantity,
+                article.getStockQuantity(),
+                userName);
+        if (!historyInserted) {
+            logger.warn("Could not write stock history for article '{}'", article.getArticleNumber());
+        }
+    }
+
+    private String resolveCurrentUserName() {
+        String userName = System.getProperty("user.name");
+        if (userName == null || userName.isBlank()) {
+            return "System";
+        }
+        return userName.trim();
     }
 
     /**
@@ -588,6 +636,10 @@ public class ArticleManager {
      * @return true if successful, false otherwise
      */
     public boolean removeFromStock(String articleNumber, int quantity) {
+        return removeFromStock(articleNumber, quantity, resolveCurrentUserName());
+    }
+
+    public boolean removeFromStock(String articleNumber, int quantity, String userName) {
         if(articleNumber == null) throw new IllegalArgumentException("Article number cannot be null");
         Article article = getArticleByNumber(articleNumber);
         if (article == null) {
@@ -598,7 +650,7 @@ public class ArticleManager {
             newQuantity = 0;
         }
         article.setStockQuantity(newQuantity);
-        return updateArticle(article);
+        return updateArticle(article, userName);
     }
 
     /**
@@ -609,6 +661,10 @@ public class ArticleManager {
      * @return true if successful, false otherwise
      */
     public boolean addToStock(String articleNumber, int quantity) {
+        return addToStock(articleNumber, quantity, resolveCurrentUserName());
+    }
+
+    public boolean addToStock(String articleNumber, int quantity, String userName) {
         if(articleNumber == null) throw new IllegalArgumentException("Article number cannot be null");
         Article article = getArticleByNumber(articleNumber);
         if (article == null) {
@@ -616,7 +672,7 @@ public class ArticleManager {
         }
         int newQuantity = article.getStockQuantity() + quantity;
         article.setStockQuantity(newQuantity);
-        return updateArticle(article);
+        return updateArticle(article, userName);
     }
 
     public boolean insertSeperateArticle(SeperateArticle article) {

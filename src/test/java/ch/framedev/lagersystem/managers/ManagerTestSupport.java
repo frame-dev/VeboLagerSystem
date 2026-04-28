@@ -52,6 +52,7 @@ abstract class ManagerTestSupport {
         resetSingleton(NotesManager.class);
         resetSingleton(DepartmentManager.class);
         resetSingleton(LogManager.class);
+        HistoryManager.resetInstance();
         OrderManager.resetInstance();
     }
 
