@@ -302,6 +302,29 @@ public class QRCodeUtils {
         return data.split(";");
     }
 
+    public static String extractArticleNumberFromData(String data) {
+        String[] parts = getPartsFromData(data);
+        if (parts.length == 0 || parts[0] == null) {
+            return "";
+        }
+        return parts[0].replace("artikelNr:", "").trim();
+    }
+
+    public static String buildQrImportFailureMessage(String articleNumber, String qrValue, String qrId, String reason) {
+        String safeArticleNumber = isBlank(articleNumber) ? "<unbekannt>" : articleNumber.trim();
+        String safeQrId = isBlank(qrId) ? "<keine ID>" : qrId.trim();
+        String safeReason = isBlank(reason) ? "Unbekannter Fehler" : reason.trim();
+        String safeQrValue = isBlank(qrValue) ? "<leer>" : qrValue.trim();
+        return "QR-Code-Import fehlgeschlagen: " + safeReason
+                + " | Artikel-Nr.: " + safeArticleNumber
+                + " | QR-ID: " + safeQrId
+                + " | QR-Wert: " + safeQrValue;
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
     /**
      * Reads all QR code JSON objects as maps from the local scans.json file.
      *

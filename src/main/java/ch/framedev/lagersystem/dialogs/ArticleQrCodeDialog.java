@@ -11,6 +11,7 @@ import ch.framedev.lagersystem.guis.SupplierOrderGUI;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.ArticleManager;
 import ch.framedev.lagersystem.utils.QRCodeUtils;
+import org.apache.logging.log4j.Level;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -21,6 +22,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -759,16 +761,20 @@ public final class ArticleQrCodeDialog {
             if (confirm == JOptionPane.YES_OPTION) {
                 int imported = 0;
                 int errors = 0;
+                List<String> errorDetails = new ArrayList<>();
                 ArticleManager articleManager = ArticleManager.getInstance();
 
                 for (int row : selectedRows) {
+                    String id = "";
+                    String data = "";
+                    String artikelNr = "";
                     try {
-                        String id = (String) tableModel.getValueAt(row, COL_ID);
-                        String data = (String) tableModel.getValueAt(row, COL_DATA);
+                        id = (String) tableModel.getValueAt(row, COL_ID);
+                        data = (String) tableModel.getValueAt(row, COL_DATA);
                         int quantity = Integer.parseInt(tableModel.getValueAt(row, COL_QUANTITY).toString());
 
                         String[] parts = QRCodeUtils.getPartsFromData(data);
-                        String artikelNr = extractArticleNumber(parts);
+                        artikelNr = extractArticleNumber(parts);
                         Article article = articleManager.getArticleByNumber(artikelNr);
 
                         if (article != null && !ImportUtils.getImportedQrCodes().contains(id)) {
@@ -777,31 +783,44 @@ public final class ArticleQrCodeDialog {
                                 imported++;
                             } else {
                                 errors++;
+                                recordQrImportFailure(errorDetails, id, artikelNr, data,
+                                        "Bestand konnte nicht aktualisiert werden", null);
                             }
                         } else if (article == null) {
-                            Article newArticle = retrieveParts(parts);
-                            if (articleManager.insertArticle(newArticle)) {
-                                if (articleManager.addToStock(artikelNr, quantity)) {
-                                    ImportUtils.addQrCodeImport(id);
-                                    imported++;
+                            try {
+                                Article newArticle = retrieveParts(parts);
+                                if (articleManager.insertArticle(newArticle)) {
+                                    if (articleManager.addToStock(artikelNr, quantity)) {
+                                        ImportUtils.addQrCodeImport(id);
+                                        imported++;
+                                    } else {
+                                        errors++;
+                                        recordQrImportFailure(errorDetails, id, artikelNr, data,
+                                                "Unbekannte Artikel-Nr.; Artikel wurde angelegt, Bestand konnte aber nicht aktualisiert werden", null);
+                                    }
                                 } else {
                                     errors++;
+                                    recordQrImportFailure(errorDetails, id, artikelNr, data,
+                                            "Unbekannte Artikel-Nr.; Artikel konnte nicht automatisch angelegt werden", null);
                                 }
-                            } else {
+                            } catch (Exception ex) {
                                 errors++;
+                                recordQrImportFailure(errorDetails, id, artikelNr, data,
+                                        "Unbekannte Artikel-Nr.; QR-Daten konnten nicht als neuer Artikel gelesen werden", ex);
                             }
                         } else {
                             errors++;
+                            recordQrImportFailure(errorDetails, id, artikelNr, data,
+                                    "Datensatz wurde bereits verarbeitet", null);
                         }
                     } catch (Exception ex) {
                         errors++;
+                        recordQrImportFailure(errorDetails, id, artikelNr, data,
+                                "Datensatz konnte nicht importiert werden", ex);
                     }
                 }
 
-                String message = String.format("<html><b>Import abgeschlossen</b><br/><br/>" +
-                                UnicodeSymbols.CHECKMARK + " Erfolgreich: %d<br/>" +
-                                (errors > 0 ? UnicodeSymbols.CLOSE + " Fehler: %d<br/>" : ""),
-                        imported, errors);
+                String message = buildImportResultMessage(imported, 0, errors, errorDetails);
 
                 new MessageDialog()
                         .setTitle("Import Ergebnis")
@@ -841,16 +860,20 @@ public final class ArticleQrCodeDialog {
                     int imported = 0;
                     int errors = 0;
                     int skipped = 0;
+                    final List<String> errorDetails = new ArrayList<>();
 
                     @Override
                     protected Void doInBackground() {
                         ArticleManager articleManager = ArticleManager.getInstance();
 
                         for (int i = 0; i < rowCount; i++) {
+                            String data = "";
+                            String id = "";
+                            String artikelNr = "";
                             try {
-                                String data = (String) tableModel.getValueAt(i, COL_DATA);
+                                data = (String) tableModel.getValueAt(i, COL_DATA);
                                 int quantity = Integer.parseInt(tableModel.getValueAt(i, COL_QUANTITY).toString());
-                                String id = (String) tableModel.getValueAt(i, COL_ID);
+                                id = (String) tableModel.getValueAt(i, COL_ID);
 
                                 if (ImportUtils.getImportedQrCodes().contains(id)) {
                                     skipped++;
@@ -858,7 +881,7 @@ public final class ArticleQrCodeDialog {
                                 }
 
                                 String[] parts = QRCodeUtils.getPartsFromData(data);
-                                String artikelNr = extractArticleNumber(parts);
+                                artikelNr = extractArticleNumber(parts);
                                 Article article = articleManager.getArticleByNumber(artikelNr);
 
                                 if (article != null) {
@@ -868,22 +891,36 @@ public final class ArticleQrCodeDialog {
                                         publish(imported);
                                     } else {
                                         errors++;
+                                        recordQrImportFailure(errorDetails, id, artikelNr, data,
+                                                "Bestand konnte nicht aktualisiert werden", null);
                                     }
                                 } else {
-                                    Article newArticle = retrieveParts(parts);
-                                    if (articleManager.insertArticle(newArticle)) {
-                                        if (articleManager.addToStock(artikelNr, quantity)) {
-                                            ImportUtils.addQrCodeImport(id);
-                                            imported++;
+                                    try {
+                                        Article newArticle = retrieveParts(parts);
+                                        if (articleManager.insertArticle(newArticle)) {
+                                            if (articleManager.addToStock(artikelNr, quantity)) {
+                                                ImportUtils.addQrCodeImport(id);
+                                                imported++;
+                                            } else {
+                                                errors++;
+                                                recordQrImportFailure(errorDetails, id, artikelNr, data,
+                                                        "Unbekannte Artikel-Nr.; Artikel wurde angelegt, Bestand konnte aber nicht aktualisiert werden", null);
+                                            }
                                         } else {
                                             errors++;
+                                            recordQrImportFailure(errorDetails, id, artikelNr, data,
+                                                    "Unbekannte Artikel-Nr.; Artikel konnte nicht automatisch angelegt werden", null);
                                         }
-                                    } else {
+                                    } catch (Exception ex) {
                                         errors++;
+                                        recordQrImportFailure(errorDetails, id, artikelNr, data,
+                                                "Unbekannte Artikel-Nr.; QR-Daten konnten nicht als neuer Artikel gelesen werden", ex);
                                     }
                                 }
                             } catch (Exception ex) {
                                 errors++;
+                                recordQrImportFailure(errorDetails, id, artikelNr, data,
+                                        "Datensatz konnte nicht importiert werden", ex);
                             }
                         }
                         return null;
@@ -899,12 +936,7 @@ public final class ArticleQrCodeDialog {
 
                     @Override
                     protected void done() {
-                        String message = String.format(
-                                "<html><b>Import abgeschlossen</b><br/><br/>" +
-                                        UnicodeSymbols.CHECKMARK + " Erfolgreich: %d<br/>" +
-                                        (skipped > 0 ? UnicodeSymbols.FAST_FORWARD + "️ Übersprungen: %d (bereits importiert)<br/>" : "") +
-                                        (errors > 0 ? UnicodeSymbols.CLOSE + " Fehler: %d<br/>" : ""),
-                                imported, skipped, errors);
+                        String message = buildImportResultMessage(imported, skipped, errors, errorDetails);
 
                         new MessageDialog()
                                 .setTitle("Import Ergebnis")
@@ -1067,6 +1099,64 @@ public final class ArticleQrCodeDialog {
         String vendor = parts[5].replace("vendor:", "");
         return new Article(artikelNr, name, details, 0, 0,
                 Double.parseDouble(sellPrice), Double.parseDouble(buyPrice), vendor);
+    }
+
+    private static void recordQrImportFailure(List<String> errorDetails, String qrId, String articleNumber,
+                                              String qrValue, String reason, Exception exception) {
+        String detail = QRCodeUtils.buildQrImportFailureMessage(
+                articleNumber,
+                qrValue,
+                qrId,
+                exception == null ? reason : reason + " (" + exception.getMessage() + ")");
+        Main.logUtils.addLog(Level.ERROR, detail);
+        if (errorDetails != null) {
+            errorDetails.add(detail);
+        }
+    }
+
+    private static String buildImportResultMessage(int imported, int skipped, int errors, List<String> errorDetails) {
+        StringBuilder message = new StringBuilder("<html><b>Import abgeschlossen</b><br/><br/>")
+                .append(UnicodeSymbols.CHECKMARK)
+                .append(" Erfolgreich: ")
+                .append(imported)
+                .append("<br/>");
+        if (skipped > 0) {
+            message.append(UnicodeSymbols.FAST_FORWARD)
+                    .append(" Übersprungen: ")
+                    .append(skipped)
+                    .append(" (bereits importiert)<br/>");
+        }
+        if (errors > 0) {
+            message.append(UnicodeSymbols.CLOSE)
+                    .append(" Fehler: ")
+                    .append(errors)
+                    .append("<br/>");
+        }
+        if (errorDetails != null && !errorDetails.isEmpty()) {
+            message.append("<br/><b>Fehlerdetails</b><br/>");
+            int maxDetails = Math.min(5, errorDetails.size());
+            for (int i = 0; i < maxDetails; i++) {
+                message.append("<small>")
+                        .append(escapeHtml(errorDetails.get(i)))
+                        .append("</small><br/>");
+            }
+            if (errorDetails.size() > maxDetails) {
+                message.append("<small>Weitere Fehler wurden im Log gespeichert.</small><br/>");
+            }
+        }
+        message.append("</html>");
+        return message.toString();
+    }
+
+    private static String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 
     private static void styleButton(JButton button, Color bgColor, Color fgColor) {

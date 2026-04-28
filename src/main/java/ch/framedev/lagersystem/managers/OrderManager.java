@@ -19,6 +19,7 @@ import ch.framedev.lagersystem.classes.Article;
 import ch.framedev.lagersystem.classes.Order;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.utils.ArticleUtils;
+import ch.framedev.lagersystem.utils.OrderLoggingUtils;
 import ch.framedev.lagersystem.utils.Variables;
 
 @SuppressWarnings({"UnusedReturnValue", "DuplicatedCode"})
@@ -194,6 +195,7 @@ public class OrderManager {
         if (id == null) return false;
 
         if (existsOrder(id)) {
+            OrderLoggingUtils.getInstance().addWarn(id, "Bestellung konnte nicht angelegt werden: existiert bereits");
             return false;
         }
 
@@ -222,6 +224,7 @@ public class OrderManager {
 
         if (result) {
             Main.logUtils.addLog("Order with id '" + id + "' inserted");
+            OrderLoggingUtils.getInstance().addInfo(id, "Bestellung angelegt: " + summarizeOrder(order));
             cache.put(id, order);
             invalidateAllOrdersCache();
             return true;
@@ -229,6 +232,7 @@ public class OrderManager {
 
         logger.error("Error while inserting order with id '{}'", id);
         Main.logUtils.addLog("Error while inserting order with id '" + id + "'");
+        OrderLoggingUtils.getInstance().addError(id, "Bestellung konnte nicht angelegt werden");
         return false;
     }
 
@@ -239,6 +243,7 @@ public class OrderManager {
 
         if (!existsOrder(id)) {
             Main.logUtils.addLog("Order with id '" + id + "' does not exist");
+            OrderLoggingUtils.getInstance().addWarn(id, "Bestellung konnte nicht aktualisiert werden: nicht gefunden");
             return false;
         }
 
@@ -268,6 +273,7 @@ public class OrderManager {
 
         if (result) {
             Main.logUtils.addLog("Order with id '" + id + "' updated");
+            OrderLoggingUtils.getInstance().addInfo(id, "Bestellung aktualisiert: " + summarizeOrder(order));
             cache.put(id, order);
             invalidateAllOrdersCache();
             return true;
@@ -275,6 +281,7 @@ public class OrderManager {
 
         logger.error("Error while updating order with id '{}'", id);
         Main.logUtils.addLog("Error while updating order with id '" + id + "'");
+        OrderLoggingUtils.getInstance().addError(id, "Bestellung konnte nicht aktualisiert werden");
         return false;
     }
 
@@ -283,6 +290,7 @@ public class OrderManager {
         if (id == null) return false;
 
         if (!existsOrder(id)) {
+            OrderLoggingUtils.getInstance().addWarn(id, "Bestellung konnte nicht gelöscht werden: nicht gefunden");
             return false;
         }
 
@@ -291,6 +299,7 @@ public class OrderManager {
 
         if (ok) {
             Main.logUtils.addLog("Order with id '" + id + "' deleted");
+            OrderLoggingUtils.getInstance().addInfo(id, "Bestellung gelöscht");
             cache.remove(id);
             invalidateAllOrdersCache();
             return true;
@@ -298,7 +307,30 @@ public class OrderManager {
 
         logger.error("Error while deleting order with id '{}'", id);
         Main.logUtils.addLog("Error while deleting order with id '" + id + "'");
+        OrderLoggingUtils.getInstance().addError(id, "Bestellung konnte nicht gelöscht werden");
         return false;
+    }
+
+    private String summarizeOrder(Order order) {
+        if (order == null) {
+            return "keine Details";
+        }
+        int articleCount = order.getOrderedArticles() == null ? 0 : order.getOrderedArticles().size();
+        int quantity = order.getOrderedArticles() == null
+                ? 0
+                : order.getOrderedArticles().values().stream()
+                        .filter(java.util.Objects::nonNull)
+                        .mapToInt(Integer::intValue)
+                        .sum();
+        return "Status: " + safeSummary(order.getStatus())
+                + " | Artikelpositionen: " + articleCount
+                + " | Gesamtmenge: " + quantity
+                + " | Empfänger: " + safeSummary(order.getReceiverName())
+                + " | Abteilung: " + safeSummary(order.getDepartment());
+    }
+
+    private String safeSummary(String value) {
+        return value == null || value.isBlank() ? "-" : value.trim();
     }
 
     public Order getOrder(String orderId) {

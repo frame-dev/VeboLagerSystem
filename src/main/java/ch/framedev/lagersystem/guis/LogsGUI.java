@@ -1,8 +1,10 @@
 package ch.framedev.lagersystem.guis;
 
 import ch.framedev.lagersystem.dialogs.MessageDialog;
+import ch.framedev.lagersystem.classes.History;
 import ch.framedev.lagersystem.main.Main;
 import ch.framedev.lagersystem.managers.DatabaseManager;
+import ch.framedev.lagersystem.managers.HistoryManager;
 import ch.framedev.lagersystem.managers.ThemeManager;
 import ch.framedev.lagersystem.utils.ArticleExporter;
 import ch.framedev.lagersystem.utils.JFrameUtils;
@@ -54,6 +56,7 @@ public class LogsGUI extends JFrame {
     private final List<String> orderLogsData = new ArrayList<>();
     private final List<String> supplierLogsData = new ArrayList<>();
     private final List<String> supplierOrderLogs = new ArrayList<>();
+    private final List<String> articleLogsData = new ArrayList<>();
 
     private final JTextPane logTextPane = new JTextPane();
     private final JTextField searchField = new JTextField(20);
@@ -75,6 +78,7 @@ public class LogsGUI extends JFrame {
     private final JButton orderLogsButton;
     private final JButton supplierLogsButton;
     private final JButton supplierOrderLogsButton;
+    private final JButton articleLogsButton;
     private final JButton allLogsButton;
     private final JButton clearLogsButton;
 
@@ -86,6 +90,7 @@ public class LogsGUI extends JFrame {
         ORDER,
         SUPPLIER,
         SUPPLIER_ORDER,
+        ARTICLE,
         ALL
     }
 
@@ -126,6 +131,9 @@ public class LogsGUI extends JFrame {
         supplierOrderLogsButton = createCategoryButton(UnicodeSymbols.DOCUMENT + " Lieferanten-Bestellungen",
                 ThemeManager.getWarningColor(),
                 LogCategory.SUPPLIER_ORDER);
+        articleLogsButton = createCategoryButton(UnicodeSymbols.PACKAGE + " Artikel-Verlauf",
+                ThemeManager.getInfoColor(),
+                LogCategory.ARTICLE);
         allLogsButton = createCategoryButton(UnicodeSymbols.CLIPBOARD + " Alle Protokolle",
                 ThemeManager.getPrimaryColor(),
                 LogCategory.ALL);
@@ -250,8 +258,10 @@ public class LogsGUI extends JFrame {
                 KeyboardShortcutUtils.menuKey(KeyEvent.VK_2), () -> setCategory(LogCategory.SUPPLIER));
         KeyboardShortcutUtils.register(rootPane, "logs.categorySupplierOrders",
                 KeyboardShortcutUtils.menuKey(KeyEvent.VK_3), () -> setCategory(LogCategory.SUPPLIER_ORDER));
+        KeyboardShortcutUtils.register(rootPane, "logs.categoryArticles",
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_4), () -> setCategory(LogCategory.ARTICLE));
         KeyboardShortcutUtils.register(rootPane, "logs.categoryAll",
-                KeyboardShortcutUtils.menuKey(KeyEvent.VK_4), () -> setCategory(LogCategory.ALL));
+                KeyboardShortcutUtils.menuKey(KeyEvent.VK_5), () -> setCategory(LogCategory.ALL));
     }
 
     private JPanel createHeaderPanel() {
@@ -308,6 +318,7 @@ public class LogsGUI extends JFrame {
         buttonRow.add(orderLogsButton);
         buttonRow.add(supplierLogsButton);
         buttonRow.add(supplierOrderLogsButton);
+        buttonRow.add(articleLogsButton);
         buttonRow.add(allLogsButton);
 
         JPanel badgeRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
@@ -507,6 +518,7 @@ public class LogsGUI extends JFrame {
         updateCategoryButtonState(orderLogsButton, LogCategory.ORDER);
         updateCategoryButtonState(supplierLogsButton, LogCategory.SUPPLIER);
         updateCategoryButtonState(supplierOrderLogsButton, LogCategory.SUPPLIER_ORDER);
+        updateCategoryButtonState(articleLogsButton, LogCategory.ARTICLE);
         updateCategoryButtonState(allLogsButton, LogCategory.ALL);
         clearLogsButton.setEnabled(currentCategory != LogCategory.ALL);
         categoryBadgeLabel.setText(UnicodeSymbols.TAG + " " + getCategoryDisplayName(currentCategory));
@@ -541,6 +553,7 @@ public class LogsGUI extends JFrame {
             case ORDER -> "Bestellungs-Protokolle";
             case SUPPLIER -> "Lieferanten-Protokolle";
             case SUPPLIER_ORDER -> "Lieferanten-Bestellungen";
+            case ARTICLE -> "Artikel-Verlauf";
             case ALL -> "Alle Protokolle";
         };
     }
@@ -550,6 +563,7 @@ public class LogsGUI extends JFrame {
             case ORDER -> loadOrderLogs();
             case SUPPLIER -> loadSupplierLogs();
             case SUPPLIER_ORDER -> loadSupplierOrderLogs();
+            case ARTICLE -> loadArticleLogs();
             case ALL -> loadAllLogs();
         };
         applyFilters();
@@ -576,6 +590,7 @@ public class LogsGUI extends JFrame {
         appendLogFileSection(allLogs, orderLogFile, "--- Bestellungs-Protokolle ---");
         appendLogFileSection(allLogs, vendorOrderFile, "--- Lieferanten-Protokolle ---");
         appendLogSection(allLogs, SupplierOrderGUI.getAllSupplierOrdersForDisplay(), "--- Lieferanten-Bestellungen ---");
+        appendLogSection(allLogs, loadArticleLogs(), "--- Artikel-Verlauf ---");
 
         return allLogs;
     }
@@ -633,6 +648,60 @@ public class LogsGUI extends JFrame {
         supplierOrderLogs.clear();
         supplierOrderLogs.addAll(SupplierOrderGUI.getAllSupplierOrdersForDisplay());
         return new ArrayList<>(supplierOrderLogs);
+    }
+
+    private List<String> loadArticleLogs() {
+        articleLogsData.clear();
+        try {
+            List<String> historyLines = new ArrayList<>();
+            for (History history : HistoryManager.getInstance().getHistories()) {
+                historyLines.add(formatArticleHistory(history));
+            }
+            appendLogSection(articleLogsData, historyLines, "--- Artikel-Ereignisse ---");
+        } catch (Exception ex) {
+            logger.error("Fehler beim Laden des Artikel-Verlaufs: {}", ex.getMessage(), ex);
+            articleLogsData.add("ERROR Artikel-Verlauf konnte nicht geladen werden: " + ex.getMessage());
+        }
+        return new ArrayList<>(articleLogsData);
+    }
+
+    private String formatArticleHistory(History history) {
+        if (history == null) {
+            return "";
+        }
+        String date = safeLogValue(history.getDate(), "-");
+        String articleNumber = safeLogValue(history.getArticleNumber(), "-");
+        String user = safeLogValue(history.getUserName(), "System");
+        String action = safeLogValue(history.getAction(), "ARTICLE_EVENT");
+        String info = safeLogValue(history.getInfo(), "");
+
+        StringBuilder builder = new StringBuilder()
+                .append("Datum: ")
+                .append(date)
+                .append(", Level: INFO, Artikel: ")
+                .append(articleNumber)
+                .append(", Benutzer: ")
+                .append(user)
+                .append(", Aktion: ")
+                .append(action);
+
+        if (history.getOldStock() != null || history.getNewStock() != null || history.getChangeAmount() != null) {
+            builder.append(", Bestand: ")
+                    .append(history.getOldStock() == null ? "-" : history.getOldStock())
+                    .append(" -> ")
+                    .append(history.getNewStock() == null ? "-" : history.getNewStock())
+                    .append(" (")
+                    .append(history.getChangeAmount() == null ? "-" : String.format("%+d", history.getChangeAmount()))
+                    .append(")");
+        }
+        if (!info.isBlank()) {
+            builder.append(", Ereignis: ").append(info);
+        }
+        return builder.toString();
+    }
+
+    private String safeLogValue(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
     }
 
     private void applyFilters() {
@@ -958,12 +1027,15 @@ public class LogsGUI extends JFrame {
             case ORDER -> new File(new File(Main.getAppDataDir(), "logs"), "bestellung.log");
             case SUPPLIER -> new File(new File(Main.getAppDataDir(), "logs"), "vendorOrder.log");
             case SUPPLIER_ORDER -> null;
+            case ARTICLE -> null;
             case ALL -> null;
         };
 
-        if (currentCategory == LogCategory.SUPPLIER_ORDER) {
+        if (currentCategory == LogCategory.SUPPLIER_ORDER || currentCategory == LogCategory.ARTICLE) {
             if (Main.databaseManager != null) {
-                Main.databaseManager.clearTable(DatabaseManager.TABLE_SUPPLIER_ORDERS);
+                Main.databaseManager.clearTable(currentCategory == LogCategory.SUPPLIER_ORDER
+                        ? DatabaseManager.TABLE_SUPPLIER_ORDERS
+                        : DatabaseManager.TABLE_HISTORIES);
             }
             refreshCurrentLogs();
             return;

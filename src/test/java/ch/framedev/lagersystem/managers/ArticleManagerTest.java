@@ -65,7 +65,9 @@ class ArticleManagerTest extends ManagerTestSupport {
         assertTrue(manager.removeFromStock("3301", 20, "bernd"));
         assertEquals(0, manager.getArticleByNumber("3301").getStockQuantity());
 
-        List<History> histories = HistoryManager.getInstance().getHistoriesForArticle("3301");
+        List<History> histories = HistoryManager.getInstance().getHistoriesForArticle("3301").stream()
+                .filter(history -> history.getAction() != null && history.getAction().startsWith("STOCK_"))
+                .toList();
         assertEquals(2, histories.size());
         assertEquals("bernd", histories.get(0).getUserName());
         assertEquals(15, histories.get(0).getOldStock());

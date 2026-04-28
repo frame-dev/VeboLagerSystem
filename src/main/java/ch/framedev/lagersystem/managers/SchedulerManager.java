@@ -466,12 +466,10 @@ public class SchedulerManager {
                     continue;
                 }
 
-                String[] parts = QRCodeUtils.getPartsFromData(payload);
-                if (parts.length < 2) {
+                String articleNumber = QRCodeUtils.extractArticleNumberFromData(payload);
+                if (articleNumber.isBlank()) {
                     continue;
                 }
-
-                String articleNumber = parts[0];
 
                 int quantity;
                 Object rawQty = data.get("quantity");
@@ -496,8 +494,13 @@ public class SchedulerManager {
                 }
 
                 if (!articleManager.addToStock(articleNumber, quantity)) {
-                    LOGGER.error("Failed to auto-import QR-code for article {}", articleNumber);
-                    Main.logUtils.addLog("Failed to auto-import QR-code for article " + articleNumber);
+                    String message = QRCodeUtils.buildQrImportFailureMessage(
+                            articleNumber,
+                            payload,
+                            id,
+                            "Unbekannte Artikel-Nr. oder Bestand konnte nicht aktualisiert werden");
+                    LOGGER.error(message);
+                    Main.logUtils.addLog(org.apache.logging.log4j.Level.ERROR, message);
                 } else {
                     LOGGER.info("Auto-imported {} units to article {}", quantity, articleNumber);
                     ImportUtils.addQrCodeImport(id);

@@ -84,8 +84,8 @@
 - [ ] **Backup-Funktion:** Einzel-Klick-Backup der Datenbank und Einstellungen ins App-Datenverzeichnis
 - [ ] **Export-Vorlagen:** Konfigurierbare PDF-Vorlagen für Bestellungen und Artikel-Listen
 - [ ] **`ScanServer` – konfigurierbarer Port:** Neuen Key `scan_server_port` in `settings.properties` einlesen und beim Start nutzen
-- [ ] **QR-Code-Import – Fehlerprotokoll:** Bei fehlgeschlagenen Imports (unbekannte Artikel-Nr.) detailliertere Fehlermeldung inkl. dem problematischen QR-Wert speichern/anzeigen
-- [ ] **`Better Logging`**: Better Logging for Orders, Vendor Orders and Articles.
+- [x] **QR-Code-Import – Fehlerprotokoll:** Bei fehlgeschlagenen Imports (unbekannte Artikel-Nr.) detailliertere Fehlermeldung inkl. dem problematischen QR-Wert speichern/anzeigen
+- [x] **`Better Logging`**: Better Logging for Orders, Vendor Orders and Articles. Update LogsGUI
 
 ---
 

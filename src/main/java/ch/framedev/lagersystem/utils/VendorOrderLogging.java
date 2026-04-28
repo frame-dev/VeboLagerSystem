@@ -1,6 +1,7 @@
 package ch.framedev.lagersystem.utils;
 
 import ch.framedev.lagersystem.main.Main;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -40,8 +41,24 @@ public class VendorOrderLogging {
     }
 
     public synchronized void addLog(String message) {
-        String formattedMessage = "[LieferantenLog] | " + DATE_FORMAT.format(LocalDateTime.now()) + " >> " + safe(message);
+        addLog(Level.INFO, message);
+    }
+
+    public synchronized void addLog(Level level, String message) {
+        Level effectiveLevel = level == null ? Level.INFO : level;
+        String safeMessage = safe(message);
+        String formattedMessage = "[LieferantenLog|" + effectiveLevel + "] | "
+                + DATE_FORMAT.format(LocalDateTime.now()) + " >> " + safeMessage;
         save(formattedMessage);
+        Main.logUtils.addLog(effectiveLevel, "[VENDOR ORDER LOG|" + effectiveLevel + "] " + safeMessage);
+    }
+
+    public void addWarn(String message) {
+        addLog(Level.WARN, message);
+    }
+
+    public void addError(String message) {
+        addLog(Level.ERROR, message);
     }
 
     private void save(String message) {

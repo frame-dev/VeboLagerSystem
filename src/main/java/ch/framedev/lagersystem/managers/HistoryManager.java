@@ -122,6 +122,28 @@ public class HistoryManager {
                 action));
     }
 
+    public boolean insertArticleEvent(String articleNumber, String articleName, String action, String message,
+                                      String userName) {
+        String safeArticleNumber = articleNumber == null || articleNumber.isBlank() ? "<unbekannt>" : articleNumber.trim();
+        String safeArticleName = articleName == null || articleName.isBlank() ? "-" : articleName.trim();
+        String safeAction = action == null || action.isBlank() ? "ARTICLE_EVENT" : action.trim();
+        String safeUserName = userName == null || userName.isBlank() ? "System" : userName.trim();
+        String safeMessage = message == null || message.isBlank() ? "Artikel-Ereignis" : message.trim();
+        String info = "Artikel-Ereignis: " + safeArticleNumber + " - " + safeArticleName
+                + " | Aktion: " + safeAction
+                + " | " + safeMessage
+                + " | Benutzer: " + safeUserName;
+        return insertHistory(new History(
+                info,
+                LocalDateTime.now().format(HISTORY_TIMESTAMP_FORMAT),
+                safeArticleNumber,
+                safeUserName,
+                null,
+                null,
+                null,
+                safeAction));
+    }
+
     public List<History> getHistories() {
         List<History> histories = new ArrayList<>();
         String sql = "SELECT info, date, articleNumber, userName, oldStock, newStock, changeAmount, action " +

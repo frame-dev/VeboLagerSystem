@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -313,7 +314,7 @@ public class ArticleManager {
     public boolean insertArticle(Article article) {
         if (article == null) throw new IllegalArgumentException("Article cannot be null");
         if (existsArticle(article.getArticleNumber())) {
-            Main.logUtils.addLog("Article with the number " + article.getArticleNumber() + " already exists!");
+            logArticleEvent(Level.WARN, article.getArticleNumber(), "Artikel existiert bereits");
             return false;
         }
         String sql = "INSERT INTO " + DatabaseManager.TABLE_ARTICLES + " (articleNumber, name, details, stockQuantity, minStockLevel, sellPrice, purchasePrice, vendorName) " +
@@ -327,9 +328,12 @@ public class ArticleManager {
             cacheArticle(article);
             invalidateAllArticlesList();
             logger.debug("Article {} added to cache", article.getArticleNumber());
-            Main.logUtils.addLog("Article with number '" + article.getArticleNumber() + "' inserted");
+            logArticleEvent(Level.INFO, article.getArticleNumber(),
+                    "Artikel angelegt: " + article.getName() + " | Bestand: " + article.getStockQuantity());
+            logArticleHistoryEvent(article, "ARTICLE_CREATED",
+                    "Bestand: " + article.getStockQuantity() + " | Lieferant: " + article.getVendorName());
         } else {
-            Main.logUtils.addLog("Error while inserting article with number: " + article.getArticleNumber());
+            logArticleEvent(Level.ERROR, article.getArticleNumber(), "Artikel konnte nicht angelegt werden");
         }
 
         return success;
@@ -379,9 +383,12 @@ public class ArticleManager {
             cacheArticle(article);
             logStockChangeIfNeeded(article, previousStockQuantity, userName);
             logger.debug("Article {} updated in cache", article.getArticleNumber());
-            Main.logUtils.addLog("Article with number '" + article.getArticleNumber() + "' updated");
+            logArticleEvent(Level.INFO, article.getArticleNumber(),
+                    "Artikel aktualisiert: " + article.getName() + " | Bestand: " + article.getStockQuantity());
+            logArticleHistoryEvent(article, "ARTICLE_UPDATED",
+                    "Bestand: " + article.getStockQuantity() + " | Lieferant: " + article.getVendorName());
         } else {
-            Main.logUtils.addLog("Error while updating article with number: " + article.getArticleNumber());
+            logArticleEvent(Level.ERROR, article.getArticleNumber(), "Artikel konnte nicht aktualisiert werden");
         }
 
         return success;
@@ -446,12 +453,38 @@ public class ArticleManager {
         if (success) {
             invalidateArticleCache(articleNumber);
             logger.debug("Article {} removed from cache", articleNumber);
-            Main.logUtils.addLog("Article with number '" + articleNumber + "' deleted");
+            logArticleEvent(Level.INFO, articleNumber, "Artikel gelöscht");
+            HistoryManager.getInstance().insertArticleEvent(
+                    articleNumber,
+                    null,
+                    "ARTICLE_DELETED",
+                    "Artikel wurde gelöscht",
+                    resolveCurrentUserName());
         } else {
-            Main.logUtils.addLog("Error while deleting article with number: " + articleNumber);
+            logArticleEvent(Level.ERROR, articleNumber, "Artikel konnte nicht gelöscht werden");
         }
 
         return success;
+    }
+
+    private void logArticleEvent(Level level, String articleNumber, String message) {
+        Level effectiveLevel = level == null ? Level.INFO : level;
+        String safeArticleNumber = articleNumber == null || articleNumber.isBlank() ? "<unbekannt>" : articleNumber.trim();
+        String safeMessage = message == null || message.isBlank() ? "Artikel-Ereignis" : message.trim();
+        Main.logUtils.addLog(effectiveLevel,
+                "[ARTICLE LOG|" + effectiveLevel + "] [" + safeArticleNumber + "] " + safeMessage);
+    }
+
+    private void logArticleHistoryEvent(Article article, String action, String message) {
+        if (article == null) {
+            return;
+        }
+        HistoryManager.getInstance().insertArticleEvent(
+                article.getArticleNumber(),
+                article.getName(),
+                action,
+                message,
+                resolveCurrentUserName());
     }
 
     /**
