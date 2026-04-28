@@ -181,6 +181,8 @@ public class DatabaseManager {
      */
     public static final String TABLE_CATEGORIES = "categories";
 
+    public static final String TABLE_HISTORIES = "histories";
+
     /**
      * Whitelist of allowed table names for clearTable() to prevent SQL injection. Must be kept in sync with actual schema and clearTable() usage.
      */
@@ -197,7 +199,8 @@ public class DatabaseManager {
             TABLE_NOTES,
             TABLE_SUPPLIER_ORDERS,
             TABLE_IMPORTED_QRCODES,
-            TABLE_CATEGORIES
+            TABLE_CATEGORIES,
+            TABLE_HISTORIES
     );
 
     private static final List<String> APPLICATION_TABLES = List.of(
@@ -213,7 +216,8 @@ public class DatabaseManager {
             TABLE_NOTES,
             TABLE_SUPPLIER_ORDERS,
             TABLE_IMPORTED_QRCODES,
-            TABLE_CATEGORIES
+            TABLE_CATEGORIES,
+            TABLE_HISTORIES
     );
 
     private static final Set<String> IDENTITY_MANAGED_TABLES = Set.of(

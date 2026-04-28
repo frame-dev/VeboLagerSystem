@@ -21,7 +21,8 @@
 - [x] **`OrderManager` fehlt `resetInstance()`**: alle anderen Manager haben diese Methode für Test-Reset; `OrderManager` fehlt sie → Tests für `OrderManager` sind dadurch aufwändiger
 - [x] **`LogManager.CACHE_TTL_MILLIS` ist Instanzvariable**: `private final long CACHE_TTL_MILLIS = 60 * 1000;` (Z.40) → sollte `private static final` sein, da der Wert nicht pro Instanz variiert
 - [x] **`OrderManager.CACHE_TTL_MILLIS` als lokale Variable**: Z.334 `long CACHE_TTL_MILLIS = 5 * 60 * 1000;` wird bei jedem `getOrders()`-Aufruf neu angelegt → als Klassenkonstante (`private static final`) auslagern (wie in `VendorManager`, `WarningManager` etc. korrekt gemacht)
-- [ ] **`Tabs Font size`**: Tabs font size doesn't work in Settings panel.
+- [ ] **`Tabs Font size`**: Tabs font size doesn't work in Settings panel. The UI doesn't change.
+- [ ] **`Performance Fix`**: Fixes in all Manager classes and more stable Database usage.
 
 ---
 
@@ -84,6 +85,7 @@
 - [ ] **Export-Vorlagen:** Konfigurierbare PDF-Vorlagen für Bestellungen und Artikel-Listen
 - [ ] **`ScanServer` – konfigurierbarer Port:** Neuen Key `scan_server_port` in `settings.properties` einlesen und beim Start nutzen
 - [ ] **QR-Code-Import – Fehlerprotokoll:** Bei fehlgeschlagenen Imports (unbekannte Artikel-Nr.) detailliertere Fehlermeldung inkl. dem problematischen QR-Wert speichern/anzeigen
+- [ ] **`Better Logging`**: Better Logging for Orders, Vendor Orders and Articles.
 
 ---
 
