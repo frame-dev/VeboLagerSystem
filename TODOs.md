@@ -49,7 +49,7 @@
 - [x] `DatabaseManager` – `resetInstance()` ist `public` und nur für Tests gedacht → mit `@VisibleForTesting` annotieren oder in `protected` umwandeln
 - [x] `Main.settings` ist `public static` – Threading-Sicherheit durch `volatile` oder AtomicReference verbessern
 - [x] `supplier_orders.txt` und `imported_qrcodes.txt` werden als einfache Text-Dateien geführt → in Datenbanktabellen überführen für Konsistenz
-- [ ] Persistenz-Layer: JSON/YAML Backend hat keine Schema-Versionierung – Migrationsstrategie fehlt
+- [x] Persistenz-Layer: JSON/YAML Backend hat keine Schema-Versionierung – Migrationsstrategie fehlt
 - [x] `ArticleUtils.getCategoryForArticle()` liest `categories.json` über `Main.getAppDataDir()` – schwer testbar; in `CategoryManager` auslagern
 - [x] **`ScanServer.STORE` und `QRCodeUtils.STORE`** definieren beide `new File(Main.getAppDataDir(), "scans.json")` → duplizierte Konstante; in einer gemeinsamen Klasse (z. B. `AppPaths`) zentralisieren
 - [x] **`ScanServer` – Port 8080 hardkodiert** (`int port = 8080`) → über `settings.properties` konfigurierbar machen (neuer Key `scan_server_port`)

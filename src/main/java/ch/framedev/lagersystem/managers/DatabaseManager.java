@@ -16,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -51,6 +52,10 @@ import ch.framedev.lagersystem.main.Main;
 public class DatabaseManager {
     private static final Logger logger = LogManager.getLogger(DatabaseManager.class);
     private static final Gson FILE_GSON = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
+    private static final int CURRENT_FILESYSTEM_SCHEMA_VERSION = 1;
+    private static final String FILESYSTEM_SCHEMA_VERSION_KEY = "schemaVersion";
+    private static final String FILESYSTEM_SCHEMA_FORMAT_KEY = "storageFormat";
+    private static final String FILESYSTEM_SCHEMA_UPDATED_KEY = "updatedAt";
     private static final Pattern CREATE_TABLE_PATTERN = Pattern.compile(
             "CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?\"?([A-Za-z_][A-Za-z0-9_]*)\"?",
             Pattern.CASE_INSENSITIVE);
@@ -342,6 +347,7 @@ public class DatabaseManager {
             loadJdbcDriver(this.databaseType);
             this.connection = DriverManager.getConnection(url);
             applyDatabaseSettings();
+            ensureFilesystemSchemaVersion();
         } catch (SQLException | ClassNotFoundException e) {
             Main.logUtils.addLog("Fehler beim Öffnen der Datenbank: " + e.getMessage());
             throw new RuntimeException(buildOpenDatabaseErrorMessage(url, e), e);
@@ -450,6 +456,13 @@ public class DatabaseManager {
         return isFilesystemType(databaseType);
     }
 
+    public int getFilesystemSchemaVersion() {
+        if (!isFilesystemBackend()) {
+            return 0;
+        }
+        return readFilesystemSchemaVersion();
+    }
+
     private void ensureFilesystemStorageDirectory() {
         if (filesystemStorageDir == null) {
             return;
@@ -458,6 +471,45 @@ public class DatabaseManager {
             throw new RuntimeException("Failed to create filesystem storage directory: "
                     + filesystemStorageDir.getAbsolutePath());
         }
+    }
+
+    private void ensureFilesystemSchemaVersion() {
+        if (!isFilesystemBackend()) {
+            return;
+        }
+
+        int existingVersion = readFilesystemSchemaVersion();
+        if (existingVersion > CURRENT_FILESYSTEM_SCHEMA_VERSION) {
+            throw new RuntimeException("Filesystem storage schema version " + existingVersion
+                    + " is newer than supported version " + CURRENT_FILESYSTEM_SCHEMA_VERSION);
+        }
+        if (existingVersion < CURRENT_FILESYSTEM_SCHEMA_VERSION) {
+            migrateFilesystemSchema(existingVersion, CURRENT_FILESYSTEM_SCHEMA_VERSION);
+        }
+        writeFilesystemSchemaManifest(CURRENT_FILESYSTEM_SCHEMA_VERSION);
+    }
+
+    private void migrateFilesystemSchema(int fromVersion, int toVersion) {
+        if (fromVersion == toVersion) {
+            return;
+        }
+
+        int current = Math.max(0, fromVersion);
+        while (current < toVersion) {
+            int next = current + 1;
+            migrateFilesystemSchemaStep(current, next);
+            current = next;
+        }
+        logger.info("Filesystem storage schema migrated from version {} to {}", fromVersion, toVersion);
+    }
+
+    private void migrateFilesystemSchemaStep(int fromVersion, int toVersion) {
+        if (fromVersion == 0 && toVersion == 1) {
+            logger.info("Detected legacy filesystem storage without schema manifest; marking as schema version 1");
+            return;
+        }
+        throw new IllegalStateException("No filesystem storage migration registered for "
+                + fromVersion + " -> " + toVersion);
     }
 
     /**
@@ -1766,6 +1818,60 @@ public class DatabaseManager {
                     + e.getMessage());
         }
     }
+
+    private int readFilesystemSchemaVersion() {
+        File schemaFile = getFilesystemSchemaFile();
+        if (schemaFile == null || !schemaFile.exists()) {
+            return 0;
+        }
+
+        try (FileReader reader = new FileReader(schemaFile)) {
+            Object raw = databaseType == DatabaseType.JSON
+                    ? FILE_GSON.fromJson(reader, Map.class)
+                    : new Yaml().load(reader);
+            if (!(raw instanceof Map<?, ?> map)) {
+                return 0;
+            }
+            Object value = map.get(FILESYSTEM_SCHEMA_VERSION_KEY);
+            if (value instanceof Number number) {
+                return number.intValue();
+            }
+            if (value instanceof String text) {
+                try {
+                    return Integer.parseInt(text.trim());
+                } catch (NumberFormatException ignored) {
+                    return 0;
+                }
+            }
+            return 0;
+        } catch (IOException e) {
+            logger.error("Failed to read filesystem schema manifest {}", schemaFile.getAbsolutePath(), e);
+            Main.logUtils.addLog("Fehler beim Lesen der Dateispeicher-Schema-Version: " + e.getMessage());
+            return 0;
+        }
+    }
+
+    private void writeFilesystemSchemaManifest(int schemaVersion) {
+        File schemaFile = getFilesystemSchemaFile();
+        if (schemaFile == null) {
+            return;
+        }
+        Map<String, Object> manifest = new LinkedHashMap<>();
+        manifest.put(FILESYSTEM_SCHEMA_VERSION_KEY, schemaVersion);
+        manifest.put(FILESYSTEM_SCHEMA_FORMAT_KEY, databaseType.getConfigValue());
+        manifest.put(FILESYSTEM_SCHEMA_UPDATED_KEY, Instant.now().toString());
+
+        try (FileWriter writer = new FileWriter(schemaFile)) {
+            if (databaseType == DatabaseType.JSON) {
+                FILE_GSON.toJson(manifest, writer);
+            } else {
+                new Yaml().dump(manifest, writer);
+            }
+        } catch (IOException e) {
+            logger.error("Failed to write filesystem schema manifest {}", schemaFile.getAbsolutePath(), e);
+            Main.logUtils.addLog("Fehler beim Schreiben der Dateispeicher-Schema-Version: " + e.getMessage());
+        }
+    }
     
     private List<Map<String, Object>> readFilesystemRows(File tableFile) {
         try (FileReader reader = new FileReader(tableFile)) {
@@ -1824,6 +1930,13 @@ public class DatabaseManager {
 
     private File getFilesystemTableFile(String tableName) {
         return new File(filesystemStorageDir, tableName + getFilesystemFileExtension());
+    }
+
+    private File getFilesystemSchemaFile() {
+        if (filesystemStorageDir == null || filesystemStorageDir.getParentFile() == null) {
+            return null;
+        }
+        return new File(filesystemStorageDir.getParentFile(), "schema" + getFilesystemFileExtension());
     }
 
     private String getFilesystemFileExtension() {

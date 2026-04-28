@@ -70,6 +70,40 @@ class DatabaseManagerTest {
     }
 
     @Test
+    @DisplayName("JSON filesystem backend writes schema version manifest")
+    void jsonFilesystemBackend_writesSchemaVersionManifest() throws IOException {
+        DatabaseManager jsonDb = new DatabaseManager(DatabaseManager.DatabaseType.JSON,
+                tempDir.toString(), "schema-test");
+        try {
+            jsonDb.initializeApplicationSchema();
+
+            Path schemaFile = tempDir.resolve("schema-test_json").resolve("schema.json");
+            assertTrue(Files.exists(schemaFile), "JSON schema manifest should exist");
+            assertEquals(1, jsonDb.getFilesystemSchemaVersion());
+            assertTrue(Files.readString(schemaFile).contains("\"schemaVersion\": 1"));
+        } finally {
+            jsonDb.close();
+        }
+    }
+
+    @Test
+    @DisplayName("YAML filesystem backend writes schema version manifest")
+    void yamlFilesystemBackend_writesSchemaVersionManifest() throws IOException {
+        DatabaseManager yamlDb = new DatabaseManager(DatabaseManager.DatabaseType.YAML,
+                tempDir.toString(), "schema-test");
+        try {
+            yamlDb.initializeApplicationSchema();
+
+            Path schemaFile = tempDir.resolve("schema-test_yaml").resolve("schema.yaml");
+            assertTrue(Files.exists(schemaFile), "YAML schema manifest should exist");
+            assertEquals(1, yamlDb.getFilesystemSchemaVersion());
+            assertTrue(Files.readString(schemaFile).contains("schemaVersion: 1"));
+        } finally {
+            yamlDb.close();
+        }
+    }
+
+    @Test
     @DisplayName("getDatabaseType: returns H2")
     void getDatabaseType_h2() {
         assertEquals(DatabaseManager.DatabaseType.H2, db.getDatabaseType());
